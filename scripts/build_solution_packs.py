@@ -85,6 +85,8 @@ class Joined:
     #: Additional routers the same service declares — aliases, not the
     #: contract the pack is written against.
     traefik_other: list = field(default_factory=list)
+    #: Base URLs the compose environment configures for this service.
+    env_urls: list = field(default_factory=list)
     #: The build context and Dockerfile compose actually uses. Inferring the
     #: context from the worker directory was wrong for every service built
     #: with `context: .` — ice-box's Dockerfile COPYs `src/`, so the inferred
@@ -163,6 +165,7 @@ def parse_compose() -> dict:
                 "traefik": "",
                 "router": "",
                 "rules": [],
+                "env_urls": [],
                 "strip": "",
                 "port": "",
                 "context": "",
@@ -188,6 +191,15 @@ def parse_compose() -> dict:
         pm = re.search(r'^\s+- "(\d+):(\d+)"', line)
         if pm:
             services[current]["port"] = pm.group(1)
+        # A configured base URL is evidence about routing that this repo can
+        # read even for a third-party image whose source it cannot: Forgejo
+        # is told `ROOT_URL=https://trancendos.com/the-workshop/`, which is
+        # the image being rooted at the prefix, stated by the deployment.
+        url = re.search(
+            r"^\s+-?\s*[A-Za-z0-9_]*URL[A-Za-z0-9_]*[:=]\s*\"?(\S*://\S+?)\"?\s*$", line
+        )
+        if url:
+            services[current]["env_urls"].append(url.group(1))
         pe = re.search(r"^\s+- PORT=(\d+)", line)
         if pe and not services[current]["port"]:
             services[current]["port"] = pe.group(1)
@@ -250,6 +262,7 @@ def join_entity(name: str, ent, entity_md, priority_md, oss_md, compose) -> Join
             j.traefik_router = compose[c]["router"]
             j.traefik_strip = compose[c]["strip"]
             j.traefik_other = list(compose[c].get("other_rules") or [])
+            j.env_urls = list(compose[c].get("env_urls") or [])
             j.build_context = compose[c]["context"]
             j.build_dockerfile = compose[c]["dockerfile"]
             j.compose_port = compose[c]["port"]
@@ -387,7 +400,7 @@ def quadrant(c: int, r: int, c_split: float, r_split: float) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def worker_serves_prefix(build_context: str, prefix: str) -> bool | None:
+def worker_serves_prefix(j: "Joined", prefix: str) -> tuple[bool | None, str]:
     """Does the worker itself serve paths under `prefix`?
 
     `None` when it cannot be determined — a third-party image (Forgejo, n8n,
@@ -411,8 +424,24 @@ def worker_serves_prefix(build_context: str, prefix: str) -> bool | None:
     that is checkable: whether any route or router prefix in the worker's own
     source begins with the external prefix.
     """
+    # The verdict AND what it rests on. Returning a bare boolean made the
+    # pack describe every positive as "this worker's own source registers
+    # paths under the prefix" — true for the Python workers, false for
+    # Forgejo, where the evidence is a configured base URL. Saying the wrong
+    # reason for a right answer is how a reader learns to distrust the pack.
+    for url in j.env_urls:
+        # A base URL whose own path carries the prefix is the deployment
+        # saying the image is rooted there. It is weaker evidence than
+        # reading routes, so it is consulted only when the source cannot be:
+        # it settles exactly the third-party-image case the packs used to
+        # hedge about, and hedging where evidence exists is its own defect.
+        path = url.split("://", 1)[-1]
+        path = path[path.find("/") :] if "/" in path else ""
+        if path.rstrip("/").endswith(prefix.rstrip("/")):
+            return True, f"its compose environment configures the base URL `{url}`"
+    build_context = j.build_context
     if not build_context:
-        return None
+        return None, "it declares no build context"
     # Resolved against the repository, not the caller's cwd. A relative
     # context read from `os.getcwd()` makes every routing verdict depend on
     # where the generator happened to be invoked from: run it from anywhere
@@ -421,12 +450,14 @@ def worker_serves_prefix(build_context: str, prefix: str) -> bool | None:
     candidate = Path(build_context)
     directory = candidate if candidate.is_absolute() else ROOT / build_context.lstrip("./")
     if not directory.is_dir():
-        return None
+        return None, f"its build context `{build_context}` is not a directory here"
     sources = list(directory.glob("*.py")) + list(directory.glob("*/*.py"))
     if not sources:
-        return None  # a third-party image; its routing is not ours to read
+        # A third-party image; its routing is not ours to read.
+        return None, "its build context holds no Python to read (a third-party image)"
     text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in sources)
-    return f'"{prefix}' in text or f"'{prefix}" in text
+    serves = f'"{prefix}' in text or f"'{prefix}" in text
+    return serves, "this worker's own source registers paths under it"
 
 
 def render_pack(
@@ -555,11 +586,11 @@ def render_pack(
         add("  the path unchanged and the worker serves what it registers under `/`. Do not")
         add("  add a stripprefix middleware here; there is nothing for it to strip.")
     elif j.traefik_rule and not j.traefik_strip:
-        serves = worker_serves_prefix(j.build_context, route_prefix)
+        serves, evidence = worker_serves_prefix(j, route_prefix)
         if serves is True:
-            add(f"- **No `stripprefix` on `{route_prefix}`, and none is needed** — verified:")
-            add(f"  this worker's own source registers paths under `{route_prefix}`, so the")
-            add("  prefix must reach it intact. Adding the middleware would break it.")
+            add(f"- **No `stripprefix` on `{route_prefix}`, and none is needed** — verified,")
+            add(f"  because {evidence}, so the prefix must reach")
+            add("  it intact. Adding the middleware would break it.")
         elif serves is False:
             add(f"- **ROUTING DEFECT — `{route_prefix}` has no `stripprefix` and this worker")
             add("  does not serve the prefixed path.** Verified against its own source: every")
@@ -569,8 +600,8 @@ def render_pack(
             add("  worker's router the prefix. **Fix this before building anything on it.**")
         else:
             add(f"- **No `stripprefix` on `{route_prefix}`, and this could not be verified** —")
-            add("  the build context holds no Python to read (a third-party image). Confirm")
-            add("  against that image's own routing before relying on either behaviour.")
+            add(f"  {evidence}. Confirm against that image's own routing")
+            add("  before relying on either behaviour.")
     elif j.traefik_rule:
         add(
             f"- **Traefik `stripprefix` is mandatory** for `{route_prefix}` routing; "
@@ -791,19 +822,19 @@ def render_pack(
     add("## 12. Wireframe — SCAFFOLD")
     add("")
     add("```")
-    add("┌──────────────────────────────────────────────────────┐")
-    add(f"│ {name[:36]:<36} {(ent.pid or ''):>15} │")
-    add("├──────────────────────────────────────────────────────┤")
-    add(f"│ {ent.primary_function[:52]:<52} │")
-    add("├──────────────────────────────────────────────────────┤")
+    add("┌" + "─" * _BOX + "┐")
+    add(_row(f" {name[:36]:<36} {(ent.pid or ''):>15} "))
+    add("├" + "─" * _BOX + "┤")
+    add(_row(f" {ent.primary_function[:52]:<52} "))
+    add("├" + "─" * _BOX + "┤")
     for a in agents:
-        add(f"│  ▸ {a.code_name[:24]:<24} {a.description[:24][:24]:<24}│")
-    add("├──────────────────────────────────────────────────────┤")
-    add(f"│  bots: {', '.join(b.code_name for b in bots)[:44]:<44} │")
-    add("├──────────────────────────────────────────────────────┤")
+        add(_row(f"  ▸ {a.code_name[:24]:<24} {a.description[:24]:<24}"))
+    add("├" + "─" * _BOX + "┤")
+    add(_row(f"  bots: {', '.join(b.code_name for b in bots)[:44]:<44}"))
+    add("├" + "─" * _BOX + "┤")
     routed = f"route {route_prefix}" if route_prefix else "routed by host"
-    add(f"│  [ health ]  [ status ]  {routed[:26]:<26} │")
-    add("└──────────────────────────────────────────────────────┘")
+    add(_row(f"  [ health ]  [ status ]  {routed[:26]:<26}"))
+    add("└" + "─" * _BOX + "┘")
     add("```")
     add("")
 
@@ -844,6 +875,21 @@ def render_pack(
     add("- `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation")
     add("")
     return _document(L)
+
+
+#: Inner width of the wireframe box, in characters.
+_BOX = 54
+
+
+def _row(inner: str) -> str:
+    """One wireframe row, padded to the box so its right edge closes.
+
+    Three of the row shapes were hand-counted and came out one character
+    short of the borders, so every wireframe in all 43 packs had a ragged
+    right edge — including rows nobody had edited. Padding once, against the
+    same constant the borders are drawn from, is what makes the box a box.
+    """
+    return "│" + f"{inner[:_BOX]:<{_BOX}}" + "│"
 
 
 def route_names(j: "Joined", sl: str) -> tuple[str, str | None, str | None]:
@@ -911,14 +957,14 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
                 "with the prefix stripped.",
                 "As a reviewer, a stripprefix middleware exists and is referenced by the router.",
             ]
-        elif worker_serves_prefix(j.build_context, route_prefix) is True:
+        elif worker_serves_prefix(j, route_prefix)[0] is True:
             criteria = [
                 f"As a client, requests to `{route_prefix}` reach the worker with the "
                 "prefix intact, which is what its own routes expect.",
                 "As a reviewer, NO stripprefix middleware is attached — adding one "
                 "would break every route.",
             ]
-        elif worker_serves_prefix(j.build_context, route_prefix) is False:
+        elif worker_serves_prefix(j, route_prefix)[0] is False:
             # The acceptance criterion for a defect is the fix, not a
             # description of the broken state. Asking a reviewer to confirm a
             # middleware "exists" when section 3 has just proven it does not,

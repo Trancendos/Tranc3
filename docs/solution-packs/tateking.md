@@ -231,12 +231,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Video Creation & Editing Platform                    │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Director-B           Coordinates timeline-as-│
-│  ▸ The Editor-B             Suggests cuts, music shi│
+│  ▸ The Director-B           Coordinates timeline-as- │
+│  ▸ The Editor-B             Suggests cuts, music shi │
 ├──────────────────────────────────────────────────────┤
-│  bots: Cutter-Bot, Splicer-Bot, Renderer-Bot, Scrub │
+│  bots: Cutter-Bot, Splicer-Bot, Renderer-Bot, Scrub  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /tateking            │
+│  [ health ]  [ status ]  route /tateking             │
 └──────────────────────────────────────────────────────┘
 ```
 

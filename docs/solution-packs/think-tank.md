@@ -213,12 +213,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ R&D Centre                                           │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Professor            Simulates untested progr│
-│  ▸ The Visionary            Suggests structural upda│
+│  ▸ The Professor            Simulates untested progr │
+│  ▸ The Visionary            Suggests structural upda │
 ├──────────────────────────────────────────────────────┤
-│  bots: Beaker-Bot, Bunsen-Bot, Pipette-Bot, Petri-B │
+│  bots: Beaker-Bot, Bunsen-Bot, Pipette-Bot, Petri-B  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

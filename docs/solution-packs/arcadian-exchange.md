@@ -221,12 +221,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Procurement & Resource Trading                       │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Speculator-C         Assesses server cost tre│
-│  ▸ The Trader-C             Automates bidding on ope│
+│  ▸ The Speculator-C         Assesses server cost tre │
+│  ▸ The Trader-C             Automates bidding on ope │
 ├──────────────────────────────────────────────────────┤
-│  bots: Bidder-Bot, Asker-Bot, Miner-Bot, Harvester- │
+│  bots: Bidder-Bot, Asker-Bot, Miner-Bot, Harvester-  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

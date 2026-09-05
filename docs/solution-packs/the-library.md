@@ -211,12 +211,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Knowledge Base & Wiki                                │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Curator              Identifies duplicated wi│
-│  ▸ The Indexer              Adds searchable tags and│
+│  ▸ The Curator              Identifies duplicated wi │
+│  ▸ The Indexer              Adds searchable tags and │
 ├──────────────────────────────────────────────────────┤
-│  bots: Page-Bot, Bookmark-Bot, Spine-Bot, Dust-Jack │
+│  bots: Page-Bot, Bookmark-Bot, Spine-Bot, Dust-Jack  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

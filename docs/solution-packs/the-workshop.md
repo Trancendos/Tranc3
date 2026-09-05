@@ -53,9 +53,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/the-workshop`, and this could not be verified** —
-  the build context holds no Python to read (a third-party image). Confirm
-  against that image's own routing before relying on either behaviour.
+- **No `stripprefix` on `/the-workshop`, and none is needed** — verified,
+  because its compose environment configures the base URL `https://trancendos.com/the-workshop/`, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -191,9 +191,8 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, a request through Traefik to `/the-workshop` returns something other than 404 — measured, because this repo cannot read the image's routing to decide it.
-- As a reviewer, the measurement is recorded: either the worker serves `/the-workshop` itself (leave the labels alone) or it does not (a stripprefix middleware is then required).
-- As an implementer, nothing changes in the compose labels until that measurement says which.
+- As a client, requests to `/the-workshop` reach the worker with the prefix intact, which is what its own routes expect.
+- As a reviewer, NO stripprefix middleware is attached — adding one would break every route.
 
 ### Epic 2 — Implement the abilities
 
@@ -220,12 +219,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Repository Storage (Forgejo)                         │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Branch-Manager           Tracks active code branc│
-│  ▸ Merge-Master             Safely merges code branc│
+│  ▸ Branch-Manager           Tracks active code branc │
+│  ▸ Merge-Master             Safely merges code branc │
 ├──────────────────────────────────────────────────────┤
-│  bots: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot    │
+│  bots: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot     │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-workshop        │
+│  [ health ]  [ status ]  route /the-workshop         │
 └──────────────────────────────────────────────────────┘
 ```
 

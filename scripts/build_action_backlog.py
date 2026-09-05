@@ -335,7 +335,16 @@ def _apply_routing(items: list[dict]) -> list[dict]:
     """
     try:
         from src.townhall.routing import load_decisions  # noqa: PLC0415
-    except Exception:  # noqa: BLE001 - the sweep must still run without src/
+    except ModuleNotFoundError as exc:
+        # Only the case this fallback is for: `src/` is not on the path at
+        # all. Catching every exception meant a broken import — a missing
+        # dependency, a syntax error, a regression in the registry — read as
+        # "no decisions recorded" and produced a backlog that looked valid
+        # and was entirely unrouted. A control that fails quietly into the
+        # answer you would have got anyway is the defect this file's own
+        # subject matter is about.
+        if (exc.name or "").split(".")[0] != "src":
+            raise
         return items
     decisions = load_decisions()
     for item in items:

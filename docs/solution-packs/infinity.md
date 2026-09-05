@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/auth/`, and none is needed** — verified:
-  this worker's own source registers paths under `/auth/`, so the
-  prefix must reach it intact. Adding the middleware would break it.
+- **No `stripprefix` on `/auth/`, and none is needed** — verified,
+  because this worker's own source registers paths under it, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -223,12 +223,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Centralized Auth, Edge Auth (OAuth 2.0) & User Trans │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Gatekeeper           Checks incoming user log│
-│  ▸ The Bouncer              Monitors login origins a│
+│  ▸ The Gatekeeper           Checks incoming user log │
+│  ▸ The Bouncer              Monitors login origins a │
 ├──────────────────────────────────────────────────────┤
-│  bots: Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bo │
+│  bots: Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bo  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /auth/               │
+│  [ health ]  [ status ]  route /auth/                │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -210,12 +210,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Financial & Operations Management                    │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Treasurer            Monitors resource usage,│
-│  ▸ The Actuary              Evaluates system runtime│
+│  ▸ The Treasurer            Monitors resource usage, │
+│  ▸ The Actuary              Evaluates system runtime │
 ├──────────────────────────────────────────────────────┤
-│  bots: Ledger-Bot, Coin-Bot, Ticker-Bot, Receipt-Bo │
+│  bots: Ledger-Bot, Coin-Bot, Ticker-Bot, Receipt-Bo  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

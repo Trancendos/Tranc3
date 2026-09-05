@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Cryptographic Scanner & Automated Quarantine Transpo │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Warden               Oversees integrity scans│
-│  ▸ The Inspector            Compares active database│
+│  ▸ The Warden               Oversees integrity scans │
+│  ▸ The Inspector            Compares active database │
 ├──────────────────────────────────────────────────────┤
-│  bots: Scan-Bot, Sniffer-Bot, Beam-Bot, Portal-Bot  │
+│  bots: Scan-Bot, Sniffer-Bot, Beam-Bot, Portal-Bot   │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /warp-tunnel         │
+│  [ health ]  [ status ]  route /warp-tunnel          │
 └──────────────────────────────────────────────────────┘
 ```
 

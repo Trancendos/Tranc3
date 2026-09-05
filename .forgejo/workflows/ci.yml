@@ -54,7 +54,6 @@ jobs:
         run: python scripts/check_master_matrix_freshness.py
 
       - name: Estate lint (duplication + registry drift)
-        # Non-blocking (no --strict): the registry/compose reconciliation
         # The container-naming backlog this suppression was waiting on is
         # gone, and it was never a backlog: the check compared the registry
         # against the naming convention rather than against compose, so 45

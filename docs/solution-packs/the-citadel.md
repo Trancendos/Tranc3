@@ -213,12 +213,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Strategic Ops (Main fortress for Think Tank/R&D/Temp │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The General              Directs high-level devel│
-│  ▸ The Tactician            Re-allocates team struct│
+│  ▸ The General              Directs high-level devel │
+│  ▸ The Tactician            Re-allocates team struct │
 ├──────────────────────────────────────────────────────┤
-│  bots: Map-Bot, Compass-Bot, Clock-Bot, Radio-Bot   │
+│  bots: Map-Bot, Compass-Bot, Clock-Bot, Radio-Bot    │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

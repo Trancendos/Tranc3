@@ -223,12 +223,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Photo & Image Generation Center                      │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Retoucher            Directs neural filters t│
-│  ▸ Prompt-Smith             Optimizes prompts into t│
+│  ▸ The Retoucher            Directs neural filters t │
+│  ▸ Prompt-Smith             Optimizes prompts into t │
 ├──────────────────────────────────────────────────────┤
-│  bots: Aperture-Bot, Shutter-Bot, Flash-Bot, Lens-B │
+│  bots: Aperture-Bot, Shutter-Bot, Flash-Bot, Lens-B  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /sashas-photo-studio │
+│  [ health ]  [ status ]  route /sashas-photo-studio  │
 └──────────────────────────────────────────────────────┘
 ```
 

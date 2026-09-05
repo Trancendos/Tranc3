@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Opt-in Digital Twin System & Life Assistant          │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Shadow               Mirrors daily habits to │
-│  ▸ The Scheduler            Adjusts calendar priorit│
+│  ▸ The Shadow               Mirrors daily habits to  │
+│  ▸ The Scheduler            Adjusts calendar priorit │
 ├──────────────────────────────────────────────────────┤
-│  bots: Sync-Bot, Fetch-Bot, Nudge-Bot, Alert-Bot    │
+│  bots: Sync-Bot, Fetch-Bot, Nudge-Bot, Alert-Bot     │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /taimra              │
+│  [ health ]  [ status ]  route /taimra               │
 └──────────────────────────────────────────────────────┘
 ```
 

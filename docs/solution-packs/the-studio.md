@@ -225,12 +225,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Central Hub of the Creativity Center                 │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Conductor            Coordinates asset handof│
-│  ▸ The Muse                 Generates baseline desig│
+│  ▸ The Conductor            Coordinates asset handof │
+│  ▸ The Muse                 Generates baseline desig │
 ├──────────────────────────────────────────────────────┤
-│  bots: Palette-Bot, Easel-Bot, Clay-Bot, Layout-Bot │
+│  bots: Palette-Bot, Easel-Bot, Clay-Bot, Layout-Bot  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-studio          │
+│  [ health ]  [ status ]  route /the-studio           │
 └──────────────────────────────────────────────────────┘
 ```
 

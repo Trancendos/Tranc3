@@ -224,12 +224,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Archived Information Store                           │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Undertaker           Finds stale databases, a│
-│  ▸ The Miner                Searches deep archive ca│
+│  ▸ The Undertaker           Finds stale databases, a │
+│  ▸ The Miner                Searches deep archive ca │
 ├──────────────────────────────────────────────────────┤
-│  bots: Compressor-Bot, Extractor-Bot, Dust-Bunny-Bo │
+│  bots: Compressor-Bot, Extractor-Bot, Dust-Bunny-Bo  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /basement            │
+│  [ health ]  [ status ]  route /basement             │
 └──────────────────────────────────────────────────────┘
 ```
 

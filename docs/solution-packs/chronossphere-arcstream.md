@@ -210,12 +210,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Task, Time and Scheduling Management                 │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Timekeeper           Rearranges task backlogs│
-│  ▸ The Time-Weaver          Translates timeline para│
+│  ▸ The Timekeeper           Rearranges task backlogs │
+│  ▸ The Time-Weaver          Translates timeline para │
 ├──────────────────────────────────────────────────────┤
-│  bots: Tick-Bot, Tock-Bot, Pendulum-Bot, Sandglass- │
+│  bots: Tick-Bot, Tock-Bot, Pendulum-Bot, Sandglass-  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

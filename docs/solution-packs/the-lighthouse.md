@@ -210,12 +210,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Cryptographic Token Applicator                       │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Minter               Mints unique cryptograph│
-│  ▸ The Stamper              Attaches verified, tampe│
+│  ▸ The Minter               Mints unique cryptograph │
+│  ▸ The Stamper              Attaches verified, tampe │
 ├──────────────────────────────────────────────────────┤
-│  bots: Seal-Bot, Wax-Bot, Signet-Bot, Seal-Stamp-Bo │
+│  bots: Seal-Bot, Wax-Bot, Signet-Bot, Seal-Stamp-Bo  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -211,12 +211,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Document Management Hub                              │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Filer                Places files in structur│
-│  ▸ The Tagger               Scans text documents to │
+│  ▸ The Filer                Places files in structur │
+│  ▸ The Tagger               Scans text documents to  │
 ├──────────────────────────────────────────────────────┤
-│  bots: Scanner-Bot, Stapler-Bot, Folder-Bot, Shredd │
+│  bots: Scanner-Bot, Stapler-Bot, Folder-Bot, Shredd  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -232,12 +232,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Central Testing Platform (Wonderland Theme)          │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The March Hare           Sends rapid mock inputs │
-│  ▸ The Dormouse             Sits silently in tests, │
+│  ▸ The March Hare           Sends rapid mock inputs  │
+│  ▸ The Dormouse             Sits silently in tests,  │
 ├──────────────────────────────────────────────────────┤
-│  bots: Teapot-Bot, Pocket-Watch-Bot, Sugar-Cube-Bot │
+│  bots: Teapot-Bot, Pocket-Watch-Bot, Sugar-Cube-Bot  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /chaos-party         │
+│  [ health ]  [ status ]  route /chaos-party          │
 └──────────────────────────────────────────────────────┘
 ```
 

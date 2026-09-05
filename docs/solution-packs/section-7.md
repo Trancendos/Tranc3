@@ -224,12 +224,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Intelligence (Predictive lore, market intelligence)  │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Spy                  Gathers sentiment data f│
-│  ▸ The Oracle               Converts intelligence re│
+│  ▸ The Spy                  Gathers sentiment data f │
+│  ▸ The Oracle               Converts intelligence re │
 ├──────────────────────────────────────────────────────┤
-│  bots: Scraper-Bot, Parser-Bot, Crawler-Bot, Whispe │
+│  bots: Scraper-Bot, Parser-Bot, Crawler-Bot, Whispe  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-dutchy          │
+│  [ health ]  [ status ]  route /the-dutchy           │
 └──────────────────────────────────────────────────────┘
 ```
 

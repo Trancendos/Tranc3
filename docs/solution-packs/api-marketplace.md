@@ -214,12 +214,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Central Integration Hub (APIs, Webhooks, OAuth)      │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Broker               Standardizes input/outpu│
-│  ▸ The Diplomat             Handles external handsha│
+│  ▸ The Broker               Standardizes input/outpu │
+│  ▸ The Diplomat             Handles external handsha │
 ├──────────────────────────────────────────────────────┤
-│  bots: GET-Bot, POST-Bot, PUT-Bot, DELETE-Bot       │
+│  bots: GET-Bot, POST-Bot, PUT-Bot, DELETE-Bot        │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

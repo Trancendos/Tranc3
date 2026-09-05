@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Sensitivity to Emotion Engine                        │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Counselor            Leads reflection session│
-│  ▸ The Listener             Passively monitors works│
+│  ▸ The Counselor            Leads reflection session │
+│  ▸ The Listener             Passively monitors works │
 ├──────────────────────────────────────────────────────┤
-│  bots: Journal-Bot, Mood-Bot, Reflect-Bot, Soothe-B │
+│  bots: Journal-Bot, Mood-Bot, Reflect-Bot, Soothe-B  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /imind               │
+│  [ health ]  [ status ]  route /imind                │
 └──────────────────────────────────────────────────────┘
 ```
 

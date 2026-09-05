@@ -224,12 +224,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Development Operations                               │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Foreman              Coordinates deployment p│
-│  ▸ The Dispatcher           Launches automated serve│
+│  ▸ The Foreman              Coordinates deployment p │
+│  ▸ The Dispatcher           Launches automated serve │
 ├──────────────────────────────────────────────────────┤
-│  bots: Crane-Bot, Wrench-Bot, Gear-Bot, Belt-Bot    │
+│  bots: Crane-Bot, Wrench-Bot, Gear-Bot, Belt-Bot     │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /devocity            │
+│  [ health ]  [ status ]  route /devocity             │
 └──────────────────────────────────────────────────────┘
 ```
 

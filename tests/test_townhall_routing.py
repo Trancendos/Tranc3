@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from src.townhall.routing import (
+    InvalidExport,
     RoutingRefused,
     RoutingRegistry,
     design_pack,
@@ -194,8 +195,166 @@ class TestTheSlugAgreesWithTheBacklog:
         missing = sorted(name for name, pack in resolved.items() if pack is None)
         assert missing == [], f"Locations with no solution pack: {missing}"
 
-    def test_the_slug_matches_the_generators_expression(self):
-        import re
+    def test_the_slug_matches_the_generators_own_function(self):
+        """Calibrated: changing either implementation fails this.
 
-        for name in ("Sashas Photo Studio", "ChronosSphere / ArcStream", "tAimra"):
-            assert pack_slug(name) == re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        This used to re-implement the generator's regex inline and compare
+        `pack_slug` against a copy of itself — always true, and blind to the
+        exact drift it claimed to catch. It now calls the generator's own
+        `_pack_slug`, so the two implementations are compared rather than
+        one of them being compared with a transcription of the other.
+        """
+        from scripts.build_action_backlog import _pack_slug
+        from src.entities.platform import PLATFORM_ENTITIES
+
+        for name in PLATFORM_ENTITIES:
+            assert pack_slug(name) == _pack_slug(name), name
+
+
+class TestTheExportIsValidatedNotTrusted:
+    """Everything `route()` refuses must be refused on the way back in.
+
+    The export is a file in the repository. It can be hand-edited, merged
+    badly, or left behind — and CI reads it and applies it to the backlog.
+    Trusting it made every validation in `route()` optional in practice.
+    Each of these is calibrated: with the validation removed, the malformed
+    entry loads cleanly and the backlog carries it as if the Town Hall had
+    decided it.
+    """
+
+    def _write(self, tmp_path, entry):
+        import yaml
+
+        path = tmp_path / "backlog_routing.yaml"
+        path.write_text(yaml.safe_dump({"decisions": [entry]}), encoding="utf-8")
+        return path
+
+    def test_a_location_that_is_not_a_location_is_refused(self, tmp_path):
+        path = self._write(
+            tmp_path,
+            {
+                "item_key": "a:1",
+                "location": "The Ministry of Silly Walks",
+                "reason": "seems right",
+                "authority": "someone",
+            },
+        )
+        with pytest.raises(InvalidExport, match="not one of the"):
+            load_decisions(path)
+
+    @pytest.mark.parametrize("missing", ["item_key", "location", "reason", "authority"])
+    def test_a_missing_or_blank_field_is_refused(self, tmp_path, missing):
+        entry = {
+            "item_key": "a:1",
+            "location": "Cryptex",
+            "reason": "because",
+            "authority": "The Town Hall",
+        }
+        entry[missing] = "   "
+        path = self._write(tmp_path, entry)
+        with pytest.raises(InvalidExport, match=f"has no {missing}"):
+            load_decisions(path)
+
+    def test_a_design_pack_that_is_not_the_locations_is_refused(self, tmp_path):
+        path = self._write(
+            tmp_path,
+            {
+                "item_key": "a:1",
+                "location": "Cryptex",
+                "reason": "because",
+                "authority": "The Town Hall",
+                "design_pack": "docs/solution-packs/the-lab.md",
+            },
+        )
+        with pytest.raises(InvalidExport, match="names design pack"):
+            load_decisions(path)
+
+    def test_one_item_routed_twice_is_refused(self, tmp_path):
+        import yaml
+
+        entry = {
+            "item_key": "a:1",
+            "location": "Cryptex",
+            "reason": "because",
+            "authority": "The Town Hall",
+        }
+        path = tmp_path / "backlog_routing.yaml"
+        path.write_text(yaml.safe_dump({"decisions": [entry, dict(entry)]}), encoding="utf-8")
+        with pytest.raises(InvalidExport, match="a second time"):
+            load_decisions(path)
+
+    def test_the_real_export_loads(self):
+        """Whatever is committed must satisfy the same rules."""
+        load_decisions()
+
+
+class TestWritesAreGatedAndReadsAreNot:
+    def test_the_post_endpoints_require_authentication(self):
+        """Calibrated: removing the Depends fails this.
+
+        A routing decision is durable, supersedes an earlier one, and
+        changes a file CI reads. An anonymous caller must not make one.
+        """
+        import api
+        from tests.support.routes import mounted_routes
+
+        posts = [
+            route
+            for route in mounted_routes(api.app)
+            if getattr(route, "path", "").startswith("/townhall/routing")
+            and "POST" in getattr(route, "methods", set())
+        ]
+        assert {route.path for route in posts} == {
+            "/townhall/routing/decisions",
+            "/townhall/routing/export",
+        }
+        for route in posts:
+            assert route.dependant.dependencies, f"{route.path} takes no authentication"
+
+    def test_the_read_endpoints_stay_public(self):
+        """A register nobody can read is a register nobody consults."""
+        import api
+        from tests.support.routes import mounted_routes
+
+        gets = [
+            route
+            for route in mounted_routes(api.app)
+            if getattr(route, "path", "").startswith("/townhall/routing")
+            and "GET" in getattr(route, "methods", set())
+        ]
+        assert gets, "the routing register exposes no reads"
+        for route in gets:
+            assert not route.dependant.dependencies, f"{route.path} became gated"
+
+    def test_a_null_reason_is_refused_by_the_request_model(self):
+        """Calibrated: coercing with `str(...)` passes this.
+
+        `str(None)` is `"None"` — non-empty, so the registry's own check
+        accepted it and recorded a decision with no written reason.
+        """
+        import pydantic
+
+        from src.townhall.routing_routes import RouteItemRequest
+
+        with pytest.raises(pydantic.ValidationError):
+            RouteItemRequest(
+                item_key="a:1", location="Cryptex", reason=None, authority="The Town Hall"
+            )
+        with pytest.raises(pydantic.ValidationError):
+            RouteItemRequest(item_key="a:1", location="Cryptex", reason="", authority="x")
+
+
+class TestTheRegistrySingleton:
+    def test_a_different_path_gets_a_different_registry(self, tmp_path):
+        """Calibrated: a single global returns the first registry forever.
+
+        `get_routing_registry(db_path=...)` silently ignored every later
+        path, so a caller asking for a different database got the wrong one
+        with no error to say so.
+        """
+        from src.townhall.routing import get_routing_registry
+
+        first = get_routing_registry(tmp_path / "one.db")
+        second = get_routing_registry(tmp_path / "two.db")
+        assert first is not second
+        assert get_routing_registry(tmp_path / "one.db") is first

@@ -213,12 +213,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Governance & Compliance Center                       │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Auditor              Compares operations agai│
-│  ▸ The Bailiff              Flags non-compliant acco│
+│  ▸ The Auditor              Compares operations agai │
+│  ▸ The Bailiff              Flags non-compliant acco │
 ├──────────────────────────────────────────────────────┤
-│  bots: Gavel-Bot, Scroll-Bot, Red-Tape-Bot, Stamp-B │
+│  bots: Gavel-Bot, Scroll-Bot, Red-Tape-Bot, Stamp-B  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

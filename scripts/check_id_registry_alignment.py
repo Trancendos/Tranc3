@@ -143,7 +143,16 @@ def _path_failures(pid: str, declared: str) -> list[str]:
         return [f"{pid}: {declared!r} is absolute; worker paths are repository-relative"]
     if ".." in path.parts:
         return [f"{pid}: {declared!r} escapes the repository with '..'"]
-    if not (REPO / declared).exists():
+    # Textual checks are not enough: a repository-relative path can still
+    # leave the checkout through a symlink, and `exists()` on the far side
+    # of one reports a pass for a directory that is not in this repository
+    # at all. Resolve first, then require the result to stay inside.
+    candidate = (REPO / declared).resolve()
+    try:
+        candidate.relative_to(REPO.resolve())
+    except ValueError:
+        return [f"{pid}: {declared!r} leaves the repository through a symlink"]
+    if not candidate.exists():
         return [f"{pid}: both registers say {declared!r}, which is not on disk"]
     return []
 

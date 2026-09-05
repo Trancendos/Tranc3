@@ -214,12 +214,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Post-Login User Frontend, Forum & Email Hub          │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Forum-Mod                Scans threads to flag po│
-│  ▸ Campaign-Mgr             Drafts automated system │
+│  ▸ Forum-Mod                Scans threads to flag po │
+│  ▸ Campaign-Mgr             Drafts automated system  │
 ├──────────────────────────────────────────────────────┤
-│  bots: Mail-Sorter-Bot, Thread-Pumper-Bot, UI-Rende │
+│  bots: Mail-Sorter-Bot, Thread-Pumper-Bot, UI-Rende  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

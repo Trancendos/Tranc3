@@ -225,12 +225,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Cyber Defense (Threat Intelligence, DDoS, CVE Scanni │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Shield               Configures dynamic firew│
-│  ▸ The Spear                Automatically performs p│
+│  ▸ The Shield               Configures dynamic firew │
+│  ▸ The Spear                Automatically performs p │
 ├──────────────────────────────────────────────────────┤
-│  bots: Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypo │
+│  bots: Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypo  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /cryptex             │
+│  [ health ]  [ status ]  route /cryptex              │
 └──────────────────────────────────────────────────────┘
 ```
 

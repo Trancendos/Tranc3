@@ -20,7 +20,7 @@ stale number with a confident wrong one, so they are left to the record.
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -38,6 +38,11 @@ ACCEPTED_DIVERGENCES: dict[tuple[str, str], str] = {
         "The Spark is mounted in-process under api.py, so it shares "
         "tranc3-backend's container and has no port of its own. Recording "
         "8000 would imply a separately addressable service."
+    ),
+    ("TRC-P1-003", "worker_path"): (
+        "Infinity Gate is embedded in the Infinity Portal worker and has no "
+        "worker directory of its own; recording the portal's would claim a "
+        "second service builds from it."
     ),
     ("TRC-P1-003", "port"): (
         "Infinity Gate is embedded in the Infinity Portal worker rather "
@@ -70,10 +75,20 @@ def derived_worker_path(service: dict) -> str | None:
     """
     build = service.get("build")
     context = build.get("context") if isinstance(build, dict) else build
-    if not isinstance(context, str):
-        return None
-    context = context.lstrip("./").rstrip("/")
-    return f"{context}/" if context.startswith("workers/") else None
+    if isinstance(context, str):
+        trimmed = context.lstrip("./").rstrip("/")
+        if trimmed.startswith("workers/"):
+            return f"{trimmed}/"
+    # A root-context build still names its worker, in the Dockerfile path.
+    # Several services build from `.` so their image can COPY `src/`, and
+    # reading only the context left every one of them unchecked — the
+    # registry could say anything about their worker_path and this agreed.
+    dockerfile = build.get("dockerfile") if isinstance(build, dict) else None
+    if isinstance(dockerfile, str):
+        trimmed = dockerfile.lstrip("./")
+        if trimmed.startswith("workers/"):
+            return f"{PurePosixPath(trimmed).parent}/"
+    return None
 
 
 def derived_port(service: dict) -> str | None:
@@ -118,19 +133,25 @@ def check_compose_banners() -> list[str]:
         match = re.match(r"^  ([a-z0-9][a-z0-9._-]*):\s*$", line)
         if not match or match.group(1) not in services:
             continue
-        for above in range(index - 1, max(index - 4, -1), -1):
+        # Scan every consecutive comment above the key, not just the
+        # nearest one. Stopping at the first comment meant a service with a
+        # stacked header — a note above its banner — had its banner never
+        # checked, which is the drift this exists to catch hiding behind an
+        # unrelated line of prose.
+        for above in range(index - 1, max(index - 6, -1), -1):
             comment = lines[above].strip()
             if not comment.startswith("#"):
                 break
             stated = re.search(r"Port\s+(\d+)", comment)
-            if stated:
-                actual = derived_port(services[match.group(1)])
-                if actual and stated.group(1) != actual:
-                    failures.append(
-                        f"docker-compose.production.yml:{above + 1}: the banner for "
-                        f"`{match.group(1)}` says Port {stated.group(1)}, the service "
-                        f"serves {actual}"
-                    )
+            if not stated:
+                continue
+            actual = derived_port(services[match.group(1)])
+            if actual and stated.group(1) != actual:
+                failures.append(
+                    f"docker-compose.production.yml:{above + 1}: the banner for "
+                    f"`{match.group(1)}` says Port {stated.group(1)}, the service "
+                    f"serves {actual}"
+                )
             break
     return failures
 
@@ -144,6 +165,16 @@ def check() -> list[str]:
         ref = record.get("ref", record.get("short_id", "?"))
         name = record.get("name", ref)
         declared = record.get("docker_service")
+        if declared is not None and declared not in services:
+            # Reported, never silently re-pointed at `short_id`. Falling
+            # back would accept a record naming a service that does not
+            # exist as long as its short_id happened to name one that does,
+            # which is a wrong deployment mapping validated as correct.
+            failures.append(
+                f"{ref} {name}: docker_service `{declared}` is not a service in "
+                "docker-compose.production.yml"
+            )
+            continue
         key = declared if declared in services else None
         if key is None and record["short_id"] in services:
             # A record saying it has no deployment while compose builds,
@@ -159,11 +190,6 @@ def check() -> list[str]:
                 continue
             key = record["short_id"]
         if key is None:
-            if declared is not None:
-                failures.append(
-                    f"{ref} {name}: docker_service `{declared}` is not a service in "
-                    "docker-compose.production.yml"
-                )
             continue
 
         service = services[key]

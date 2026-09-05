@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Education & Skill Training                           │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Tutor                Modifies materials and g│
-│  ▸ The Proctor              Evaluates practice codin│
+│  ▸ The Tutor                Modifies materials and g │
+│  ▸ The Proctor              Evaluates practice codin │
 ├──────────────────────────────────────────────────────┤
-│  bots: Chalk-Bot, Board-Bot, Eraser-Bot, Bell-Bot   │
+│  bots: Chalk-Bot, Board-Bot, Eraser-Bot, Bell-Bot    │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-academy         │
+│  [ health ]  [ status ]  route /the-academy          │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -211,12 +211,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Data Transport Hub                                   │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Swarm-Leader             Manages massive data str│
-│  ▸ Hive-Mind                Uses telemetry to optimi│
+│  ▸ Swarm-Leader             Manages massive data str │
+│  ▸ Hive-Mind                Uses telemetry to optimi │
 ├──────────────────────────────────────────────────────┤
-│  bots: Worker-Bee-Bot, Drone-7-Bot, Nectar-Fetch-Bo │
+│  bots: Worker-Bee-Bot, Drone-7-Bot, Nectar-Fetch-Bo  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

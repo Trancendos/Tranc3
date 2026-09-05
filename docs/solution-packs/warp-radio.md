@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Music & Audio Streaming Integration                  │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The DJ                   Curates spatial music pl│
-│  ▸ The Maestro              Dynamically balances sys│
+│  ▸ The DJ                   Curates spatial music pl │
+│  ▸ The Maestro              Dynamically balances sys │
 ├──────────────────────────────────────────────────────┤
-│  bots: Play-Bot, Pause-Bot, Skip-Bot, Volume-Bot    │
+│  bots: Play-Bot, Pause-Bot, Skip-Bot, Volume-Bot     │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /warp-radio          │
+│  [ health ]  [ status ]  route /warp-radio           │
 └──────────────────────────────────────────────────────┘
 ```
 

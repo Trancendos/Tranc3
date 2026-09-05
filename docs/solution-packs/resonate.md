@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Empathy Engine                                       │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Tuner                Translates emotional tel│
-│  ▸ The Balancer             Screens system audio spi│
+│  ▸ The Tuner                Translates emotional tel │
+│  ▸ The Balancer             Screens system audio spi │
 ├──────────────────────────────────────────────────────┤
-│  bots: Frequency-Bot, Wave-Bot, Pitch-Bot, Harmonic │
+│  bots: Frequency-Bot, Wave-Bot, Pitch-Bot, Harmonic  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /resonate            │
+│  [ health ]  [ status ]  route /resonate             │
 └──────────────────────────────────────────────────────┘
 ```
 

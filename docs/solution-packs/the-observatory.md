@@ -212,12 +212,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Audit Log & Monitoring Platform                      │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Watcher              Scans monitoring logs in│
-│  ▸ The Scribe               Compresses long log file│
+│  ▸ The Watcher              Scans monitoring logs in │
+│  ▸ The Scribe               Compresses long log file │
 ├──────────────────────────────────────────────────────┤
-│  bots: Log-Alpha-Bot, Log-Beta-Bot, Tracer-Bot, Tim │
+│  bots: Log-Alpha-Bot, Log-Beta-Bot, Tracer-Bot, Tim  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

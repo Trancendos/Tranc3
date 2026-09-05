@@ -205,12 +205,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Core Platform Brain & Orchestration Engine           │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Synapse                  Monitors global activity│
-│  ▸ Cortex                   Translates objectives in│
+│  ▸ Synapse                  Monitors global activity │
+│  ▸ Cortex                   Translates objectives in │
 ├──────────────────────────────────────────────────────┤
-│  bots: Neuron-1-Bot, Neuron-2-Bot, Dendrite-Bot, Ax │
+│  bots: Neuron-1-Bot, Neuron-2-Bot, Dendrite-Bot, Ax  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/vrar3d`, and none is needed** — verified:
-  this worker's own source registers paths under `/vrar3d`, so the
-  prefix must reach it intact. Adding the middleware would break it.
+- **No `stripprefix` on `/vrar3d`, and none is needed** — verified,
+  because this worker's own source registers paths under it, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -221,12 +221,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Standalone 3D / VR immersion                         │
 ├──────────────────────────────────────────────────────┤
-│  ▸ World-Builder            Renders calming, expansi│
-│  ▸ The VR-Guide             Leads users through stru│
+│  ▸ World-Builder            Renders calming, expansi │
+│  ▸ The VR-Guide             Leads users through stru │
 ├──────────────────────────────────────────────────────┤
-│  bots: Render-Bot, Track-Bot, Haptic-Bot, VR-Lens-B │
+│  bots: Render-Bot, Track-Bot, Haptic-Bot, VR-Lens-B  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /vrar3d              │
+│  [ health ]  [ status ]  route /vrar3d               │
 └──────────────────────────────────────────────────────┘
 ```
 

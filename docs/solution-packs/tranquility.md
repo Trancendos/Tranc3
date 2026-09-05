@@ -222,12 +222,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Wellbeing Central Hub                                │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Guide                Screens user stress metr│
-│  ▸ The Healer               Directs relaxation routi│
+│  ▸ The Guide                Screens user stress metr │
+│  ▸ The Healer               Directs relaxation routi │
 ├──────────────────────────────────────────────────────┤
-│  bots: Breath-Bot, Pulse-Bot, Calm-Bot, Aura-Bot    │
+│  bots: Breath-Bot, Pulse-Bot, Calm-Bot, Aura-Bot     │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /tranquility         │
+│  [ health ]  [ status ]  route /tranquility          │
 └──────────────────────────────────────────────────────┘
 ```
 

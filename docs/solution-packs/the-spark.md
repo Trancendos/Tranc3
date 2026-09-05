@@ -213,12 +213,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ The MCP Skills Matrix                                │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Matchmaker           Matches multi-node reque│
-│  ▸ The Router               Re-routes service querie│
+│  ▸ The Matchmaker           Matches multi-node reque │
+│  ▸ The Router               Re-routes service querie │
 ├──────────────────────────────────────────────────────┤
-│  bots: Spark-1-Bot, Spark-2-Bot, Linker-Bot, Pinger │
+│  bots: Spark-1-Bot, Spark-2-Bot, Linker-Bot, Pinger  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

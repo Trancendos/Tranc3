@@ -223,12 +223,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Omni-Creative Masterpiece Wizard                     │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Alchemist            Translates product plans│
-│  ▸ The Architect            Bridges visual layouts w│
+│  ▸ The Alchemist            Translates product plans │
+│  ▸ The Architect            Bridges visual layouts w │
 ├──────────────────────────────────────────────────────┤
-│  bots: Mixer-Bot, Blender-Bot, Welder-Bot, Polisher │
+│  bots: Mixer-Bot, Blender-Bot, Welder-Bot, Polisher  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /imaginarium         │
+│  [ health ]  [ status ]  route /imaginarium          │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -226,12 +226,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Secrets Vault, Password Store & Sensitive Data Store │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Crypt-Keeper             Coordinates zero-knowled│
-│  ▸ The Silencer             Sanitizes outbound strea│
+│  ▸ Crypt-Keeper             Coordinates zero-knowled │
+│  ▸ The Silencer             Sanitizes outbound strea │
 ├──────────────────────────────────────────────────────┤
-│  bots: Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot  │
+│  bots: Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot   │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /api/void            │
+│  [ health ]  [ status ]  route /api/void             │
 └──────────────────────────────────────────────────────┘
 ```
 

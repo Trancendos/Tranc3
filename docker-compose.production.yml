@@ -2846,7 +2846,7 @@ services:
       - "traefik.http.routers.cryptex.rule=Host(`trancendos.com`) && PathPrefix(`/cryptex`)"
       - "traefik.http.services.cryptex.loadbalancer.server.port=8053"
 
-  # ── Observatory — The Observatory / Norman Hawkins (Port 8040)
+  # ── Observatory — The Observatory / Norman Hawkins (Port 8065)
   # 7-backend ACO pheromone routing: Tempo+Jaeger (traces), VictoriaMetrics+Prometheus
   # (metrics), Loki (logs), Netdata (node), SigNoz (unified APM). All free, self-hosted.
   observatory:

@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/artifactory`, and none is needed** — verified:
-  this worker's own source registers paths under `/artifactory`, so the
-  prefix must reach it intact. Adding the middleware would break it.
+- **No `stripprefix` on `/artifactory`, and none is needed** — verified,
+  because this worker's own source registers paths under it, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -221,12 +221,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Central Artifact Repository Library (JFrog style)    │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Librarian            Catalogs compiled code a│
-│  ▸ The Archivist            Packages ecosystem snaps│
+│  ▸ The Librarian            Catalogs compiled code a │
+│  ▸ The Archivist            Packages ecosystem snaps │
 ├──────────────────────────────────────────────────────┤
-│  bots: Packer-Bot, Unpacker-Bot, Checksum-Bot, Vers │
+│  bots: Packer-Bot, Unpacker-Bot, Checksum-Bot, Vers  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /artifactory         │
+│  [ health ]  [ status ]  route /artifactory          │
 └──────────────────────────────────────────────────────┘
 ```
 

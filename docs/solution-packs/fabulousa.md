@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/fabulousa`, and none is needed** — verified:
-  this worker's own source registers paths under `/fabulousa`, so the
-  prefix must reach it intact. Adding the middleware would break it.
+- **No `stripprefix` on `/fabulousa`, and none is needed** — verified,
+  because this worker's own source registers paths under it, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -221,12 +221,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Styling, UX, UI & Design Center                      │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Tailor               Adapts interface layouts│
-│  ▸ The Weaver               Converts visual mockups │
+│  ▸ The Tailor               Adapts interface layouts │
+│  ▸ The Weaver               Converts visual mockups  │
 ├──────────────────────────────────────────────────────┤
-│  bots: Pixel-Pusher-Bot, Hex-Code-Bot, Font-Fetcher │
+│  bots: Pixel-Pusher-Bot, Hex-Code-Bot, Font-Fetcher  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /fabulousa           │
+│  [ health ]  [ status ]  route /fabulousa            │
 └──────────────────────────────────────────────────────┘
 ```
 

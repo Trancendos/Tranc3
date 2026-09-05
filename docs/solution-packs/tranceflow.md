@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/tranceflow`, and none is needed** — verified:
-  this worker's own source registers paths under `/tranceflow`, so the
-  prefix must reach it intact. Adding the middleware would break it.
+- **No `stripprefix` on `/tranceflow`, and none is needed** — verified,
+  because this worker's own source registers paths under it, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -221,12 +221,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ 3D Modeling & Games Creation Studio                  │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Mesh-Weaver              Synthesizes wireframes a│
-│  ▸ The Physicist            Calculates rigid body dy│
+│  ▸ Mesh-Weaver              Synthesizes wireframes a │
+│  ▸ The Physicist            Calculates rigid body dy │
 ├──────────────────────────────────────────────────────┤
-│  bots: Voxel-1-Bot, Collider-Bot, Ray-Tracer-Bot, S │
+│  bots: Voxel-1-Bot, Collider-Bot, Ray-Tracer-Bot, S  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /tranceflow          │
+│  [ health ]  [ status ]  route /tranceflow           │
 └──────────────────────────────────────────────────────┘
 ```
 

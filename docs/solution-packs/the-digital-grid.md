@@ -212,12 +212,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Workflow Platform                                    │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Flow-Weaver          Weaves APIs, webhooks, a│
-│  ▸ Event-Broker             Monitors webhooks, sendi│
+│  ▸ The Flow-Weaver          Weaves APIs, webhooks, a │
+│  ▸ Event-Broker             Monitors webhooks, sendi │
 ├──────────────────────────────────────────────────────┤
-│  bots: Trigger-Bot, Action-Bot, Condition-Bot, Loop │
+│  bots: Trigger-Bot, Action-Bot, Condition-Bot, Loop  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -234,12 +234,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Code Creation Platform                               │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Hounds               Searches sandbox code fo│
-│  ▸ Syntax-Sage              Reads active scripts, su│
+│  ▸ The Hounds               Searches sandbox code fo │
+│  ▸ Syntax-Sage              Reads active scripts, su │
 ├──────────────────────────────────────────────────────┤
-│  bots: Lint-Bot, Compile-Bot, Debug-Bot, Test-Bot   │
+│  bots: Lint-Bot, Compile-Bot, Debug-Bot, Test-Bot    │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-lab             │
+│  [ health ]  [ status ]  route /the-lab              │
 └──────────────────────────────────────────────────────┘
 ```
 

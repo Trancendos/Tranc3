@@ -223,12 +223,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Inception-Layered Sandbox Threat Isolation & Quarant │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Jailer               Manages secure quarantin│
-│  ▸ The Interrogator         Triggers/monitors quaran│
+│  ▸ The Jailer               Manages secure quarantin │
+│  ▸ The Interrogator         Triggers/monitors quaran │
 ├──────────────────────────────────────────────────────┤
-│  bots: Frostbite-Bot, Icicle-Bot, Glacier-Bot, Perm │
+│  bots: Frostbite-Bot, Icicle-Bot, Glacier-Bot, Perm  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /ice-box             │
+│  [ health ]  [ status ]  route /ice-box              │
 └──────────────────────────────────────────────────────┘
 ```
 

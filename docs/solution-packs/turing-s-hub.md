@@ -214,12 +214,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ Central Creation Forge (3D Avatar & AI Entity Genera │
 ├──────────────────────────────────────────────────────┤
-│  ▸ The Sculptor             Designs and rigs detaile│
-│  ▸ The Geneticist           Outlines AI profiles, ma│
+│  ▸ The Sculptor             Designs and rigs detaile │
+│  ▸ The Geneticist           Outlines AI profiles, ma │
 ├──────────────────────────────────────────────────────┤
-│  bots: Wireframe-Bot, Texture-Bot, Vocoder-Bot, Opt │
+│  bots: Wireframe-Bot, Texture-Bot, Vocoder-Bot, Opt  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  routed by host              │
 └──────────────────────────────────────────────────────┘
 ```
 

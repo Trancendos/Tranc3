@@ -54,9 +54,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/ws`, and none is needed** — verified:
-  this worker's own source registers paths under `/ws`, so the
-  prefix must reach it intact. Adding the middleware would break it.
+- **No `stripprefix` on `/ws`, and none is needed** — verified,
+  because this worker's own source registers paths under it, so the prefix must reach
+  it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -221,12 +221,12 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │ AI Communication Gateway & AI, Agent, and Bot / Work │
 ├──────────────────────────────────────────────────────┤
-│  ▸ Pathfinder               Maps fast system data co│
-│  ▸ Omni-Router              Routes user prompts to t│
+│  ▸ Pathfinder               Maps fast system data co │
+│  ▸ Omni-Router              Routes user prompts to t │
 ├──────────────────────────────────────────────────────┤
-│  bots: Ping-Bot, Ack-Bot, Syn-Bot, Fin-Bot          │
+│  bots: Ping-Bot, Ack-Bot, Syn-Bot, Fin-Bot           │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /ws                  │
+│  [ health ]  [ status ]  route /ws                   │
 └──────────────────────────────────────────────────────┘
 ```
 

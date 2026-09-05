@@ -81,29 +81,63 @@ _WRITE_METHODS = frozenset(
 )
 
 
-def _module_level(body: list[ast.stmt]) -> list[ast.stmt]:
-    """Statements that run on import.
+def _same_scope(body: list[ast.stmt]) -> list[ast.stmt]:
+    """Statements that run on import in ONE scope.
 
     Function bodies do not run on import and are skipped — creating the
     directory in one is the remedy, so flagging it would reject the fix.
-    Class bodies DO run on import and are walked: a class-level write is as
-    much an import-time write as a module-level one, and skipping them left
-    a way past the guard that looked like ordinary code.
+    Class bodies DO run on import, but they are a different *scope*, so they
+    are not gathered here; `_scopes` walks them separately with their own
+    name table. An `if`/`try`/`with` body is the same scope and is gathered.
 
     A `try`'s handlers run on import too, on the branch the exception takes.
     """
     found: list[ast.stmt] = []
     for node in body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             continue
         found.append(node)
         for field in ("body", "orelse", "finalbody"):
             nested = getattr(node, field, None)
             if isinstance(nested, list):
-                found.extend(_module_level(nested))
+                found.extend(_same_scope(nested))
         for handler in getattr(node, "handlers", []) or []:
-            found.extend(_module_level(handler.body))
+            found.extend(_same_scope(handler.body))
     return found
+
+
+def _classes(body: list[ast.stmt]) -> list[ast.ClassDef]:
+    """Class definitions reachable on import from one scope's statements."""
+    found: list[ast.ClassDef] = []
+    for node in body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if isinstance(node, ast.ClassDef):
+            found.append(node)
+            continue
+        for field in ("body", "orelse", "finalbody"):
+            nested = getattr(node, field, None)
+            if isinstance(nested, list):
+                found.extend(_classes(nested))
+        for handler in getattr(node, "handlers", []) or []:
+            found.extend(_classes(handler.body))
+    return found
+
+
+def _bindings(statements: list[ast.stmt]) -> dict[str, str]:
+    """Name -> literal path, for the assignments in one scope."""
+    bound: dict[str, str] = {}
+    for node in statements:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)) or node.value is None:
+            continue
+        literal = _literal_default(node.value)
+        if literal is None:
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        for target in targets:
+            if isinstance(target, ast.Name):
+                bound[target.id] = literal
+    return bound
 
 
 def _literal_default(node: ast.AST) -> str | None:
@@ -207,34 +241,34 @@ def scan_file(path: Path) -> list[str]:
     except (SyntaxError, UnicodeDecodeError, OSError):
         return []
 
-    statements = _module_level(tree.body)
-
-    # Module-level names only. A class body executes on import, so its writes
-    # are still import-time writes and are still walked — but a name bound
-    # inside one is class-local, and letting it into the file-wide table meant
-    # `class C: DB_PATH = Path("/tmp/x")` silently rebound the module's own
-    # `DB_PATH` and hid the real write behind a harmless-looking path.
-    defaults: dict[str, str] = {}
-    for node in tree.body:
-        if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            literal = _literal_default(node.value)
-            if literal is None:
-                continue
-            for target in targets:
-                if isinstance(target, ast.Name):
-                    defaults[target.id] = literal
-
+    # Scope by scope, not one file-wide name table. A class body executes on
+    # import, so its writes ARE import-time writes — but its names are its
+    # own. Pooling them into one table let `class C: DB_PATH = Path("/tmp/x")`
+    # rebind the module's `DB_PATH` and hide the real write behind a
+    # harmless-looking path; excluding class bodies from the table instead
+    # traded that for the opposite hole, where a class that both binds and
+    # writes its own name — `class C: OUT = Path("/app/x"); OUT.mkdir()` —
+    # reported nothing at all. A scope inherits the names above it and
+    # shadows them locally, which is what Python itself does.
     found: list[str] = []
-    for node in statements:
-        for call, lineno in _calls_in(node):
-            report = _write_target(call, defaults)
-            if report is None:
-                continue
-            method, literal = report
-            if not literal.startswith("/"):
-                continue
-            found.append(f"{path.relative_to(REPO).as_posix()}:{lineno}: {method} {literal}")
+    relative = path.relative_to(REPO).as_posix()
+
+    def walk(body: list[ast.stmt], inherited: dict[str, str]) -> None:
+        statements = _same_scope(body)
+        defaults = {**inherited, **_bindings(statements)}
+        for node in statements:
+            for call, lineno in _calls_in(node):
+                report = _write_target(call, defaults)
+                if report is None:
+                    continue
+                method, literal = report
+                if not literal.startswith("/"):
+                    continue
+                found.append(f"{relative}:{lineno}: {method} {literal}")
+        for klass in _classes(body):
+            walk(klass.body, defaults)
+
+    walk(tree.body, {})
     return found
 
 
