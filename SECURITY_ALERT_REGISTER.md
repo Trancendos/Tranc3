@@ -239,18 +239,30 @@ CI is unaffected by the ERESOLVE because `frontend-build.yml` runs `npm ci
 today. Resolving that peer conflict is the prerequisite for *any* automated dependency
 remediation in `web/`, this one included.
 
-**Not exploitable as used.** The advisory is an infinite loop in `unzipSync` when
-parsing malformed ZIP64 archives. `posthog-js` uses fflate only to compress *outbound*
-payloads, and the evidence for that is the shipped code, not the dependency graph:
+**Not exploitable as used — at the version `web/` installs.** The advisory is an
+infinite loop in `unzipSync` when parsing malformed ZIP64 archives. `posthog-js` uses
+fflate only to compress *outbound* payloads, and the evidence for that is the shipped
+code, not the dependency graph.
 
-| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` |
+That evidence was read from **one version**, and the conclusion is scoped to it. The
+table below was measured on `posthog-js@1.422.5` — the version `web/package-lock.json`
+resolves — and says nothing about any other release. A different version ships different
+code, so a bump invalidates the measurement rather than inheriting it. Because CI has no
+`node_modules` to re-read the call sites from, the lockfile pin is what makes the scope
+checkable: `scripts/check_disposition_premises.py` fails if `posthog-js` moves off
+1.422.5 or `fflate` off 0.4.8, which is the signal to re-measure before this acceptance
+is relied on again.
+
+| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` — the version `web/package-lock.json` pins, enforced by `scripts/check_disposition_premises.py` |
 |---|---|
 | Sites that import fflate at all | 2 — `lib/src/request.js:77` and `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`, both `require("fflate")` |
 | Symbols those sites call | `gzipSync`, `strToU8`, `strFromU8` (`request.js:143`, `lazy-loaded-session-recorder.js:170`) — compression and UTF-8 conversion only |
 | Decompression entry points reached | **zero** — no `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync` anywhere in the package |
 
-No attacker-supplied archive is ever unzipped, so the vulnerable function is never
-called.
+No attacker-supplied archive is ever unzipped by `posthog-js@1.422.5`, so the vulnerable
+function is never called by the code `web/` actually ships today. Stated no wider than
+that: this is a measurement of one version's call sites, not a general property of
+`posthog-js`, and not a prediction about its next release.
 
 An earlier revision of this entry cited "18 references each to `strToU8` and
 `gzipSync`" and `npm audit`'s `effects: []`. Both are corrected here. The 18 counted

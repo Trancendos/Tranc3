@@ -14,7 +14,9 @@ justified not by the advisory but by *how this repository uses the component*:
   SEC-007 (fflate GHSA-px8p-9vwx-vf98)
       Accepted because the vulnerable path is `unzipSync` parsing malformed
       ZIP64 archives, and `web/` never decompresses — `posthog-js` uses
-      fflate only to compress outbound data.
+      fflate only to compress outbound data. That second half was measured
+      by reading the shipped code of ONE version, `posthog-js@1.422.5`, so
+      it is a fact about that version and not about posthog-js in general.
 
 Each entry's `Re-evaluate` row listed only version and dependency triggers: a
 new nltk release, a widened `posthog-js` range. Neither covered the premise the
@@ -73,6 +75,16 @@ _FFLATE_DECOMPRESS = (
 )
 
 _WEB_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".svelte", ".vue"}
+
+#: The exact versions SEC-007's call-site evidence was read from. The entry
+#: records "Measured on web/node_modules/posthog-js@1.422.5" — two import
+#: sites, `gzipSync`/`strToU8`/`strFromU8` only, zero decompression entry
+#: points. That is a fact about 1.422.5. A different version ships different
+#: code, and the measurement would have to be redone before the acceptance
+#: means anything; CI has no `node_modules` to re-read it from, so the
+#: lockfile pin is what makes the evidence checkable at all.
+_SEC_007_MEASURED = {"posthog-js": "1.422.5", "fflate": "0.4.8"}
+_WEB_LOCKFILE = "web/package-lock.json"
 
 
 def _walk(base: Path, suffixes: set[str]):
@@ -174,9 +186,62 @@ def check_sec_006() -> list[str]:
     return failures
 
 
+def _locked_versions() -> dict[str, str] | None:
+    """`web/`'s lockfile resolutions for the packages SEC-007 rests on."""
+    import json  # noqa: PLC0415 - only needed on this path
+
+    lock = ROOT / _WEB_LOCKFILE
+    if not lock.is_file():
+        return None
+    try:
+        data = json.loads(lock.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    found: dict[str, str] = {}
+    for key, node in (data.get("packages") or {}).items():
+        name = key.rsplit("node_modules/", 1)[-1] if "node_modules/" in key else None
+        if name in _SEC_007_MEASURED and isinstance(node, dict):
+            version = node.get("version")
+            if isinstance(version, str):
+                found[name] = version
+    return found
+
+
 def check_sec_007() -> list[str]:
-    """`web/` compresses with fflate and never decompresses."""
+    """`web/` compresses with fflate and never decompresses.
+
+    Two premises, and the second is the one a reviewer caught the entry
+    over-stating: the "never decompresses" conclusion was established by
+    reading `posthog-js@1.422.5`'s shipped code, so it is scoped to that
+    version. CI has no `node_modules` to re-read, which is exactly why the
+    lockfile pin has to be the thing that is checked.
+    """
     failures: list[str] = []
+
+    locked = _locked_versions()
+    if locked is None:
+        failures.append(
+            f"SEC-007: {_WEB_LOCKFILE} is missing or unreadable, so the versions the "
+            f"call-site evidence in {REGISTER} was measured on cannot be confirmed. "
+            "The acceptance rests on that measurement."
+        )
+    else:
+        for package, measured in _SEC_007_MEASURED.items():
+            actual = locked.get(package)
+            if actual is None:
+                failures.append(
+                    f"SEC-007: `{package}` is no longer in {_WEB_LOCKFILE}. The "
+                    f"acceptance in {REGISTER} describes a risk that may no longer "
+                    "exist — close the entry rather than leaving it asserting one."
+                )
+            elif actual != measured:
+                failures.append(
+                    f"SEC-007: {_WEB_LOCKFILE} resolves `{package}` to {actual}, but the "
+                    f"evidence in {REGISTER} was measured on {measured}. A different "
+                    "version ships different code; the call sites have to be re-read "
+                    "before the acceptance means anything."
+                )
     for path in _walk(ROOT / "web", _WEB_SUFFIXES):
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -206,9 +271,11 @@ def main() -> int:
         for failure in failures:
             print(f"  {failure}")
         return 1
+    pins = ", ".join(f"{name}@{version}" for name, version in _SEC_007_MEASURED.items())
     print(
-        "Disposition premises: PASSED — SEC-006 (nltk reached lazily, wordnet only, "
-        "no path call) and SEC-007 (no fflate decompression in web/) both still hold"
+        "Disposition premises: PASSED — SEC-006 (nltk reached lazily, wordnet only, no "
+        f"path call) and SEC-007 (no fflate decompression in web/; {pins} still the "
+        "versions the call-site evidence was measured on) both still hold"
     )
     return 0
 
