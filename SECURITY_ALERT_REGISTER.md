@@ -175,7 +175,7 @@ above, drop this entry and take the fix.
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
-| **Re-evaluate** | On any `nltk` release above 3.10.3 |
+| **Re-evaluate** | On any `nltk` release above 3.10.3; on nltk becoming a declared runtime dependency; or on any change to how this repository uses nltk — a second import site, an import outside `nltk.corpus`, an import-time (non-lazy) import, or any call handing nltk a path (`nltk.data.load`, `download`, `find`, `retrieve`). **Enforced by `scripts/check_disposition_premises.py`**, not left to memory |
 
 **No patched release exists.** 3.10.3 is the latest version on PyPI, and the GHSA
 record's range is `introduced: 0, last_affected: 3.10.3` — every published release is
@@ -216,7 +216,7 @@ import raises and the keyword-heuristic fallback runs instead.
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
-| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved, or when `posthog-js` widens its `fflate` range |
+| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved; when `posthog-js` widens its `fflate` range; or as soon as `web/` gains any fflate **decompression** path (`unzipSync`, `unzip`, `decompressSync`, `gunzipSync`, `inflateSync`, `unzlibSync`) or begins processing archives from an untrusted source. **Enforced by `scripts/check_disposition_premises.py`**, not left to memory |
 
 A patched release exists — fflate 0.8.3 — so this is `blocked`, not `SUPPRESS`, and the
 **Blocked-by** row above is what produces that classification.
