@@ -22,7 +22,8 @@ and never invoked.
 What "reachable" means here
 ---------------------------
 A document is reachable when any OTHER tracked file names it — by repository
-path or by bare filename — in any syntax. That is deliberately generous:
+path, by bare filename, or by the extension-elided stem that the GitHub wiki
+convention uses (`[label](Todo-todo_infra)` for `wiki-content/Todo-todo_infra.md`). That is deliberately generous:
 markdown links, backticked paths in prose (the estate's dominant style), a
 path in a workflow, a template loaded by `src/townhall`, a register swept by
 the backlog generator. The question is not "is it linked" but "can anything at
@@ -31,6 +32,20 @@ all lead a reader here". A document nothing names fails even that.
 It is generous in the other direction too: a bare filename match can be
 coincidental. That errs toward reporting a document as reachable, which is the
 right direction for a gate whose job is to catch the clear cases.
+
+The elided form is not an optional nicety. The first version of this check
+required the `.md`, and `wiki-content/_Sidebar.md` and `wiki-content/Home.md`
+link every wiki page WITHOUT it — that is how the published wiki addresses
+pages. So the whole `wiki-content/` tree read as unreachable, and the count
+this check first reported (52) was overstated for that reason. The corrected
+figure is recorded in the baseline.
+
+The baseline file itself is excluded from the corpus. It lists every recorded
+path, so leaving it in made every recorded document "named by something" and
+the gate reported all of them as newly reachable — the action backlog's
+self-ingestion defect, reproduced in a new guard one commit later. A generator
+or a gate whose own output is part of its input will always be wrong; it is
+worth checking for by habit.
 
 Why a ratchet rather than a rule
 --------------------------------
@@ -92,8 +107,11 @@ def _tracked(*patterns: str) -> list[str]:
 def unreachable() -> list[str]:
     """Documents no other tracked file names, by path or by filename."""
     documents = _tracked("*.md")
+    baseline_path = BASELINE.relative_to(REPO).as_posix()
     corpus: dict[str, str] = {}
     for path in _tracked():
+        if path == baseline_path:
+            continue  # its whole content is the list of paths being tested
         try:
             corpus[path] = (REPO / path).read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -104,8 +122,10 @@ def unreachable() -> list[str]:
         if Path(document).name in _ENTRY_POINTS:
             continue
         name = Path(document).name
+        stem = Path(document).stem
+        spellings = (document, name, stem)
         if any(
-            source != document and (document in text or name in text)
+            source != document and any(spelling in text for spelling in spellings)
             for source, text in corpus.items()
         ):
             continue

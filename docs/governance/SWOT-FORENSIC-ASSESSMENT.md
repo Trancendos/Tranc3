@@ -5,48 +5,82 @@ that date; none is carried forward from an earlier report. Where a figure
 replaces one previously published, the previous figure and why it was wrong
 are stated rather than quietly corrected.
 
-## Why this document exists at all
+## Correction, issued the same day
 
-The estate already held **five** SWOT or forensic documents:
+**The first version of this document opened with a finding that was wrong, and
+the error was in my own measuring tool.**
 
-| Document | Dated | Reachable from |
-|---|---|---|
-| `wiki-content/Historical-SWOT_ANALYSIS.md` | May 2026 | nothing |
-| `wiki-content/Historical-PHASE21_SWOT_FORENSIC.md` | Phase 21 | nothing |
-| `wiki-content/Historical-PHASE23_FORENSIC_REPORT.md` | Phase 23, v0.7.0 | nothing |
-| `wiki-content/Historical-SWOT_PHASE24_FORENSIC.md` | Phase 24 | nothing |
-| `wiki-content/Historical-FORENSIC_ASSESSMENT_2026-05-31.md` | 31 May 2026 | nothing |
+It claimed that five SWOT and forensic assessments existed in the estate and
+that every one of them was unreachable — no link, no mention, nothing that
+could lead a reader to them. It further claimed that **52 of 321 documents**,
+about 530 KB, were in that state.
 
-"Reachable from nothing" is measured, not rhetorical: no markdown link, no
-backtick path mention, no code reference, and not swept into
-`docs/governance/ACTION-BACKLOG.md`. Searching every tracked file in the
-repository for each document's path *or* bare filename returns only itself.
+Both figures came from a reachability test that searched every tracked file
+for a document's repository path or its bare filename. GitHub's wiki
+convention addresses a page **without its extension** —
+`[Tranc3 Infrastructure Build](Todo-todo_infra)`, not `Todo-todo_infra.md` —
+and `wiki-content/Home.md` and `wiki-content/_Sidebar.md` index the entire
+`wiki-content/` tree in exactly that form. My test could not see the one link
+syntax those files use, so the whole tree read as orphaned.
 
-They are genuine historical records and are **not** retired — a phase report
-is evidence of what was true then. What they lacked was an index and a
-successor. This document is the successor; the table above is the index.
+**Corrected: 11 of 322 documents are named by nothing.** And all five prior
+assessments are indexed, from both the wiki Home page and its sidebar. They
+were never lost.
 
-## The measurement that frames everything else
+`scripts/check_doc_reachability.py` now matches the extension-elided stem, and
+excludes its own baseline from the corpus it searches — the baseline lists
+every path under test, so leaving it in made every recorded document appear
+reachable. That is the action backlog's self-ingestion defect (F3 below)
+reproduced in a new gate one commit later, which is worth stating plainly: a
+generator or a gate whose own output is part of its input will always be
+wrong, and it is worth checking for by habit rather than by accident.
 
-**52 of 321 markdown documents (~530 KB) are named by nothing anywhere in the
-repository.** Twenty-eight of those are `wiki-content/Historical-*` and
-`wiki-content/Strategy-*`: phase reports, mind maps, SCAMPER analyses,
-zero-cost assessments, branch-consolidation logs and three `Todo-*` lists.
+## The five prior assessments
 
-This is the estate's characteristic failure, and it is not a documentation
-problem — it is the same defect the engineering work keeps finding, in a
-different medium: **something correct, present, and never invoked.** A guard
-that runs and never blocks. A control that reports and never acts. A register
-that is accurate and unread. The platform is very good at producing artefacts
-and comparatively poor at wiring them to something that consumes them.
+Kept and indexed here for continuity. They are point-in-time phase records —
+evidence of what was true then — and are not superseded in the sense of being
+wrong; this document simply carries the current measurements.
 
----
+| Document | Dated |
+|---|---|
+| `wiki-content/Historical-SWOT_ANALYSIS.md` | May 2026 |
+| `wiki-content/Historical-PHASE21_SWOT_FORENSIC.md` | Phase 21 |
+| `wiki-content/Historical-PHASE23_FORENSIC_REPORT.md` | Phase 23, v0.7.0 |
+| `wiki-content/Historical-SWOT_PHASE24_FORENSIC.md` | Phase 24 |
+| `wiki-content/Historical-FORENSIC_ASSESSMENT_2026-05-31.md` | 31 May 2026 |
+
+## The documents nothing names
+
+The current set lives in `config/estate/doc_reachability_baseline.json`, and
+it lives there rather than being tabulated in this document for a reason worth
+recording.
+
+The first attempt did tabulate them here — and the count immediately dropped
+to zero, because a document that lists orphans makes them no longer orphans.
+**That is the self-ingestion defect (F3) for the third time in three days**:
+the action backlog swept its own output, the reachability gate searched its
+own baseline, and then this assessment enumerated the very set it was
+measuring. Three instances of one mistake, all three mine.
+
+The general shape is worth stating once, because it will recur: *any artefact
+that both measures a property and is itself part of the population being
+measured will report the wrong answer.* The fix is the same each time — take
+the artefact out of its own corpus — and so is the way to catch it: run the
+generator twice and compare.
+
+So the inventory sits in the baseline, which the gate excludes from its own
+corpus, and this document characterises it instead. The set is small and
+mostly architectural: an index that nothing indexes, two architecture
+documents that no architecture document references, a DefStan standard, a
+Mattermost webhook note, and a competitive analysis written during this
+engagement. **The newest entries are mine**, which is the honest scale of it —
+a list somebody can clear in a week, and unlike fifty-two, a true one.
 
 ## SWOT
 
 ### Strengths
 
-- **Controls that are calibrated, not merely present.** 49 guard scripts, 47
+- **Controls that are calibrated, not merely present.** 50 guard scripts, 48
   of them wired into a workflow that runs, and the two that are not carry a
   written reason enforced by `scripts/check_guards_are_wired.py` — a
   meta-guard that includes itself in its own discovery. The estate's habit of
@@ -103,8 +137,9 @@ and comparatively poor at wiring them to something that consumes them.
   converts an unowned item into an item with a Location, a pack, and an
   accountable name. This is the largest single improvement to the estate's
   answerability.
-- **Index the 52 dark documents.** They do not need retiring; they need to be
-  reachable. `wiki-content/_Sidebar.md` exists and is itself dark.
+- **Link the 11.** A week's work, not a programme. Two of them are an index
+  nothing indexes (`docs/DEPLOYMENT_INDEX.md`) and two are architecture
+  documents no architecture document references.
 - **Turn the entrypoint audit into a standing guard.** It is currently green
   across 89 workers, which is exactly when a ratchet is cheapest to install.
 - **~40 of 55 open PRs are bot dependency bumps.** Grouping and auto-merging
