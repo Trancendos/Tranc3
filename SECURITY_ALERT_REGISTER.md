@@ -163,6 +163,106 @@ above, drop this entry and take the fix.
 
 ---
 
+
+### SEC-006 — nltk model-artifact path-sandbox bypass, no patched release
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp, CVE-2026-81726) |
+| **Scanner** | pip-audit |
+| **Component** | `nltk==3.10.3` — transitive via `safety` (`nltk>=3.9`), `requirements-security.txt` |
+| **Recorded** | 2026-09-03 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2026-12-03 |
+| **Re-evaluate** | On any `nltk` release above 3.10.3 |
+
+**No patched release exists.** 3.10.3 is the latest version on PyPI, and the GHSA
+record's range is `introduced: 0, last_affected: 3.10.3` — every published release is
+affected. There is deliberately **no Blocked-by row**: a fix is not merely out of
+reach, it does not exist, and that distinction is what keeps this entry failing the
+gate again the day one ships.
+
+The advisory data is internally inconsistent and it is worth writing down why, because
+the next person to check will hit the same contradiction. The PYSEC-2026-3740 record
+lists `fixed: 3.10.3`, which reads as "already fixed". The GHSA record for the same
+finding lists `last_affected: 3.10.3`, which reads as "not fixed". OSV's query endpoint
+settles it — asked directly whether `nltk 3.10.3` is affected, it returns
+GHSA-8mgp-746c-j5xp. pip-audit follows the same merged data and reports
+`fix_versions: []`. Treat the GHSA range as authoritative here; the PYSEC `fixed` value
+appears to record the release that was *expected* to carry the fix.
+
+Not exploitable as used. The vulnerable surface is the model-artifact APIs —
+`TransitionParser.train` and the related read/write flows — which treat
+caller-controlled model paths as ordinary filenames even when NLTK path security is
+enforced. This repository has exactly one nltk import, `src/search/query_expansion.py`,
+and it is a lazy `from nltk.corpus import wordnet` inside a `try`/`except` that returns
+`[]` on any failure. It calls `wordnet.synsets()` and reads lemma names — corpus
+lookup, no model artifact, no caller-supplied path. nltk is also not a declared runtime
+dependency (it is absent from `requirements.txt`), so on a production install that
+import raises and the keyword-heuristic fallback runs instead.
+
+---
+
+### SEC-007 — fflate unzipSync ZIP64 infinite loop, fix unreachable behind web's peer graph
+
+| Field | Value |
+|---|---|
+| **Disposition** | **ACCEPT** |
+| **ID** | GHSA-px8p-9vwx-vf98 |
+| **Scanner** | npm audit (census `web` surface) |
+| **Component** | `fflate@0.4.8` — transitive via `posthog-js`, `web/` |
+| **Blocked-by** | `posthog-js` declares `fflate: ^0.4.8` through its latest release (1.425.1), and `web/`'s peer graph cannot be re-resolved to apply an override — see below |
+| **Recorded** | 2026-09-03 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2026-12-03 |
+| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved, or when `posthog-js` widens its `fflate` range |
+
+A patched release exists — fflate 0.8.3 — so this is `blocked`, not `SUPPRESS`, and the
+**Blocked-by** row above is what produces that classification.
+
+**Why the fix is unreachable.** `posthog-js` declares `fflate: ^0.4.8`, a range that
+excludes every patched release, and it still does so at 1.425.1 (verified against the
+registry, not assumed) — so bumping `posthog-js` does not help. The remaining route is
+an `overrides` entry, the mechanism `web/package.json` already uses for four other
+packages. It cannot be applied cleanly: `npm install` fails ERESOLVE on clean `main`
+before any override is added, because `react-router@8.3.1` requires React 19 while the
+app pins `react@^18.3.1` (and `react-router-dom` sits on a different major, 7.18.3).
+Forcing it through with `--legacy-peer-deps` succeeds but re-resolves the entire tree:
+**982 package versions and roughly 16,000 lockfile lines changed**, measured, to
+remediate one moderate advisory. That trade was rejected — an unreviewable whole-tree
+rewrite carries more risk than the finding does.
+
+CI is unaffected by the ERESOLVE because `frontend-build.yml` runs `npm ci
+--ignore-scripts`, which replays the committed lockfile rather than re-resolving peers.
+`make frontend` (`Makefile:150`) runs plain `npm install` and therefore does not work
+today. Resolving that peer conflict is the prerequisite for *any* automated dependency
+remediation in `web/`, this one included.
+
+**Not exploitable as used.** The advisory is an infinite loop in `unzipSync` when
+parsing malformed ZIP64 archives. `posthog-js` uses fflate only to compress *outbound*
+payloads, and the evidence for that is the shipped code, not the dependency graph:
+
+| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` |
+|---|---|
+| Sites that import fflate at all | 2 — `lib/src/request.js:77` and `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`, both `require("fflate")` |
+| Symbols those sites call | `gzipSync`, `strToU8`, `strFromU8` (`request.js:143`, `lazy-loaded-session-recorder.js:170`) — compression and UTF-8 conversion only |
+| Decompression entry points reached | **zero** — no `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync` anywhere in the package |
+
+No attacker-supplied archive is ever unzipped, so the vulnerable function is never
+called.
+
+An earlier revision of this entry cited "18 references each to `strToU8` and
+`gzipSync`" and `npm audit`'s `effects: []`. Both are corrected here. The 18 counted
+`.js.map` source maps alongside the 2 real call sites, inflating the figure ninefold
+without adding evidence. And `effects: []` does not mean what it was read to mean: it
+lists the packages npm reports as vulnerable *because of* this one, so an empty list
+says only that no dependent was separately flagged — `posthog-js` does depend on
+fflate, and always did. The direct call-site evidence above is what carries this
+disposition; the audit field never did.
+
+
+---
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
