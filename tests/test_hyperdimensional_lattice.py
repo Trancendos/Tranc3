@@ -65,7 +65,7 @@ def test_concept_lattice():
     n3 = lattice.compose([n1.id, n2.id], "concept3")
     assert n3.concept == "concept3"
 
-    res = lattice.find_similar(n1.id, top_k=10)
+    res = lattice.find_similar("concept1", top_k=10)
     assert isinstance(res, list)
 
 
