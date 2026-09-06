@@ -13,6 +13,7 @@
  */
 
 const express = require('express');
+const helmet = require('helmet');
 const { Queue, Worker } = require('bullmq');
 
 const PORT = process.env.PORT || 8092;
@@ -59,6 +60,7 @@ const workers = ALLOWED_QUEUES.map((queueName) => {
 });
 
 const app = express();
+app.use(helmet());
 app.use(express.json());
 
 app.get('/health', async (_req, res) => {

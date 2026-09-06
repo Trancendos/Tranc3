@@ -9,6 +9,7 @@
  */
 
 import express, { Request, Response } from 'express';
+import helmet from 'helmet';
 import { Queue, Worker, JobsOptions } from 'bullmq';
 
 const PORT = parseInt(process.env.PORT || '8092', 10);
@@ -52,6 +53,7 @@ ALLOWED_QUEUES.forEach((queueName) => {
 });
 
 const app = express();
+app.use(helmet());
 app.use(express.json());
 
 app.get('/health', async (_req: Request, res: Response) => {
