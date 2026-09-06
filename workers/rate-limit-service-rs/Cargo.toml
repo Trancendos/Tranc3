@@ -8,7 +8,7 @@ name = "rate-limit-service"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.7", features = ["json"] }
+axum = { version = "0.8", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 dashmap = "6"
 serde = { version = "1", features = ["derive"] }
