@@ -195,6 +195,15 @@ jobs:
       - name: Dependency vulnerability census
         run: python3 scripts/vulnerability_census.py --check --scope core
 
+      # A disposition in SECURITY_ALERT_REGISTER.md silences a finding the census
+      # would otherwise block on. Two of them are justified by how this repository
+      # uses the component, not by the advisory -- so if that usage changes, the
+      # justification is void while the suppression carries on working. This is the
+      # step that notices. It runs immediately after the census because the census
+      # is what those dispositions steer.
+      - name: Disposition premises still hold
+        run: python3 scripts/check_disposition_premises.py
+
       - name: Security dimension score
         run: python3 scripts/security_score.py --min-percent 90
 
