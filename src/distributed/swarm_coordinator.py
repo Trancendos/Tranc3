@@ -139,7 +139,8 @@ class SwarmCoordinator:
     async def _check_node_health(self, node_url: str) -> Dict[str, Any]:
         """Check health of swarm node"""
         try:
-            assert self.session is not None  # noqa: S101 — session is set by __aenter__
+            if self.session is None:
+                raise AssertionError("session is set by __aenter__")
             async with self.session.get(
                 f"{node_url}/health", timeout=aiohttp.ClientTimeout(total=5)
             ) as response:

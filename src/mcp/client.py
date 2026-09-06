@@ -230,9 +230,9 @@ class MCPClient:
             _MCPRemoteError: on JSON-RPC error responses.
             httpx.HTTPError: on transport/HTTP failures.
         """
-        assert (
-            self._client is not None
-        )  # guarded by callers  # nosec B101 — assertion for type/class contract checking
+        if self._client is None:
+            raise AssertionError()
+        # guarded by callers  # nosec B101 — assertion for type/class contract checking
 
         payload = {
             "jsonrpc": JSONRPC_VERSION,

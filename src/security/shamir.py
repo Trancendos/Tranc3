@@ -171,16 +171,16 @@ if __name__ == "__main__":
     sss = ShamirSecretSharing()
     secret = b"super_secret_vault_master_key_32"
     shares = sss.split(secret, n=5, k=3)
-    assert len(shares) == 5
-    assert sss.combine(shares[:3]) == secret
+    if len(shares) != 5: raise AssertionError
+    if sss.combine(shares[:3]) != secret: raise AssertionError
     print("  [PASS] 3-of-5 first-3 reconstruction")
 
-    assert sss.combine([shares[1], shares[3], shares[4]]) == secret
+    if sss.combine([shares[1], shares[3], shares[4]]) != secret: raise AssertionError
     print("  [PASS] non-contiguous shares")
 
     mk = secrets.token_hex(32)
     mk_shares = split_master_key(mk, total_shares=5, threshold=3)
-    assert reconstruct_master_key(mk_shares[:3]) == mk
+    if reconstruct_master_key(mk_shares[:3]) != mk: raise AssertionError
     print("  [PASS] master-key helpers")
 
     print("All self-tests PASSED.")
