@@ -303,7 +303,7 @@ async def update_policy(name: str, req: PolicyUpdate):
         updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
             for k in updates:
-                if not re.match(r'^[a-zA-Z0-9_]+$', str(k)):
+                if not re.match(r"^[a-zA-Z0-9_]+$", str(k)):
                     raise ValueError("Invalid input")
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
