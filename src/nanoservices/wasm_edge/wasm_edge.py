@@ -13,7 +13,6 @@ import asyncio
 import hashlib
 import json
 import logging
-import os
 import struct
 import subprocess
 import tempfile
