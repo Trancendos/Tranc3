@@ -72,6 +72,6 @@ def validate_port(port: int) -> int:
     """
     if isinstance(port, bool) or not isinstance(port, int):
         raise ValueError(f"port must be an integer, got {type(port).__name__}")
-    if not (1 <= port <= 65535):
+    if isinstance(port, bool) or not isinstance(port, int) or not (1 <= port <= 65535):
         raise ValueError(f"port {port} is out of valid range (1–65535)")
     return port
