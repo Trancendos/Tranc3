@@ -162,19 +162,19 @@ def _validate_url(url: str) -> str:
     try:
         if "/../" in url or re.search(r"/%2e%2e/", url, re.IGNORECASE):
             raise ValueError("Invalid path")
-        
+
         parsed = urlparse(url)
-        
+
         if parsed.scheme not in ("http", "https"):
             raise ValueError("Invalid protocol")
-        
+
         if not parsed.hostname:
             raise ValueError("Invalid host")
-        
+
         allowed_domains = ["pypi.org", "registry.npmjs.org"]
         if parsed.hostname.lower() not in allowed_domains:
             raise ValueError("Invalid host")
-        
+
         return urlunparse(parsed)
     except Exception:
         raise ValueError("Invalid URL")

@@ -57,9 +57,9 @@ def build_validated_url(base_url: str) -> str:
         # Minimal path validation
         if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
             raise ValueError("Invalid path")
-        
+
         parsed = urlparse(base_url)
-        
+
         # Protocol + host checks
         if parsed.scheme not in ("http", "https"):
             raise ValueError("Invalid protocol")
@@ -68,7 +68,7 @@ def build_validated_url(base_url: str) -> str:
         allowed_domains = ["tranc3-backend.fly.dev", "api.trancendos.com", "trancendos.com"]
         if parsed.hostname.lower() not in allowed_domains:
             raise ValueError("Invalid host")
-        
+
         return urlunparse(parsed)
     except Exception:
         raise ValueError("Invalid URL")

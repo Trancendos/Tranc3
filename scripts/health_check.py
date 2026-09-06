@@ -93,29 +93,29 @@ def build_validated_url(base_url: str, port: int, path: str) -> str:
             raise ValueError("Invalid path")
         if "/../" in path or re.search(r"/%2e%2e/", path, re.IGNORECASE):
             raise ValueError("Invalid path")
-        
+
         parsed = urlparse(base_url)
-        
+
         # Protocol check
         if parsed.scheme not in ("http", "https"):
             raise ValueError("Invalid protocol")
-        
+
         # Host check
         if not parsed.hostname:
             raise ValueError("Invalid host")
-        
+
         # Port validation
         port = int(port)
         if not 1 <= port <= 65535:
             raise ValueError("Invalid port")
-        
+
         # Validate path parameter
         if not re.fullmatch(r"/[A-Za-z0-9_/-]*", path):
             raise ValueError("Invalid parameter")
-        
+
         # Build URL with validated port and path
         parsed = parsed._replace(netloc=f"{parsed.hostname}:{port}", path=path)
-        
+
         return urlunparse(parsed)
     except Exception:
         raise ValueError("Invalid URL")

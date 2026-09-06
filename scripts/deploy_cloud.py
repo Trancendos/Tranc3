@@ -40,12 +40,12 @@ def _build_fly_health_url(app_name: str) -> str:
         # Validate app_name as a slug
         if not re.fullmatch(r"[A-Za-z0-9_-]+", app_name):
             raise ValueError("Invalid parameter")
-        
+
         # Build URL with validated subdomain
         base_url = "https://placeholder.fly.dev/health"
         parsed = urlparse(base_url)
         parsed = parsed._replace(netloc=f"{app_name}.fly.dev")
-        
+
         return urlunparse(parsed)
     except Exception:
         raise ValueError("Invalid URL")
