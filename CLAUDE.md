@@ -462,7 +462,7 @@ EMBED_MODEL              # all-MiniLM-L6-v2 (sentence-transformers)
 ## CI/CD
 
 **Forgejo (The Workshop) is the primary CI/CD system for deployment and heavier pipelines.**
-`.github/workflows/` is not dead code, though — it currently has 12 real, active files, several of
+`.github/workflows/` is not dead code, though — it currently has 36 workflow files, several of
 which gate this repo's PRs directly (`ci.yml`'s Ruff/lint checks, `codeql.yml`, `test.yml`,
 `trivy.yml`, `codecov.yml`, `python.yml`, `rust.yml`, `go.yml`). Two more are deliberate, narrow
 exceptions for GitHub-native features with no Forgejo equivalent — `publish-wiki.yml` (GitHub
