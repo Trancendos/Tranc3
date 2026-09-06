@@ -105,7 +105,8 @@ class ItsmService:
             return None
         inc.status = status
         if status in (IncidentStatus.RESOLVED, IncidentStatus.CLOSED):
-            inc.resolved_at = time.time()
+            if inc.resolved_at is None:
+                inc.resolved_at = time.time()
         return inc
 
     def list_incidents(self, *, open_only: bool = False) -> list[ItsmIncident]:
