@@ -605,8 +605,14 @@ def download_document(doc_id: str):
     if not path.exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
 
+    # Validate path to prevent directory traversal
+    base_real = os.path.realpath(UPLOAD_DIR)
+    target_real = os.path.realpath(path)
+    if os.path.commonpath([base_real, target_real]) != base_real:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
     def _iter():
-        with open(path, "rb") as f:
+        with open(target_real, "rb") as f:
             while chunk := f.read(65536):
                 yield chunk
 

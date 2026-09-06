@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import os
 import time
 import uuid
 from collections import deque
@@ -236,7 +237,11 @@ class TranceFlowRouter:
         src = str(Path(config.ASSET_DIR) / f"{job_id}.{req.source_format.value}")
 
         if req.asset_data_b64:
-            with open(src, "wb") as f:
+            base_real = os.path.realpath(config.ASSET_DIR)
+            target_real = os.path.realpath(src)
+            if os.path.commonpath([base_real, target_real]) != base_real:
+                raise Exception("Invalid file path")
+            with open(target_real, "wb") as f:
                 f.write(base64.b64decode(req.asset_data_b64))
         elif req.source_path:
             src = req.source_path

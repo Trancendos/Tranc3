@@ -22,6 +22,7 @@ import json
 import logging
 import math
 import operator
+import os
 import re
 import time
 import uuid
@@ -450,6 +451,8 @@ class EvalSuite:
         jsonl_path: str,
     ) -> EvalResult:
         """Load samples from a JSONL file (one JSON object per line)."""
+        if ".." in jsonl_path:
+            raise Exception("Invalid file path")
         samples = []
         with open(jsonl_path) as f:
             for line in f:
@@ -509,8 +512,12 @@ class EvalSuite:
 
     def _save_result(self, result: EvalResult) -> None:
         path = self._results_dir / f"{result.name}_{result.run_id}.json"
+        base_real = os.path.realpath(self._results_dir)
+        target_real = os.path.realpath(path)
+        if os.path.commonpath([base_real, target_real]) != base_real:
+            raise Exception("Invalid file path")
         try:
-            with open(path, "w") as f:
+            with open(target_real, "w") as f:
                 json.dump(result.to_dict(), f, indent=2, default=str)
         except Exception as exc:
             logger.warning("Failed to save eval result: %s", exc)

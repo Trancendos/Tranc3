@@ -625,7 +625,11 @@ async def download_object(bucket: str, key: str):
     headers = {"ETag": row["etag"]}
 
     if backend == "local" and row["path"]:
-        p = Path(row["path"])
+        base_real = os.path.realpath(LOCAL_ROOT)
+        target_real = os.path.realpath(row["path"])
+        if os.path.commonpath([base_real, target_real]) != base_real:
+            raise HTTPException(status_code=403, detail="Invalid file path")
+        p = Path(target_real)
         if not p.exists():
             raise HTTPException(status_code=404, detail="Object file missing")
         return FileResponse(str(p), media_type=ctype, headers=headers)
