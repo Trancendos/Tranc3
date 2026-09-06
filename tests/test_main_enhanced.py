@@ -2,9 +2,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 import sys
-sys.modules['torch'] = MagicMock()
-sys.modules['torch.nn'] = MagicMock()
-sys.modules['torch.nn.functional'] = MagicMock()
 
 from src.main_enhanced import TRANC3Enhanced
 
