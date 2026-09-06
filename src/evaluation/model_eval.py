@@ -531,4 +531,4 @@ class EvalSuite:
             norm_b_sq += y * y
         if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
-        return dot / math.sqrt(norm_a_sq * norm_b_sq)
+        return dot / (math.sqrt(norm_a_sq) * math.sqrt(norm_b_sq))
