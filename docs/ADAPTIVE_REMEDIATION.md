@@ -7,7 +7,7 @@
 The Adaptive Vulnerability Remediation System is a **forward-looking, probabilistic approach** to security that moves beyond reactive patching. Instead of treating all vulnerabilities equally, it:
 
 1. **Scores risk probabilistically** using exploitability, impact, and exposure
-2. **Automates safe patches** (patch-level updates, non-breaking changes)  
+2. **Automates safe patches** (patch-level updates, non-breaking changes)
 3. **Predicts escalation** by monitoring attack chain development
 4. **Documents decisions** with full traceability for compliance
 
@@ -36,7 +36,7 @@ Each factor is **context-aware** for Tranc3 specifically.
 
 ### Exploitability P(Exploit) - 0 to 1
 - **Attack vector**: local=0.3, adjacent=0.6, network=1.0
-- **Attack complexity**: high=0.2, low=1.0  
+- **Attack complexity**: high=0.2, low=1.0
 - **Privileges required**: none=1.0, low=0.6, high=0.3
 - **User interaction**: yes=0.3, no=1.0
 - **Public exploit available**: +0.3
@@ -83,13 +83,13 @@ else:
 
 **Context-Aware Assessment**:
 - **Attack vector**: Local only (requires local code execution first)
-- **Vulnerable code paths**: torch.jit.script, torch.lstm_cell, RNN unpacking  
+- **Vulnerable code paths**: torch.jit.script, torch.lstm_cell, RNN unpacking
 - **Tranc3 usage pattern**:
   - ✅ Inference: tokenizer → model.forward() → output
   - ❌ JIT compilation: Never used
   - ❌ Model deserialization: weights_only=True enforced
   - ❌ Direct tensor manipulation: Sanitized through tokenizer
-  
+
 - **Attack chain**: 4+ steps required, all needing local code execution
 - **Mitigations in place**: Input validation, weights_only flag, no JIT
 
@@ -239,7 +239,7 @@ Every security decision is logged:
 
 **Accepted Risks**:
 - ✅ Entry in .trivyignore with justification
-- ✅ Section in SECURITY.md 
+- ✅ Section in SECURITY.md
 - ✅ Documented in REMEDIATION_LOG.md per-PR
 - ✅ Annual review trigger
 
