@@ -86,5 +86,5 @@ async def test_hyperdimensional_lattice_service_endpoints():
     mock_request.concept = "concept_test"
     mock_request.domain = "test_domain"
 
-    response = svc.add_concept(mock_request)
+    response = svc.add_concept("concept_test")
     assert response is not None
