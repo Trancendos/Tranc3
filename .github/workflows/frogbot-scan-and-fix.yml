@@ -13,13 +13,14 @@ name: "Frogbot Scan and Fix"
 on:
   push:
     branches: [ "main" ]
-permissions:
-  contents: write
-  pull-requests: write
-  security-events: write
+permissions: {}
 jobs:
   create-fix-pull-requests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
