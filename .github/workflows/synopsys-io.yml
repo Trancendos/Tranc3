@@ -53,7 +53,7 @@ jobs:
     # in order for this logic to work
     - name: Software Composition Analysis with Black Duck
       if: ${{steps.prescription.outputs.scaScan == 'true' }}
-      uses: blackducksoftware/github-action@7ed4b950ff4069b28c2e0d755f8265de755ef277 # v2
+      uses: blackducksoftware/github-action@v2
       with:
          args: '--blackduck.url="${{ secrets.BLACKDUCK_URL}}" --blackduck.api.token="${{ secrets.BLACKDUCK_TOKEN}}" --detect.tools="SIGNATURE_SCAN,DETECTOR"'
 
@@ -69,7 +69,7 @@ jobs:
 
     - name: Upload SARIF file
       if: ${{steps.prescription.outputs.sastScan == 'true' }}
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         # Path to SARIF file relative to the root of the repository
         sarif_file: workflowengine-results.sarif.json

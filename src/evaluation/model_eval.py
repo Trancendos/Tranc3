@@ -525,12 +525,10 @@ class EvalSuite:
         dot = 0.0
         norm_a_sq = 0.0
         norm_b_sq = 0.0
-        if len(vec_a) != len(vec_b):
-            raise ValueError("Vectors must have equal lengths")
         for x, y in zip(vec_a, vec_b, strict=False):
             dot += x * y
             norm_a_sq += x * x
             norm_b_sq += y * y
         if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
-        return dot / (math.sqrt(norm_a_sq) * math.sqrt(norm_b_sq))
+        return dot / math.sqrt(norm_a_sq * norm_b_sq)
