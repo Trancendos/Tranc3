@@ -349,7 +349,7 @@ class HyperdimensionalVectorOps:
             return matches / len(a.data)
 
         elif metric == LatticeTopology.EUCLIDEAN:
-            dist = math.sqrt(sum((x - y) * (x - y) for x, y in zip(a.data, b.data)))
+            dist = math.sqrt(sum((x - y) ** 2 for x, y in zip(a.data, b.data)))
             max_dist = math.sqrt(len(a.data)) * 2
             return max(0.0, 1.0 - dist / max_dist)
 
