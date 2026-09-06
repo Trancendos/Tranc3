@@ -302,6 +302,9 @@ async def update_policy(name: str, req: PolicyUpdate):
             raise HTTPException(status_code=404, detail="Policy not found")
         updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
+            for k in updates:
+                if not re.match(r'^[a-zA-Z0-9_]+$', str(k)):
+                    raise ValueError("Invalid input")
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
                 f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
