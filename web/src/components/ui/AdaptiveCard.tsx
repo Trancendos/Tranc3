@@ -52,6 +52,30 @@ const SIZE_STYLES: Record<CardSize, string> = {
   expanded: 'p-6 text-base',
 }
 
+function buildValidatedUrl(baseUrl: string): string {
+  try {
+    // Minimal path validation
+    if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
+      throw new Error('Invalid path');
+    }
+    
+    const url = new URL(baseUrl);
+    
+    // Protocol + host checks
+    const allowedDomains = ['example.com']; // add your allowed domains here
+    if (!allowedDomains.includes(url.hostname)) {
+      throw new Error('Invalid host');
+    }
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error('Invalid protocol');
+    }
+    
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 export function AdaptiveCard({
   title,
   subtitle,
@@ -77,7 +101,7 @@ export function AdaptiveCard({
     const fetch_ = async () => {
       setLoading(true)
       try {
-        const res = await fetch(liveUrl)
+        const res = await fetch(buildValidatedUrl(liveUrl))
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json() as object
         if (active) {
