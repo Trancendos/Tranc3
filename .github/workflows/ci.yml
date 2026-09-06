@@ -121,6 +121,14 @@ jobs:
       - name: Workflow drift (GitHub vs Forgejo copies)
         run: python scripts/check_workflow_drift.py --check
 
+      # Eight marketplace security workflows were added from GitHub's starter
+      # templates and committed unedited. Five went permanently red, one was
+      # not valid YAML, and one pointed an OWASP suite at a third party's
+      # demo host. Every symptom was mechanically detectable and nothing was
+      # looking, so a red X stopped meaning anything for weeks.
+      - name: Workflows parse and carry no template placeholders
+        run: python scripts/check_workflow_placeholders.py
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
