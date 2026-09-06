@@ -116,7 +116,7 @@ class Tranquility:
 
                 get_imind().assess(f"User reported mood: {mood_level.name}", actor=user_id)
             except Exception:
-                pass  # nosec B110 — graceful degradation; error logged upstream
+                logger.exception("tranquility: I-Mind assessment failed for low mood")
 
         self._emit(user_id, "tranquility.mood_logged", {"mood": mood_level.value})
         return entry
