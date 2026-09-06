@@ -31,8 +31,12 @@ class ServiceContainer:
             self._singletons.pop(name, None)
 
     def register_instance(self, name: str, instance: Any) -> None:
-        """Register a pre-built instance directly"""
+        """Register a pre-built instance directly, superseding any factory of that name."""
         self._singletons[name] = instance
+        # Without this, a name could hold both a factory and an instance. get()
+        # checks singletons first so the instance would win, but has() and the
+        # internal state would disagree about how the service is provided.
+        self._factories.pop(name, None)
 
     def get(self, name: str) -> Any:
         """Resolve a service by name"""
@@ -64,7 +68,8 @@ class ServiceContainer:
         return result
 
     def reset(self) -> None:
-        """Clear all singletons (useful for testing)"""
+        """Clear all registrations — factories and singletons. Primarily for testing."""
+        self._factories.clear()
         self._singletons.clear()
         self._initialized = False
 

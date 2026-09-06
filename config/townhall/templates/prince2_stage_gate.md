@@ -1,6 +1,6 @@
 # PRINCE2 Stage Gate — {{stage_name}}
 
-**Project:** {{project}}  
+**Project:** {{project}}
 **Stage:** {{stage}}
 
 ## Business case
@@ -11,8 +11,8 @@
 
 ## Decision
 
-- [ ] Proceed  
-- [ ] Hold  
-- [ ] Stop  
+- [ ] Proceed
+- [ ] Hold
+- [ ] Stop
 
 **Approved by (BoardRoom):** {{approver}}

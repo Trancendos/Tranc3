@@ -2,7 +2,7 @@
 # Fixes CVE-2024-33663 (algorithm confusion) and CVE-2024-29370 (JWE DoS)
 fastapi==0.141.1
 starlette==1.6.0
-uvicorn==0.52.3
+uvicorn==0.52.4
 pydantic==2.13.4
 python-jose[cryptography]==3.5.0
 # ecdsa explicit pin (previously unpinned/transitive via python-jose's
@@ -19,5 +19,5 @@ ecdsa==0.19.2
 # so the vulnerable ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
 pyasn1==0.6.4
 email-validator==2.3.0
-pyotp==2.9.0
+pyotp==2.10.0
 argon2-cffi==25.1.0

@@ -44,6 +44,9 @@ class RoleAssignment:
     seat_id: str = "primary"
     designed_for: Optional[str] = None
     functions: Tuple[str, ...] = ()
+    # Mirrors RoleSeat.mandate: "internal" for a seat serving the platform and
+    # its users, "external" for one facing markets outside Trancendos.
+    mandate: str = "internal"
     pillar: str = ""
     primary_function: str = ""
     job_description: str = ""
@@ -412,6 +415,7 @@ class RoleRegistry:
             seat_id=seat_id,
             designed_for=seat.designed_for if seat else None,
             functions=seat.functions if seat else (),
+            mandate=seat.mandate if seat else "internal",
             pillar=entity.pillar.value if entity else "",
             primary_function=(entity.primary_function if entity else (role.scope if role else "")),
             job_description=row["job_description"],
@@ -424,11 +428,20 @@ class RoleRegistry:
         with self._lock:
             cur = self._conn.execute(
                 "SELECT location, seat_id, job_description, assigned_ai, assigned_at, assigned_by "
-                # Primary seat first within each Location: a reader scanning the
-                # list sees the headline role before its specialisations.
                 "FROM role_assignments ORDER BY location, seat_id != 'primary', seat_id"
             )
-            return [self._row_to_assignment(row) for row in cur.fetchall()]
+            rows = [self._row_to_assignment(row) for row in cur.fetchall()]
+        # Primary seat first within each Location, then internal seats, then
+        # external ones: a reader scanning the list sees the headline role
+        # before its specialisations, and the platform's own work before the
+        # sell-side mandates. Sorted here rather than in SQL because `mandate`
+        # is derived from the seat catalogue, not stored in the row -- ordering
+        # on a `seat_id LIKE '%-external'` string match would silently reorder
+        # the day a seat is named differently.
+        rows.sort(
+            key=lambda r: (r.location, r.seat_id != "primary", r.mandate == "external", r.seat_id)
+        )
+        return rows
 
     def get_role(self, location: str, seat_id: str = "primary") -> Optional[RoleAssignment]:
         """One seat. Defaults to `primary`, so existing callers are unchanged."""
@@ -456,7 +469,10 @@ class RoleRegistry:
                 "ORDER BY seat_id != 'primary', seat_id",
                 (location,),
             )
-            return [self._row_to_assignment(row) for row in cur.fetchall()]
+            seats = [self._row_to_assignment(row) for row in cur.fetchall()]
+        # Same ordering rule as list_roles, for the same reason.
+        seats.sort(key=lambda r: (r.seat_id != "primary", r.mandate == "external", r.seat_id))
+        return seats
 
     def assign_ai(
         self,

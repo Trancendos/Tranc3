@@ -61,6 +61,7 @@ def _serialize(assignment: RoleAssignment) -> Dict[str, Any]:
         "seat_id": assignment.seat_id,
         "designed_for": assignment.designed_for,
         "functions": list(assignment.functions),
+        "mandate": assignment.mandate,
         "pillar": assignment.pillar,
         "primary_function": assignment.primary_function,
         "job_description": assignment.job_description,

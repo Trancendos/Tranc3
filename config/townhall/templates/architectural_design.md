@@ -1,8 +1,8 @@
 # Architectural Design Document (ADD)
 
-**System:** {{system_name}}  
-**Author:** {{author}}  
-**Version:** {{version}}  
+**System:** {{system_name}}
+**Author:** {{author}}
+**Version:** {{version}}
 **Date:** {{date}}
 
 ## 1. Context

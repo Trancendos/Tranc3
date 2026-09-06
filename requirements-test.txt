@@ -5,7 +5,7 @@
 # ──────────────────────────────────────────────────────────────────
 
 # Fixes: CVE-2025-71176 (tempfile race condition)
-pytest==9.0.3
+pytest==9.1.1
 pytest-asyncio==1.4.0  # 0.25.0 required pytest<9; 1.4.0 supports pytest<10,>=8.4
 pytest-cov==7.1.0
 

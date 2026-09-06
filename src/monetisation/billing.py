@@ -516,6 +516,15 @@ class PassiveRevenueEngine:
         },
         "ad_revenue": {"description": "Opt-in contextual advertising", "currency": "GBP"},
         "consulting": {"description": "Platform consulting and integration", "currency": "GBP"},
+        # Added when src/exchange/ was built: the Exchange's external mandate
+        # sells the estate's own finished assets and spare capacity outright,
+        # and none of the streams above records that. `marketplace_fees` is the
+        # 2.5% cut of somebody else's transaction, which is a different thing
+        # and would have understated a direct sale by a factor of forty.
+        "asset_licensing": {
+            "description": "Direct licensing of estate-owned assets and spare capacity",
+            "currency": "GBP",
+        },
     }
 
     # Cap on remembered event ids for idempotent booking (bounded memory).

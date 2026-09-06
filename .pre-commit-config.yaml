@@ -4,10 +4,23 @@
 # Run manually: pre-commit run --all-files
 # Updated: 2026-05 — Proactive Remediation & Automation
 
+# Hooks that cannot run inside pre-commit.ci's sandbox: it has no network
+# access and installs nothing from this repository. Each is still enforced
+# elsewhere — semgrep, safety and the security scanner in
+# .forgejo/workflows/security-scan.yml, the EA workbook in the Service
+# Topology job of .github/workflows/ci.yml.
+ci:
+  skip:
+    - semgrep
+    - python-safety-dependencies-check
+    - validate-ea-workbook
+    - security-scanner
+    - security-autofix
+
 repos:
   # ── Ruff (lint + format) ──────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.8
+    rev: v0.16.4
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -15,7 +28,7 @@ repos:
 
   # ── General file checks ───────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -41,34 +54,38 @@ repos:
     rev: 1.9.4
     hooks:
       - id: bandit
-        args: [-c, pyproject.toml, -r, src]
+        # medium+ severity, matching the gate in
+        # .forgejo/workflows/security-scan.yml. Low findings are tracked by
+        # the ratchet in security-baseline.yml instead of blocking a commit.
+        args: [-c, pyproject.toml, -ll, --confidence-level, medium, -r, src, api.py]
+        # Scan the configured targets rather than the changed-file list:
+        # pre-commit's filenames bypass [tool.bandit] exclude_dirs, which
+        # dragged tests/ and scripts/ into every run.
+        pass_filenames: false
         additional_dependencies: ["bandit[toml]"]
-
-  # ── Python formatting ─────────────────────────────────────────────
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        language_version: python3.11
-
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
 
   # ── Semgrep (semantic code analysis) ──────────────────────────────
   - repo: https://github.com/semgrep/pre-commit
-    rev: v1.63.0
+    rev: v1.174.0
     hooks:
       - id: semgrep
         args: ["--config", "auto", "--error"]
 
   # ── Secrets detection ─────────────────────────────────────────────
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
+    rev: v8.30.0
     hooks:
       - id: gitleaks
 
+  # detect-secrets' own is_lock_file filter recognises package-lock.json,
+  # yarn.lock, poetry.lock and nine others, but not pnpm-lock.yaml -- the
+  # list predates pnpm. So web/pnpm-lock.yaml was the one lockfile scanned
+  # as if it were source, and each of its ~460 sha512 integrity digests was
+  # baselined individually. Regenerating the lockfile then left new digests
+  # unbaselined, failing this hook on whichever PR came next rather than on
+  # the one that moved the lockfile. The baseline's should_exclude_file
+  # pattern now covers pnpm-lock.yaml, matching how every other package
+  # manager's lockfile is already treated.
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
@@ -77,16 +94,33 @@ repos:
 
   # ── Dependency safety ─────────────────────────────────────────────
   - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.3
+    rev: v1.4.2
     hooks:
       - id: python-safety-dependencies-check
         files: requirements.*\.txt$
 
   # ── Typo detection (security-sensitive) ───────────────────────────
   - repo: https://github.com/crate-ci/typos
-    rev: v1.31.1
+    # Immutable tag, not the `v1` alias. pre-commit warns on every run that a
+    # moving reference "is never updated after first install": local runs pin
+    # to whatever was cached on first use while pre-commit.ci installs fresh
+    # each time, so the two can silently run different versions of one gate.
+    rev: v1.49.0
     hooks:
       - id: typos
+        # Runs once over the tree instead of being handed ~2,900 explicit
+        # paths. That matters twice over:
+        #
+        #   - The hook was being SIGKILLed (exit -9) on pre-commit.ci while
+        #     passing locally -- a resource ceiling there, not a finding.
+        #     Building and passing an argv of every tracked file is the bulk
+        #     of that cost; typos' own walker is what the tool is built around.
+        #   - .typos.toml's files.extend-exclude is *ignored* when pre-commit
+        #     passes explicit paths, which is why the exclusions previously had
+        #     to be duplicated here and drifted out of sync. With
+        #     pass_filenames: false they apply, so .typos.toml is the single
+        #     place exclusions live.
+        pass_filenames: false
         args: [--config, .typos.toml]
 
   # ── EA/CMDB workbook integrity ────────────────────────────────────

@@ -837,6 +837,14 @@ from src.townhall.routes import (
 
 app.include_router(_townhall_router)
 
+# The Town Hall's ITSM records. Previously src/townhall/itsm.py had no callers
+# anywhere in src/ -- an incident service nothing could reach.
+from src.townhall.itsm_routes import (
+    router as _townhall_itsm_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_townhall_itsm_router)
+
 # ── The Library (knowledge base) ─────────────────────────────────────────────
 from src.library.routes import (
     router as _library_router,  # noqa: F401  # intentional top-level import
@@ -938,6 +946,16 @@ from src.roles.routes import (
 )
 
 app.include_router(_roles_router)
+
+# ── Arcadian Exchange opportunity book (external/sell-side mandate) ──────────
+# The front half of monetisation: what the estate could sell, what it is worth,
+# and what the eligibility gate refuses. Realised income still books through
+# /billing's PassiveRevenueEngine, so there is one ledger.
+from src.exchange.routes import (
+    router as _exchange_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_exchange_router)
 
 # ── Deployment Mode Registry (Location -> Cloud Only/Hybrid/Local + Dev/UAT) ─
 from src.deployment_modes.routes import (

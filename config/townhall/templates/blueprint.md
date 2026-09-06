@@ -1,7 +1,7 @@
 # Blueprint — {{title}}
 
-**Location (entity):** {{location}}  
-**Lead AI:** {{lead_ai}}  
+**Location (entity):** {{location}}
+**Lead AI:** {{lead_ai}}
 **PID:** {{pid}}
 
 ## Overview

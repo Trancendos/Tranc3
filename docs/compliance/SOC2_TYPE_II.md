@@ -1,8 +1,8 @@
 # SOC 2 Type II — Trust Services Criteria Mapping
-**Organisation:** Trancendos Ltd  
-**Scope:** Tranc3 Platform — all self-hosted workers, infrastructure, data stores, CI/CD  
-**Version:** 1.0 | **Date:** 2026-06-07 | **Owner:** ISMS Lead  
-**Evidence Period:** 2026-06-07 → 2026-12-07 (6 months)  
+**Organisation:** Trancendos Ltd
+**Scope:** Tranc3 Platform — all self-hosted workers, infrastructure, data stores, CI/CD
+**Version:** 1.0 | **Date:** 2026-06-07 | **Owner:** ISMS Lead
+**Evidence Period:** 2026-06-07 → 2026-12-07 (6 months)
 **Target Report Date:** Q1 2027
 
 ---
