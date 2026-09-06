@@ -14,18 +14,18 @@
     "sbom": "npm sbom --sbom-type cyclonedx > sbom.json"
   },
   "dependencies": {
-    "undici": "7.29.0",
+    "undici": "8.10.0",
     "vite": "7.3.5",
     "ws": "8.21.3",
     "esbuild": "0.28.2"
   },
   "overrides": {
-    "undici": "7.29.0",
+    "undici": "8.10.0",
     "vite": "7.3.5",
     "ws": "8.21.3",
     "esbuild": "0.28.2",
     "postcss": "8.5.23",
-    "nanoid": "3.3.18"
+    "nanoid": "6.0.1"
   },
   "devDependencies": {},
   "engines": {
