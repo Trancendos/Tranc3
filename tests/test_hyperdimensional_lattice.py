@@ -74,7 +74,14 @@ def test_concept_lattice_project():
     lattice.add_concept("concept1", "domain1")
     lattice.add_concept("concept2", "domain1")
 
-    proj = lattice.project(target_dim=3, method=ProjectionMethod.RANDOM)
+from src.nanoservices.hyperdimensional_lattice.hyperdimensional_lattice import (
+    ConceptLattice,
+    HyperdimensionalLatticeService,
+    HyperdimensionalVectorOps,
+    Hypervector,
+    LatticeTopology,
+    ProjectionMethod,
+)
     assert proj.method == ProjectionMethod.RANDOM
     assert proj.quality_score == pytest.approx(0.5)
 
