@@ -122,9 +122,10 @@
     toast.setAttribute('role', 'alert');
     toast.innerHTML = `
       <span class="toast-icon" aria-hidden="true">${TOAST_ICONS[type] || TOAST_ICONS.info}</span>
-      <span class="toast-message">${message}</span>
+      <span class="toast-message"></span>
       <button class="toast-close" aria-label="Close notification" onclick="this.closest('.toast').remove()">×</button>
     `;
+    toast.querySelector('.toast-message').textContent = message;
     container.appendChild(toast);
 
     setTimeout(() => {
