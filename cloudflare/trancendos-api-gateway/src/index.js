@@ -131,22 +131,22 @@ function buildValidatedUrl(baseUrl, targetPath, queryString) {
     if (targetPath && (targetPath.includes('/../') || /\/%2e%2e\//i.test(targetPath))) {
       throw new Error('Invalid path');
     }
-    
+
     const url = new URL(baseUrl);
-    
+
     // Protocol + host checks
     const allowedDomains = ['trancendos.workers.dev', 'fly.dev'];
-    const isAllowedDomain = allowedDomains.some(domain => 
+    const isAllowedDomain = allowedDomains.some(domain =>
       url.hostname === domain || url.hostname.endsWith('.' + domain)
     );
     if (!isAllowedDomain) {
       throw new Error('Invalid host');
     }
-    
+
     if (!['http:', 'https:'].includes(url.protocol)) {
       throw new Error('Invalid protocol');
     }
-    
+
     // Build pathname from base + validated target path
     if (targetPath) {
       // Preserve the base pathname and append the target path
@@ -154,12 +154,12 @@ function buildValidatedUrl(baseUrl, targetPath, queryString) {
       const cleanTargetPath = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
       url.pathname = basePath + cleanTargetPath;
     }
-    
+
     // Add query string if provided
     if (queryString) {
       url.search = queryString;
     }
-    
+
     return url.href;
   } catch {
     throw new Error('Invalid URL');
