@@ -43,11 +43,13 @@ export class ZFSProvider implements IStorageProvider {
   /** Resolve a logical path to a physical path under rootDir */
   private resolve(path: string): string {
     // Prevent path traversal
-    const resolved = join(this.rootDir, path);
-    if (!resolved.startsWith(this.rootDir)) {
-      throw new Error(`Path traversal detected: ${path}`);
+    const base = require('path').resolve(this.rootDir);
+    const target = require('path').resolve(base, path);
+    const relative = require('path').relative(base, target);
+    if (relative.startsWith('..') || require('path').isAbsolute(relative)) {
+      throw new Error(`Invalid path: ${path}`);
     }
-    return resolved;
+    return target;
   }
 
   /** Increment operation counter */
@@ -138,6 +140,10 @@ export class ZFSProvider implements IStorageProvider {
   async exists(path: string): Promise<boolean> {
     try {
       const resolved = this.resolve(path);
+      const relative = require('path').relative(require('path').resolve('.'), resolved);
+      if (relative.startsWith('..') || require('path').isAbsolute(relative)) {
+        return false;
+      }
       await fs.access(resolved);
       return true;
     } catch {
@@ -150,6 +156,10 @@ export class ZFSProvider implements IStorageProvider {
     this.tick();
     try {
       const resolved = this.resolve(path);
+      const relative = path.relative(this.baseDir, resolved);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error('Invalid path');
+      }
       const stat = await fs.stat(resolved);
 
       // Compute SHA-256 checksum
