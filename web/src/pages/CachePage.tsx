@@ -69,6 +69,7 @@ export default function CachePage() {
   }
 
   const deleteKey = async (key: string) => {
+    if (!window.confirm(`Are you sure you want to delete the key "${key}"?`)) return
     try {
       const res = await fetch(`${CACHE_API}/cache/${encodeURIComponent(key)}`, { method: 'DELETE', headers: INTERNAL })
       if (!res.ok) throw new Error('Failed to delete key')
@@ -79,6 +80,7 @@ export default function CachePage() {
   }
 
   const flushAll = async () => {
+    if (!window.confirm("Are you sure you want to flush all keys from the cache? This action cannot be undone.")) return
     setFlushMsg(null)
     try {
       const r = await fetch(`${CACHE_API}/cache`, { method: 'DELETE', headers: INTERNAL })
@@ -113,6 +115,7 @@ export default function CachePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={flushAll}
+            title="Flush all cache"
             className="flex items-center gap-1.5 rounded-lg border border-red-700/50 bg-red-900/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-900/40 transition-colors"
           >
             <Trash2 size={12} /> Flush All
@@ -215,6 +218,7 @@ export default function CachePage() {
                 )}
                 <button
                   onClick={() => deleteKey(selectedKey)}
+                  title="Delete key"
                   className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
                 >
                   <Trash2 size={11} /> Delete

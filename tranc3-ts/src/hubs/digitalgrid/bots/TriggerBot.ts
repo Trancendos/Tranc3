@@ -137,7 +137,7 @@ export class TriggerBot extends Bot {
 
     // Check payload filter
     let payloadMatch = true;
-    let payloadDetails: Record<string, boolean> = {};
+    const payloadDetails: Record<string, boolean> = {};
     if (payloadFilter) {
       for (const [key, expected] of Object.entries(payloadFilter)) {
         const actual = this.resolveNestedValue(event.payload, key);
@@ -321,7 +321,7 @@ export class TriggerBot extends Bot {
 
     // Check body filter
     let bodyMatch = true;
-    let bodyDetails: Record<string, boolean> = {};
+    const bodyDetails: Record<string, boolean> = {};
     if (bodyFilter) {
       for (const [key, expected] of Object.entries(bodyFilter)) {
         const actual = this.resolveNestedValue(event.payload, key);

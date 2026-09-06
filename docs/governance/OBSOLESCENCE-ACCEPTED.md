@@ -2,6 +2,8 @@
 
 **Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-08-19
 
+**Why the census exists:** [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) §2 items 5–7, and §4 for the direct-only scope limit.
+
 This register records dependencies that `scripts/obsolescence_census.py` reports as
 **dormant** — no upstream release in 730 days or more — together with the decision to
 keep carrying each one.

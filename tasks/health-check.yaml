@@ -49,7 +49,10 @@ steps:
         - { name: infinity-admin,     url: "http://localhost:8044/health" }
         - { name: infinity-shards,    url: "http://localhost:8045/health" }
         - { name: infinity-bridge,    url: "http://localhost:8070/health" }
-        - { name: cranbania,          url: "http://localhost:8071/health" }
+        # CranBania is a Next.js app, not a FastAPI worker: it serves no /health
+        # route (its middleware only matches /api/*), so this probe 404d on every
+        # run. fail_fast is false here, so it reported and never blocked.
+        - { name: cranbania,          url: "http://localhost:8071/api/board" }
       timeout_seconds: 5
       fail_fast: false
     timeout_seconds: 60

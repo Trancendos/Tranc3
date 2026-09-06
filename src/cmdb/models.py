@@ -31,6 +31,14 @@ class Service(Base):
     __tablename__ = "services"
 
     service_id = Column(String(32), primary_key=True)
+    # The association key to PLATFORM_ENTITIES / src/entities/platform.py.
+    # 02_service_inventory.csv has carried this column all along; the model
+    # dropped it, so nothing downstream could join a CMDB service to the
+    # Location that owns it, to that Location's seats, or to its Exchange
+    # resources. Nullable on purpose: 15 of 92 services are cross-cutting
+    # infrastructure (LangChain, LiteLLM, the API gateway) rather than one
+    # of the 43 named Locations, and have no PID to carry.
+    pid = Column(String(16), index=True)
     service_name = Column(String(128))
     description = Column(Text)
     service_type = Column(String(32))

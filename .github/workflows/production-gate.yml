@@ -45,13 +45,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # Nothing here pushes; the gate only reads the tree and runs checks.
           persist-credentials: false
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
           cache: pip
@@ -59,7 +59,7 @@ jobs:
       # The vulnerability census audits five npm surfaces as well as the Python
       # manifest. ubuntu-latest ships a Node, but a gate should not depend on
       # whichever version the image happens to carry this week.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
 
@@ -148,7 +148,19 @@ jobs:
           # compose file itself so new secrets are covered automatically instead of
           # drifting against a hardcoded list here.
           env_file="$(mktemp)"
-          trap 'rm -f "$env_file" .env.production' EXIT
+          # Only clean up the stub if this step is the one that created it.
+          # The unconditional `rm -f .env.production` this replaces was safe
+          # only by accident of the runner: on ubuntu-latest the file never
+          # exists, but the same step on any self-hosted runner would delete
+          # the operator's real, populated secrets file. The Forgejo copy
+          # already guarded this; the guard is ported here so the two agree
+          # on the safe behaviour rather than on the lucky one.
+          stub_env=""
+          cleanup() {
+            rm -f "$env_file"
+            if [ -n "$stub_env" ]; then rm -f .env.production; fi
+          }
+          trap cleanup EXIT
           grep -o '\${[A-Za-z0-9_]*:?[^}]*}' docker-compose.production.yml \
             | sed 's/^\${//; s/:?.*//' | sort -u \
             | sed 's/$/=ci-validation-placeholder/' > "$env_file"
@@ -158,7 +170,10 @@ jobs:
           # (.gitignore's `.env.*`), so it is absent in a fresh checkout and Compose
           # refuses to resolve the project without it. An empty stub satisfies the
           # reference; the values in it are irrelevant to a schema check.
-          : > .env.production
+          if [ ! -f .env.production ]; then
+            stub_env=1
+            : > .env.production
+          fi
           docker compose --env-file "$env_file" -f docker-compose.production.yml config --quiet
 
       - name: Citadel preflight (compose contracts)
@@ -172,8 +187,22 @@ jobs:
       # -- which is how it reported 100% while 31 vulnerabilities were open on the
       # default branch. --check fails here on any FIXABLE finding; an unfixable
       # one recorded in SECURITY_ALERT_REGISTER.md counts as accepted and passes.
+      # --scope core keeps this to the root manifests (~90s). The full estate --
+      # every discovered worker manifest -- is swept daily by
+      # .github/workflows/supply-chain-watch.yml, which alerts rather than blocks:
+      # a worker CVE disclosed overnight should raise an issue, not redden a pull
+      # request that never touched it.
       - name: Dependency vulnerability census
-        run: python3 scripts/vulnerability_census.py --check
+        run: python3 scripts/vulnerability_census.py --check --scope core
+
+      # A disposition in SECURITY_ALERT_REGISTER.md silences a finding the census
+      # would otherwise block on. Two of them are justified by how this repository
+      # uses the component, not by the advisory -- so if that usage changes, the
+      # justification is void while the suppression carries on working. This is the
+      # step that notices. It runs immediately after the census because the census
+      # is what those dispositions steer.
+      - name: Disposition premises still hold
+        run: python3 scripts/check_disposition_premises.py
 
       - name: Security dimension score
         run: python3 scripts/security_score.py --min-percent 90

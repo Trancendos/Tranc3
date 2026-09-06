@@ -1,8 +1,8 @@
 # Compliance Register — Tranc3 / Trancendos Platform
 
-**Classification:** UNCLASSIFIED — PUBLIC  
-**Version:** 1.0.0  
-**Last Updated:** 2026-06-06  
+**Classification:** UNCLASSIFIED — PUBLIC
+**Version:** 1.0.0
+**Last Updated:** 2026-06-06
 **Owner:** Trancendos Platform Engineering
 
 ---

@@ -36,7 +36,7 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
           </div>
           <button
             onClick={onCreate}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             + New Workflow
           </button>
@@ -57,7 +57,7 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
             <p className="text-gray-600 text-sm mt-1 mb-4">Create your first workflow to connect AI nodes into intelligent pipelines.</p>
             <button
               onClick={onCreate}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             >
               Create Workflow
             </button>
@@ -84,14 +84,14 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => onOpen(wf)}
-                    className="flex-1 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                    className="flex-1 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                   >
                     Open Editor
                   </button>
                   <button
                     onClick={() => handleRun(wf)}
                     disabled={runningId === wf.id}
-                    className="flex-1 py-1.5 text-xs font-medium bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg transition-colors"
+                    className="flex-1 py-1.5 text-xs font-medium bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                   >
                     {runningId === wf.id ? "Running…" : "▶ Run"}
                   </button>

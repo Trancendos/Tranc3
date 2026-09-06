@@ -17,8 +17,8 @@
 
 ## Requirements
 
-1. 
-2. 
+1.
+2.
 
 ## Review cadence
 

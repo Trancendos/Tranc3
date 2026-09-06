@@ -174,30 +174,30 @@ interface TrancendosTask {
   pid: string              // Assigned Product ID (e.g., PID-SOVEREIGN-001)
   aid?: string             // Assigned AI ID (e.g., AID-LEAD-001)
   sid?: string             // Assigned Service ID (e.g., SID-SCAN-001)
-  
+
   // Classification
   pillar: string           // Pillar ID (e.g., "security")
   hub: string              // Hub ID (e.g., "the-citadel")
   tier: 1 | 2 | 3 | 4 | 5 // Tier level
   priority: "critical" | "high" | "medium" | "low" | "info"
-  
+
   // Content
   title: string
   description: string
   tags: string[]
-  
+
   // Lifecycle
   status: "pending" | "assigned" | "in_progress" | "review" | "completed" | "failed" | "cancelled"
   createdAt: string        // ISO 8601
   updatedAt: string        // ISO 8601
   completedAt?: string     // ISO 8601
   deadline?: string        // ISO 8601
-  
+
   // Assignment chain
   assignedBy: string       // PID/AID that created the task
   assignedTo: string       // PID/AID/SID executing the task
   delegatedFrom?: string   // If delegated, the original assignee
-  
+
   // Results
   result?: {
     status: "success" | "partial" | "failure"
@@ -205,7 +205,7 @@ interface TrancendosTask {
     artifacts: string[]    // URLs or paths to outputs
     auditRecordId?: string // Reference to AuditLedger entry
   }
-  
+
   // Compliance
   auditTrail: {
     event: string
@@ -213,7 +213,7 @@ interface TrancendosTask {
     actor: string
     detail: string
   }[]
-  
+
   // Retry policy
   retryPolicy?: {
     maxAttempts: number
@@ -232,19 +232,19 @@ interface TrancendosWorkflow {
   description: string
   pillar: string
   hub: string
-  
+
   // Steps
   steps: WorkflowStep[]
-  
+
   // State machine
   status: "draft" | "active" | "paused" | "completed" | "failed"
   currentStep: number
-  
+
   // Execution
   triggeredBy: string      // PID/AID that started the workflow
   startedAt?: string
   completedAt?: string
-  
+
   // Neural Bus integration
   busSubscriptions: string[] // Event types to listen for
   busPublishes: string[]     // Event types this workflow emits
@@ -254,23 +254,23 @@ interface WorkflowStep {
   stepId: string
   name: string
   type: "task" | "decision" | "parallel" | "subworkflow" | "notification"
-  
+
   // Task assignment (for type="task")
   assignTo?: string        // PID/AID/SID
   taskTemplate?: Partial<TrancendosTask>
-  
+
   // Decision (for type="decision")
   condition?: string       // Expression to evaluate
   trueBranch?: string      // Step ID if condition is true
   falseBranch?: string     // Step ID if condition is false
-  
+
   // Parallel (for type="parallel")
   parallelSteps?: string[] // Step IDs to run in parallel
-  
+
   // Dependencies
   dependsOn: string[]      // Step IDs that must complete first
   timeout?: number         // Seconds
-  
+
   // State
   status: "pending" | "running" | "completed" | "failed" | "skipped"
   startedAt?: string

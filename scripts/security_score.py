@@ -97,6 +97,86 @@ def _bandit_clean_signal() -> bool:
     return True  # unknown — neutral
 
 
+def _bandit_baseline_drift() -> tuple[bool | None, str]:
+    """Compare measured bandit findings with the stored `.security-baseline`.
+
+    Returns ``(within_tolerance, detail)``. A ``None`` first element means
+    "unknown" (no measured data available) and is treated as neutral — it never
+    fails the score. This mirrors the drift check in
+    ``.forgejo/workflows/security-baseline.yml`` so the production-readiness
+    score and the CI ratchet agree on whether the baseline is still meaningful.
+
+    A stale baseline that over-counts findings is silent in the ratchet: the
+    gate keeps passing while providing no real protection. Surfacing the drift
+    here makes that blind spot visible in the Security dimension.
+    """
+    baseline_path = ROOT / ".security-baseline"
+    if not baseline_path.is_file():
+        return None, "no .security-baseline"
+    try:
+        # Read EVERY assignment, not just the first. A file with two of them is
+        # rejected by .forgejo/workflows/security-baseline.yml, and a parser
+        # here that silently took the first would let the two controls disagree
+        # about the same file. `int()` also accepts "-1", which would then be
+        # treated as a zero baseline, so require digits only.
+        values = [
+            line.split("=", 1)[1].strip()
+            for line in baseline_path.read_text().splitlines()
+            if line.startswith("bandit_findings=")
+        ]
+    except (OSError, UnicodeDecodeError):
+        return None, "unreadable .security-baseline"
+    if not values:
+        return None, ".security-baseline missing bandit_findings="
+    if len(values) > 1:
+        return None, f".security-baseline has {len(values)} bandit_findings= lines (need exactly 1)"
+    # `str.isdigit()` is TRUE for characters `int()` refuses: "\u00b2".isdigit()
+    # is True but int("\u00b2") raises ValueError. Requiring ASCII first keeps the
+    # rejection of "-1" that isdigit() was chosen for, without the crash.
+    if not (values[0].isascii() and values[0].isdigit()):
+        return (
+            None,
+            f".security-baseline bandit_findings={values[0]!r} is not a non-negative integer",
+        )
+    baseline = int(values[0])
+
+    # Two workflows produce this report under different names:
+    # security-baseline.yml writes bandit-full.json, security-scan.yml writes
+    # bandit-results.json -- and security-scan.yml also runs this script.
+    # Reading only one name made the drift check silently neutral in the other
+    # workflow: a control that runs, reports, and measures nothing.
+    bandit_log = next(
+        (p for p in (LOGS / "bandit-full.json", LOGS / "bandit-results.json") if p.is_file()),
+        None,
+    )
+    if bandit_log is None:
+        return None, "no bandit report in logs/ (run bandit to compare)"
+    try:
+        payload = json.loads(bandit_log.read_text())
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return None, f"unreadable {bandit_log.name}"
+    # A JSON list or scalar would raise AttributeError on .get, and
+    # `"results": null` would raise TypeError in len(). Neither should crash a
+    # scorecard; both mean "cannot measure", which is already a neutral answer.
+    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+        return None, f"{bandit_log.name} is not a bandit report (no results list)"
+    measured = len(payload["results"])
+
+    if baseline <= 0:
+        return True, f"baseline zero (measured {measured})"
+    delta = baseline - measured
+    # Whole-percent, half-up -- byte-for-byte the arithmetic in
+    # .forgejo/workflows/security-baseline.yml:
+    #   DRIFT=$(( (DELTA_ABS * 100 + BASELINE / 2) / BASELINE ))
+    # Rounding to one decimal here made the two controls disagree on the same
+    # scan: baseline 201 / measured 180 is 10% to the workflow (pass) and 10.4%
+    # to this script (stale). Two security controls reporting different verdicts
+    # from identical input is worse than either verdict being slightly coarse.
+    drift = (abs(delta) * 100 + baseline // 2) // baseline
+    within = drift <= 10
+    return within, f"baseline {baseline}, measured {measured}, drift {drift}%"
+
+
 CENSUS_PATH = ROOT / "logs" / "vulnerability_census.json"
 
 
@@ -135,7 +215,20 @@ def _dependency_vulnerabilities() -> tuple[bool, str, int]:
         return False, f"census incomplete (errored: {errored})", -1
     fixable = data["fixable_count"]
     accepted = data["accepted_count"]
-    detail = f"{fixable} fixable, {accepted} accepted ({data.get('generated_at', '?')})"
+    # Read with .get, and deliberately NOT added to the required-field check above:
+    # a census written before the blocked classification existed is still a valid
+    # census, and demanding the field would turn an older artefact into an error.
+    blocked = data.get("blocked_count", 0)
+    blocked_note = f", {blocked} blocked upstream" if blocked else ""
+    # Name the scope. The production gate runs the census with --scope core (root
+    # manifests only); without this the Security dimension reads as a whole-estate
+    # result while measuring a subset. Absent on a census written before scopes
+    # existed, hence the default rather than a required field.
+    scope = data.get("scope", "unknown")
+    detail = (
+        f"{fixable} fixable, {accepted} accepted{blocked_note} "
+        f"(scope {scope}, {data.get('generated_at', '?')})"
+    )
     return fixable == 0, detail, fixable
 
 
@@ -171,6 +264,14 @@ def compute_security_dimension() -> dict:
 
     details["dependency_vulnerabilities_detail"] = vuln_detail
 
+    drift_ok, drift_detail = _bandit_baseline_drift()
+    details["bandit_baseline_drift"] = drift_detail
+    # A stale baseline (drift beyond tolerance) means the ratchet gate is not
+    # providing meaningful protection; flag it honestly rather than letting the
+    # dimension read as healthy by default.
+    if drift_ok is False:
+        details["bandit_baseline_drift_stale"] = True
+
     # Hard cap, not just a weight. With weighting alone a repo could still show
     # ~90% -- a green status -- while shipping known-exploitable dependencies,
     # because the other ten checks are easy to satisfy and never regress. The cap
@@ -191,7 +292,9 @@ def compute_security_dimension() -> dict:
             "Config checks derive from repo artifacts and local pytest; not a live Forgejo "
             "API sync. The vulnerability figure comes from logs/vulnerability_census.json "
             "and caps this score below green whenever a fixable CVE is open or the census "
-            "could not be read."
+            "could not be read. The bandit baseline drift (bandit_baseline_drift) is "
+            "comparative only: it warns when .security-baseline diverges from a measured "
+            "bandit run, exposing a ratchet that has gone stale."
         ),
     }
 

@@ -1,6 +1,6 @@
 # Trancendos Platform — Forensic Assessment & Production Readiness Roadmap
-**Date**: 2026-05-28  
-**Branch**: claude/loving-mendel-dPsZ7 (merged to main as PR #75)  
+**Date**: 2026-05-28
+**Branch**: claude/loving-mendel-dPsZ7 (merged to main as PR #75)
 **Scope**: Full repo deep-dive: src/, workers/, cloudflare/, Dimensional/, tests/, CI/CD
 
 ---
@@ -15,7 +15,7 @@ Honest assessment: the platform has made substantial structural progress but car
 
 ### 1.1 XOR Encryption in vault-service — CRITICAL
 
-**File**: `workers/vault-service/worker.py`  
+**File**: `workers/vault-service/worker.py`
 **Severity**: CRITICAL — all secrets stored are effectively plaintext
 
 The `vault-service` worker uses XOR cipher for "encryption":
@@ -71,7 +71,7 @@ No `Procfile`, `uvicorn` command, or Docker CMD unambiguously designates which f
 
 ### 1.4 diskcache CVE-2025-69872 — Unresolved
 
-**Package**: `diskcache==5.6.3`  
+**Package**: `diskcache==5.6.3`
 No upstream fix version exists. Local attack vector only. Mitigation: run as non-root (documented in requirements.txt). Status remains open.
 
 ---

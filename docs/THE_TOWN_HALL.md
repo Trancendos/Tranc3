@@ -19,15 +19,15 @@ Governance, compliance, Agile/Kanban, ITSM/ITIL, PRINCE2, rooms (BoardRoom, WarR
 
 ## Framework domains (`config/townhall/frameworks.yaml`)
 
-- **governance** — Magna Carta, governance core  
-- **agile** — Agile, Kanban (Scrum planned)  
-- **itsm** — ITSM, ITIL 4  
-- **project_management** — PRINCE2 7  
-- **compliance** — GDPR, UK-GDPR, Zero-Cost, regulation/compliancy frameworks  
-- **security** — Security framework (OWASP + Zero Trust)  
-- **legal_ip_finance** — Legal, IP, financial oversight  
-- **architecture** — Foundation, Universe, App-per-App, ADD, DDD, Blueprint, Design System  
-- **documentation** — Policy, procedural, legislation, cookbooks, bibles/guides  
+- **governance** — Magna Carta, governance core
+- **agile** — Agile, Kanban (Scrum planned)
+- **itsm** — ITSM, ITIL 4
+- **project_management** — PRINCE2 7
+- **compliance** — GDPR, UK-GDPR, Zero-Cost, regulation/compliancy frameworks
+- **security** — Security framework (OWASP + Zero Trust)
+- **legal_ip_finance** — Legal, IP, financial oversight
+- **architecture** — Foundation, Universe, App-per-App, ADD, DDD, Blueprint, Design System
+- **documentation** — Policy, procedural, legislation, cookbooks, bibles/guides
 
 ## Rooms
 
@@ -49,13 +49,13 @@ curl -X POST https://tranc3-backend.fly.dev/townhall/documents/templates/add/ren
 
 ## Compliance integration
 
-- Fail/warn results emit to **The Observatory** (`observe(..., category=GOVERNANCE)`).  
-- Zero-cost deployments should pass `POST /townhall/check` with `{"monthly_cost_usd": 0}`.  
+- Fail/warn results emit to **The Observatory** (`observe(..., category=GOVERNANCE)`).
+- Zero-cost deployments should pass `POST /townhall/check` with `{"monthly_cost_usd": 0}`.
 - War Room sessions should be opened for P1 ITSM incidents.
 
 ## Related
 
-- `PLATFORM_ENTITIES.md` (PID-TWH)  
-- `docs/ZERO_COST_VENDOR_MATRIX.md`  
-- `docs/RESEARCH_ADVANCEMENT_2026.md`  
+- `PLATFORM_ENTITIES.md` (PID-TWH)
+- `docs/ZERO_COST_VENDOR_MATRIX.md`
+- `docs/RESEARCH_ADVANCEMENT_2026.md`
 - `tranc3-ts/src/hubs/townhall/TownHallAI.ts` (orchestration layer)

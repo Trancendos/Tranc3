@@ -1,9 +1,9 @@
 /**
  * Trancendos Ecosystem Design Tokens
- * 
+ *
  * Central source of truth for all visual constants across the platform.
  * Maps to Tailwind CSS custom properties and component-level tokens.
- * 
+ *
  * Taxonomy alignment:
  * - PID-hub colors mapped per pillar
  * - Tier indicators (1-5) with distinct visual language
