@@ -293,7 +293,7 @@ class DistillationLoss:
 
         n = min(len(predictions), len(targets))
         diffs = list(map(operator.sub, predictions[:n], targets[:n]))
-        return sum(map(operator.mul, diffs, diffs)) / n
+        return sum(diff**2 for diff in diffs) / n
 
     @staticmethod
     def combined_loss(
