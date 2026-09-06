@@ -28,6 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -505,26 +507,38 @@ async def health():
 
 
 def _require_internal(x_internal_secret: Optional[str]) -> None:
-    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    """Read-only gate. Fails closed, like every other gate on the platform.
+
+    This previously fell open when INTERNAL_SECRET was unset, and that was a
+    reasoned position: the mutating endpoints were tightened because they are an
+    SSRF primitive, and reads were left open "as-is elsewhere" — consistency
+    with the rest of the estate.
+
+    That consistency argument no longer holds, because the rest of the estate
+    changed: audit-service, fabulousa-service and infinity-ai now fail closed
+    too. Leaving reads open would make this the sole exception rather than the
+    norm it was following. The read surface is also not nothing — it enumerates
+    every monitored service and its health, which maps internal topology for an
+    attacker already on tranc3-net.
+
+    The two-tier split is kept, because the distinction it draws is real: reads
+    return 403, registration returns a 503 naming the missing configuration.
+    """
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 def _require_internal_strict(x_internal_secret: Optional[str]) -> None:
-    """Like _require_internal, but fails closed when INTERNAL_SECRET is unset.
+    """Gate for the mutating endpoints, with a configuration-specific message.
 
     POST/DELETE /services cause health-aggregator to poll an operator-chosen
     URL from its own network every interval — an unauthenticated instance of
-    this would be an open SSRF primitive against tranc3-net. The read-only
-    _require_internal fail-open behavior is left as-is elsewhere; this only
-    tightens the two mutating endpoints.
+    this would be an open SSRF primitive against tranc3-net.
     """
-    if not INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="INTERNAL_SECRET must be configured to register/remove dynamic services",
-        )
-    if x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 @app.post("/services", status_code=201, summary="Dynamically register a service to monitor")

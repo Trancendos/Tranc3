@@ -94,10 +94,12 @@ def init_router_deps(sentinel: Any = None, worker_kit: Any = None, rbac_engine: 
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +107,7 @@ async def require_internal_auth(
 # ---------------------------------------------------------------------------
 
 from Dimensional.infinity.nomenclature import SentinelChannel  # noqa: E402
+from Dimensional.service_auth_fastapi import guard_internal_secret  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Router

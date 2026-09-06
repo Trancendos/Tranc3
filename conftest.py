@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import subprocess
 import tempfile
 import time
 
@@ -83,12 +84,43 @@ _log = logging.getLogger("tranc3.tests")
 # ── JSON test-result log ──────────────────────────────────────────────────────
 
 
+def _current_commit() -> str:
+    """The commit under test, for correlating results across runs.
+
+    Without this, "flaky" cannot be distinguished from "fixed": a test that
+    failed yesterday and passes today looks identical to one that alternates
+    on the same code. scripts/test_intelligence.py only calls a test flaky
+    when it disagrees with itself at a SINGLE commit, which needs this field.
+
+    CI provides the SHA in the environment; locally we ask git. Unknown is a
+    valid answer -- it degrades flaky detection to a weaker signal rather than
+    producing a false one.
+    """
+    for var in ("GITHUB_SHA", "FORGEJO_SHA", "CI_COMMIT_SHA"):
+        sha = os.environ.get(var, "").strip()
+        if sha:
+            return sha[:12]
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()[:12]
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return "unknown"
+
+
 class _TestResultLogger:
     """Appends one JSON line per test to logs/test_results.jsonl."""
 
     def __init__(self, path: str = "logs/test_results.jsonl") -> None:
         os.makedirs("logs", exist_ok=True)
         self._path = path
+        # Resolved once: a subprocess per test would dominate the runtime of
+        # the fast suites, and the commit cannot change mid-session anyway.
+        self._commit = _current_commit()
+        self._run_id = f"{int(time.time())}-{os.getpid()}"
 
     def record(self, name: str, outcome: str, duration_ms: float, reason: str = "") -> None:
         entry = {
@@ -97,6 +129,8 @@ class _TestResultLogger:
             "outcome": outcome,
             "duration_ms": round(duration_ms, 2),
             "reason": reason,
+            "commit": self._commit,
+            "run_id": self._run_id,
         }
         with open(self._path, "a") as f:
             f.write(json.dumps(entry) + "\n")
@@ -117,6 +151,54 @@ def pytest_runtest_makereport(item, call):
             outcome=rep.outcome,  # passed / failed / skipped
             duration_ms=duration_ms,
             reason=str(rep.longrepr) if rep.failed else "",
+        )
+
+
+# ── Guard: shared auth env vars must not be mutated mid-session ──────────────
+# Several modules capture these into a module-level constant at *their* import
+# time (e.g. src/compliance/waivers_routes.py's _INTERNAL_SECRET). If one test
+# module reassigns the env var without restoring it, whether any other module
+# saw the real value comes down to collection order — which produces failures
+# that reproduce only in a full-suite run and pass in isolation, the most
+# expensive kind to debug. tests/test_vrar3d_viewer.py did exactly this and
+# broke every authenticated waiver route for a whole run.
+#
+# This fails the offending test loudly and names the variable, instead of
+# letting the damage surface as an unrelated 403 several hundred tests later.
+# Use monkeypatch.setenv (auto-restoring) or read the existing value; if a
+# module genuinely must reassign one of these, save and restore it the way
+# tests/test_analytics_service.py does.
+# Scoped to the module, not the test: a module-scoped fixture that overrides one
+# of these for its own tests and restores afterwards (as
+# tests/test_analytics_service.py does, deliberately and with a comment
+# explaining why) is legitimate and must not trip this. What is never
+# legitimate is a module *finishing* with the value still changed, because from
+# that point on every later import sees the wrong one.
+_GUARDED_ENV_VARS = ("INTERNAL_SECRET", "SECRET_KEY", "JWT_SECRET", "MASTER_KEY_SEED")
+_env_baseline = {name: os.environ.get(name) for name in _GUARDED_ENV_VARS}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _assert_shared_env_unchanged(request):
+    yield
+    drifted = [
+        f"{name}: {_env_baseline[name]!r} -> {os.environ.get(name)!r}"
+        for name in _GUARDED_ENV_VARS
+        if os.environ.get(name) != _env_baseline[name]
+    ]
+    if drifted:
+        # Restore before failing so the rest of the run is not also poisoned.
+        for name in _GUARDED_ENV_VARS:
+            if _env_baseline[name] is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = _env_baseline[name]
+        raise AssertionError(
+            f"{getattr(request.module, '__name__', '?')} left a shared auth env var "
+            "changed. Later-imported modules capture these into module-level "
+            "constants, so this makes unrelated tests fail depending on collection "
+            "order:\n  " + "\n  ".join(drifted) + "\nUse monkeypatch.setenv, or "
+            "save/restore around the change."
         )
 
 

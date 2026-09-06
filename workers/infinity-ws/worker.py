@@ -32,7 +32,6 @@ from fastapi import (
     Depends,
     FastAPI,
     Header,
-    HTTPException,
     Query,
     WebSocket,
     WebSocketDisconnect,
@@ -41,6 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sanitize import sanitize_for_log
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")
@@ -322,10 +322,12 @@ async def require_internal_auth(
     # no-op, leaving /stats, /channels, and (now) the message-injecting
     # /broadcast reachable by anyone who can reach this port. Matches the
     # convention already used by workers/vrar3d/router.py's _auth().
-    if not _INTERNAL_SECRET:
-        raise HTTPException(status_code=503, detail="Service auth not configured")
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
@@ -458,9 +460,11 @@ async def websocket_endpoint(
                     WSMessage(
                         type="subscribed" if success else "error",
                         channel=message.channel,
-                        data={"channels": manager.get_user_channels(ws)}
-                        if success
-                        else {"error": "Cannot subscribe"},
+                        data=(
+                            {"channels": manager.get_user_channels(ws)}
+                            if success
+                            else {"error": "Cannot subscribe"}
+                        ),
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),

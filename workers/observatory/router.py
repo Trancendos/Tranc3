@@ -6,9 +6,10 @@ import time
 from typing import Optional
 
 import service
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, Query
 
 import config
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import SignalType
 
 
@@ -16,10 +17,12 @@ def _make_observatory_router() -> APIRouter:
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:
-        if not config.INTERNAL_SECRET:
-            return
-        if x_internal_secret != config.INTERNAL_SECRET:
-            raise HTTPException(401, "Invalid or missing X-Internal-Secret header")
+        guard_internal_secret(
+            x_internal_secret,
+            config.INTERNAL_SECRET,
+            mismatch_status=401,
+            detail="Invalid or missing X-Internal-Secret header",
+        )
 
     router = APIRouter(dependencies=[Depends(_auth)])
 

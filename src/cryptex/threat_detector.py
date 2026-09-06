@@ -189,6 +189,16 @@ class Cryptex:
         logger.warning(
             "cryptex: blocked IP %s", sanitize_for_log(ip)
         )  # codeql[py/cleartext-logging]
+        # Fail-open, fire-and-forget: durably record the block on
+        # workers/cryptex/ so every other Trancendos process picks it up on
+        # its next background sync (src/cryptex/bridge.py) — without this,
+        # a block only ever applied to this one process's memory.
+        try:
+            from src.cryptex.bridge import forward_block_ip
+
+            forward_block_ip(ip)
+        except Exception:
+            pass  # nosec B110 — graceful degradation; fail-open by design
 
     def unblock_ip(self, ip: str) -> None:
         self._blocked_ips.discard(ip)
@@ -232,7 +242,11 @@ class Cryptex:
     def _apply_mitigations(self, signal: ThreatSignal) -> None:
         if MitigationAction.BLOCK in signal.mitigations:
             if signal.source_ip:
-                self._blocked_ips.add(signal.source_ip)
+                # Routed through block_ip() (not a direct set add) so
+                # auto-mitigated blocks get the same forward-to-worker
+                # treatment as explicit block_ip() calls — previously this
+                # bypassed both the log line and the (now-added) bridge.
+                self.block_ip(signal.source_ip)
             if signal.actor:
                 self._blocked_actors.add(signal.actor)
 

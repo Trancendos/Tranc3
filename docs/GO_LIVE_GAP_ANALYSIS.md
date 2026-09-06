@@ -1,5 +1,39 @@
 # Go-Live Gap Analysis — Trancendos Estate (4 repos)
 
+> ## ⚠️ STATUS AS OF 2026-08-18 — two of the three blockers below are CLOSED
+>
+> This document is the forensic record of a 2026-07-31 assessment and is kept
+> intact for that reason. Read this box first: most of §2 no longer describes the
+> estate.
+>
+> | Blocker | 2026-07-31 | Now | Evidence |
+> |---|---|---|---|
+> | §2.1 Magna-Carta submodule pin unreachable | blocks a clean clone | **RESOLVED** | Both gitlinks resolve; the "Validate submodule pins are reachable" CI check passes on every PR |
+> | §2.2 Town Hall deploys unauthenticated by default | makes deployment unsafe | **RESOLVED** | `docker-compose.production.yml` documents the key as *"Required, not defaulted"*; CranBania also fails closed on its own side |
+> | §2.3 Nothing is deployed | true | **STILL TRUE** | `.env.production` absent; honest live readiness 12% |
+>
+> Also changed since this was written:
+>
+> - **§3's central criticism was acted on.** It argued the published readiness
+>   percentage is not a measurement. The scorecard now separates
+>   `honest_p0_code_percent` (91.5%) from `honest_p0_live_percent` (12.0%), and
+>   labels self-assessed dimensions as self-assessed.
+> - **The security dimension now counts vulnerabilities.** It previously scored
+>   100% from presence checks alone while 31 vulnerabilities were open; it now
+>   reads `logs/vulnerability_census.json` and is hard-capped below green while any
+>   fixable CVE is open. See `scripts/vulnerability_census.py`.
+> - **All 12 fixable npm vulnerabilities are patched** across `web/` and the three
+>   Cloudflare workers. The one remaining Python finding (`ecdsa`
+>   PYSEC-2026-1325) has no upstream fix and is an accepted risk documented in
+>   `SECURITY.md`, enforced by `scripts/check_ecdsa_direct_usage.py`.
+> - **§4's defects and §5's per-repo gaps** have been worked through in the
+>   intervening weeks and are not re-verified here; treat any specific claim in
+>   those sections as needing a fresh check before you rely on it.
+>
+> **The single remaining go-live blocker is §2.3: nothing is deployed.** That is a
+> decision plus a deployment, not an engineering backlog. The cloud-only path
+> (`deploy/CLOUD_GO_LIVE.md`) does not require the unfunded server.
+
 **Date:** 2026-07-31
 **Scope:** Tranc3, CranBania, Magna-Carta, InfinityStyles
 **Question:** what remains before the platform is 100% production-ready and LIVE?
@@ -36,6 +70,9 @@ makes a successful deployment unsafe. §2.3 is neither: it is the current state 
 estate, which is that nothing has been deployed yet.
 
 ### 2.1 The Magna-Carta submodule pin references a commit that does not exist
+
+> **RESOLVED 2026-08-18.** Re-pinned to a reachable commit; a CI check now validates
+> submodule reachability on every PR, so this cannot silently recur.
 
 The superproject's gitlink for `compliance/magna-carta` records
 `966c237cbcc9b1020091366f81e38254167a8766` — reported by `git submodule status`, and stored
@@ -95,6 +132,10 @@ on mismatch) so deployment is deterministic rather than branch-tip dependent.
 
 ### 2.2 The Town Hall deploys unauthenticated by default
 
+> **RESOLVED 2026-08-18.** The compose entry now treats the API key as required
+> rather than defaulted, and CranBania fails closed independently — defence in depth
+> rather than a single guard.
+
 Three facts compound:
 
 1. `middleware.ts:27-28` fails **open** — `if (!apiKey) return NextResponse.next()`.
@@ -121,7 +162,28 @@ CranBania (Traefik forward-auth / IP allowlist / private network), or complete t
 Infinity-One SSO integration already identified as the long-term direction. Also make
 compose fail loudly on an empty `CRANBANIA_API_KEY` rather than defaulting it blank.
 
+> **RESOLVED 2026-08-12.** Both halves are now closed.
+> - *Missing key:* `docker-compose.production.yml` uses
+>   `CRANBANIA_API_KEY: ${CRANBANIA_API_KEY:?required}` — compose refuses to start
+>   rather than defaulting blank. CranBania's own `middleware.ts` also fails closed
+>   (503 on mutating routes in production when the key is unset), as defence in depth.
+> - *Ungated reads:* the owner chose a **network boundary now** over waiting for SSO.
+>   A Traefik `ipallowlist` middleware (`townhall-allowlist`) now fronts the
+>   `/townhall` router, its source range driven by `TOWNHALL_ALLOWED_CIDRS` and
+>   defaulting to `127.0.0.1/32` — so an operator who never sets it gets a Town Hall
+>   reachable only from the host, rather than a public one. Set it to the operator's
+>   own address/VPN range before go-live; see `.env.production.example`.
+>
+> This is explicitly an interim measure. Infinity-One SSO remains the long-term
+> direction, and this middleware should be retired when the browser dashboard gains a
+> real session layer. One caveat carried in the compose comment: `ipallowlist`
+> evaluates the immediate peer, so if a CDN or another proxy is ever placed in front
+> of Traefik this needs an `ipstrategy.depth` or it will see that proxy's address for
+> every request and allow everyone.
+
 ### 2.3 Nothing is deployed
+
+> **STILL OPEN 2026-08-18** — and now the only remaining blocker.
 
 `Ops executed on Citadel (live)` scores **12%**. `citadel_preflight.py` fails on exactly
 one item — `.env.production missing` — which is expected, since secrets are generated on

@@ -246,9 +246,16 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
 async def lifespan(app_instance: FastAPI):
     """Startup: initialize DB schema. Shutdown: no-op."""
     init_schema()
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app_instance, service_name="tranc3.infinity-void")
+        instrument_worker(app_instance, service_name="tranc3.infinity-void")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     yield
 
 

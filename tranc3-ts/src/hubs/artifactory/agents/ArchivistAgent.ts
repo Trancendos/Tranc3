@@ -437,7 +437,7 @@ export class ArchivistAgent extends Agent {
 
     let verified = 0;
     let corrupted = 0;
-    let missing = 0;
+    const missing = 0;
     let expired = 0;
     let archived = 0;
 

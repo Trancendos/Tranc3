@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException
 from service import LibraryRouter
 
 import config
 from database import LibraryDatabase
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import (
     DocumentCreate,
     DocumentResponse,
@@ -19,14 +20,12 @@ from models import (
 
 
 def _auth(x_internal_secret: Optional[str] = Header(None)) -> None:
-    if not config.INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="INTERNAL_SECRET not configured"
-        )
-    if x_internal_secret != config.INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal secret"
-        )
+    guard_internal_secret(
+        x_internal_secret,
+        config.INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid internal secret",
+    )
 
 
 def _make_library_router(db: LibraryDatabase, router_svc: LibraryRouter) -> APIRouter:
@@ -47,6 +46,12 @@ def _make_library_router(db: LibraryDatabase, router_svc: LibraryRouter) -> APIR
         if result is None:
             raise HTTPException(status_code=404, detail="Document not found")
         return result
+
+    @api.delete("/documents/{doc_id}", status_code=204, dependencies=[Depends(_auth)])
+    async def delete_document(doc_id: str):
+        deleted = await router_svc.delete_document(doc_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Document not found")
 
     @api.post("/search", response_model=SearchResponse, dependencies=[Depends(_auth)])
     async def search(req: SearchRequest):

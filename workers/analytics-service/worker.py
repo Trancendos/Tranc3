@@ -27,10 +27,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ── Config ────────────────────────────────────────────────────────────────────
 WORKER_PORT = int(os.environ.get("ANALYTICS_PORT", "8016"))
@@ -378,10 +380,9 @@ app.add_middleware(
 
 
 async def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:
-    if not INTERNAL_SECRET:
-        return
-    if x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 _router = APIRouter(dependencies=[Depends(_auth)])

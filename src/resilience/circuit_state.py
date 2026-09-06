@@ -1,30 +1,15 @@
 # src/resilience/circuit_state.py
-# Canonical CircuitState enum — single source of truth (TASD-001 Phase 1).
+# Re-export of the canonical CircuitState, which now lives in Dimensional/.
 #
-# Previously this three-state machine was defined 4× (src/mesh/types.py,
-# src/nanoservices/circuit_breaker/, src/resilience/circuit_breaker.py,
-# src/validation/loop_validator.py) with divergent base types and one divergent
-# value (mesh used "half-open"). All four now re-export this definition.
+# TASD-001 Phase 1 made this module canonical for the four implementations under
+# src/. It stays as the import path those four use — nothing about them changes
+# — but the definition moved to Dimensional/circuit_state.py so that own-context
+# workers, which cannot import src/, can reach it too. See that module for the
+# full reasoning and for the three further copies inside Dimensional/ that
+# TASD-001 §6 wrongly scoped out as "unrelated".
 #
-# This module deliberately imports only `enum` so it can be re-exported from any
-# subsystem without pulling in the resilience breaker (no circular imports).
+# Direction of dependency: src/ imports Dimensional/, never the reverse.
 
-from enum import Enum
+from Dimensional.circuit_state import CircuitState  # noqa: F401
 
-
-class CircuitState(str, Enum):
-    """Circuit breaker states — closed (healthy), open (failing), half_open (probing)."""
-
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
-
-    @classmethod
-    def _missing_(cls, value: object) -> "CircuitState | None":
-        # Backward compatibility: mesh formerly serialised HALF_OPEN as the
-        # hyphenated "half-open". Accept it on lookup/Pydantic validation so
-        # data serialised by an older instance (e.g. a ServiceCallResult in
-        # flight during a rolling deploy) still resolves. See TASD-001 Phase 1.
-        if value == "half-open":
-            return cls.HALF_OPEN
-        return None
+__all__ = ["CircuitState"]

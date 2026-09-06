@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
@@ -12,6 +12,16 @@ RUN mkdir -p assets/vrm assets/animations assets/portraits \
 
 RUN mkdir -p src/personality src/entities 2>/dev/null; \
     touch src/__init__.py src/personality/__init__.py src/entities/__init__.py
+
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=worker:worker . /app/Dimensional/
+COPY --from=observability --chown=worker:worker . /app/src/observability/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
 
 USER worker
 EXPOSE 8058

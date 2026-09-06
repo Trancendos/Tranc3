@@ -111,6 +111,9 @@ from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-leve
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
 )
+from src.monetisation.bridge import (
+    check_and_increment_durable,  # noqa: F401  # intentional top-level import
+)
 from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
@@ -511,6 +514,22 @@ async def lifespan(app: FastAPI):
     except Exception as _ab_exc:
         logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
 
+    try:
+        from src.cryptex.bridge import start_background_sync as _start_cryptex_sync
+
+        await _start_cryptex_sync()
+        logger.info("Cryptex IOC background sync started (fail-open, %ss interval)", 30)
+    except Exception as _cx_exc:
+        logger.warning("Cryptex IOC background sync unavailable: %s", sanitize_for_log(_cx_exc))
+
+    try:
+        from src.monetisation.bridge import ensure_tier_policies as _ensure_tier_policies
+
+        await _ensure_tier_policies()
+        logger.info("Billing tier rate-limit policies seeded on rate-limit-service (fail-open)")
+    except Exception as _bl_exc:
+        logger.warning("Billing tier policy seeding unavailable: %s", sanitize_for_log(_bl_exc))
+
     # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
     try:
         from src.event_bus import get_event_bus
@@ -818,6 +837,14 @@ from src.townhall.routes import (
 
 app.include_router(_townhall_router)
 
+# The Town Hall's ITSM records. Previously src/townhall/itsm.py had no callers
+# anywhere in src/ -- an incident service nothing could reach.
+from src.townhall.itsm_routes import (
+    router as _townhall_itsm_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_townhall_itsm_router)
+
 # ── The Library (knowledge base) ─────────────────────────────────────────────
 from src.library.routes import (
     router as _library_router,  # noqa: F401  # intentional top-level import
@@ -919,6 +946,16 @@ from src.roles.routes import (
 )
 
 app.include_router(_roles_router)
+
+# ── Arcadian Exchange opportunity book (external/sell-side mandate) ──────────
+# The front half of monetisation: what the estate could sell, what it is worth,
+# and what the eligibility gate refuses. Realised income still books through
+# /billing's PassiveRevenueEngine, so there is one ledger.
+from src.exchange.routes import (
+    router as _exchange_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_exchange_router)
 
 # ── Deployment Mode Registry (Location -> Cloud Only/Hybrid/Local + Dev/UAT) ─
 from src.deployment_modes.routes import (
@@ -1655,7 +1692,7 @@ async def chat(
 
     # Rate limiting
     try:
-        tier_enforcer.check_and_increment(user_id, tier)
+        await check_and_increment_durable(user_id, tier)
     except ValueError as e:
         raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
 
@@ -1911,7 +1948,7 @@ async def chat_stream(
 
     try:
         InputSanitizer.sanitize(chat_req.message)
-        tier_enforcer.check_and_increment(user_id, tier)
+        await check_and_increment_durable(user_id, tier)
     except ValueError as e:
         raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
     except Exception as e:

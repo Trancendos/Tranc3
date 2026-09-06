@@ -55,6 +55,7 @@ export default function RateLimitPage() {
   useEffect(() => { loadData() }, [loadData])
 
   const resetBucket = async (key: string) => {
+    if (!window.confirm(`Are you sure you want to reset the bucket "${key}"?`)) return
     try {
       await fetch(`${RL_API}/buckets/${encodeURIComponent(key)}`, { method: 'DELETE', headers: INTERNAL })
       loadData()
@@ -185,6 +186,7 @@ export default function RateLimitPage() {
                       <td className="px-4 py-2.5 text-right">
                         <button
                           onClick={() => resetBucket(key)}
+                          title="Reset bucket"
                           className="text-xs text-slate-500 hover:text-amber-400 transition-colors"
                         >
                           reset

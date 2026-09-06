@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import hmac
 import json
 import logging
 import os
@@ -45,6 +44,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -382,9 +383,16 @@ def _new_id() -> str:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.vault-service")
+        instrument_worker(app, service_name="tranc3.vault-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     _init_db()
     _init_openbao()
     logger.info("vault-service started — DB at %s", DB_PATH)
@@ -428,8 +436,12 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
@@ -680,6 +692,7 @@ async def scan_for_leaks():
     conn = _get_db()
     patterns = ["SECRET", "PASSWORD", "API_KEY", "TOKEN", "PRIVATE_KEY"]
     leaks = []
+    insert_data = []
     for key, value in os.environ.items():
         for pattern in patterns:
             if pattern in key.upper() and value:
@@ -687,13 +700,12 @@ async def scan_for_leaks():
                 leaks.append({"variable_name": key, "preview": preview, "severity": "high"})
                 lid = _new_id()
                 now = _now()
-                try:
-                    conn.execute(
-                        "INSERT INTO leak_detections (id, variable_name, variable_value_preview, severity, created_at) VALUES (?,?,?,?,?)",
-                        (lid, key, preview, "high", now),
-                    )
-                except sqlite3.IntegrityError:
-                    pass
+                insert_data.append((lid, key, preview, "high", now))
+    if insert_data:
+        conn.executemany(
+            "INSERT OR IGNORE INTO leak_detections (id, variable_name, variable_value_preview, severity, created_at) VALUES (?,?,?,?,?)",
+            insert_data,
+        )
     conn.commit()
     conn.close()
     return {"leaks_found": len(leaks), "leaks": leaks}

@@ -36,7 +36,6 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import logging
 import os
@@ -52,6 +51,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocke
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 logger = logging.getLogger("turings-hub")
 
@@ -73,8 +74,9 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -396,9 +398,16 @@ _audio_cache: Dict[str, bytes] = {}
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.turings-hub-service")
+        instrument_worker(app, service_name="tranc3.turings-hub-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     for d in (VRM_DIR, ANIM_DIR, PORTRAIT_DIR):
         d.mkdir(parents=True, exist_ok=True)
     logger.info("Turing's Hub 3D AI Model Builder started on port %d", PORT)
@@ -476,15 +485,19 @@ async def health():
         "port": PORT,
         "purpose": "3D AI Model Builder — entity assembly pod",
         "tts": {
-            "kokoro": "available"
-            if kokoro_alive
-            else "unavailable (install: github.com/eduardolat/kokoro-web)",
+            "kokoro": (
+                "available"
+                if kokoro_alive
+                else "unavailable (install: github.com/eduardolat/kokoro-web)"
+            ),
             "piper": "check PIPER_BIN env",
         },
         "lip_sync": {
-            "rhubarb": "available"
-            if rhubarb_alive
-            else "unavailable (install: github.com/DanielSWolf/rhubarb-lip-sync)",
+            "rhubarb": (
+                "available"
+                if rhubarb_alive
+                else "unavailable (install: github.com/DanielSWolf/rhubarb-lip-sync)"
+            ),
         },
         "entities_configured": len(ENTITY_EMBODIMENT),
         "vrm_assets": len(list(VRM_DIR.glob("*.vrm"))) if VRM_DIR.exists() else 0,
@@ -561,12 +574,14 @@ async def get_entity(entity_id: str):
             for k, v in anim_files.items()
         },
         "forge_note": (
-            "VRM assets not yet placed. Create character in VRoid Studio "
-            "(vroid.com/en/studio), export as .vrm, place in "
-            f"workers/turings-hub-service/assets/vrm/{vrm_file or entity_id + '.vrm'}"
-        )
-        if vrm_file and not (VRM_DIR / vrm_file).exists()
-        else None,
+            (
+                "VRM assets not yet placed. Create character in VRoid Studio "
+                "(vroid.com/en/studio), export as .vrm, place in "
+                f"workers/turings-hub-service/assets/vrm/{vrm_file or entity_id + '.vrm'}"
+            )
+            if vrm_file and not (VRM_DIR / vrm_file).exists()
+            else None
+        ),
     }
 
 

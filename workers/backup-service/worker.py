@@ -40,6 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from Dimensional.service_auth import check_internal_secret
 from src.backup.engine import BackupEngine
 from src.backup.registry import (
     REGISTRY_BY_TIER,
@@ -132,10 +133,28 @@ app.add_middleware(
 
 @app.middleware("http")
 async def _internal_auth(request: Request, call_next):
-    if _INTERNAL_SECRET and request.url.path != "/health":
-        token = request.headers.get("x-internal-secret", "")
-        if token != _INTERNAL_SECRET:
-            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    """Gate every route except /health. Fails closed.
+
+    Previously `if _INTERNAL_SECRET and ...`: a blank secret made the whole
+    condition falsy, so the refusal never ran and every request was served
+    unauthenticated — and `.env.example` ships INTERNAL_SECRET blank. It now
+    answers 503 in that case.
+
+    Middleware must *return* its refusal rather than raise it, since a raise
+    here escapes the middleware stack instead of becoming a response. That is
+    why this calls `check_internal_secret`, the non-raising form of the shared
+    verifier, rather than the HTTPException-raising dependency the route-level
+    gates use.
+    """
+    if request.url.path != "/health":
+        ok, code, detail = check_internal_secret(
+            request.headers.get("x-internal-secret", ""),
+            _INTERNAL_SECRET,
+            mismatch_status=401,
+            detail="Unauthorized",
+        )
+        if not ok:
+            return JSONResponse(status_code=code, content={"detail": detail})
     return await call_next(request)
 
 
@@ -223,7 +242,11 @@ async def run_backup(req: BackupRunRequest):
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Unknown tier '{req.tier}'") from None
         await _backup_tier(tier)
-        return {"success": True, "tier": req.tier, "workers": len(REGISTRY_BY_TIER.get(tier, []))}
+        return {
+            "success": True,
+            "tier": req.tier,
+            "workers": len(REGISTRY_BY_TIER.get(tier, [])),
+        }
 
     raise HTTPException(status_code=400, detail="Provide either 'worker' or 'tier'")
 
@@ -237,7 +260,11 @@ async def run_all():
         "success": ok,
         "failed": len(results) - ok,
         "results": [
-            {"worker": r.meta.worker if r.meta else "?", "success": r.success, "error": r.error}
+            {
+                "worker": r.meta.worker if r.meta else "?",
+                "success": r.success,
+                "error": r.error,
+            }
             for r in results
         ],
     }

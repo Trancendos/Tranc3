@@ -39,14 +39,14 @@ Run: `python scripts/branch_benefit_audit.py`
 
 ## Implemented from this research
 
-- Platform layer rotator (`src/platform/layer_rotator.py`)  
-- `openrouter/free` in `zero_cost_config.py`  
-- The Town Hall expansion (`docs/THE_TOWN_HALL.md`)  
-- This digest  
+- Platform layer rotator (`src/platform/layer_rotator.py`)
+- `openrouter/free` in `zero_cost_config.py`
+- The Town Hall expansion (`docs/THE_TOWN_HALL.md`)
+- This digest
 
 ## Next priorities
 
-1. Merge platform-layer + Windows branches to `main`  
-2. infinity-adminOS P1 ports (void, webauthn)  
-3. Persistent Town Hall store (SQLite) + Forgejo policy gates  
+1. Merge platform-layer + Windows branches to `main`
+2. infinity-adminOS P1 ports (void, webauthn)
+3. Persistent Town Hall store (SQLite) + Forgejo policy gates
 4. Close stale PRs (`gh pr close 84 86 87 88 89`)

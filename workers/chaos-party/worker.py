@@ -24,6 +24,8 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 WORKER_PORT = int(os.getenv("PORT") or "8063")
 WORKER_NAME = "chaos-party"
 DB_PATH = Path(__file__).parent / "data" / "chaos.db"
@@ -44,6 +46,26 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
+
+try:
+    from observatory_bridge import forward_runs as _bridge_forward
+except ImportError as _exc:  # keep the worker bootable without the bridge
+    _bridge_forward = None
+    logging.getLogger(WORKER_NAME).warning("Observatory bridge unavailable: %s", _exc)
+
+
+async def _forward_to_observatory(conn, runs: list, suite_id) -> dict:
+    """Hand recorded runs to The Observatory. Swallows everything by design."""
+    if _bridge_forward is None:
+        return {"forwarded": 0, "skipped": len(runs), "reason": "bridge_unavailable"}
+    for r in runs:
+        r.setdefault("suite_id", suite_id)
+    try:
+        return await _bridge_forward(conn, runs)
+    except Exception as exc:  # noqa: BLE001 — never fail a run on telemetry
+        logging.getLogger(WORKER_NAME).warning("Observatory forward errored: %s", exc)
+        return {"forwarded": 0, "skipped": len(runs), "error": str(exc)}
+
 
 _start_time = time.time()
 _req_count = 0
@@ -162,9 +184,13 @@ _router = APIRouter()
 def _auth(x_internal_secret: str = Header(default="")) -> None:
     global _req_count, _err_count
     _req_count += 1
-    if x_internal_secret != INTERNAL_SECRET:
+    try:
+        guard_internal_secret(
+            x_internal_secret, INTERNAL_SECRET, mismatch_status=401, detail="Unauthorized"
+        )
+    except HTTPException:
         _err_count += 1
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise
 
 
 class SuiteIn(BaseModel):
@@ -338,7 +364,14 @@ async def record_batch_runs(body: BatchRunIn, x_internal_secret: str = Header(de
             )
             results.append({"id": cur.lastrowid, "name": run.name, "status": run.status})
         conn.commit()
-    return {"inserted": len(results), "runs": results}
+
+        # Forward to The Observatory with trend context attached. Fail-open by
+        # contract: a telemetry outage must never fail a test run, so
+        # forward_runs never raises and the rows above are already committed.
+        forward = await _forward_to_observatory(
+            conn, [r.model_dump() for r in body.runs], body.suite_id
+        )
+    return {"inserted": len(results), "runs": results, "observatory": forward}
 
 
 @_router.get("/runs")

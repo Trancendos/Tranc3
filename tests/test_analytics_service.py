@@ -31,7 +31,15 @@ def client(tmp_path_factory):
     # handlers/closures. Save and restore it so this file's test-local
     # override never leaks into other test modules.
     _original_internal_secret = os.environ.get("INTERNAL_SECRET")
-    os.environ["INTERNAL_SECRET"] = ""  # disable internal auth for analytics worker tests
+    # Blanking this used to disable the worker's auth, because its gate was
+    # fail-open: `if not INTERNAL_SECRET: return`. That gate now delegates to
+    # Dimensional.service_auth and fails closed, so a blank secret answers 503
+    # rather than admitting the request — which is the point of the change.
+    # The fixture therefore sets a real secret and the client presents it,
+    # exercising the service the way it is actually deployed instead of with
+    # its authentication switched off.
+    _TEST_SECRET = "analytics-service-test-secret"
+    os.environ["INTERNAL_SECRET"] = _TEST_SECRET
 
     tranc3_root = Path(__file__).resolve().parent.parent
     if str(tranc3_root) not in sys.path:
@@ -70,7 +78,11 @@ def client(tmp_path_factory):
 
         from fastapi.testclient import TestClient
 
-        with TestClient(module.app, raise_server_exceptions=True) as test_client:
+        with TestClient(
+            module.app,
+            headers={"X-Internal-Secret": _TEST_SECRET},
+            raise_server_exceptions=True,
+        ) as test_client:
             yield test_client
     finally:
         if original_enc is not None:

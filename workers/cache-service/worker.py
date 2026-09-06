@@ -33,6 +33,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 # ── Config ────────────────────────────────────────────────────────────────────
 WORKER_PORT = int(os.environ.get("CACHE_PORT", "8023"))
 WORKER_NAME = "cache-service"
@@ -438,10 +440,9 @@ app.add_middleware(
 
 
 async def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:
-    if not INTERNAL_SECRET:
-        return
-    if x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 _router = APIRouter(dependencies=[Depends(_auth)])

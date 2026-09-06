@@ -34,14 +34,28 @@ atexit.register(shutil.rmtree, _TMP_DIR, ignore_errors=True)
 
 os.environ["VRAR3D_DB_PATH"] = str(Path(_TMP_DIR) / "vrar3d.db")
 os.environ["VRAR3D_ASSET_DIR"] = str(Path(_TMP_DIR) / "assets")
-os.environ["INTERNAL_SECRET"] = "test-internal-secret"
+
+# Reuse whatever conftest.py put in INTERNAL_SECRET rather than assigning a
+# test-local value here. This module used to set it to "test-internal-secret"
+# at import time with no restore, which permanently changed the value for the
+# rest of the pytest session. INTERNAL_SECRET is shared: many modules capture
+# it into a module-level constant at *their* import time, so whether a given
+# module saw the real value or this one depended purely on collection order.
+# Alphabetically this file ("v") is imported just before tests/test_waivers.py
+# ("w"), so test_waivers captured the overwritten value while
+# src/compliance/waivers_routes.py — imported much earlier via api.py — still
+# held conftest's, and every authenticated waiver route then 403'd in a
+# full-suite run while passing in isolation. tests/test_analytics_service.py
+# documents this same hazard and save/restores around it; taking the value
+# instead of setting one avoids needing to.
+_INTERNAL_SECRET = os.environ["INTERNAL_SECRET"]
 
 main_mod = _import_worker("vrar3d_main", _TRANC3_ROOT / "workers" / "vrar3d" / "main.py")
 # main.py's `db` is local to _build_app(), not module-level — open a second
 # connection to the same on-disk SQLite file to seed asset-job rows directly.
 _db = main_mod.VRARDatabase(os.environ["VRAR3D_DB_PATH"])
 
-_HEADERS = {"x-internal-secret": "test-internal-secret"}
+_HEADERS = {"x-internal-secret": _INTERNAL_SECRET}
 
 
 @pytest.fixture

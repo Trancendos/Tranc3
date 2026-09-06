@@ -55,9 +55,9 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set
 
+from Dimensional.circuit_state import CircuitState  # noqa: F401
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.sentinel_config import (
     FallbackConfig,
@@ -124,10 +124,10 @@ class SentinelEvent:
 # ── Circuit Breaker ─────────────────────────────────────────────────────────
 
 
-class CircuitState(str, Enum):
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
+# CircuitState is imported at the top of this module from its canonical home,
+# Dimensional/circuit_state.py. It was previously defined here as a (str, Enum)
+# with identical members and values — one of three such copies inside
+# Dimensional/, and of eight across the platform.
 
 
 @dataclass

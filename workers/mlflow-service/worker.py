@@ -52,7 +52,6 @@ Trancendos-native endpoints
 
 from __future__ import annotations
 
-import hmac
 import json
 import logging
 import os
@@ -66,6 +65,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from path_validation import PathTraversalError, list_validated_children, validate_path
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -89,8 +90,9 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 logger = logging.getLogger("mlflow-service")
@@ -338,9 +340,16 @@ class CompareRunsIn(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.mlflow-service")
+        instrument_worker(app, service_name="tranc3.mlflow-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     init_db()
     logger.info("mlflow-service ready — tracking URI: sqlite:///%s", DB_PATH)
     yield

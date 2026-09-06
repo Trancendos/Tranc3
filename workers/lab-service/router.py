@@ -10,16 +10,16 @@ from service import LabRouter
 
 import config
 from database import LabDatabase
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import CodeRequest, CodeResponse, LabStatus
 
 logger = logging.getLogger(config.WORKER_NAME)
 
 
 def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:
-    if config.INTERNAL_SECRET and x_internal_secret != config.INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    if not config.INTERNAL_SECRET:
-        raise HTTPException(status_code=503, detail="Service auth not configured")
+    guard_internal_secret(
+        x_internal_secret, config.INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 def _make_lab_router(db: LabDatabase, lab: LabRouter) -> APIRouter:

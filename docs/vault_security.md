@@ -66,7 +66,7 @@ Loads secrets from multiple sources with automatic memory zeroization. The conte
 from Dimensional.architecture.vault_security import VaultSecretLoader, SoftHSM2Provider
 
 loader = VaultSecretLoader(
-    hsm_provider=SoftHSM2Provider(token="tranc3", pin="123456"),
+    hsm_provider=SoftHSM2Provider(token="tranc3", pin=os.environ.get("SOFTHSM2_PIN")),
     infinity_void_url="http://infinity-void:8002",
     infinity_void_secret="internal-dev-secret",
     lock_memory=True,
@@ -104,7 +104,7 @@ apt install softhsm2
 
 # Initialize a token
 softhsm2-util --init-token --slot 0 --label "tranc3" \
-    --pin 123456 --so-pin 12345678
+    --pin $SOFTHSM2_PIN --so-pin $SOFTHSM2_SO_PIN
 
 # Install Python bindings
 pip install python-pkcs11
@@ -114,7 +114,7 @@ pip install python-pkcs11
 ```python
 from Dimensional.architecture.vault_security import SoftHSM2Provider, HSMKeyType
 
-hsm = SoftHSM2Provider(token="tranc3", pin="123456")
+hsm = SoftHSM2Provider(token="tranc3", pin=os.environ.get("SOFTHSM2_PIN"))
 hsm.initialize()
 
 # Generate an AES-256 key inside the HSM
@@ -156,7 +156,7 @@ from Dimensional.architecture.vault_security import YubiHSM2Provider, HSMKeyType
 hsm = YubiHSM2Provider(
     connector_url="http://localhost:12345",
     auth_key_id=1,
-    auth_key_password=b"password",
+    auth_key_password=os.environ.get("YUBIHSM2_PASSWORD", "").encode("utf-8"),
 )
 hsm.initialize()
 # Same API as SoftHSM2 — transparent provider switching

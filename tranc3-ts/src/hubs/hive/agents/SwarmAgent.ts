@@ -205,7 +205,7 @@ export class SwarmAgent extends Agent {
 
   async decide(perception: SwarmPerception): Promise<SwarmDecision> {
     let approach: SwarmDecision['approach'] = 'direct';
-    let targetNodes: string[] = [];
+    const targetNodes: string[] = [];
     let confidence = 0.8;
     let requiresConsensus = false;
 

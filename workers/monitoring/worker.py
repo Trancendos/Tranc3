@@ -40,6 +40,9 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth import check_internal_secret
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -290,7 +293,13 @@ class MonitoringDatabase:
             cur.executemany(
                 "INSERT INTO metrics (name, type, value, labels, timestamp) VALUES (?,?,?,?,?)",
                 [
-                    (m.name, m.type.value, m.value, json.dumps(m.labels), m.timestamp.isoformat())
+                    (
+                        m.name,
+                        m.type.value,
+                        m.value,
+                        json.dumps(m.labels),
+                        m.timestamp.isoformat(),
+                    )
                     for m in metrics
                 ],
             )
@@ -523,7 +532,11 @@ class DashboardWSManager:
 
     async def broadcast(self, event_type: str, data: Any):
         msg = json.dumps(
-            {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
+            {
+                "type": event_type,
+                "data": data,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
         )
         # Snapshot the connection list under the lock, then send outside to avoid
         # awaiting while holding a threading.Lock (which would block the event loop).
@@ -591,8 +604,14 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # through the `sharedcore` named build context. It compares with
+    # compare_digest and refuses when the secret is unset.
+    guard_internal_secret(
+        x_internal_secret,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
@@ -777,8 +796,21 @@ async def dashboard_websocket(
     ws: WebSocket,
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ):
-    """WebSocket endpoint for live dashboard updates."""
-    if _INTERNAL_SECRET and x_internal_secret != _INTERNAL_SECRET:
+    """WebSocket endpoint for live dashboard updates. Fails closed.
+
+    Previously `if _INTERNAL_SECRET and ...`, which admitted every connection
+    when the secret was blank — this socket streams the platform's live health
+    and metrics, so that was an unauthenticated read of the whole estate's
+    status.
+
+    A WebSocket refuses with a close code, not an HTTP status, so this uses
+    `check_internal_secret` — the non-raising form — and keeps 1008 (policy
+    violation) for both the misconfigured and the wrong-secret case. The
+    distinction the HTTP gates draw between 503 and 401 has no equivalent here;
+    what the client needs to know is that the handshake was refused.
+    """
+    ok, _code, _detail = check_internal_secret(x_internal_secret, _INTERNAL_SECRET)
+    if not ok:
         await ws.close(code=1008)
         return
     await ws_manager.connect(ws)
@@ -830,7 +862,7 @@ async def collect_health():
             report = HealthReport(
                 service_name=svc["name"],
                 status=status,
-                response_time_ms=resp.elapsed.total_seconds() * 1000 if resp.elapsed else None,
+                response_time_ms=(resp.elapsed.total_seconds() * 1000 if resp.elapsed else None),
                 metadata=body,
             )
             db.store_health(report)

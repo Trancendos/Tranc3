@@ -10,7 +10,7 @@
 **Code:** `src/entities/platform.py` (`JOB_DESCRIPTIONS` dict, `get_job_description()`),
 `src/roles/registry.py` (`RoleRegistry`, SQLite-backed), `src/roles/routes.py` (HTTP API, mounted
 in `api.py` at `/roles`).
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-11
+**Owner:** Platform Owner Trancendos · **Version:** 2.0.0 · **Last verified:** 2026-08-21 (seat model added)
 
 ---
 
@@ -30,6 +30,132 @@ it: `lead_ai` remains the *canonical, documented* name (used throughout `CLAUDE.
 is the *live, operational* holder, seeded from `lead_ai` but free to diverge once an operator
 reassigns it. Treat `lead_ai` as "who this role was designed for" and the registry as "who
 actually holds it right now."
+
+## 1a. Seats — one Job Description per AI role
+
+> **Added 2026-08-21.** The model in §1 held one Job Description per Location. That is correct for
+> the 38 Locations with a single Lead AI and wrong for the five that have more: **43 Job
+> Descriptions were being asked to cover 51 AI seats**, so eight AIs held no job title at all, and
+> `role_assignments` was keyed by `location` alone — structurally unable to record a second.
+
+They were never spares. The Chaos Party is the clearest case: The Mad Hatter runs adversarial
+testing — rapid mock payloads, memory-leak and performance watching — while Alice Dream runs the
+deterministic half, acceptance and regression and smoke, where a repeatable result is the whole
+point. One title covering both describes neither, and an operator reassigning "The Chaos Party"
+could not say which of the two jobs they were moving.
+
+A **seat** is one Job Description at one Location plus the AI it was designed for. Seats are
+*derived* from `lead_ais` and `agent_teams` rather than declared in a parallel list, so the seat
+roster cannot drift from the entity table. Only the eight co-lead **titles** are declared
+(`CO_LEAD_JOB_DESCRIPTIONS` in `src/entities/platform.py`), because a job title is an editorial
+decision no amount of introspection can derive.
+
+Each seat's **functions** come from its own Agent pair's descriptions. That is deliberate: the
+agents are the concrete work, so a seat's stated function is evidenced by the two things doing it
+rather than asserted independently and left to rot.
+
+### The eight co-lead seats
+
+| Location | Seat | Job Description | Designed for | Functions (from its Agent pair) |
+|---|---|---|---|---|
+| **TateKing** | `sam-king` | Head of Production Operations & Delivery | Sam King | Oversees production logistics, scheduling, and resource coordination across video projects<br>Manages asset delivery pipelines, versioning, and platform-specific format finishing |
+| **The Lab** | `slime` | Head of Diagnostics & Defect Remediation | Slime | Traces failing tests and stack traces back to their originating commit or logic error<br>Drafts targeted fixes and re-runs the failing case to confirm the regression is resolved |
+| **The Chaos Party** | `alice-dream` | Head of Deterministic Assurance | Alice Dream | Runs deterministic, schedule-bound suites — acceptance, regression and smoke — where a repeatable result is the whole point<br>Reflects actual behaviour against expected, producing the pass/fail assertions and diffs the Observatory trends on |
+| **Arcadian Exchange** | `ann-porter` | Head of Storage Procurement | Ann Porter | Assesses storage cost trends across providers to secure bulk capacity<br>Automates bidding on storage marketplaces for the best rates |
+| **Arcadian Exchange** | `george-porter` | Head of Model & Inference Procurement | George Porter | Assesses AI model licensing and inference cost trends<br>Automates bidding on model marketplaces for compute-efficient access |
+| **Arcadian Exchange** | `edward-porter` | Head of Workflow Tooling Procurement | Edward Porter | Assesses workflow and orchestration tooling costs<br>Automates bidding on workflow-automation marketplaces |
+| **Arcadian Exchange** | `james-porter` | Head of API Credit Procurement | James Porter | Assesses API credit pricing trends across providers<br>Automates bidding on API-credit marketplaces for cost efficiency |
+| **Infinity** | `the-orb-of-orisis` | Head of Architectural Foresight | The Orb of Orisis | Projects how current architectural decisions will scale or strain months ahead<br>Maps dependency and growth trends into a forward-looking architecture roadmap |
+
+The primary seat at every Location keeps its existing headline title, so every caller of
+`get_job_description(location)` and `get_role(location)` is unchanged.
+
+### The five external seats — the Arcadian Exchange's second mandate
+
+Every seat above is **internal**: it serves the platform and the people using it. The Arcadian
+Exchange is the one Location that also trades *outside* Trancendos, so each of its five Porters
+holds two entwined Job Descriptions — an internal, user-facing procurement seat and an external,
+market-facing revenue seat. Ten Job Descriptions across five AIs.
+
+The pairing is the whole design, not a filing convention. The price intelligence that tells Ann
+Porter what storage costs to buy is the same intelligence that tells her what spare capacity is
+worth selling; George Porter's inference-market model prices both the reservation he buys and the
+capacity he resells. Each external seat therefore names the internal seat it mirrors
+(`paired_with`), and `get_seats` refuses to emit an external seat whose twin is missing — a revenue
+mandate with no procurement counterpart has nothing feeding it.
+
+| Seat | Job Description | Designed for | Paired with | Revenue function |
+|---|---|---|---|---|
+| `clarence-porter-external` | Chief Revenue Officer | Clarence Porter | `primary` (Chief Procurement Officer) | Ranks every opportunity the other four raise against one another, so the estate pursues the best return rather than the most recent suggestion<br>Holds the risk limits and the escalation threshold: past either, an opportunity goes to a human, not to market |
+| `ann-porter-external` | Head of Capacity & Asset Monetisation | Ann Porter | `ann-porter` (Storage Procurement) | Offers surplus storage and IPFS capacity back to the marketplaces her internal seat buys from<br>Licenses finished creative assets the estate already holds — Sashas Photo Studio images, TateKing video, TranceFlow models, Warp Radio audio — with provenance and licence terms attached |
+| `george-porter-external` | Head of Market & Treasury Operations | George Porter | `george-porter` (Model & Inference Procurement) | Models treasury positions and market exposure in **advisory mode only** — a recommendation and a rationale, never an executed trade<br>Resells reserved inference and compute bought below spot by his internal seat |
+| `edward-porter-external` | Head of Expert & Managed Services | Edward Porter | `edward-porter` (Workflow Tooling Procurement) | Packages the estate's own operational competence: governance and compliance profiles from Magna Carta, workflow templates from The Digital Grid, the CMDB and EA workbook<br>Scopes and prices consolidation engagements, where a client's several tools are replaced by one Location |
+| `james-porter-external` | Head of Data, Knowledge & Audience Products | James Porter | `james-porter` (API Credit Procurement) | Sells metered API access and knowledge products from The Library, priced against the credit costs his internal seat already tracks<br>Publishes aggregate, non-identifying data products and audience inventory |
+
+#### What the external mandate deliberately will not do
+
+An external seat describes what the platform is *willing* to sell. Three limits are part of the
+design rather than gaps in it, and each is written into the seat's own stated functions so it
+travels with the role instead of living only here:
+
+- **No autonomous trading.** George Porter's treasury seat produces recommendations. Executing
+  trades in securities or crypto on behalf of others is a regulated activity Trancendos is not
+  authorised for, and an AI seat is not the place to discover that.
+- **No user data as product.** James Porter's seat sells aggregate, non-identifying data. A user's
+  own data is theirs; tAimra's digital twin is opt-in for the user's benefit, not inventory.
+- **No reselling what the platform only licenses.** Third-party analyst research and any other
+  licensed material the estate holds for its own use cannot be repackaged into a knowledge product.
+  The licence forbids it, and Edward Porter's service packs are built from the platform's *own*
+  governance work for exactly that reason.
+
+`EXTERNAL_SEATS` is confined to the Arcadian Exchange. Widening it to another Location is a
+decision about what Trancendos sells, so it should arrive as a written change with a reason, not as
+a derivation that quietly grew.
+
+The machinery these seats work through is `src/exchange/` — an inventory of what the estate can
+sell, a valuation that refuses to invent revenue, and a gate that blocks rather than annotates.
+It implements the review practice `docs/governance/COST-AND-REVENUE-GOVERNANCE.md` §5 already
+defined, and §5.1 there describes how.
+
+#### Where it lives
+
+`EXTERNAL_SEATS` and `ExternalSeat` in `src/entities/platform.py`; every `RoleSeat` and
+`RoleAssignment` now carries a `mandate` of `"internal"` or `"external"`, defaulted to `"internal"`
+so every pre-existing seat keeps its meaning without being restated. `/roles` returns `mandate` on
+each row, and `GET /roles/Arcadian Exchange/seats` returns all ten. A registry database created
+before this existed backfills the five external rows on its next startup without disturbing any
+manual reassignment already made — `tests/test_roles.py::TestExternalMandate` proves that by
+stripping the rows and reopening.
+
+### API
+
+| Call | Returns |
+|---|---|
+| `GET /roles/` | Every seat, primary first within each Location |
+| `GET /roles/{location}` | The Location's **primary** seat (unchanged behaviour) |
+| `GET /roles/{location}/seats` | **New** — every seat at that Location, with `designed_for` and `functions` |
+| `POST /roles/{location}/assign` | Body takes `seat_id`, defaulting to `primary` |
+| `DELETE /roles/{location}/assign` | Body takes `seat_id`, defaulting to `primary` |
+| `GET /roles/{location}/history` | Optional `seat_id` filter; entries record which seat moved |
+
+### Two defects the change surfaced
+
+Both were latent, and both were writes scoped to `location` alone that the composite key turned
+into cross-seat corruption:
+
+- **`assign_ai` / `remove_ai`** updated `WHERE location = ?`. Under the seat schema that would have
+  rewritten every co-lead at a Location on a single reassignment.
+- **`_migrate_renamed_lead_ais`** read with `fetchone()` over an unscoped `SELECT`. Once Arcadian
+  Exchange had five rows it read whichever SQLite ordered first, failed to match "The Porter
+  Family", and skipped the migration — while its `UPDATE` would have stamped one name across all
+  five seats. Caught by `tests/test_roles.py::TestRenameMigration`, which is why that test existed.
+
+A persisted pre-seat database is rebuilt on open: every existing row becomes that Location's
+`primary` seat, which is what it always was, so no operator's manual reassignment is disturbed.
+`tests/test_role_seats.py::TestMigrationFromTheLocationOnlySchema` proves that against a real
+legacy database rather than a mock.
+
+---
 
 ## 2. Master table (seed state)
 

@@ -85,12 +85,19 @@ jobs:
     # to main queue instead of racing.
     runs-on: deploy-host
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Build tranc3-ai worker
         run: |
           if [ -f workers/tranc3-ai/Dockerfile ]; then
-            docker build -t tranc3-ai:latest workers/tranc3-ai/ || echo "tranc3-ai Dockerfile not ready yet"
+            # --build-context supplies the Shared Functional Services Core.
+            # These two workers are the only own-context workers built here
+            # rather than by `docker compose build`, so they cannot pick the
+            # contexts up from docker-compose.production.yml's
+            # `additional_contexts:` and must name them on the command line.
+            docker build -t tranc3-ai:latest \
+              --build-context observability=src/observability \
+              workers/tranc3-ai/ || echo "tranc3-ai Dockerfile not ready yet"
           else
             echo "tranc3-ai: Using Python worker (no Dockerfile needed)"
           fi
@@ -98,7 +105,9 @@ jobs:
       - name: Build infinity-void worker
         run: |
           if [ -f workers/infinity-void/Dockerfile ]; then
-            docker build -t infinity-void:latest workers/infinity-void/ || echo "infinity-void Dockerfile not ready yet"
+            docker build -t infinity-void:latest \
+              --build-context observability=src/observability \
+              workers/infinity-void/ || echo "infinity-void Dockerfile not ready yet"
           else
             echo "infinity-void: Using Python worker (no Dockerfile needed)"
           fi
@@ -130,7 +139,7 @@ jobs:
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # `concurrency: cancel-in-progress: false` (workflow-scoped, above)
       # queues overlapping runs on the same ref instead of cancelling them —
@@ -235,10 +244,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     continue-on-error: true
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
 

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/react-vite"
 import { DocumentCard } from "../components/shadcn/document-card"
 import { UploadZone } from "../components/shadcn/upload-zone"
 import { PdfOpsPanel } from "../components/shadcn/pdf-ops-panel"

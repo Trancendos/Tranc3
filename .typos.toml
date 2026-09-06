@@ -8,6 +8,30 @@ extend-exclude = [
     "__pycache__",
     "*.pyc",
     "bandit-results*.json",
+    # Generated scan/report artefacts: their contents come from third-party
+    # tooling, so spelling there is not ours to fix.
+    "reports/",
+    ".security_learning/",
+    ".security_telemetry/",
+    ".secrets.baseline",
+    # Lockfiles and build artefacts: machine-generated, no prose to check, and
+    # collectively the largest inputs the scan was being handed.
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.lock",
+    "poetry.lock",
+    "*.tsbuildinfo",
+    "docs/architecture/service-review.json",
+    "docs/architecture/ea-workbook/",
+    # Git submodules. They are separate repositories with their own hooks and
+    # their own .typos.toml; scanning them from here would apply this repo's
+    # allowlist to content it does not own, and report findings nobody working
+    # in this repo can fix. (This exclusion only became necessary once the hook
+    # switched to pass_filenames: false -- pre-commit's own file list never
+    # descended into submodules, so the change quietly widened the scan.)
+    "compliance/magna-carta/",
+    "workers/cranbania/",
 ]
 
 [default]
@@ -22,7 +46,102 @@ extend-ignore-re = [
     "cryptex",
     "nanocode",
     "observatory",
+    # Platform entity IDs — PID-HVE, AID-WRK-01, SVC-KNO, … The three-letter
+    # location codes in src/config/id_registry.* are not words.
+    "\\b(?:PID|AID|SVC|SEC|CAP|EVT|WF)-[A-Z0-9]{2,6}(?:-[A-Z0-9]+)*\\b",
 ]
+
+# Domain vocabulary that typos' dictionary mistakes for misspellings. Each
+# entry maps a word to itself, i.e. "this spelling is correct".
+[default.extend-words]
+# Location/entity short codes used bare in tables, IDs and test fixtures.
+ACI = "ACI"
+AER = "AER"
+Aer = "Aer"
+aer = "aer"
+AKS = "AKS"
+aks = "aks"
+Daa = "Daa"
+Ded = "Ded"
+EIS = "EIS"
+eis = "eis"
+FND = "FND"
+FPR = "FPR"
+GROTH = "GROTH"
+Groth = "Groth"
+groth = "groth"
+HVE = "HVE"
+IIT = "IIT"
+iit = "iit"
+KNO = "KNO"
+LOD = "LOD"
+lod = "lod"
+NCE = "NCE"
+Pn = "Pn"
+RTO = "RTO"
+rto = "rto"
+SAV = "SAV"
+SER = "SER"
+SME = "SME"
+VAS = "VAS"
+WRK = "WRK"
+# Truncated column headers in generated CSV/Markdown inventories.
+REGIST = "REGIST"
+STORAG = "STORAG"
+THR = "THR"
+TYP = "TYP"
+UPDAT = "UPDAT"
+branc = "branc"
+delet = "delet"
+deprecat = "deprecat"
+desig = "desig"
+priorit = "priorit"
+propert = "propert"
+retriev = "retriev"
+rotat = "rotat"
+structur = "structur"
+secur = "secur"
+# Technical vocabulary and accepted spelling variants.
+Hashi = "Hashi"                  # HashiCorp
+MAPE = "MAPE"                    # MAPE-K autonomic loop
+Mape = "Mape"
+mape = "mape"
+DIMENSIONALS = "DIMENSIONALS"    # Dimensional nanoservice layer
+Dimensionals = "Dimensionals"
+dimensionals = "dimensionals"
+extraversion = "extraversion"    # Big Five trait name
+unparseable = "unparseable"
+discernable = "discernable"
+precison = "precison"            # deliberate misspelling in schema-rejection tests
+Mis = "Mis"                      # "Mis-tiered", the doc-pack audit status
+mis = "mis"
+inh = "inh"                      # inhibitory conductance/time-constant variables
+iy = "iy"                        # integer y coordinate in the voxel bots
+iz = "iz"                        # Izhikevich neuron model parameters
+                                 # (iz_a/iz_b/iz_c/iz_d in
+                                 # src/nanoservices/neuromorphic/) -- the
+                                 # published names of the model's four
+                                 # coefficients, not a misspelling of "is".
+ND = "ND"
+nd = "nd"
+ba = "ba"
+BA = "BA"
+Bre = "Bre"
+ot = "ot"
+nin = "nin"
+ue = "ue"
+tre = "tre"
+ure = "ure"
+jus = "jus"
+fo = "fo"
+agai = "agai"                    # truncated inside an ASCII box diagram
+criticals = "criticals"          # the count of CRITICAL findings, as a
+CRITICALS = "CRITICALS"          # field/variable name (report.criticals,
+                                 # $CRITICALS in the scanner workflow) --
+                                 # a plural noun, not "critical".
+THREED = "THREED"                # "3D" spelled out where an identifier
+                                 # cannot start with a digit (TranceFlow,
+                                 # VRAR3D) -- not "THREAD".
 
 [type.py]
 extend-ignore-re = [

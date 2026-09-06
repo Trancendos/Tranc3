@@ -77,7 +77,10 @@ class TestMatrixSummary:
         summary = matrix_summary()
         # 43 Locations, 4 of which run more than one named AI (TateKing x2,
         # The Lab x2, Infinity x2, Arcadian Exchange x5) => 43 - 4 + 2+2+2+5
-        assert summary["total_ais"] == 50
+        # 51 since The Chaos Party gained Alice Dream — the matrix derives its
+        # roster from PLATFORM_ENTITIES, so a new named AI is covered
+        # automatically and only this count needed moving.
+        assert summary["total_ais"] == 51
 
     def test_specialized_count_matches_seed_table(self):
         summary = matrix_summary()

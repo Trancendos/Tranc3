@@ -16,18 +16,60 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.forgejo/workflows/dependency-audit.yml'
+      - 'scripts/obsolescence_census.py'
+      - 'docs/governance/OBSOLESCENCE-ACCEPTED.md'
   workflow_dispatch:  # Manual trigger
 
 jobs:
+  obsolescence:
+    name: Obsolescence Census
+    runs-on: ubuntu-latest
+    # Deliberately NOT on every pull request, and deliberately not in the
+    # production gate. This makes ~110 live calls to pypi.org and
+    # registry.npmjs.org, and it is fail-closed: an unreachable registry is
+    # reported as unknown, never as healthy. Those two properties are correct for
+    # the measurement and wrong for a blocking gate on unrelated work -- a
+    # transient npm outage would redden a PR that touched no dependency at all.
+    #
+    # This workflow's existing triggers are already the right shape: the weekly
+    # schedule catches a component crossing the dormancy threshold while nobody
+    # was looking (the whole point -- obsolescence arrives by the passage of time,
+    # not by a commit), and the pull_request path filter catches a *newly
+    # introduced* dormant dependency at the moment someone adds it.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.11'
+
+      - name: Measure dependency obsolescence
+        # --fail-on stranded is the strict setting and it passes today, because
+        # every currently-dormant component is recorded in
+        # docs/governance/OBSOLESCENCE-ACCEPTED.md with a reasoned disposition.
+        # The gate therefore fails only on a dormant component nobody has looked
+        # at yet, which is the state worth interrupting someone for.
+        run: python scripts/obsolescence_census.py --check --fail-on stranded
+
+      - name: Upload obsolescence census
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: obsolescence-census
+          path: logs/obsolescence_census.json
+          retention-days: 90
+
   python-audit:
     name: Python Dependency Audit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
 
@@ -92,10 +134,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
 
@@ -143,10 +185,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
 
@@ -203,10 +245,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
 
@@ -230,10 +272,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
 
