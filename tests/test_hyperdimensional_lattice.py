@@ -74,8 +74,9 @@ def test_concept_lattice_project():
     lattice.add_concept("concept1", "domain1")
     lattice.add_concept("concept2", "domain1")
 
-    proj = lattice.project(target_dim=3, method="random")
-    assert proj.method == "random"
+    proj = lattice.project(target_dim=3, method=ProjectionMethod.RANDOM)
+    assert proj.method == ProjectionMethod.RANDOM
+    assert proj.quality_score == pytest.approx(0.5)
 
 
 @pytest.mark.asyncio
