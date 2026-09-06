@@ -1,7 +1,7 @@
 # ISO 27001:2022 — Information Security Risk Register
-**Organisation:** Trancendos Ltd  
-**Scope:** Tranc3 Platform  
-**Version:** 1.0 | **Date:** 2026-06-07 | **Owner:** ISMS Lead  
+**Organisation:** Trancendos Ltd
+**Scope:** Tranc3 Platform
+**Version:** 1.0 | **Date:** 2026-06-07 | **Owner:** ISMS Lead
 **Review cycle:** Quarterly
 
 ---

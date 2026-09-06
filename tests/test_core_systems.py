@@ -437,7 +437,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -456,7 +456,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -474,7 +474,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -492,7 +492,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -510,7 +510,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -530,7 +530,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -553,7 +553,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -573,7 +573,7 @@ class TestReactiveStream:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+            "reactive_stream", "src/event_bus/reactive_stream.py"
         )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)

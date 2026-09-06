@@ -67,7 +67,7 @@ CAB_GATE_ENABLED=true
 # Check DEFSTAN only
 make compliance-check
 
-# Check Magna Carta only  
+# Check Magna Carta only
 make compliance-mc
 
 # Full merged check (recommended)

@@ -43,6 +43,11 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Slime": "slime",
     "Larry Lowhammer": "larry-lowhammer",
     "The Mad Hatter": "the-mad-hatter",
+    # The Chaos Party's second Lead AI. A chaos AI and an acceptance AI cannot
+    # share one personality: the adversarial half is tuned for variance and the
+    # deterministic half requires none, so alice-dream.json runs at
+    # temperature 0.15 against The Mad Hatter's 0.75.
+    "Alice Dream": "alice-dream",
     "Lunascene": "lunascene",
     "Solarscene": "solarscene",
     "Dorris Fontaine": "dorris-fontaine",
@@ -59,16 +64,17 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Norman Hawkins": "norman-hawkins",
     "Zimik": "zimik",
     "Shimshi": "shimshi",
-    # DocUtari's seat has a named holder (Fiddsy, per
-    # trance_one/platform_manifest.py) but no personality profile authored
-    # for it yet — maps to no profile rather than a guessed one.
-    "Fiddsy": None,
+    "Fiddsy": "fiddsy",
     "Gary Glowman (Glow-Worm)": "gary-glowman",
-    # norman-hawkins.json's own "serves" list already names The Spark
-    # alongside The Observatory — see docs/governance/PERSONALITY-ARCHETYPES.md
-    # §3 for the pre-existing Imfy/Norman-Hawkins naming inconsistency this
-    # sidesteps rather than silently resolves.
-    "Imfy": "norman-hawkins",
+    # Imfy is NOT a naming variant of Norman Hawkins, and mapping it to
+    # norman-hawkins.json was a tier collapse, not a shortcut.
+    # PLATFORM_ENTITIES.md PID-SPK and src/entities/platform.py agree: The
+    # Spark's Lead AI (Tier 3, AID-SPK-01) is Imfy and its Prime (Tier 2) is
+    # Norman Hawkins, who is separately The Observatory's OWN Lead AI. The old
+    # mapping therefore ran a Tier-3 AI on its own Tier-2 Prime's personality
+    # and gave The Spark The Observatory's voice. imfy.json (2026-08-22) gives
+    # the seat its own profile; see docs/governance/PERSONALITY-ARCHETYPES.md §3.
+    "Imfy": "imfy",
     "The Guardian (Marcus Magnolia)": "the-guardian",
     # The Orb of Orisis (Infinity's precognitive AI) previously had no
     # profile mapped at all — added 2026-07-25 alongside its own

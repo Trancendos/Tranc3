@@ -48,13 +48,13 @@ SECRET_KEY=xxx uvicorn api:app --host 0.0.0.0 --port 8000 --workers 2
 ## 4. Common Incidents
 
 ### 4.1 Service fails to start — "SECRET_KEY not set"
-**Symptom:** Container exits immediately with `FATAL: SECRET_KEY environment variable is not set`.  
-**Cause:** Missing environment variable.  
+**Symptom:** Container exits immediately with `FATAL: SECRET_KEY environment variable is not set`.
+**Cause:** Missing environment variable.
 **Fix:** Set `SECRET_KEY` in `.env` or Docker secrets, then restart.
 
 ### 4.2 Database connection refused
-**Symptom:** `sqlalchemy.exc.OperationalError: could not connect to server`.  
-**Cause:** PostgreSQL not running or `DATABASE_URL` incorrect.  
+**Symptom:** `sqlalchemy.exc.OperationalError: could not connect to server`.
+**Cause:** PostgreSQL not running or `DATABASE_URL` incorrect.
 **Fix:**
 ```bash
 docker compose up -d postgres
@@ -63,8 +63,8 @@ docker exec tranc3-dev-postgres pg_isready -U tranc3 -d tranc3
 ```
 
 ### 4.3 High latency (>1s p95)
-**Symptom:** Prometheus alert `tranc3_request_latency_p95 > 1`.  
-**Cause:** Usually AI inference timeout or database slow query.  
+**Symptom:** Prometheus alert `tranc3_request_latency_p95 > 1`.
+**Cause:** Usually AI inference timeout or database slow query.
 **Diagnosis:**
 ```bash
 curl http://localhost:8000/metrics | grep tranc3_request_duration
@@ -73,8 +73,8 @@ curl http://localhost:8000/health  # check ai_gateway status
 **Fix:** Check AI Gateway tier fallback, check DB slow query log.
 
 ### 4.4 Memory leak / OOM
-**Symptom:** Container OOM-killed.  
-**Cause:** Large inference results accumulating in LRU cache.  
+**Symptom:** Container OOM-killed.
+**Cause:** Large inference results accumulating in LRU cache.
 **Fix:** Restart service; consider reducing `LIMIT_HTTP_MAX_CONNECTIONS`.
 
 ## 5. Escalation Path
@@ -120,5 +120,5 @@ Key Prometheus metrics:
 
 Alert thresholds (Prometheus rules in `monitoring/`):
 - Error rate > 5% over 5 min → P1 alert
-- p95 latency > 2s → P1 alert  
+- p95 latency > 2s → P1 alert
 - Circuit breaker open > 60s → P0 alert

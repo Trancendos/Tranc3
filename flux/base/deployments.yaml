@@ -2,18 +2,6 @@
 # Core nanoservice deployments — NSA Broker, SHI Gateway, DNF Orchestrator
 # IPC via emptyDir volumes instead of hostIPC for security hardening
 ---
-podSecurity: &podSecurity
-  runAsNonRoot: true
-  seccompProfile:
-    type: RuntimeDefault
-
-containerSecurity: &containerSecurity
-  allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  capabilities:
-    drop: ["ALL"]
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -37,7 +25,13 @@ spec:
         - name: nsa-broker
           image: forgejo.local/trancendos/nsa-broker:latest
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 7780
               name: http
@@ -71,14 +65,6 @@ spec:
               value: "64"
             - name: SLOT_SIZE
               value: "1024"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -103,7 +89,13 @@ spec:
         - name: shi-gateway
           image: forgejo.local/trancendos/shi-gateway:latest
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8000
               name: http
@@ -138,14 +130,6 @@ spec:
               mountPath: /models
             - name: dshm
               mountPath: /dev/shm
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: model-cache
           emptyDir:
@@ -179,7 +163,13 @@ spec:
         - name: dnf-orchestrator
           image: forgejo.local/trancendos/dnf-orchestrator:latest
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
               name: http
@@ -210,14 +200,6 @@ spec:
           volumeMounts:
             - name: dshm
               mountPath: /dev/shm
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: dshm
           emptyDir:
@@ -244,12 +226,20 @@ spec:
         tier: tier-2
     spec:
       securityContext:
-        <<: *podSecurity
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: daas-stream
           image: forgejo.local/trancendos/daas-stream:latest
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8090
               name: http
@@ -265,14 +255,6 @@ spec:
               value: "redpanda:9092"
             - name: OPA_URL
               value: "http://opa:8181"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -294,12 +276,20 @@ spec:
         tier: tier-2
     spec:
       securityContext:
-        <<: *podSecurity
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: fmd-distiller
           image: forgejo.local/trancendos/fmd-distiller:latest
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8070
               name: http
@@ -315,11 +305,3 @@ spec:
               value: "4.0"
             - name: ALPHA
               value: "0.7"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]

@@ -49,7 +49,7 @@ GITHUB_API = "https://api.github.com"
 # the phrases in their output that indicate a *broken integration* rather
 # than a normal "no issues found" or "found N issues" result.
 KNOWN_BOTS: dict[str, tuple[str, ...]] = {
-    "Kilo Code Review": ("out of credits", "could not run", "billing"),
+    "Kilo Code Review": ("out of credits", "could not run", "billing", "assistant request failed"),
     "CodeRabbit": ("review limit reached", "couldn't start this review"),
 }
 
