@@ -97,6 +97,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 REPO = Path(__file__).resolve().parent.parent
 CENSUS = REPO / "logs" / "obsolescence_census.json"
@@ -156,6 +157,29 @@ def _parse_iso(value: str) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
+def _validate_url(url: str) -> str:
+    """Validate URL to prevent SSRF attacks."""
+    try:
+        if "/../" in url or re.search(r"/%2e%2e/", url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        
+        parsed = urlparse(url)
+        
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        
+        allowed_domains = ["pypi.org", "registry.npmjs.org"]
+        if parsed.hostname.lower() not in allowed_domains:
+            raise ValueError("Invalid host")
+        
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
 def _get_json(url: str) -> dict:
     """Fetch JSON with bounded retries.
 
@@ -163,11 +187,12 @@ def _get_json(url: str) -> dict:
     that cannot tell "no data" from "empty data" is exactly how a scan reports
     clean for something it never read.
     """
+    validated_url = _validate_url(url)
     last: Exception | None = None
     for attempt in range(RETRIES):
         try:
             req = urllib.request.Request(
-                url,
+                validated_url,
                 headers={
                     "Accept": "application/json",
                     "User-Agent": "trancendos-obsolescence-census",

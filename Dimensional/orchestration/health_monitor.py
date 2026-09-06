@@ -4,17 +4,41 @@
 
 import asyncio
 import logging
+import re
 import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlparse, urlunparse
 
 from Dimensional.circuit_state import CircuitState  # noqa: F401
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
+
+
+def build_validated_url(base_url: str) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        
+        parsed = urlparse(base_url)
+        
+        # Protocol + host checks
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        allowed_domains = ["example.com"]  # add your allowed domains here
+        if parsed.hostname.lower() not in allowed_domains:
+            raise ValueError("Invalid host")
+        
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
 
 
 # CircuitState is imported at the top of this module from its canonical home,
@@ -292,7 +316,7 @@ class AdaptiveHealthMonitor:
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    config["health_url"],
+                    build_validated_url(config["health_url"]),
                     timeout=aiohttp.ClientTimeout(total=config["timeout"]),
                 ) as resp:
                     latency = (time.monotonic() - start) * 1000
@@ -328,7 +352,7 @@ class AdaptiveHealthMonitor:
             try:
                 import urllib.request
 
-                req = urllib.request.Request(config["health_url"])
+                req = urllib.request.Request(build_validated_url(config["health_url"]))
                 with urllib.request.urlopen(req, timeout=config["timeout"]) as resp:
                     latency = (time.monotonic() - start) * 1000
                     result = HealthCheckResult(

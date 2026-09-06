@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -25,14 +26,29 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_APP = os.environ.get("FLY_BACKEND_APP", "tranc3-backend")
 BOTS_APP = os.environ.get("FLY_BOTS_APP", "trancendos-bots")
-BACKEND_HEALTH = f"https://{BACKEND_APP}.fly.dev/health"
-BOTS_HEALTH = f"https://{BOTS_APP}.fly.dev/health"
 
 _PLACEHOLDER_TOKENS = frozenset({"your_fly_token", "your_token", ""})
+
+
+def _build_fly_health_url(app_name: str) -> str:
+    try:
+        # Validate app_name as a slug
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", app_name):
+            raise ValueError("Invalid parameter")
+        
+        # Build URL with validated subdomain
+        base_url = "https://placeholder.fly.dev/health"
+        parsed = urlparse(base_url)
+        parsed = parsed._replace(netloc=f"{app_name}.fly.dev")
+        
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
 
 
 def _log(msg: str) -> None:
@@ -294,6 +310,7 @@ def main() -> int:
         return 0
 
     _log("==> Wait for Fly health (cold start may take ~60s)")
+    BACKEND_HEALTH = _build_fly_health_url(BACKEND_APP)
     ok, detail = _http_ok(BACKEND_HEALTH)
     if ok:
         _log(f"  OK {BACKEND_HEALTH} — {detail}")
@@ -301,6 +318,7 @@ def main() -> int:
         _log(f"  WARN backend health: {detail} — check: fly logs --app {BACKEND_APP}")
 
     if not args.backend_only:
+        BOTS_HEALTH = _build_fly_health_url(BOTS_APP)
         ok_b, detail_b = _http_ok(BOTS_HEALTH, timeout=60)
         if ok_b:
             _log(f"  OK {BOTS_HEALTH}")

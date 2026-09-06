@@ -17,12 +17,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGS = ROOT / "logs"
@@ -140,6 +142,50 @@ class VerifyReport:
 
 
 # ---------------------------------------------------------------------------
+# URL validation helper
+# ---------------------------------------------------------------------------
+
+
+def build_validated_url(base_url: str, port: int, path: str) -> str:
+    try:
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        parsed = urlparse(base_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        allowed_domains = [
+            "tranc3-backend", "tranc3-ai", "infinity-ws", "infinity-auth",
+            "infinity-portal", "infinity-one", "infinity-admin", "infinity-shards",
+            "infinity-bridge", "cranbania", "users-service", "monitoring",
+            "notifications", "infinity-ai", "the-grid", "products-service",
+            "orders-service", "payments-service", "files-service", "identity-service",
+            "analytics-service", "search-service", "email-service", "sms-service",
+            "storage-service", "cron-service", "queue-service", "cache-service",
+            "config-service", "audit-service", "rate-limit-service", "geo-service",
+            "cdn-service", "health-aggregator", "gbrain-bridge", "topology-service",
+            "ledger-service", "model-router-service", "workflow-engine-service",
+            "skills-benchmark-service", "langchain-integration-service",
+            "deepagents-orchestrator-service", "vault-service", "mlflow-service",
+            "the-academy", "basement", "the-studio", "sashas-photo-studio",
+            "tranceflow", "tateking", "imaginarium", "the-lab", "warp-tunnel",
+            "warp-radio", "the-dutchy", "devocity", "tranquility", "imind",
+            "taimra", "vrar3d", "resonate", "chaos-party",
+            "127.0.0.1", "localhost"
+        ]
+        if parsed.hostname.lower() not in allowed_domains:
+            raise ValueError("Invalid host")
+        port_int = int(port)
+        if not 1 <= port_int <= 65535:
+            raise ValueError("Invalid port")
+        parsed = parsed._replace(netloc=f"{parsed.hostname}:{port_int}", path=path)
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
+# ---------------------------------------------------------------------------
 # Probe
 # ---------------------------------------------------------------------------
 
@@ -155,7 +201,10 @@ def _probe(base: str | None, entity: dict, timeout: float = 5.0) -> tuple[str, i
     manual testing against 127.0.0.1 with all worker ports published).
     """
     host = base if base is not None else f"http://{entity['name']}"
-    url = f"{host}:{entity['port']}{entity['path']}"
+    try:
+        url = build_validated_url(host, entity['port'], entity['path'])
+    except ValueError:
+        return "unreachable", 0, 0
     t0 = time.monotonic()
     try:
         req = urllib.request.Request(url, method="GET")
@@ -215,6 +264,10 @@ def probe_with_retry(
 def _report_to_observatory(base: str | None, report: VerifyReport) -> None:
     host = base if base is not None else "http://monitoring"
     try:
+        url = build_validated_url(host, 8007, "/events")
+    except ValueError:
+        return
+    try:
         payload = json.dumps(
             {
                 "source": "post-deploy-verify",
@@ -227,7 +280,7 @@ def _report_to_observatory(base: str | None, report: VerifyReport) -> None:
             }
         ).encode()
         req = urllib.request.Request(
-            f"{host}:8007/events",
+            url,
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",
