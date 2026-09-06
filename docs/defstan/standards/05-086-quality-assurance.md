@@ -1,8 +1,8 @@
 # DEF STAN 05-086 — Quality Assurance
 
-**Standard:** DEF STAN 05-086 (adapted)  
-**Area Code:** QA  
-**Status Summary:** 6 COMPLIANT, 1 PARTIAL  
+**Standard:** DEF STAN 05-086 (adapted)
+**Area Code:** QA
+**Status Summary:** 6 COMPLIANT, 1 PARTIAL
 **Score:** ~92.9%
 
 ## Purpose
@@ -15,7 +15,7 @@ Establishes quality assurance requirements for the platform: test coverage, stat
 
 80+ test files. Unit, integration, end-to-end. Coverage reports on every CI run.
 
-**Evidence:** `tests/test_smoke.py`, `tests/test_uat.py`, `tests/test_chaos.py`, `pyproject.toml`  
+**Evidence:** `tests/test_smoke.py`, `tests/test_uat.py`, `tests/test_chaos.py`, `pyproject.toml`
 **Status:** COMPLIANT
 
 ---
@@ -24,7 +24,7 @@ Establishes quality assurance requirements for the platform: test coverage, stat
 
 Python code passes ruff + mypy + black + isort before merge.
 
-**Evidence:** `.pre-commit-config.yaml`, `pyproject.toml`, `.forgejo/workflows/ci.yml`  
+**Evidence:** `.pre-commit-config.yaml`, `pyproject.toml`, `.forgejo/workflows/ci.yml`
 **Status:** COMPLIANT
 
 ---
@@ -33,7 +33,7 @@ Python code passes ruff + mypy + black + isort before merge.
 
 No code merged to main without passing CI: tests, linting, security scans.
 
-**Evidence:** `.forgejo/workflows/ci.yml`, `.forgejo/workflows/production-gate.yml`  
+**Evidence:** `.forgejo/workflows/ci.yml`, `.forgejo/workflows/production-gate.yml`
 **Status:** COMPLIANT
 
 ---
@@ -42,7 +42,7 @@ No code merged to main without passing CI: tests, linting, security scans.
 
 SAST, dependency scanning, secret detection on every PR.
 
-**Evidence:** `.forgejo/workflows/security-scan.yml` (bandit, semgrep, gitleaks), `.forgejo/workflows/dependency-audit.yml`  
+**Evidence:** `.forgejo/workflows/security-scan.yml` (bandit, semgrep, gitleaks), `.forgejo/workflows/dependency-audit.yml`
 **Status:** COMPLIANT
 
 ---
@@ -51,7 +51,7 @@ SAST, dependency scanning, secret detection on every PR.
 
 Test results persisted in machine-readable format, linked to requirements.
 
-**Evidence:** `pyproject.toml` (logs/test_results.jsonl), `tests/test_compliance.py`  
+**Evidence:** `pyproject.toml` (logs/test_results.jsonl), `tests/test_compliance.py`
 **Status:** COMPLIANT
 
 ---
@@ -60,7 +60,7 @@ Test results persisted in machine-readable format, linked to requirements.
 
 Regular fault injection: service unavailability, network partitions, invalid input storms.
 
-**Evidence:** `tests/test_chaos.py` (The Chaos Party — Alice in Wonderland themed), `tests/test_resilience.py`  
+**Evidence:** `tests/test_chaos.py` (The Chaos Party — Alice in Wonderland themed), `tests/test_resilience.py`
 **Status:** COMPLIANT
 
 ---
@@ -69,5 +69,5 @@ Regular fault injection: service unavailability, network partitions, invalid inp
 
 Key paths benchmarked to establish baselines. CI regression gate on regressions.
 
-**Evidence:** `src/benchmark/`, `tests/test_tranc3_ml.py`  
+**Evidence:** `src/benchmark/`, `tests/test_tranc3_ml.py`
 **Status:** PARTIAL — Benchmarks exist; CI regression gate not yet automated

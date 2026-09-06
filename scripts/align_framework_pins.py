@@ -34,7 +34,7 @@ WHAT IT WILL AND WILL NOT TOUCH
 
 It rewrites the version of an **exact `==` pin** of a canonical package, and
 nothing else. Extras are preserved (`uvicorn[standard]==0.30.6` becomes
-`uvicorn[standard]==0.52.3`, not `uvicorn==0.52.3`), as are inline comments,
+`uvicorn[standard]==0.52.4`, not `uvicorn==0.52.4`), as are inline comments,
 surrounding lines, and line endings.
 
 A non-`==` specifier is reported but never rewritten. The estate's convention
@@ -80,7 +80,7 @@ CANONICAL: dict[str, str] = {
     "fastapi": "0.141.1",
     "starlette": "1.6.0",
     "pydantic": "2.13.4",
-    "uvicorn": "0.52.3",
+    "uvicorn": "0.52.4",
     "redis": "8.1.0",
 }
 

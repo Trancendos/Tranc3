@@ -97,7 +97,7 @@ export default function DigitalGridPage() {
           <div className="flex items-center gap-3 px-4 py-2 bg-gray-900 border-b border-gray-700 flex-shrink-0">
             <button
               onClick={() => setView("dashboard")}
-              className="text-gray-400 hover:text-gray-200 text-sm transition-colors"
+              className="text-gray-400 hover:text-gray-200 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded"
             >
               ← Workflows
             </button>
@@ -107,7 +107,7 @@ export default function DigitalGridPage() {
             {nameEdit ? (
               <input
                 autoFocus
-                className="bg-gray-800 text-white text-sm font-semibold px-2 py-0.5 rounded border border-indigo-500 outline-none w-48"
+                className="bg-gray-800 text-white text-sm font-semibold px-2 py-0.5 rounded border border-indigo-500 outline-none w-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 value={workflow.name}
                 onChange={(e) => setWorkflow((wf) => ({ ...wf, name: e.target.value }))}
                 onBlur={() => setNameEdit(false)}
@@ -115,7 +115,7 @@ export default function DigitalGridPage() {
               />
             ) : (
               <button
-                className="text-sm font-semibold text-white hover:text-indigo-300 transition-colors"
+                className="text-sm font-semibold text-white hover:text-indigo-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded px-1 -ml-1"
                 onClick={() => setNameEdit(true)}
               >
                 {workflow.name}
@@ -131,7 +131,7 @@ export default function DigitalGridPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-3 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {saving ? "Saving…" : "Save"}
             </button>
@@ -139,7 +139,7 @@ export default function DigitalGridPage() {
             <button
               onClick={handleRun}
               disabled={running || saving}
-              className="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {running ? "Running…" : "▶ Run"}
             </button>
@@ -171,7 +171,7 @@ export default function DigitalGridPage() {
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Label</label>
                     <input
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-indigo-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
                       value={selectedNode.label}
                       onChange={(e) => setWorkflow((wf) => ({
                         ...wf,
@@ -197,7 +197,7 @@ export default function DigitalGridPage() {
                         }));
                         setSelectedId(null);
                       }}
-                      className="w-full py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:border-red-800 rounded transition-colors"
+                      className="w-full py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:border-red-800 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
                     >
                       Delete Node
                     </button>

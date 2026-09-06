@@ -17,7 +17,7 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -295,11 +295,16 @@ async def browse_listings(
         conditions.append("seller_id=?")
         params.append(seller_id)
 
+    # `conditions` holds only literal fragments appended by the code above
+    # ("resource_type=?", "price_per_unit >= ?", ...); every caller-supplied
+    # value goes into `params` and reaches SQLite as a bound `?`. The scanners
+    # match on the f-string, not on what is interpolated, so both lines are
+    # suppressed with the reason recorded rather than left to fail the gate.
     where_clause = " AND ".join(conditions)
     listing_sql = (
-        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
+        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608  # nosec B608
     )
-    count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608
+    count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608  # nosec B608
 
     conn = _get_conn()
     try:
@@ -309,6 +314,111 @@ async def browse_listings(
         rows = conn.execute(listing_sql, [*params, limit, offset]).fetchall()  # nosec B608
         total = conn.execute(count_sql, params).fetchone()[0]  # nosec B608
         return {"total": total, "listings": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+class UpdateListingRequest(BaseModel):
+    quantity: Optional[float] = Field(None, gt=0)
+    price_per_unit: Optional[float] = Field(None, ge=0)
+    description: Optional[str] = None
+    # Constrained rather than free text. Only two statuses exist anywhere in
+    # this worker: rows are created 'active' (line ~266) and a purchase moves
+    # them to 'sold' when the quantity reaches zero (line ~448). Browsing
+    # (`WHERE status='active'`) and purchasing both filter on 'active', so a
+    # PATCH setting any other string returned 200 while making the listing
+    # invisible to buyers and impossible to purchase -- with nothing to say so.
+    status: Optional[Literal["active", "sold"]] = None
+
+
+@_router.get("/listings/{listing_id}")
+async def get_listing(listing_id: str):
+    """Retrieve a specific listing."""
+    conn = _get_conn()
+    try:
+        row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Listing not found")
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@_router.patch("/listings/{listing_id}")
+async def update_listing(listing_id: str, req: UpdateListingRequest):
+    """Update a specific listing."""
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
+        if not row:
+            conn.rollback()
+            raise HTTPException(404, "Listing not found")
+
+        updates = []
+        params = []
+
+        if req.quantity is not None:
+            updates.append("quantity=?")
+            params.append(req.quantity)
+        if req.price_per_unit is not None:
+            updates.append("price_per_unit=?")
+            params.append(req.price_per_unit)
+        if req.description is not None:
+            updates.append("description=?")
+            params.append(req.description)
+        if req.status is not None:
+            updates.append("status=?")
+            params.append(req.status)
+
+        if not updates:
+            conn.rollback()
+            return dict(row)
+
+        updates.append("updated_at=?")
+        params.append(now)
+
+        params.append(listing_id)
+
+        # Same shape as the search query above: `updates` holds only literal
+        # "column=?" fragments, values ride in `params`. The nosec has to sit on
+        # the f-string line -- that is the line bandit reports -- not on the
+        # execute below, where it was previously and therefore did nothing.
+        update_sql = f"UPDATE listings SET {', '.join(updates)} WHERE id=?"  # noqa: S608  # nosec B608
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query
+        conn.execute(update_sql, params)
+        conn.commit()
+
+        updated_row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
+        return dict(updated_row)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Update listing failed")
+        raise HTTPException(500, "Update listing failed") from exc
+    finally:
+        conn.close()
+
+
+@_router.delete("/listings/{listing_id}", status_code=204)
+async def delete_listing(listing_id: str):
+    """Delete a specific listing."""
+    conn = _get_conn()
+    try:
+        with _cursor(conn) as cur:
+            row = cur.execute("SELECT id FROM listings WHERE id=?", (listing_id,)).fetchone()
+            if not row:
+                raise HTTPException(404, "Listing not found")
+            cur.execute("DELETE FROM listings WHERE id=?", (listing_id,))
+    except sqlite3.IntegrityError as exc:
+        # _get_conn sets PRAGMA foreign_keys=ON and orders.listing_id REFERENCES
+        # listings(id), so deleting a listing an order points at raises here.
+        # _cursor rolls back and re-raises, which FastAPI would otherwise turn
+        # into a 500 -- a server error for a well-formed request the server is
+        # simply refusing. 409 says what actually happened.
+        raise HTTPException(409, "Listing cannot be deleted while orders reference it") from exc
     finally:
         conn.close()
 
@@ -372,7 +482,7 @@ async def purchase(req: PurchaseRequest):
     except Exception as exc:
         conn.rollback()
         logger.exception("Purchase failed")
-        raise HTTPException(500, f"Purchase failed: {exc}") from exc
+        raise HTTPException(500, "Purchase failed") from exc
     finally:
         conn.close()
 
@@ -405,8 +515,111 @@ async def buyer_orders(
         conn.close()
 
 
+class UpdateOrderRequest(BaseModel):
+    status: Optional[str] = None
+
+
+@_router.get("/orders")
+async def list_orders(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """List all orders."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+        return {"total": total, "orders": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+@_router.get("/orders/id/{order_id}")
+async def get_order(order_id: str):
+    """Retrieve a specific order."""
+    conn = _get_conn()
+    try:
+        row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Order not found")
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@_router.patch("/orders/id/{order_id}")
+async def update_order(order_id: str, req: UpdateOrderRequest):
+    """Update a specific order."""
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        if not row:
+            conn.rollback()
+            raise HTTPException(404, "Order not found")
+
+        if req.status is not None:
+            conn.execute("UPDATE orders SET status=? WHERE id=?", (req.status, order_id))
+            conn.commit()
+
+        updated_row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        return dict(updated_row)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Update order failed")
+        raise HTTPException(500, "Update order failed") from exc
+    finally:
+        conn.close()
+
+
+@_router.delete("/orders/id/{order_id}", status_code=204)
+async def delete_order(order_id: str):
+    """Cancel an order, returning its quantity to the listing.
+
+    Deleting the order row alone would leave the listing permanently short:
+    `purchase` decrements `listings.quantity` and flips `status` to 'sold' when
+    it reaches zero, so a bare DELETE consumes inventory and then destroys the
+    only record of why. The reversal is the exact inverse of `purchase`, in one
+    EXCLUSIVE transaction so a concurrent purchase cannot interleave between
+    the restore and the delete.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        order = conn.execute(
+            "SELECT listing_id, quantity FROM orders WHERE id=?", (order_id,)
+        ).fetchone()
+        if not order:
+            conn.rollback()
+            raise HTTPException(404, "Order not found")
+
+        # Back to 'active': the restored quantity is necessarily > 0, which is
+        # exactly the condition under which `purchase` leaves a listing active.
+        conn.execute(
+            "UPDATE listings SET quantity = quantity + ?, status='active', updated_at=? WHERE id=?",
+            (order["quantity"], now, order["listing_id"]),
+        )
+        conn.execute("DELETE FROM orders WHERE id=?", (order_id,))
+        conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Delete order failed")
+        raise HTTPException(500, "Delete order failed") from exc
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Exchange Stats
+
+
 # ---------------------------------------------------------------------------
 @_router.get("/exchange/stats")
 async def exchange_stats():

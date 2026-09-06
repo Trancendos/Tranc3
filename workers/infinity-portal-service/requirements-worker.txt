@@ -1,7 +1,7 @@
 # Exact-pinned — Do NOT use >= or ~=
 fastapi==0.141.1
 starlette==1.6.0
-uvicorn==0.52.3
+uvicorn==0.52.4
 pydantic==2.13.4
 httpx==0.28.1
 httpcore==1.0.9
@@ -19,4 +19,4 @@ ecdsa==0.19.2
 # This worker never signs/verifies ES256/ES384/ES512 JWTs (grep confirms no ES2xx usage),
 # so the vulnerable ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
 pyasn1==0.6.4
-email-validator==2.2.0
+email-validator==2.3.0

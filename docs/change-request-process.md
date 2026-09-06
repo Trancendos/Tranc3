@@ -1,10 +1,10 @@
 # Change Request Process
 
-> **Document ID:** CR-PROC-001  
-> **DEF STAN ref:** REQ-CM-006 (DEF STAN 00-044 Configuration Management)  
-> **Owner:** The Town Hall / The Citadel  
-> **Version:** 1.0  
-> **Date:** 2026-06-06  
+> **Document ID:** CR-PROC-001
+> **DEF STAN ref:** REQ-CM-006 (DEF STAN 00-044 Configuration Management)
+> **Owner:** The Town Hall / The Citadel
+> **Version:** 1.0
+> **Date:** 2026-06-06
 
 ---
 

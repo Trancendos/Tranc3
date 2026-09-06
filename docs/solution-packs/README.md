@@ -73,4 +73,3 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | The Artifactory | `PID-ART` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](the-artifactory.md) |
 | The Spark | `PID-SPK` | Knowledge | 1/10 | 7/10 | 0 | — | [pack](the-spark.md) |
 | Arcadia | `PID-ARC` | Commercial / Financial | 1/10 | 3/10 | 0 | — | [pack](arcadia.md) |
-

@@ -27,7 +27,11 @@ from typing import Any, Optional
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 # Newline sequences that can break log lines
-_NEWLINE_RE = re.compile(r"[\r\n]+")
+# Includes the Unicode line breaks Python's own str.splitlines() splits on:
+# U+0085 NEL, U+2028 LINE SEPARATOR, U+2029 PARAGRAPH SEPARATOR. Stripping
+# only CR/LF left a forged log line reachable by any downstream tool that
+# splits lines the way Python does.
+_NEWLINE_RE = re.compile(r"[\r\n\x85\u2028\u2029]+")
 
 # Maximum length for a single log field to prevent log flooding
 _MAX_LOG_FIELD_LENGTH = 1024

@@ -202,7 +202,8 @@ class TestApiGateway:
 
 class TestBackupService:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BACKUP_ROOT", str(tmp_path / "backups"))
         self.mod = _import_worker("workers/backup-service/worker.py")
         self.client = _client_for(self.mod)
 
@@ -402,7 +403,8 @@ class TestInfinityAdminService:
     )
     def test_admin_config_with_auth(self):
         client = TestClient(
-            self.mod.app, headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")}
+            self.mod.app,
+            headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")},
         )
         r = client.get("/admin/config")
         assert r.status_code in (200, 404, 500)
@@ -410,7 +412,8 @@ class TestInfinityAdminService:
     @pytest.mark.skip(reason="Same Dimensional JWT-gateway blocker as test_admin_config_with_auth.")
     def test_admin_primes(self):
         client = TestClient(
-            self.mod.app, headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")}
+            self.mod.app,
+            headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")},
         )
         r = client.get("/admin/primes")
         assert r.status_code in (200, 404, 500)

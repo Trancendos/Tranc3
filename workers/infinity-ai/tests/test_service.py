@@ -116,6 +116,12 @@ async def test_router_uses_lru_cache(tmp_db):
         max_tokens=512,
         temperature=0.7,
     )
+    # The smart semantic cache is consulted before the LRU one and persists
+    # across tests, so a near-duplicate prompt seeded by an earlier test would
+    # answer here as "smart-cache" and this test would stop covering the LRU
+    # path it is named for. Disabling it keeps the assertion exact.
+    router._smart_cache = None
+
     resp = await router.route(req)
     assert resp.provider == "cache"
 
@@ -185,6 +191,11 @@ async def test_router_falls_back_to_offline(tmp_db):
         messages=[ChatMessage(role="user", content="hello")],
         max_tokens=64,
     )
+    # Same reason as the LRU test: a smart-cache hit would satisfy route()
+    # before any provider is tried, and this test would pass without ever
+    # reaching the offline fallback it exists to verify.
+    router._smart_cache = None
+
     resp = await router.route(req)
     assert resp.provider == "offline"
     assert resp.choices[0].message.content != ""

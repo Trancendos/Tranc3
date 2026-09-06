@@ -5,6 +5,7 @@ with AST analysis, smell detection, and autonomous self-improvement.
 
 import ast
 import hashlib
+import keyword
 import logging
 import re
 import textwrap
@@ -417,7 +418,7 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
         "fastapi_router": textwrap.dedent("""\
             from fastapi import APIRouter, HTTPException, status
             from pydantic import BaseModel
-            from typing import List, Optional
+            from typing import Any, List, Optional
 
             router = APIRouter(prefix="/{prefix}", tags=["{tag}"])
 
@@ -479,8 +480,13 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
 
             async def extract(source: str) -> AsyncIterator[dict]:
                 \"\"\"Yield records from *source*.\"\"\"
-                # TODO: implement extraction
-                yield {}
+                # Generic mock implementation simulating asynchronous extraction
+
+                # Simulate reading a batch of records from the source
+                print(f"Starting extraction from {source}")
+                for i in range(1, 11):
+                    await asyncio.sleep(0.01)  # Simulate I/O delay
+                    yield {"id": i, "source": source, "status": "extracted"}
 
 
             async def transform(record: dict) -> dict:
@@ -543,8 +549,7 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
                 \"\"\"Handle {description}.\"\"\"
                 try:
                     body = await request.json()
-                    # TODO: implement handler logic
-                    return JSONResponse(content={{"status": "ok"}})
+{handler_logic}
                 except Exception as exc:
                     logger.exception("Handler error: %s", exc)
                     raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
@@ -600,13 +605,41 @@ def _generate_pytest_tests(code: str, description: str) -> str:
             prefix = "async " if is_async else ""
             decorator = "@pytest.mark.asyncio\n" if is_async else ""
             call = f"await {fn}({', '.join(params)})" if is_async else f"{fn}({', '.join(params)})"
+            assertion = "assert result is not None  # TODO: strengthen assertion"
+            if getattr(node, "returns", None):
+                if isinstance(node.returns, ast.Constant) and node.returns.value is None:
+                    assertion = "assert result is None"
+                else:
+                    rt = None
+                    if isinstance(node.returns, ast.Name):
+                        rt = node.returns.id
+                    elif isinstance(node.returns, ast.Subscript) and isinstance(
+                        node.returns.value, ast.Name
+                    ):
+                        rt = node.returns.value.id
+
+                    if rt in (
+                        "int",
+                        "float",
+                        "str",
+                        "bool",
+                        "dict",
+                        "list",
+                        "set",
+                        "tuple",
+                        "bytes",
+                    ):
+                        assertion = f"assert isinstance(result, {rt})"
+                    elif rt in ("Dict", "List", "Set", "Tuple"):
+                        assertion = f"assert isinstance(result, {rt.lower()})"
+
             lines += [
                 f"{decorator}{prefix}def test_{fn}() -> None:",
                 f'    """Test {fn}."""',
                 "    # Arrange / Act",
                 f"    result = {call}",
                 "    # Assert",
-                "    assert result is not None  # TODO: strengthen assertion",
+                f"    {assertion}",
                 "",
             ]
 
@@ -619,6 +652,12 @@ def _generate_pytest_tests(code: str, description: str) -> str:
 # ---------------------------------------------------------------------------
 # AdvancedCodeGenerator
 # ---------------------------------------------------------------------------
+
+
+def _require_import(lines: List[str], statement: str) -> None:
+    """Ensure *statement* leads *lines*, without duplicating an existing import."""
+    if statement not in lines:
+        lines.insert(0, statement)
 
 
 class AdvancedCodeGenerator:
@@ -673,6 +712,7 @@ class AdvancedCodeGenerator:
         # Default: generic async Python function
         return textwrap.dedent(f"""\
             import asyncio
+            import json
             import logging
             from typing import Any, Dict, Optional
 
@@ -683,9 +723,190 @@ class AdvancedCodeGenerator:
                 \"\"\"
                 {request.description}
                 \"\"\"
-                # TODO: implement
-                raise NotImplementedError
+                try:
+                    from src.core.tranc3_inference import get_engine
+
+                    engine = get_engine()
+                    context_str = json.dumps(context, indent=2) if context else "None"
+
+                                                                                prompt = (
+                        f"Task: {request.description}\\n\\n"
+                        f"Context data:\\n{{context_str}}\\n\\n"
+                        "Please perform the task and return the result."
+                    )
+
+                    result = await engine.generate(
+                        prompt=prompt,
+                        max_new_tokens=1024,
+                        temperature=0.4,
+                    )
+                    return {{"result": result.get("response", "")}}
+                except Exception as e:
+                    logger.error("Error executing generic fallback: %s", e)
+                    return {{"error": str(e)}}
             """)
+
+    def _translate_nl_to_cli_logic(self, description: str) -> str:
+        """Natural language to code translation logic for CLI templates."""
+        desc = description.lower()
+        logic_lines = []
+
+        # Split once, at the first output verb, and classify each half on its own
+        # clause. Both formats used to be read off the whole description, which
+        # got each other's case wrong in mirror image: "read a CSV file and write
+        # JSON output" wrote text instead of JSON, and "read a JSON file and
+        # write CSV output" parsed with csv.reader instead of json.load — the
+        # second only surfaced when a round-trip test covered all four
+        # combinations.
+        # A bare substring search matched "output" inside a *filename*: for
+        # "read output.csv and count rows" the split put "csv" in the output
+        # clause and left "read " as the input clause, so the tool parsed a CSV
+        # file as text AND generated a writer for a description that only asked
+        # for a count. The trailing \w* keeps "saves"/"writes" matching (a plain
+        # \b would not); the lookahead is what rejects a filename, since \b
+        # alone happily matches "output" in "output.csv" -- "." is a non-word
+        # character, so the boundary holds.
+        out_verb = re.search(r"\b(?:write|save|output)\w*\b(?!\.\w)", desc)
+        if out_verb:
+            in_clause, out_clause = desc[: out_verb.start()], desc[out_verb.end() :]
+        else:
+            in_clause, out_clause = desc, ""
+
+        # 1. Parsing logic
+        if "csv" in in_clause:
+            in_fmt = "csv"
+            logic_lines.extend(
+                ["import csv", "with open(input, 'r') as f:", "    data = list(csv.reader(f))"]
+            )
+        elif "json" in in_clause:
+            in_fmt = "json"
+            logic_lines.extend(
+                ["import json", "with open(input, 'r') as f:", "    data = json.load(f)"]
+            )
+        else:
+            in_fmt = "text"
+            logic_lines.extend(["with open(input, 'r') as f:", "    data = f.read()"])
+
+        # 2. Processing logic
+        # Whole words: substring matching fired "Count:" on any description
+        # mentioning a discount or an account.
+        desc_words = set(re.findall(r"[a-z]+", desc))
+        if desc_words & {"count", "rows", "length"}:
+            # The text branch leaves `data` as the whole file string, so a bare
+            # len() reported characters -- newlines included -- where CSV and
+            # JSON reported records. Branch in the generated code rather than
+            # here, because the same template serves all three input formats.
+            logic_lines.append(
+                "typer.echo(f'Count: "
+                "{len(data.splitlines()) if isinstance(data, str) else len(data)}')"
+            )
+
+        # 3. Output logic
+        # Gated on the same match as the clause split above, not on a word set:
+        # a word set re-introduces the filename bug by seeing "output" in
+        # "output.csv" and writing a file nobody asked for.
+        if out_verb:
+            # Fall back to the input format when the output clause names none:
+            # "reads a JSON file ... and saves the output" says nothing after the
+            # verb and must still write JSON.
+            out_fmt = next((f for f in ("json", "csv") if f in out_clause), in_fmt)
+            # The serializer's own import is emitted here rather than assumed
+            # from the parsing branch: the input and output formats are chosen
+            # independently, so CSV-in/JSON-out reached json.dump() having only
+            # imported csv, and the generated CLI died on NameError.
+            if out_fmt == "json":
+                _require_import(logic_lines, "import json")
+                logic_lines.extend(
+                    [
+                        "with open(output, 'w') as f:",
+                        "    json.dump(data, f, indent=2)",
+                        "if verbose:",
+                        "    typer.echo(f'Saved JSON to {output}')",
+                    ]
+                )
+            elif out_fmt == "csv":
+                # str(data) wrote Python list syntax into a file named .csv.
+                # The row normalisation gives non-tabular input a defined shape
+                # -- one field per record -- instead of iterating a string
+                # character by character.
+                _require_import(logic_lines, "import csv")
+                logic_lines.extend(
+                    [
+                        "rows = data if isinstance(data, list) else [data]",
+                        "with open(output, 'w', newline='') as f:",
+                        "    csv.writer(f).writerows(",
+                        "        r if isinstance(r, (list, tuple)) else [r] for r in rows",
+                        "    )",
+                        "if verbose:",
+                        "    typer.echo(f'Saved CSV to {output}')",
+                    ]
+                )
+            else:
+                logic_lines.extend(
+                    [
+                        "with open(output, 'w') as f:",
+                        "    f.write(str(data))",
+                        "if verbose:",
+                        "    typer.echo(f'Saved to {output}')",
+                    ]
+                )
+
+        if len(logic_lines) <= 2:
+            logic_lines.append("pass")
+
+        # Unindented on purpose. The caller re-indents to whatever column the
+        # target template's placeholder sits at -- see _apply_substitutions.
+        # This used to join with sixteen spaces, which is the indentation the
+        # fastapi_handler body needs, not the four the typer_cli body needs, so
+        # every generated CLI raised IndentationError on its second logic line.
+        return "\n".join(logic_lines)
+
+    def _extract_pydantic_fields(self, description: str) -> str:
+        """Extract Pydantic model fields from description using regex."""
+        fields = {}
+        # Matches patterns like `name: str` or `age (int)`
+        pattern = r"(?i)([a-z_][a-z0-9_]*)\s*(?:[:]\s*|\(\s*)(str|int|float|bool|list|dict|any)[^a-zA-Z0-9_]"
+        for match in re.finditer(pattern, description + " "):
+            fields[match.group(1)] = match.group(2).lower()
+
+        if not fields:
+            return "pass"
+
+        lines = []
+        type_map = {
+            "str": "str",
+            "int": "int",
+            "float": "float",
+            "bool": "bool",
+            "list": "list",
+            "dict": "dict",
+            "any": "Any",
+        }
+
+        # Hard keywords only. `keyword.issoftkeyword` was also checked here at
+        # first, which was wrong: soft keywords (`match`, `case`, `type`, `_`)
+        # are contextual and perfectly legal as annotation targets --
+        # `class M: match: str` parses. Renaming them bought nothing and
+        # silently changed the generated API's field names.
+        emitted: dict[str, str] = {}
+        for name, type_str in fields.items():
+            py_type = type_map.get(type_str, "Any")
+            # The field-name pattern above happily matches Python keywords, so a
+            # description mentioning "class: str" produced `class: str` in the
+            # model body -- a SyntaxError, not a bad name. A trailing underscore
+            # is the documented convention for this collision (PEP 8) and keeps
+            # the field rather than silently dropping it.
+            safe = f"{name}_" if keyword.iskeyword(name) else name
+            # ...but that rename can collide with a field already called
+            # `class_`, and dict-ordered emission would have let the second
+            # annotation overwrite the first with no error at all. Suffix until
+            # free, so both survive and neither is silently lost.
+            while safe in emitted and emitted[safe] != name:
+                safe = f"{safe}_"
+            emitted[safe] = name
+            lines.append(f"{safe}: {py_type}")
+
+        return "\n    ".join(lines)
 
     def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
         """Fill in template placeholders from the request description."""
@@ -695,15 +916,59 @@ class AdvancedCodeGenerator:
         prefix = resource + "s"
         tag = resource
 
-        return (
+        safe_desc = request.description[:80].replace("\n", " ")
+        handler_logic = (
+            f'                    logger.info("Processing {resource} request")\n'
+            f"                    # Logic for: {safe_desc}\n"
+            f"                    if not body:\n"
+            f'                        raise ValueError("Empty payload")\n'
+            f'                    return JSONResponse(content={{"status": "success", "resource": "{resource}", "data": body}})'
+        )
+
+        # CLI templates get their own translation. This is additive to the
+        # handler_logic above rather than an alternative to it: the return
+        # below substitutes {handler_logic} and {description} unconditionally,
+        # so dropping those two assignments would raise NameError for every
+        # template, CLI or not.
+        if "import typer" in template:
+            cli_logic = self._translate_nl_to_cli_logic(request.description)
+            # Re-indent to the placeholder's own column rather than assuming
+            # one. str.replace keeps the first line where the placeholder was
+            # and leaves every later line at column 0, so they must be padded
+            # to match; deriving it here keeps this correct if the template's
+            # nesting ever changes.
+            marker = "# TODO: implement"
+            indent = ""
+            for line in template.splitlines():
+                if marker in line:
+                    indent = line[: len(line) - len(line.lstrip())]
+                    break
+            cli_logic = ("\n" + indent).join(cli_logic.splitlines())
+            template = template.replace(marker, cli_logic)
+
+        res = (
             template.replace("{prefix}", prefix)
             .replace("{tag}", tag)
             .replace("{Model}", model)
             .replace("{resource}", resource)
             .replace("{ModelName}", model + "Model")
-            .replace("{description}", request.description[:80])
+            .replace("{description}", safe_desc)
             .replace("{handler_name}", "handle_" + resource)
+            .replace("{handler_logic}", handler_logic)
         )
+
+        def replace_fields(match):
+            indent = match.group(1)
+            # Remove the hardcoded internal indent from `_extract_pydantic_fields`
+            fields_str = self._extract_pydantic_fields(request.description).replace(
+                "\n    ", "\n" + indent
+            )
+            return indent + fields_str
+
+        res = re.sub(r"([ \t]*)# TODO: define fields\n\s*pass", replace_fields, res)
+        res = re.sub(r"([ \t]*)# TODO: define response fields", replace_fields, res)
+
+        return res
 
     # ------------------------------------------------------------------
     # LLM enhancement
@@ -787,7 +1052,7 @@ class AdvancedCodeGenerator:
         explanation = await self.explain_code(final_code)
 
         # 6. Quality score
-        self._analyzer.analyze_python(final_code) if request.language == "python" else {}
+        (self._analyzer.analyze_python(final_code) if request.language == "python" else {})
         smells = (
             self._analyzer.detect_code_smells(final_code) if request.language == "python" else []
         )

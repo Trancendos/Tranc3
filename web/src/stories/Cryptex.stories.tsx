@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ThreatCard } from "@/components/shadcn/threat-card";
 import { SecurityEngineStatus } from "@/components/shadcn/security-engine-status";
 

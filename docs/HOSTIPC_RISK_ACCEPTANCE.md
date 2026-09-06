@@ -1,8 +1,8 @@
 # hostIPC Risk Acceptance — Nanoservice Shared Memory
 
-**Status:** ACCEPTED (with controls)  
-**Review date:** 2026-06-14  
-**Owner:** Platform / The Citadel  
+**Status:** ACCEPTED (with controls)
+**Review date:** 2026-06-14
+**Owner:** Platform / The Citadel
 **Next review:** 2026-09-14
 
 ## Context

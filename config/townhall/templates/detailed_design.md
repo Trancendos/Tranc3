@@ -1,6 +1,6 @@
 # Detailed Design Document (DDD)
 
-**Component:** {{component}}  
+**Component:** {{component}}
 **ADD reference:** {{add_ref}}
 
 ## Interfaces

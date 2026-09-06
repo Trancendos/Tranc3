@@ -1,6 +1,6 @@
 # Security Framework Assessment
 
-**Scope:** {{scope}}  
+**Scope:** {{scope}}
 **Date:** {{date}}
 
 ## OWASP / Zero Trust checklist
