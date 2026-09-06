@@ -25,6 +25,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -104,7 +106,12 @@ type ShmRingBuffer struct {
 
 // NewShmRingBuffer creates or opens a shared memory ring buffer
 func NewShmRingBuffer(segmentName string, create bool) (*ShmRingBuffer, error) {
-	path := fmt.Sprintf("%s/%s%s", SHMDir, SHMPrefix, segmentName)
+	for _, seg := range strings.Split(filepath.ToSlash(segmentName), "/") {
+		if seg == ".." {
+			return nil, fmt.Errorf("invalid file path")
+		}
+	}
+	path := filepath.Join(SHMDir, SHMPrefix+segmentName)
 
 	var file *os.File
 	var err error
