@@ -45,6 +45,22 @@ Two rules:
      documentation, and a check that could not tell the difference would
      punish writing the explanation down.
 
+Two remedies, and which one applies:
+
+  skip with notice  The workflow would scan this repository correctly the
+                    moment someone supplies a credential or a tenant
+                    identifier. `endorlabs.yml`, `zscaler-iac-scan.yml` and
+                    `black-duck-security-scan-ci.yml` each gate their scan on
+                    that value and emit a `::notice` until it is set, because
+                    a scan that cannot authenticate is not a finding about
+                    this repository and should not be reported as one.
+
+  delete            The workflow has nothing here to scan even fully
+                    configured: a sample target we do not own, an analyzer
+                    configuration this repository does not have, or a runner
+                    that no longer exists. No secret makes it valid, so it is
+                    removed rather than suppressed.
+
 Standard library plus PyYAML, which CI already installs.
 """
 
