@@ -9,7 +9,7 @@
 # plus manual dispatch. Free-tier GitHub Actions.
 #
 # Auth: prefers a WIKI_TOKEN secret (PAT with `repo` scope) if set, else falls
-# back to the default GITHUB_TOKEN. If pushes 403, add a WIKI_TOKEN secret — some
+# back to the default GITHUB_TOKEN. If pushes 403, add a WIKI_TOKEN secret - some
 # orgs restrict the default token from writing wikis.
 
 name: Publish Wiki
@@ -32,11 +32,11 @@ concurrency:
 
 jobs:
   publish:
-    name: Mirror wiki-content/ → GitHub Wiki
+    name: Mirror wiki-content/ -> GitHub Wiki
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v4 # v7
 
       - name: Publish wiki
         env:

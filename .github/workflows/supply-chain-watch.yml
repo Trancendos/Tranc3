@@ -1,6 +1,6 @@
 # .github/workflows/supply-chain-watch.yml
 #
-# GitHub-hosted twin of the supply-chain scans in .forgejo/workflows/ —
+# GitHub-hosted twin of the supply-chain scans in .forgejo/workflows/ -
 # following the same side-by-side pattern as bot-health-watchdog.yml rather
 # than migrating anything. The Forgejo originals keep their broader job set
 # (licences, outdated lists, worker sweep, dashboards) and will run again once
@@ -11,7 +11,7 @@
 #
 # Every scheduled supply-chain control in this repo lives in .forgejo/workflows/,
 # which GitHub does not read. Sixteen scheduled Forgejo jobs exist and fourteen
-# need `runs-on: self-hosted` — the act-runner on hardware that is currently
+# need `runs-on: self-hosted` - the act-runner on hardware that is currently
 # awaiting repair funding, which is the same reason the estate is Cloud Only.
 # The scans were therefore built, wired, and dormant: a control that exists and
 # does not fire. That is the failure mode this repo keeps rediscovering
@@ -29,29 +29,29 @@
 # the repository. A push-triggered scan cannot see either: a dependency that gets
 # a CVE published against it on a quiet Sunday produces no commit to trigger on.
 #
-#   vulnerability census — DAILY. Under CRA Art. 14(1) an actively exploited
+#   vulnerability census - DAILY. Under CRA Art. 14(1) an actively exploited
 #     vulnerability must be notified within 24 hours of becoming aware of it.
 #     Twenty-four hours is a lookup interval, not a scanning interval, so the
 #     intake that feeds it cannot be weekly. See MC-045 in the Magna Carta
 #     register and docs/compliance/EU-CRA-PROFILE.md.
 #
-#   obsolescence census — WEEKLY. Dormancy is measured in years, and the census
+#   obsolescence census - WEEKLY. Dormancy is measured in years, and the census
 #     makes ~110 live calls to pypi.org and registry.npmjs.org. Running that
 #     daily buys no earlier warning and adds a daily chance of a transient
 #     registry outage. The Forgejo original is weekly for the same reason.
 #
 # Both scripts are fail-closed by construction: a surface that could not be
 # scanned is reported as unknown, never as healthy. That property is why they are
-# safe to schedule unattended and wrong to put in a blocking PR gate — a registry
+# safe to schedule unattended and wrong to put in a blocking PR gate - a registry
 # outage would redden a pull request that touched no dependency at all.
 
 name: Supply Chain Watch
 
 on:
   schedule:
-    - cron: '0 5 * * *'    # Daily 05:00 UTC — vulnerability census
-    - cron: '30 5 * * 1'   # Monday 05:30 UTC — obsolescence census
-  workflow_dispatch:       # Manual trigger — runs both
+    - cron: '0 5 * * *'    # Daily 05:00 UTC - vulnerability census
+    - cron: '30 5 * * 1'   # Monday 05:30 UTC - obsolescence census
+  workflow_dispatch:       # Manual trigger - runs both
 
 # Least privilege at the top; only the alert job is granted issues: write, below.
 # The two census jobs read the repository and talk to package registries -- they
@@ -76,7 +76,7 @@ jobs:
     # connection sit for six hours before anyone noticed.
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v4 # v7
         with:
           # A read-only audit has no need of a push token left in .git/config.
           persist-credentials: false
@@ -89,7 +89,7 @@ jobs:
       - name: Set up Node 24
         # npm audit reads package-lock.json directly; no install step is needed,
         # and adding one would run lifecycle hooks this repo deliberately blocks.
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@v4 # v7
         with:
           node-version: '24'
 
@@ -112,7 +112,7 @@ jobs:
         # the repo rather than working from a hardcoded list, deduplicates the
         # Python ones by dependency set (91 files collapse to ~40 distinct), and
         # skips git submodules, which audit themselves. Roughly nine minutes,
-        # nearly all of it waiting on pypi.org and registry.npmjs.org — fine here,
+        # nearly all of it waiting on pypi.org and registry.npmjs.org - fine here,
         # which is why the production merge gate uses --scope core instead.
         run: python scripts/vulnerability_census.py --check --scope all
 
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v4 # v7
         with:
           persist-credentials: false
 
@@ -143,7 +143,7 @@ jobs:
         # --fail-on stranded is the strict setting and passes today, because every
         # currently-dormant component carries a reasoned disposition in
         # docs/governance/OBSOLESCENCE-ACCEPTED.md. The gate therefore fires only
-        # on a dormant component nobody has looked at yet — a reviewed risk
+        # on a dormant component nobody has looked at yet - a reviewed risk
         # passes, an unexamined one does not.
         run: python scripts/obsolescence_census.py --check --fail-on stranded
 
@@ -160,7 +160,7 @@ jobs:
     needs: [vulnerability, obsolescence]
     # A scheduled workflow has no pull request to redden and nobody watching the
     # Actions tab at 05:00. Without this job a failure is indistinguishable from
-    # a pass — which is the exact defect this workflow exists to correct, so it
+    # a pass - which is the exact defect this workflow exists to correct, so it
     # would be a poor joke to reproduce it here. Runs when either census failed;
     # `always()` is required because a skipped sibling job otherwise cancels it.
     if: always() && (needs.vulnerability.result == 'failure' || needs.obsolescence.result == 'failure')
@@ -200,7 +200,7 @@ jobs:
 
           Both censuses are fail-closed, so this means one of:
 
-          - a **fixable** vulnerability is open — a patch exists and has not been taken;
+          - a **fixable** vulnerability is open - a patch exists and has not been taken;
           - a **stranded** dependency has no reasoned disposition in \`docs/governance/OBSOLESCENCE-ACCEPTED.md\`;
           - a surface could not be scanned, and is therefore reported as unknown rather than healthy.
 

@@ -34,7 +34,7 @@ jobs:
       # The action refuses to start unless at least one product is pointed at
       # a server: "Requires at least one scan type: (polaris_server_url,
       # coverity_url, blackducksca_url, srm_url)". None of the four is set
-      # here, so every run failed at that check — a red X on every pull
+      # here, so every run failed at that check - a red X on every pull
       # request, from a scan that never looked at the code.
       #
       # Configuring any one product is enough. Set its URL as a repository

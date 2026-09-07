@@ -41,6 +41,10 @@ jobs:
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
       id: msdo
+      with:
+        categories: 'SDL,IaC,secrets'
+        tools: 'checkov,eslint,templateanalyzer'
+        # Excluded bandit because it crashes with path limits on windows
     - name: Upload results to Security tab
       uses: github/codeql-action/upload-sarif@v3
       with:
