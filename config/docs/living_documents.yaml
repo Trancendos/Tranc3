@@ -1,0 +1,40 @@
+version: 1
+documents:
+  - id: production-compose
+    title: Production deployment runbook
+    canonical: docs/DEPLOYMENT_RUNBOOK.md
+    kind: how-to
+    owner: Platform Operations
+    source_paths:
+      - docker-compose.production.yml
+      - scripts/compose_contract_audit.py
+
+  - id: ci-cd-controls
+    title: CI/CD audit and operating model
+    canonical: docs/CI-CD-AUDIT.md
+    kind: explanation
+    owner: Platform Engineering
+    source_paths:
+      - .github/workflows/ci.yml
+      - scripts/ci_health.py
+      - scripts/ci_diagnostics.py
+      - scripts/retry_transient.py
+      - scripts/security_backlog.py
+
+  - id: runtime-api
+    title: Runtime API reference
+    canonical: docs/API_REFERENCE.md
+    kind: reference
+    owner: API Platform
+    source_paths:
+      - api.py
+      - src/routers/enhanced_capabilities.py
+
+  - id: wiki-publication
+    title: Wiki source and publishing policy
+    canonical: docs/WIKI_INDEX.md
+    kind: reference
+    owner: Documentation Maintainers
+    source_paths:
+      - scripts/publish-wiki.sh
+      - .github/workflows/publish-wiki.yml

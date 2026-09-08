@@ -20,9 +20,45 @@ The Tranc3 production stack is a fully self-hosted, zero-cost architecture that 
 
 ---
 
-## Service Inventory
+## Service Inventory and Source of Truth
 
-### Infrastructure Layer (7 services)
+`docker-compose.production.yml` is the executable source of truth for production
+services, images, networks, ports, and environment requirements. This runbook
+describes the operating model; it deliberately does not attempt to duplicate the
+full Compose inventory, which changes more often than a human-maintained table
+can safely track. Run the following before a deployment to validate the current
+contract:
+
+```bash
+python scripts/compose_contract_audit.py --check
+docker compose -f docker-compose.production.yml config --quiet
+```
+
+The table below is a representative infrastructure map, not a complete service
+catalogue. Use `docs/services/INDEX.md` for service documentation and the
+rendered Compose configuration for the complete deployment inventory.
+
+### Control-plane network policy
+
+Traefik remains the public HTTP(S) entry point. Administrative and observability
+services are bound to `127.0.0.1` and must be accessed through an authenticated
+reverse proxy or an SSH tunnel, for example:
+
+```bash
+ssh -L 3001:127.0.0.1:3001 <operator>@<host>
+```
+
+Existing worker ports are not treated as private solely because this policy
+exists. Migrate each worker behind Traefik in reviewed batches, then remove its
+direct host port. The Compose contract audit prevents new duplicate bindings,
+public control-plane exposure, and insecure secret fallbacks; it does not hide
+or waive deterministic deployment failures.
+
+### Historical infrastructure reference
+
+The following legacy reference is retained only to explain the original
+Cloudflare-to-self-hosted design. Its image and port values are not deployment
+configuration; use the Compose file above for current values.
 
 | Service | Image | Port | Purpose |
 |---|---|---|---|

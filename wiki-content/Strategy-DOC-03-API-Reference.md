@@ -1,5 +1,10 @@
-# TRANC3 API Reference
+# TRANC3 API Design Specification (Historical)
 **Version:** 2.0.0 | **Base URL:** https://api.tranc3.ai/v2
+
+> **Historical design artefact.** This page records the v2 product specification
+> and is not the deployed runtime contract. For current implementation-facing
+> endpoints, use `docs/API_REFERENCE.md`; `api.py` and
+> `src/routers/enhanced_capabilities.py` are the implementation sources.
 
 ---
 

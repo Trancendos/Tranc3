@@ -314,8 +314,8 @@ def skeleton(doc: dict) -> dict[str, list[tuple]]:
 
 def compare(name: str) -> list[str]:
     """Return unexplained differences between the two copies of `name`."""
-    gh = skeleton(yaml.safe_load((GH_DIR / name).read_text()))
-    fj = skeleton(yaml.safe_load((FJ_DIR / name).read_text()))
+    gh = skeleton(yaml.safe_load((GH_DIR / name).read_text(encoding="utf-8")))
+    fj = skeleton(yaml.safe_load((FJ_DIR / name).read_text(encoding="utf-8")))
     findings: list[str] = []
 
     if set(gh) != set(fj):

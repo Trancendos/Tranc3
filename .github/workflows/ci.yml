@@ -81,6 +81,16 @@ jobs:
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
 
+      - name: Production Compose contract audit
+        run: python scripts/compose_contract_audit.py --check
+
+      # Documentation is source-coupled rather than auto-generated: a changed
+      # deployment or CI control must carry a reviewed canonical document.
+      # This is local filesystem and git-diff work in the existing job, so it
+      # adds no new workflow, schedule, token, or third-party service.
+      - name: Documentation health
+        run: python scripts/documentation_health.py --check --base-ref origin/main --check-catalog
+
       - name: Build-context import check
         run: python scripts/check_worker_build_context.py
 
