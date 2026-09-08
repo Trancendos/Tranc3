@@ -1,0 +1,60 @@
+# Labels are additive and map changed paths to the repository's existing labels.
+# Keep this deliberately small: labels should improve triage, not replace review.
+github_actions:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ".github/workflows/**"
+      - any-glob-to-any-file: ".forgejo/**"
+      - any-glob-to-any-file: ".woodpecker.yml"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: "docs/**"
+      - any-glob-to-any-file: "wiki-content/**"
+      - any-glob-to-any-file: "*.md"
+
+python:
+  - changed-files:
+      - any-glob-to-any-file: "**/*.py"
+
+javascript:
+  - changed-files:
+      - any-glob-to-any-file: "**/*.{js,jsx,ts,tsx}"
+
+rust:
+  - changed-files:
+      - any-glob-to-any-file: "**/*.rs"
+
+go:
+  - changed-files:
+      - any-glob-to-any-file: "**/*.go"
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file: "**/Dockerfile"
+      - any-glob-to-any-file: "docker/**"
+      - any-glob-to-any-file: "docker-compose*.yml"
+
+infrastructure:
+  - changed-files:
+      - any-glob-to-any-file: "ansible/**"
+      - any-glob-to-any-file: "infra/**"
+      - any-glob-to-any-file: "infrastructure/**"
+      - any-glob-to-any-file: "monitoring/**"
+
+worker:
+  - changed-files:
+      - any-glob-to-any-file: "workers/**"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: "**/requirements*.txt"
+      - any-glob-to-any-file: "**/poetry.lock"
+      - any-glob-to-any-file: "**/pyproject.toml"
+      - any-glob-to-any-file: "**/package.json"
+      - any-glob-to-any-file: "**/package-lock.json"
+      - any-glob-to-any-file: "**/pnpm-lock.yaml"
+      - any-glob-to-any-file: "**/yarn.lock"
