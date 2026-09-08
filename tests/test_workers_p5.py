@@ -229,7 +229,8 @@ class TestBackupService:
 
 class TestBlenderWorker:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("RENDERS_DIR", str(tmp_path / "renders"))
         self.mod = _import_worker("workers/blender-worker/worker.py")
         self.client = _client_for(self.mod)
 
