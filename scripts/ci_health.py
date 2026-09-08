@@ -52,7 +52,7 @@ def main() -> int:
 
     if args.remediate_run_id:
         run = next((item for item in canonical if item.get("id") == args.remediate_run_id), None)
-        if not run or run.get("conclusion") != "failure" or run.get("run_attempt", 1) != 1:
+        if not run or run.get("conclusion") != "failure" or run.get("run_attempt", -1) != 1:
             raise SystemExit("Refusing remediation: run is not a first-attempt canonical failure")
         jobs = request(f"/repos/{repository}/actions/runs/{args.remediate_run_id}/jobs").get(
             "jobs", []
