@@ -5,6 +5,10 @@ docs are staged in **`wiki-content/`** (version-controlled in this repo) and pub
 the **GitHub Wiki** (trancendos/tranc3/wiki) via `scripts/publish-wiki.sh`. Code-adjacent
 docs (referenced by automation, tests, or CI) stay in the repo under `docs/`.
 
+`docs/DOCUMENTATION_CATALOG.md` is the concise entry point for canonical operational
+documents. Its versioned living-document registry links important source paths to an
+owned document and prevents the repository and Wiki from becoming competing authorities.
+
 > **Wiki publishing status.** The 62 pages under `wiki-content/` are the canonical source.
 > The live GitHub Wiki is populated by running `scripts/publish-wiki.sh` (requires push
 > access to `…/Tranc3.wiki.git`). Edit pages in `wiki-content/` on a branch, get them

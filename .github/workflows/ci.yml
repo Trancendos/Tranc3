@@ -9,14 +9,20 @@ on:
     branches: ["main", "develop"]
   push:
     branches: ["main", "develop"]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint:
     name: Ruff Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -26,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install ruff
-        run: pip install "ruff==0.15.8"
+        run: python scripts/retry_transient.py --label "ruff install" -- pip install "ruff==0.15.8"
 
       - name: Ruff check
         run: |
@@ -42,6 +48,10 @@ jobs:
             --exclude ".forgejo" \
             .
 
+      - name: Capture diagnostics
+        if: ${{ failure() }}
+        run: python scripts/ci_diagnostics.py --job lint
+
   topology:
     # Two classes of defect that no test can catch, because both only fail
     # inside a built container while passing locally: a service calling a
@@ -49,6 +59,7 @@ jobs:
     # context excludes. Both are cheap static checks against compose itself.
     name: Service Topology
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -65,10 +76,20 @@ jobs:
           python-version: "3.11"
 
       - name: Install PyYAML
-        run: pip install PyYAML
+        run: python scripts/retry_transient.py --label "PyYAML install" -- pip install "PyYAML==6.0.3"
 
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
+
+      - name: Production Compose contract audit
+        run: python scripts/compose_contract_audit.py --check
+
+      # Documentation is source-coupled rather than auto-generated: a changed
+      # deployment or CI control must carry a reviewed canonical document.
+      # This is local filesystem and git-diff work in the existing job, so it
+      # adds no new workflow, schedule, token, or third-party service.
+      - name: Documentation health
+        run: python scripts/documentation_health.py --check --base-ref origin/main --check-catalog
 
       - name: Build-context import check
         run: python scripts/check_worker_build_context.py
@@ -209,10 +230,15 @@ jobs:
       - name: AI register conformance
         run: python scripts/check_ai_register.py
 
+      - name: Capture diagnostics
+        if: ${{ failure() }}
+        run: python scripts/ci_diagnostics.py --job topology
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
     needs: lint
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -231,13 +257,41 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements-test.txt || true
-          pip install -r requirements.txt || true
-          pip install pytest pytest-asyncio || true
+          python scripts/retry_transient.py --label "test dependencies" -- pip install -r requirements-test.txt
+          python scripts/retry_transient.py --label "application dependencies" -- pip install -r requirements.txt
+          python scripts/retry_transient.py --label "pytest tooling" -- pip install pytest pytest-asyncio pytest-cov
 
       - name: Run tests
         run: |
           python -m pytest tests/ -x -q --tb=short \
             -m "not integration and not chaos" \
             --ignore=tests/test_full_suite.py \
-            || true  # Don't block PRs on test failures yet
+            --cov=Dimensional --cov=src --cov-report=xml:coverage.xml --cov-report=term-missing
+
+      - name: Report test run to The Chaos Party
+        if: always()
+        env:
+          CHAOS_PARTY_URL: ${{ secrets.CHAOS_PARTY_URL }}
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
+        run: python scripts/report_tests_to_chaos_party.py --ran-by github-ci
+
+      - name: Upload coverage artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ci-coverage-${{ github.run_id }}
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload coverage to Codecov
+        if: ${{ success() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+        with:
+          files: coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+
+      - name: Capture diagnostics
+        if: ${{ failure() }}
+        run: python scripts/ci_diagnostics.py --job test

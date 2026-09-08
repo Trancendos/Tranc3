@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `10f7ec84`. Regenerate with
+Generated from repo state at `26bfc1a1`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -57,7 +57,7 @@ that none of them import.
 
 ### `artifactory-service`
 - **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored
-  - `workers/artifactory-service/worker.py:30 Dimensional.service_auth_fastapi`
+  - `workers/artifactory-service/worker.py:35 Dimensional.service_auth_fastapi`
 
 ### `audit-service`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored

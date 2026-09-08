@@ -64,5 +64,7 @@ def test_generate_production_env_template_keys():
         "AUDIT_SIGNING_KEY=",
         "VAULT_MASTER_KEY=",
         "AUTH_SERVICE_URL=",
+        "MINIO_ROOT_USER=",
+        "MATTERMOST_DB_PASSWORD=",
     ):
         assert key in script

@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "10f7ec84",
+  "commit": "26bfc1a1",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-02T12:58:21.702094+00:00",
+  "generated_at": "2026-09-08T19:54:52.817934+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -438,7 +438,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/artifactory-service/worker.py:30 Dimensional.service_auth_fastapi"
+            "workers/artifactory-service/worker.py:35 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },

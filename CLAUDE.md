@@ -467,11 +467,15 @@ pipelines — but it is dormant, so today GitHub Actions is the only CI that act
 an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
 execute. Describe them as the target state, not as a system currently gating anything.
 
-`.github/workflows/` has **20** files (this said 12 until 2026-08-28; it had not been recounted
-since eight more were added). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint and
-Service Topology checks, `codeql.yml`, `test.yml`, `trivy.yml`, `codecov.yml`, `python.yml`,
-`rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`). Two are
-deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
+`.github/workflows/` has **27** files. Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint,
+Service Topology checks, and integrated coverage reporting; `codeql.yml`, `trivy.yml`, `python.yml`,
+`rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`). `ci.yml` now
+includes integrated coverage reporting (previously in the standalone `codecov.yml`) along with its
+existing Ruff/lint and Service Topology checks. A consolidation in PR #1177 removed duplicate
+test/coverage workflows and unconfigured starter workflows, adding strict failure handling,
+diagnostics, and a new `ci-health.yml` workflow for scheduled health checks and remediation. All core
+security and compliance capabilities are preserved: CodeQL, Trivy, Scorecard, supply-chain scanning.
+Two workflows are deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
 `publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
 deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run

@@ -72,6 +72,36 @@ OUT_MD = ROOT / "docs" / "architecture" / "SERVICE-REVIEW.md"
 ROOT_PACKAGES = {"src", "Dimensional", "shared_core"}
 
 
+def first_difference(expected: Any, actual: Any, path: str = "") -> str | None:
+    """Return the first deterministic difference between JSON-like values."""
+    location = path or "<root>"
+    if type(expected) is not type(actual):
+        return f"{location}: expected {type(expected).__name__}, got {type(actual).__name__}"
+    if isinstance(expected, dict):
+        expected_keys = set(expected)
+        actual_keys = set(actual)
+        for key in sorted(expected_keys - actual_keys):
+            return f"{location}.{key}: missing from generated review"
+        for key in sorted(actual_keys - expected_keys):
+            return f"{location}.{key}: unexpected in generated review"
+        for key in sorted(expected_keys):
+            difference = first_difference(expected[key], actual[key], f"{location}.{key}")
+            if difference:
+                return difference
+        return None
+    if isinstance(expected, list):
+        if len(expected) != len(actual):
+            return f"{location}: expected {len(expected)} items, got {len(actual)}"
+        for index, (old, new) in enumerate(zip(expected, actual, strict=True)):
+            difference = first_difference(old, new, f"{location}[{index}]")
+            if difference:
+                return difference
+        return None
+    if expected != actual:
+        return f"{location}: expected {expected!r}, got {actual!r}"
+    return None
+
+
 # Images we pull rather than build. Their internals are not ours to review, but
 # they are still part of the running estate, so they are counted, not dropped.
 def is_infra(cfg: dict) -> bool:
@@ -274,7 +304,7 @@ def scan_imports(ctx: Path) -> dict[str, list]:
                 mods += [a.name for a in node.names if a.name.split(".")[0] in ROOT_PACKAGES]
             for mod in mods:
                 top = mod.split(".")[0]
-                entry = f"{py.relative_to(ROOT)}:{node.lineno} {mod}"
+                entry = f"{py.relative_to(ROOT).as_posix()}:{node.lineno} {mod}"
                 if (ctx / top).is_dir():
                     out["vendored"].append(entry)
                 elif any(a <= node.lineno <= b for a, b in spans):
@@ -816,7 +846,7 @@ def main() -> int:
         # or a TypeError from dict() instead of failing it. A gate that raises
         # reads as infrastructure breakage, not as "the artifact is stale".
         try:
-            committed = json.loads(OUT_JSON.read_text())
+            committed = json.loads(OUT_JSON.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             print(
                 "service-review.json is not valid JSON — rerun scripts/build_service_review.py",
@@ -835,9 +865,12 @@ def main() -> int:
             old.pop(volatile, None)
             new.pop(volatile, None)
         if old != new:
+            difference = first_difference(old, new)
             print(
                 "service review is stale — rerun scripts/build_service_review.py", file=sys.stderr
             )
+            if difference:
+                print(f"first difference: {difference}", file=sys.stderr)
             return 1
 
         # The Markdown was only checked for existence, so a change to
@@ -849,7 +882,7 @@ def main() -> int:
         for volatile in ("generated_at", "commit"):
             if volatile in committed:
                 g_for_md[volatile] = committed[volatile]
-        if OUT_MD.read_text() != render_md(g_for_md):
+        if OUT_MD.read_text(encoding="utf-8") != render_md(g_for_md):
             print(
                 "SERVICE-REVIEW.md is stale — rerun scripts/build_service_review.py",
                 file=sys.stderr,
@@ -874,7 +907,7 @@ def main() -> int:
     # recorded whenever the content genuinely moves.
     if OUT_JSON.is_file() and OUT_MD.is_file():
         try:
-            prev = json.loads(OUT_JSON.read_text())
+            prev = json.loads(OUT_JSON.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             prev = None
         # isinstance, not `is not None`: a service-review.json holding a bare
@@ -894,7 +927,7 @@ def main() -> int:
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(js + "\n", encoding="utf-8")
-    OUT_MD.write_text(md, encoding="utf-8")
+    OUT_MD.write_bytes(md.encode("utf-8"))
     t = g["totals"]
     print(
         f"service review: {sum(t.values())} services — "

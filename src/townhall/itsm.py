@@ -205,6 +205,26 @@ class ChangeRecord:
         }
 
 
+@dataclass
+class DocumentReview:
+    id: str
+    article_id: str
+    content_hash: str
+    reviewer: str
+    created_at: float
+    review_location: str = "The Town Hall"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "article_id": self.article_id,
+            "content_hash": self.content_hash,
+            "reviewer": self.reviewer,
+            "created_at": self.created_at,
+            "review_location": self.review_location,
+        }
+
+
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     """Announce a transition that has already been committed.
 
@@ -305,6 +325,22 @@ class ItsmService:
                     unresolved_reason TEXT
                 )
                 """
+            )
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS document_reviews (
+                    id TEXT PRIMARY KEY,
+                    article_id TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
+                    reviewer TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    review_location TEXT NOT NULL
+                )
+                """
+            )
+            self._conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_document_reviews_article "
+                "ON document_reviews (article_id, created_at DESC)"
             )
             self._conn.commit()
 
@@ -497,6 +533,54 @@ class ItsmService:
         with self._lock:
             rows = self._conn.execute("SELECT * FROM changes ORDER BY created_at DESC").fetchall()
         return [self._row_to_change(r) for r in rows]
+
+    def record_document_approval(
+        self, article_id: str, content_hash: str, reviewer: str
+    ) -> DocumentReview:
+        if not article_id.strip() or not content_hash.strip() or not reviewer.strip():
+            raise ValueError("document approval requires article, content hash, and reviewer")
+        review = DocumentReview(
+            id=str(uuid.uuid4()),
+            article_id=article_id,
+            content_hash=content_hash,
+            reviewer=reviewer,
+            created_at=time.time(),
+        )
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO document_reviews "
+                "(id, article_id, content_hash, reviewer, created_at, review_location) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    review.id,
+                    review.article_id,
+                    review.content_hash,
+                    review.reviewer,
+                    review.created_at,
+                    review.review_location,
+                ),
+            )
+            self._conn.commit()
+        _emit("document.review.approved", review.to_dict())
+        return review
+
+    def document_reviews(self, article_id: str) -> list[DocumentReview]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM document_reviews WHERE article_id = ? ORDER BY created_at DESC",
+                (article_id,),
+            ).fetchall()
+        return [
+            DocumentReview(
+                id=row["id"],
+                article_id=row["article_id"],
+                content_hash=row["content_hash"],
+                reviewer=row["reviewer"],
+                created_at=row["created_at"],
+                review_location=row["review_location"],
+            )
+            for row in rows
+        ]
 
     # ── serialisation ───────────────────────────────────────────────────────
 

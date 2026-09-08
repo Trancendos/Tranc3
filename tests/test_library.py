@@ -10,6 +10,7 @@ from src.library.knowledge_base import (
     ArticleStatus,
     DataClassification,
     Jurisdiction,
+    KnowledgeChannel,
     Library,
     get_library,
 )
@@ -40,6 +41,7 @@ class TestArticle:
         assert art.updated_at > 0
         assert art.source == "internal"
         assert art.outline_id is None
+        assert art.channel == KnowledgeChannel.WIKI
 
     def test_to_dict(self):
         art = Article(
@@ -53,6 +55,7 @@ class TestArticle:
         assert d["body_preview"] == "This is a test body that has some content in it"
         assert d["tags"] == ["test", "unit"]
         assert d["status"] == "published"
+        assert d["channel"] == "wiki"
 
     def test_body_preview_truncation(self):
         art = Article(body="A" * 500)
@@ -88,7 +91,7 @@ class TestLibrary:
         assert art.body == "Article content"
         assert art.tags == ["new"]
         assert art.author == "tester"
-        assert art.status == ArticleStatus.PUBLISHED
+        assert art.status == ArticleStatus.DRAFT
 
     def test_create_article_default_tags(self):
         art = self.lib.create(title="No Tags", body="Content")
@@ -194,15 +197,14 @@ class TestLibrary:
         assert len(recent) >= 1
 
     def test_recent_filter_by_status(self):
-        self.lib.create(title="Published", body="Content")
         recent = self.lib.recent(status=ArticleStatus.PUBLISHED)
         assert len(recent) >= 1
         assert all(a.status == ArticleStatus.PUBLISHED for a in recent)
 
-    def test_recent_drafts_empty(self):
-        """No drafts in seed data or new articles (create sets PUBLISHED)."""
+    def test_recent_drafts_contains_new_article(self):
+        self.lib.create(title="Draft", body="Content")
         recent = self.lib.recent(status=ArticleStatus.DRAFT)
-        assert len(recent) == 0
+        assert len(recent) == 1
 
     # ── Stats ───────────────────────────────────────────────────────────
 
@@ -218,6 +220,12 @@ class TestLibrary:
         self.lib.create(title="Outline", body="Content", source="outline")
         stats = self.lib.stats()
         assert stats["by_source"].get("outline", 0) >= 1
+
+    def test_stats_by_channel(self):
+        self.lib.create(title="KB", body="Content", channel=KnowledgeChannel.KB)
+        stats = self.lib.stats()
+        assert stats["by_channel"].get("kb", 0) == 1
+        assert stats["by_channel"].get("wiki", 0) >= 6
 
     # ── Singleton ───────────────────────────────────────────────────────
 
@@ -353,6 +361,8 @@ class TestBridgeForwardGates:
             "title": "Ordinary title",
             "body": "Ordinary body with nothing sensitive in it.",
             "classification": DataClassification.INTERNAL,
+            "status": ArticleStatus.PUBLISHED,
+            "channel": KnowledgeChannel.KB,
         }
         defaults.update(kwargs)
         return Article(**defaults)
@@ -366,6 +376,11 @@ class TestBridgeForwardGates:
         from src.library.bridge import _is_forwardable
 
         assert _is_forwardable(self._article(legal_hold=True)) is False
+
+    def test_admin_wiki_article_is_not_forwarded_to_the_user_kb_store(self):
+        from src.library.bridge import _is_forwardable
+
+        assert _is_forwardable(self._article(channel=KnowledgeChannel.WIKI)) is False
 
     def test_local_only_jurisdiction_blocks_forward(self):
         from src.library.bridge import _is_forwardable
@@ -429,5 +444,6 @@ class TestBridgeForwardGates:
         monkeypatch.setattr(bridge, "forward_delete", lambda aid: called.append(aid))
         lib = Library()
         art = lib.create(title="Not held", body="Content")
+        art.status = ArticleStatus.PUBLISHED
         lib.delete(art.id)
         assert called == [art.id]

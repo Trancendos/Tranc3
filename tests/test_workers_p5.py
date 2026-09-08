@@ -229,7 +229,8 @@ class TestBackupService:
 
 class TestBlenderWorker:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("RENDERS_DIR", str(tmp_path / "renders"))
         self.mod = _import_worker("workers/blender-worker/worker.py")
         self.client = _client_for(self.mod)
 
@@ -256,7 +257,8 @@ class TestBlenderWorker:
 
 class TestFfmpegWorker:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("FFMPEG_WORKDIR", str(tmp_path / "ffmpeg-workdir"))
         self.mod = _import_worker("workers/ffmpeg-worker/worker.py")
         self.client = _client_for(self.mod)
 
@@ -758,7 +760,9 @@ class TestTransc3Ai:
 
 class TestTriposrWorker:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUTS_DIR", str(tmp_path / "triposr-outputs"))
+        monkeypatch.setenv("MODELS_DIR", str(tmp_path / "triposr-models"))
         self.mod = _import_worker("workers/triposr-worker/worker.py")
         self.client = _client_for(self.mod)
 

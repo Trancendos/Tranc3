@@ -1,20 +1,39 @@
-# Tranc3 API Reference
+# Tranc3 Runtime API Reference
 
 > **Version:** 0.1.0
 > **Base URL:** `http://localhost:8000`
 > **Authentication:** Bearer token (JWT) for protected endpoints
 > **Protocol:** HTTP/REST + WebSocket
+>
+> **Implementation boundary:** `api.py` is the canonical FastAPI entry point.
+> Enhanced capabilities are mounted from `src/routers/enhanced_capabilities.py`;
+> the former `api_enhanced.py` entry point is archived and must not be deployed.
 
 ---
 
 ## Overview
 
-The Tranc3 platform exposes two FastAPI applications:
+The deployed runtime is one canonical FastAPI application in `api.py`. Enhanced
+capabilities are mounted from `src/routers/enhanced_capabilities.py` and share
+the same application middleware.
+
+### Town Hall ITSM
+
+The `api` package loader creates one shared canonical application instance.
+Town Hall ITSM records are mounted under `/townhall/itsm`; the administrator-only
+document review trail is available at
+`GET /townhall/itsm/documents/{article_id}/reviews`.
+
+### Retired two-application split
+
+The entries below describe the former layout. They are retained to make the
+migration traceable; do not deploy or test against `api_enhanced.py`.
 
 1. **Primary API** (`api.py`) — Core inference, auth, billing, and admin endpoints
 2. **Enhanced API** (`api_enhanced.py`) — MCP, workflow, deepmind, skills, code, healing, evolution, and personality endpoints
 
-Both applications share the same authentication middleware and can be mounted together or run independently.
+Those routes are now consolidated into the canonical entry point and are no
+longer deployed independently.
 
 ---
 

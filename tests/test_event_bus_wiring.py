@@ -80,15 +80,15 @@ def test_wire_platform_events_registers_callbacks():
 @pytest.mark.parametrize(
     "event_type,expected_channel",
     [
-        ("ai.inference.complete", "ai"),
-        ("ai.inference.failed", "ai"),
-        ("auth.token.issued", "auth"),
-        ("user.login", "users"),
+        ("ai.inference.complete", "models"),
+        ("ai.inference.failed", "models"),
+        ("auth.token.issued", "security"),
+        ("user.login", "platform"),
         ("workflow.completed", "workflows"),
         ("service.health.changed", "platform"),
         ("secret.stored", "security"),
-        ("order.created", "financial"),
-        ("payment.received", "financial"),
+        ("order.created", "platform"),
+        ("payment.received", "platform"),
         ("notification.sent", "platform"),
     ],
 )
@@ -328,4 +328,4 @@ async def test_sentinel_forward_posts_to_correct_url():
 
     assert len(posted_payloads) == 1
     assert "sentinel:8041" in posted_payloads[0]["url"]
-    assert posted_payloads[0]["payload"]["channel"] == "ai"
+    assert posted_payloads[0]["payload"]["channel"] == "models"

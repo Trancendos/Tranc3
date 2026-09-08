@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 import uuid
@@ -29,6 +30,13 @@ class ArticleStatus(str, Enum):
     ARCHIVED = "archived"
 
 
+class KnowledgeChannel(str, Enum):
+    """Publication audience for Library knowledge."""
+
+    KB = "kb"
+    WIKI = "wiki"
+
+
 @dataclass
 class Article:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -41,6 +49,7 @@ class Article:
     updated_at: float = field(default_factory=time.time)
     source: str = "internal"  # "internal" | "outline" | "observatory"
     outline_id: Optional[str] = None  # ID in external Outline instance
+    channel: KnowledgeChannel = KnowledgeChannel.WIKI
     # Classification doubles as the article's sensitivity level — this is
     # the same public/internal/confidential/restricted/top_secret taxonomy
     # already enforced for data streams (src/nanoservices/daas_stream), not
@@ -60,6 +69,10 @@ class Article:
     # governed copy the hold's custodian doesn't know about is a liability, not
     # a benefit), and a delete of held content is never propagated.
     legal_hold: bool = False
+    review_id: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[float] = None
+    review_location: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -73,10 +86,15 @@ class Article:
             "updated_at": self.updated_at,
             "source": self.source,
             "outline_id": self.outline_id,
+            "channel": self.channel.value,
             "classification": self.classification.value,
             "retention_days": self.retention_days,
             "jurisdiction": self.jurisdiction.value,
             "legal_hold": self.legal_hold,
+            "review_id": self.review_id,
+            "reviewed_by": self.reviewed_by,
+            "reviewed_at": self.reviewed_at,
+            "review_location": self.review_location,
         }
 
     def retention_expired(self, now: Optional[float] = None) -> bool:
@@ -109,18 +127,18 @@ class Library:
         author: str = "system",
         source: str = "internal",
         outline_id: Optional[str] = None,
+        channel: KnowledgeChannel = KnowledgeChannel.WIKI,
         classification: DataClassification = DataClassification.INTERNAL,
         retention_days: Optional[int] = None,
         jurisdiction: Jurisdiction = Jurisdiction.GLOBAL,
         legal_hold: bool = False,
-        status: ArticleStatus = ArticleStatus.PUBLISHED,
+        status: ArticleStatus = ArticleStatus.DRAFT,
     ) -> Article:
-        # `status` defaults to PUBLISHED so every existing caller is unchanged,
-        # but it has to be settable: Basement promotion creates articles that are
-        # proposals awaiting an admin's judgement, not established knowledge.
-        # Auto-publishing a machine-detected pattern into the knowledge base
-        # would let a false positive become something the platform then treats
-        # as fact.
+        if status is not ArticleStatus.DRAFT:
+            raise ValueError("new Library articles must be drafts; use publish after review")
+        # Basement promotion and automated sources create proposals awaiting an
+        # administrator's judgement, not established knowledge. Auto-publishing
+        # a machine-detected pattern would let a false positive become fact.
         art = Article(
             title=title,
             body=body,
@@ -128,6 +146,7 @@ class Library:
             author=author,
             source=source,
             outline_id=outline_id,
+            channel=channel,
             status=status,
             classification=classification,
             retention_days=retention_days,
@@ -164,11 +183,72 @@ class Library:
         art = self._articles.get(article_id)
         if not art:
             return None
+        if "status" in kwargs:
+            raise ValueError("article status can only change through publish")
+        content_fields = {
+            "title",
+            "body",
+            "tags",
+            "source",
+            "outline_id",
+            "channel",
+            "classification",
+            "jurisdiction",
+            "legal_hold",
+        }
+        requires_review = art.status is ArticleStatus.PUBLISHED and any(
+            field in kwargs for field in content_fields
+        )
+        was_legal_hold = art.legal_hold
         for k, v in kwargs.items():
             if hasattr(art, k):
                 setattr(art, k, v)
         art.updated_at = time.time()
-        self._emit_observatory_event(art, "article.updated")
+        if requires_review:
+            art.status = ArticleStatus.DRAFT
+            art.review_id = None
+            art.reviewed_by = None
+            art.reviewed_at = None
+            art.review_location = None
+            if not was_legal_hold and not art.legal_hold:
+                try:
+                    from src.library.bridge import forward_delete
+
+                    forward_delete(article_id)
+                except Exception:
+                    pass  # nosec B110 - durable replica invalidation is best-effort
+            self._emit_observatory_event(art, "article.review_required")
+        else:
+            self._emit_observatory_event(art, "article.updated")
+        return art
+
+    def publish(self, article_id: str, reviewer: str) -> Optional[Article]:
+        art = self._articles.get(article_id)
+        if not art:
+            return None
+        if art.status is not ArticleStatus.DRAFT:
+            raise ValueError("only draft articles can be published")
+        content_hash = hashlib.sha256(f"{art.title}\0{art.body}".encode("utf-8")).hexdigest()
+        from src.townhall.itsm import get_itsm_service
+
+        review = get_itsm_service().record_document_approval(
+            article_id=art.id,
+            content_hash=content_hash,
+            reviewer=reviewer,
+        )
+        art.status = ArticleStatus.PUBLISHED
+        art.review_id = review.id
+        art.reviewed_by = review.reviewer
+        art.reviewed_at = review.created_at
+        art.review_location = review.review_location
+        art.updated_at = review.created_at
+        self._emit_observatory_event(art, "article.published")
+        try:
+            from src.library.bridge import forward_article
+
+            forward_article(art)
+        except Exception:
+            pass  # nosec B110 - durable replication is best-effort after approval
         return art
 
     def delete(self, article_id: str) -> bool:
@@ -192,7 +272,7 @@ class Library:
         # is exactly what a hold forbids, so the durable copy is deliberately
         # left in place — held content outliving its source is the intended
         # outcome, not an orphan.
-        if not art.legal_hold:
+        if art.status is ArticleStatus.PUBLISHED and not art.legal_hold:
             try:
                 from src.library.bridge import forward_delete
 
@@ -243,17 +323,20 @@ class Library:
         by_status = {}
         by_source = {}
         by_classification = {}
+        by_channel = {}
         for art in self._articles.values():
             by_status[art.status.value] = by_status.get(art.status.value, 0) + 1
             by_source[art.source] = by_source.get(art.source, 0) + 1
             by_classification[art.classification.value] = (
                 by_classification.get(art.classification.value, 0) + 1
             )
+            by_channel[art.channel.value] = by_channel.get(art.channel.value, 0) + 1
         return {
             "total_articles": total,
             "by_status": by_status,
             "by_source": by_source,
             "by_classification": by_classification,
+            "by_channel": by_channel,
             "tags": len(self._tag_index),
         }
 
@@ -269,7 +352,13 @@ class Library:
                 target=f"article:{art.id}",
                 category=EventCategory.DATA,
                 service="library",
-                metadata={"title": art.title, "tags": art.tags},
+                metadata={
+                    "title": art.title,
+                    "tags": art.tags,
+                    "status": art.status.value,
+                    "channel": art.channel.value,
+                    "review_id": art.review_id,
+                },
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
@@ -280,7 +369,15 @@ class Library:
             bus = get_event_bus()
             bus.emit_async(
                 event_type=event_type,
-                data={"id": art.id, "title": art.title, "author": art.author, "tags": art.tags},
+                data={
+                    "id": art.id,
+                    "title": art.title,
+                    "author": art.author,
+                    "tags": art.tags,
+                    "status": art.status.value,
+                    "channel": art.channel.value,
+                    "review_id": art.review_id,
+                },
                 source="library",
             )
         except Exception:

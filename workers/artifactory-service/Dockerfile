@@ -15,6 +15,7 @@ COPY worker.py .
 #   docker build --build-context sharedcore=../../Dimensional .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
 COPY --from=sharedcore --chown=artifactory:artifactory . /app/Dimensional/
+RUN mkdir -p /app/data && chown -R artifactory:artifactory /app
 ENV PYTHONPATH=/app
 # --- end SFSC ---
 

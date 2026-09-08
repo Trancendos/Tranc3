@@ -51,7 +51,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -119,16 +118,26 @@ def _probe_inbound_imports(spec: dict[str, Any]) -> bool:
     routing. Tests are excluded for the same reason -- a test exercising a hub
     is not the platform using it.
     """
-    dotted = spec["module"]
-    prefix = dotted.replace(".", "/")
-    found = subprocess.run(
-        ["grep", "-rl", "--include=*.py", f"from {dotted}", "src", "workers", "api.py"],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-    ).stdout.split()
-    external = [f for f in found if not f.startswith(prefix) and "/test" not in f]
-    return len(external) >= int(spec.get("min", 1))
+    dotted = str(spec["module"])
+    home = _inside_repo(Path(dotted.replace(".", "/")))
+    import_pattern = re.compile(rf"(?m)^\s*from\s+{re.escape(dotted)}(?:\.|\s|$)")
+    external = 0
+    for root in ("src", "workers"):
+        for path in _code_files(REPO / root):
+            relative_path = path.relative_to(REPO)
+            if path.is_relative_to(home) or any(
+                part.startswith("test") for part in relative_path.parts
+            ):
+                continue
+            source = path.read_text(encoding="utf-8", errors="replace")
+            if import_pattern.search(_strip_prose(source)):
+                external += 1
+    api_path = REPO / "api.py"
+    if api_path.exists() and import_pattern.search(
+        _strip_prose(api_path.read_text(encoding="utf-8", errors="replace"))
+    ):
+        external += 1
+    return external >= int(spec.get("min", 1))
 
 
 def _probe_http_dependency(spec: dict[str, Any]) -> bool:

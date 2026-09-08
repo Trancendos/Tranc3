@@ -17,8 +17,6 @@
 #
 # Zero external provider dependencies. Zero cost.
 
-version: "3.8"
-
 # ---------------------------------------------------------------------------
 # Shared configuration
 # ---------------------------------------------------------------------------
@@ -81,8 +79,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8888:8080"   # Traefik dashboard (moved from 8080 to avoid KrakenD conflict)
-      - "9090:9090"   # Metrics
+      - "127.0.0.1:8888:8080"   # Dashboard is operator-only.
+      - "127.0.0.1:9090:9090"   # Metrics are scraped locally.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-config:/etc/traefik
@@ -108,7 +106,7 @@ services:
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
     ports:
-      - "8200:8200"
+      - "127.0.0.1:8200:8200"
     volumes:
       - vault-data:/vault/data
       - ./deploy/vault/vault.hcl:/vault/config/vault.hcl:ro
@@ -123,7 +121,7 @@ services:
     container_name: tranc3-prometheus
     <<: *common
     ports:
-      - "9091:9090"
+      - "127.0.0.1:9091:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alerts:/etc/prometheus/alerts:ro
@@ -144,7 +142,7 @@ services:
     container_name: tranc3-alertmanager
     <<: *common
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml.tmpl:ro
       - alertmanager-data:/alertmanager
@@ -164,9 +162,9 @@ services:
     container_name: tranc3-otel-collector
     <<: *common
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8889:8888"   # Collector self-metrics (host:8889 avoids Traefik port 8888 conflict)
+      - "127.0.0.1:4317:4317"   # OTLP gRPC is internal to the platform.
+      - "127.0.0.1:4318:4318"   # OTLP HTTP is internal to the platform.
+      - "127.0.0.1:8889:8888"   # Collector self-metrics are operator-only.
     volumes:
       - ./monitoring/otel-collector.yml:/etc/otel-collector.yml:ro
     command: ["--config=/etc/otel-collector.yml"]
@@ -189,7 +187,7 @@ services:
       - GF_SERVER_ROOT_URL=http://localhost:3001
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -207,7 +205,7 @@ services:
     container_name: tranc3-loki
     <<: *common
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     volumes:
       - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
@@ -246,7 +244,7 @@ services:
       - "--httpListenAddr=:8428"
       - "--promscrape.config=/etc/prometheus/prometheus.yml"
     ports:
-      - "8428:8428"
+      - "127.0.0.1:8428:8428"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - victoriametrics-data:/storage
@@ -264,8 +262,6 @@ services:
     container_name: tranc3-valkey
     <<: *common
     command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
-    ports:
-      - "6379:6379"
     volumes:
       - valkey-data:/data
     healthcheck:
@@ -282,7 +278,7 @@ services:
     container_name: tranc3-zot
     <<: *common
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     volumes:
       - ./config/zot/config.json:/etc/zot/config.json:ro
       - zot-data:/var/lib/registry
@@ -308,17 +304,17 @@ services:
       test: ["CMD", "ipfs", "id"]
       <<: *healthcheck-default
 
-  # ── Watchtower — Zero-Cost Auto-Update (Apache 2.0) ─────────────────
-  # Polls Docker Hub every 5 minutes; only updates containers labelled
-  # com.centurylinklabs.watchtower.enable=true
-  # Sends Slack/webhook notification on update if WATCHTOWER_NOTIFICATION_URL set.
+  # ── Watchtower — opt-in update monitor (Apache 2.0) ──────────────────
+  # Digest changes are detected weekly but never applied automatically. Start
+  # this profile only when an operator wants a maintenance report.
   watchtower:
     image: containrrr/watchtower:1.7.1@sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038
     container_name: tranc3-watchtower
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: --interval 300 --cleanup --label-enable --rolling-restart
+    profiles: ["maintenance"]
+    command: --schedule "0 0 4 * * 1" --monitor-only --cleanup
     environment:
       - WATCHTOWER_NOTIFICATIONS_LEVEL=info
       - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
@@ -337,9 +333,9 @@ services:
     restart: unless-stopped
     command: ["-js", "-sd", "/data", "--http_port", "8222"]
     ports:
-      - "4222:4222"   # Client connections
-      - "8222:8222"   # HTTP monitoring
-      - "6222:6222"   # Cluster routing (future)
+      - "127.0.0.1:4222:4222"   # Client connections are internal.
+      - "127.0.0.1:8222:8222"   # Monitoring is operator-only.
+      - "127.0.0.1:6222:6222"   # Cluster routing is internal.
     volumes:
       - nats-data:/data
     networks:
@@ -364,9 +360,9 @@ services:
       - tempo-data:/tmp/tempo
       - ./monitoring/tempo.yml:/etc/tempo/config.yml:ro
     ports:
-      - "3200:3200"     # HTTP query API
-      - "14317:4317"    # OTLP gRPC receiver (host 14317 → container 4317; avoids conflict with otel-collector)
-      - "14318:4318"    # OTLP HTTP receiver (host 14318 → container 4318)
+      - "127.0.0.1:3200:3200"     # HTTP query API is operator-only.
+      - "127.0.0.1:14317:4317"    # OTLP gRPC receiver is internal.
+      - "127.0.0.1:14318:4318"    # OTLP HTTP receiver is internal.
     networks:
       - tranc3-net
     labels:
@@ -1690,8 +1686,8 @@ services:
     image: woodpeckerci/woodpecker-server:latest@sha256:ed8cdc14dad4488d595786373ffbf5c7eea2de9ae183e97fd40308e486cb94a9
     container_name: trancendos-woodpecker-server
     restart: unless-stopped
-    ports:
-      - "8100:8000"
+    expose:
+      - "8000"
     environment:
       WOODPECKER_OPEN: "true"
       WOODPECKER_FORGEJO: "true"
@@ -1710,6 +1706,7 @@ services:
       traefik.http.routers.woodpecker.rule: "Host(`ci.trancendos.com`)"
       traefik.http.routers.woodpecker.entrypoints: "websecure"
       traefik.http.routers.woodpecker.tls.certresolver: "letsencrypt"
+      traefik.http.services.woodpecker.loadbalancer.server.port: "8000"
 
   # ── Woodpecker Agent — CI runner ─────────────────────────────────────
   # Executes pipeline steps inside Docker containers (zero-cost, local).
@@ -2233,10 +2230,10 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-tranc3admin}"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:?required}"
       MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?required}"
       MINIO_BROWSER_REDIRECT_URL: "https://s3-console.trancendos.com"
     networks:
@@ -3385,12 +3382,10 @@ services:
     <<: *worker-common
     environment:
       - PORT=8004
-      - JWT_SECRET=${JWT_SECRET:-}
-      - INTERNAL_SECRET=${INTERNAL_SECRET:-}
+      - JWT_SECRET=${JWT_SECRET:?required}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     expose:
       - "8004"
-    ports:
-      - "8100:8004"
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "wget", "-qO-", "http://localhost:8004/health"]
@@ -4004,6 +3999,9 @@ services:
       # scripts/check_service_urls.py.
       - ZOT_URL=http://zot:5000
       - PORT=8047
+      - ARTIFACT_CUSTODY_DB=/app/data/custody.db
+    volumes:
+      - artifactory-lifecycle-data:/app/data
     expose:
       - "8047"
     ports:
@@ -4339,7 +4337,7 @@ services:
       - mattermost-db
     environment:
       MM_SQLSETTINGS_DRIVERNAME: "postgres"
-      MM_SQLSETTINGS_DATASOURCE: "postgres://mattermost:${MATTERMOST_DB_PASSWORD:-mattermost_pass}@mattermost-db:5432/mattermost?sslmode=disable"
+      MM_SQLSETTINGS_DATASOURCE: "postgres://mattermost:${MATTERMOST_DB_PASSWORD:?required}@mattermost-db:5432/mattermost?sslmode=disable"
       MM_SERVICESETTINGS_SITEURL: "https://chat.trancendos.com"
       MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
       MM_SERVICESETTINGS_ENABLEINCOMINGWEBHOOKS: "true"
@@ -4377,7 +4375,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: mattermost
-      POSTGRES_PASSWORD: "${MATTERMOST_DB_PASSWORD:-mattermost_pass}"
+      POSTGRES_PASSWORD: "${MATTERMOST_DB_PASSWORD:?required}"
       POSTGRES_DB: mattermost
     volumes:
       - mattermost-db-data:/var/lib/postgresql/data
@@ -4652,6 +4650,8 @@ volumes:
   mattermost-plugins:
     driver: local
   mattermost-db-data:
+    driver: local
+  artifactory-lifecycle-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

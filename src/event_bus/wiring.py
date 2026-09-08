@@ -42,7 +42,11 @@ logger = logging.getLogger("tranc3.event_bus.wiring")
 async def _library_on_ai_event(envelope: EventEnvelope) -> None:
     """On AI_INFERENCE_COMPLETE, auto-create a Library article summarising the result."""
     try:
-        from src.library.knowledge_base import get_library  # noqa: PLC0415
+        from src.library.knowledge_base import (  # noqa: PLC0415
+            ArticleStatus,
+            KnowledgeChannel,
+            get_library,
+        )
 
         lib = get_library()
         data: dict[str, Any] = envelope.data or {}
@@ -66,6 +70,8 @@ async def _library_on_ai_event(envelope: EventEnvelope) -> None:
             tags=["ai", "inference", model, provider],
             author="system:luminous",
             source="observatory",
+            channel=KnowledgeChannel.WIKI,
+            status=ArticleStatus.DRAFT,
         )
     except Exception as exc:  # nosec B110
         logger.debug("library_on_ai_event: %s", exc)
@@ -79,7 +85,11 @@ async def _library_on_ai_event(envelope: EventEnvelope) -> None:
 async def _library_on_workflow_event(envelope: EventEnvelope) -> None:
     """On WORKFLOW_COMPLETED, auto-create a Library article documenting the run."""
     try:
-        from src.library.knowledge_base import get_library  # noqa: PLC0415
+        from src.library.knowledge_base import (  # noqa: PLC0415
+            ArticleStatus,
+            KnowledgeChannel,
+            get_library,
+        )
 
         if envelope.event_type != PlatformEventType.WORKFLOW_COMPLETED:
             return
@@ -102,6 +112,8 @@ async def _library_on_workflow_event(envelope: EventEnvelope) -> None:
             tags=["workflow", "digital-grid", wf_id],
             author="system:digital-grid",
             source="observatory",
+            channel=KnowledgeChannel.WIKI,
+            status=ArticleStatus.DRAFT,
         )
     except Exception as exc:  # nosec B110
         logger.debug("library_on_workflow_event: %s", exc)

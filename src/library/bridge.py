@@ -142,6 +142,12 @@ def _jurisdiction_permits_forward(article: Any) -> bool:
 
 
 def _is_forwardable(article: Any) -> bool:
+    status = getattr(article, "status", None)
+    if getattr(status, "value", status) != "published":
+        return False
+    channel = getattr(article, "channel", None)
+    if getattr(channel, "value", channel) != "kb":
+        return False
     classification = getattr(article, "classification", None)
     classification_value = getattr(classification, "value", str(classification))
     if classification_value not in _FORWARDABLE_CLASSIFICATIONS:
@@ -202,6 +208,10 @@ async def _post_document(article: Any) -> None:
                 "jurisdiction": _jurisdiction_value(article),
                 "source_system": "trancendos-library-bridge",
                 "content_hash": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+                "review_id": getattr(article, "review_id", None),
+                "reviewed_by": getattr(article, "reviewed_by", None),
+                "reviewed_at": getattr(article, "reviewed_at", None),
+                "review_location": getattr(article, "review_location", None),
             },
         }
         async with httpx.AsyncClient(timeout=3.0) as client:

@@ -24,6 +24,7 @@ from src.exchange.sources import (
     validate_catalogue,
 )
 from src.exchange.valuation import BASIS_CONFIDENCE, Basis, value
+from tests.route_helpers import iter_app_routes
 
 
 @pytest.fixture
@@ -417,7 +418,11 @@ class TestRoutes:
     def test_the_router_is_mounted(self):
         from api import app
 
-        paths = {r.path for r in app.routes if getattr(r, "path", "").startswith("/exchange")}
+        paths = {
+            route.path
+            for route in iter_app_routes(app.routes)
+            if getattr(route, "path", "").startswith("/exchange")
+        }
         assert "/exchange/inventory" in paths
         assert "/exchange/book" in paths
 

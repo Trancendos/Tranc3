@@ -17,7 +17,7 @@
 - [Adaptive rotation — current state and roadmap](Strategy-ADAPTIVE_PLATFORM_ROTATION)
 - [TRANC3 Project Charter](Strategy-DOC-01-Project-Charter)
 - [TRANC3 System Architecture](Strategy-DOC-02-System-Architecture)
-- [TRANC3 API Reference](Strategy-DOC-03-API-Reference)
+- [TRANC3 API Design Specification (Historical)](Strategy-DOC-03-API-Reference)
 - [TRANC3 — Strategic Analysis, Brainstorming & Future-Proof…](Strategy-DOC-13-Strategic-Analysis)
 - [TRANC3 — Zero Cost Hosting & Deployment Guide](Strategy-DOC-14-Zero-Cost-Hosting)
 - [TRANC3 — Complete Mind Map](Strategy-DOC-15-Mind-Map)

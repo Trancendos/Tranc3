@@ -657,6 +657,22 @@ class TestGenericCRUDWorker:
         assert data["filename"] == "test.pdf"
         assert "id" in data
 
+    def test_files_upload_strips_client_path_components(self, files_client):
+        response = files_client.post(
+            "/api/documents/upload",
+            files={"file": ("..\\..\\untrusted.txt", b"content", "text/plain")},
+        )
+        assert response.status_code == 200
+        assert response.json()["filename"] == "untrusted.txt"
+
+    def test_files_upload_enforces_configured_size_limit(self, files_client, monkeypatch):
+        monkeypatch.setattr(files_mod, "MAX_UPLOAD_BYTES", 4)
+        response = files_client.post(
+            "/api/documents/upload",
+            files={"file": ("oversize.bin", b"12345", "application/octet-stream")},
+        )
+        assert response.status_code == 413
+
     def test_files_list(self, files_client):
         files_client.post(
             "/api/documents/upload", files={"file": ("file1.txt", b"hello", "text/plain")}

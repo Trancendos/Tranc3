@@ -100,6 +100,18 @@ class TestProbeSafety:
         with pytest.raises(fc.ProbeError):
             fc.run_probe({"kind": "code_pattern", "path": "src", "pattern": "((("})
 
+    def test_inbound_import_probe_uses_python_files_not_unix_grep(self, monkeypatch, tmp_path):
+        (tmp_path / "src" / "hub").mkdir(parents=True)
+        (tmp_path / "workers").mkdir()
+        (tmp_path / "src" / "hub" / "__init__.py").write_text("", encoding="utf-8")
+        (tmp_path / "src" / "caller.py").write_text(
+            "from src.hub import service\n", encoding="utf-8"
+        )
+        (tmp_path / "api.py").write_text("", encoding="utf-8")
+        monkeypatch.setattr(fc, "REPO", tmp_path)
+
+        assert fc._probe_inbound_imports({"module": "src.hub", "min": 1}) is True
+
 
 class TestContract:
     def test_every_rule_has_at_least_one_coupling_probe(self):
