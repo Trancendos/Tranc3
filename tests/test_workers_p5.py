@@ -257,7 +257,8 @@ class TestBlenderWorker:
 
 class TestFfmpegWorker:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("FFMPEG_WORKDIR", str(tmp_path / "ffmpeg-workdir"))
         self.mod = _import_worker("workers/ffmpeg-worker/worker.py")
         self.client = _client_for(self.mod)
 
