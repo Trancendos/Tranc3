@@ -4,6 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from tests.route_helpers import iter_app_routes
 
 # This test file requires the full production stack (torch, transformers, etc.)
