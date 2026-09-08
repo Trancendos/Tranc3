@@ -17,6 +17,13 @@ The deployed runtime is one canonical FastAPI application in `api.py`. Enhanced
 capabilities are mounted from `src/routers/enhanced_capabilities.py` and share
 the same application middleware.
 
+### Town Hall ITSM
+
+The `api` package loader creates one shared canonical application instance.
+Town Hall ITSM records are mounted under `/townhall/itsm`; the administrator-only
+document review trail is available at
+`GET /townhall/itsm/documents/{article_id}/reviews`.
+
 ### Retired two-application split
 
 The entries below describe the former layout. They are retained to make the

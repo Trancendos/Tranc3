@@ -24,6 +24,7 @@ The resulting model is modular and zero-incremental-cost: local Python checks ru
 | Wiki publication | Repository docs and the live Wiki could diverge if both were edited. | Conflicting guidance. | Controlled: `wiki-content/` remains the reviewed canonical source and the live Wiki is one-way publication. |
 | Document lifecycle | The first documentation catalog named owner roles but did not connect repository Markdown to a verified runtime Location or prevent automatic runtime publication. | False accountability claims and unreviewed knowledge publication. | Fixed: lifecycle mapping is explicit; runtime articles are draft-first and require a durable Town Hall approval record before publication. |
 | Test isolation | `tests/test_backup_service.py` changed `SECRET_KEY` at collection time and leaked it to later modules. | Order-dependent Pytest failure in the canonical CI gate. | Fixed: backup crypto setup is an autouse fixture that restores the prior environment. |
+| API route discovery | The `api` package executed `api.py` in an unregistered module, allowing more than one root application instance to be constructed during a long test process. | A route-mount assertion could inspect an inconsistent instance. | Fixed: the loader now uses a lock and a registered module singleton, failing cleanly if root-app loading fails. |
 
 ## Implemented Controls
 
