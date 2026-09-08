@@ -156,8 +156,8 @@ export class ZFSProvider implements IStorageProvider {
     this.tick();
     try {
       const resolved = this.resolve(path);
-      const relative = path.relative(this.baseDir, resolved);
-      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      const relative = require('path').relative(require('path').resolve(this.rootDir), resolved);
+      if (relative.startsWith('..') || require('path').isAbsolute(relative)) {
         throw new Error('Invalid path');
       }
       const stat = await fs.stat(resolved);
