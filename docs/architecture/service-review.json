@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "34c40f58",
+  "commit": "26bfc1a1",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-08T18:57:42.750847+00:00",
+  "generated_at": "2026-09-08T19:54:52.817934+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -366,7 +366,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\analytics-service\\worker.py:35 Dimensional.service_auth_fastapi"
+            "workers/analytics-service/worker.py:35 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -438,7 +438,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\artifactory-service\\worker.py:35 Dimensional.service_auth_fastapi"
+            "workers/artifactory-service/worker.py:35 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -476,7 +476,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\audit-service\\worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/audit-service/worker.py:43 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -577,7 +577,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\basement\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/basement/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -622,7 +622,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\blender-worker\\worker.py:29 Dimensional.service_auth_fastapi"
+            "workers/blender-worker/worker.py:29 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -709,7 +709,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\cache-service\\worker.py:36 Dimensional.service_auth_fastapi"
+            "workers/cache-service/worker.py:36 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -768,7 +768,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\cdn-service\\worker.py:31 Dimensional.service_auth_fastapi"
+            "workers/cdn-service/worker.py:31 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -807,7 +807,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\chaos-party\\worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/chaos-party/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -845,7 +845,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\config-service\\worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/config-service/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -918,7 +918,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\cron-service\\worker.py:45 Dimensional.service_auth_fastapi"
+            "workers/cron-service/worker.py:45 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -957,7 +957,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\cryptex\\router.py:12 Dimensional.service_auth_fastapi"
+            "workers/cryptex/router.py:12 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1009,7 +1009,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\deepagents-orchestrator-service\\worker.py:30 Dimensional.service_auth_fastapi"
+            "workers/deepagents-orchestrator-service/worker.py:30 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1062,7 +1062,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\devocity\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/devocity/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1107,7 +1107,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\dspy-service\\worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/dspy-service/worker.py:28 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1145,7 +1145,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\email-service\\worker.py:33 Dimensional.service_auth_fastapi"
+            "workers/email-service/worker.py:33 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1191,7 +1191,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\fabulousa-service\\worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/fabulousa-service/worker.py:28 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1236,7 +1236,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\ffmpeg-worker\\worker.py:23 Dimensional.service_auth_fastapi"
+            "workers/ffmpeg-worker/worker.py:23 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1275,7 +1275,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\files-service\\worker.py:37 Dimensional.service_auth_fastapi"
+            "workers/files-service/worker.py:37 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1327,7 +1327,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\gbrain-bridge\\worker.py:42 Dimensional.service_auth_fastapi"
+            "workers/gbrain-bridge/worker.py:42 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1366,7 +1366,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\geo-service\\worker.py:34 Dimensional.service_auth_fastapi"
+            "workers/geo-service/worker.py:34 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1419,7 +1419,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\haystack-service\\worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/haystack-service/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1457,7 +1457,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 2 guarded, 0 vendored",
           "offenders": [
-            "workers\\health-aggregator\\worker.py:31 Dimensional.service_auth_fastapi"
+            "workers/health-aggregator/worker.py:31 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1564,7 +1564,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\identity-service\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/identity-service/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1603,8 +1603,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\imaginarium\\main.py:14 Dimensional.service_auth_fastapi",
-            "workers\\imaginarium\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/imaginarium/main.py:14 Dimensional.service_auth_fastapi",
+            "workers/imaginarium/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1642,7 +1642,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\imind\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/imind/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1714,7 +1714,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 6 guarded, 0 vendored",
           "offenders": [
-            "workers\\infinity-ai\\router.py:14 Dimensional.service_auth_fastapi"
+            "workers/infinity-ai/router.py:14 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2028,7 +2028,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\lab-service\\router.py:13 Dimensional.service_auth_fastapi"
+            "workers/lab-service/router.py:13 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2066,7 +2066,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\langchain-integration-service\\worker.py:48 Dimensional.service_auth_fastapi"
+            "workers/langchain-integration-service/worker.py:48 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2119,7 +2119,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\ledger-service\\worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/ledger-service/worker.py:43 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2158,7 +2158,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\library-service\\router.py:12 Dimensional.service_auth_fastapi"
+            "workers/library-service/router.py:12 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2203,7 +2203,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\litellm-service\\worker.py:42 Dimensional.service_auth_fastapi"
+            "workers/litellm-service/worker.py:42 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2248,7 +2248,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\llamaindex-service\\worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/llamaindex-service/worker.py:28 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2342,7 +2342,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\mlflow-service\\worker.py:69 Dimensional.service_auth_fastapi"
+            "workers/mlflow-service/worker.py:69 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2381,7 +2381,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\model-router-service\\worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/model-router-service/worker.py:43 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2420,8 +2420,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\monitoring\\worker.py:43 Dimensional.service_auth",
-            "workers\\monitoring\\worker.py:44 Dimensional.service_auth_fastapi"
+            "workers/monitoring/worker.py:43 Dimensional.service_auth",
+            "workers/monitoring/worker.py:44 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2522,7 +2522,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\notifications\\worker.py:766 Dimensional.service_auth_fastapi"
+            "workers/notifications/worker.py:766 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2561,7 +2561,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\observatory\\router.py:12 Dimensional.service_auth_fastapi"
+            "workers/observatory/router.py:12 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2634,7 +2634,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\orders-service\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/orders-service/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2722,7 +2722,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\payments-service\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/payments-service/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2796,7 +2796,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\products-service\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/products-service/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2856,7 +2856,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\queue-service\\worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/queue-service/worker.py:28 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2895,7 +2895,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\rate-limit-service\\worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/rate-limit-service/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3009,7 +3009,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\resonate\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/resonate/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3047,7 +3047,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\sashas-photo-studio\\worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/sashas-photo-studio/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3085,7 +3085,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\search-service\\worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/search-service/worker.py:28 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3186,7 +3186,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\skills-benchmark-service\\worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/skills-benchmark-service/worker.py:43 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3225,7 +3225,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\sms-service\\worker.py:32 Dimensional.service_auth_fastapi"
+            "workers/sms-service/worker.py:32 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3271,7 +3271,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\storage-service\\worker.py:41 Dimensional.service_auth_fastapi"
+            "workers/storage-service/worker.py:41 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3343,7 +3343,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\taimra\\worker.py:24 Dimensional.service_auth_fastapi"
+            "workers/taimra/worker.py:24 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3381,8 +3381,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\tateking\\main.py:33 Dimensional.service_auth_fastapi",
-            "workers\\tateking\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/tateking/main.py:33 Dimensional.service_auth_fastapi",
+            "workers/tateking/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3434,7 +3434,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\the-academy\\worker.py:24 Dimensional.service_auth_fastapi"
+            "workers/the-academy/worker.py:24 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3472,7 +3472,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\the-dutchy\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/the-dutchy/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3510,7 +3510,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\the-grid\\router.py:13 Dimensional.service_auth_fastapi"
+            "workers/the-grid/router.py:13 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3548,8 +3548,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\the-lab\\main.py:26 Dimensional.service_auth_fastapi",
-            "workers\\the-lab\\worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/the-lab/main.py:26 Dimensional.service_auth_fastapi",
+            "workers/the-lab/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3587,7 +3587,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\the-studio\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/the-studio/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3632,7 +3632,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\topology-service\\worker.py:44 Dimensional.service_auth_fastapi"
+            "workers/topology-service/worker.py:44 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3748,8 +3748,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\tranceflow\\router.py:12 Dimensional.service_auth_fastapi",
-            "workers\\tranceflow\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/tranceflow/router.py:12 Dimensional.service_auth_fastapi",
+            "workers/tranceflow/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3787,7 +3787,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\tranquility\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/tranquility/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3825,7 +3825,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\triposr-worker\\worker.py:31 Dimensional.service_auth_fastapi"
+            "workers/triposr-worker/worker.py:31 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3864,7 +3864,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\turings-hub-service\\worker.py:55 Dimensional.service_auth_fastapi"
+            "workers/turings-hub-service/worker.py:55 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3951,7 +3951,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\vault-service\\worker.py:48 Dimensional.service_auth_fastapi"
+            "workers/vault-service/worker.py:48 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4038,8 +4038,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\vrar3d\\router.py:13 Dimensional.service_auth_fastapi",
-            "workers\\vrar3d\\worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/vrar3d/router.py:13 Dimensional.service_auth_fastapi",
+            "workers/vrar3d/worker.py:25 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4077,7 +4077,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\warp-radio\\worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/warp-radio/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4115,7 +4115,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers\\warp-tunnel\\worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/warp-tunnel/worker.py:28 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4202,7 +4202,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers\\workflow-engine-service\\worker.py:40 Dimensional.service_auth_fastapi"
+            "workers/workflow-engine-service/worker.py:40 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },

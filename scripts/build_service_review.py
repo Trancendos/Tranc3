@@ -304,7 +304,7 @@ def scan_imports(ctx: Path) -> dict[str, list]:
                 mods += [a.name for a in node.names if a.name.split(".")[0] in ROOT_PACKAGES]
             for mod in mods:
                 top = mod.split(".")[0]
-                entry = f"{py.relative_to(ROOT)}:{node.lineno} {mod}"
+                entry = f"{py.relative_to(ROOT).as_posix()}:{node.lineno} {mod}"
                 if (ctx / top).is_dir():
                     out["vendored"].append(entry)
                 elif any(a <= node.lineno <= b for a, b in spans):
