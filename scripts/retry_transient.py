@@ -45,7 +45,11 @@ def main() -> int:
     attempts = max(1, min(args.attempts, 3))
     for attempt in range(1, attempts + 1):
         print(f"::group::{args.label} attempt {attempt}/{attempts}")
-        completed = subprocess.run(command, text=True, capture_output=True)
+        try:
+            completed = subprocess.run(command, text=True, capture_output=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            print(f"::error title={args.label} failed::command exceeded 600s timeout")
+            return 124
         output = f"{completed.stdout}\n{completed.stderr}"
         print(output, end="")
         classification = classify(output, completed.returncode)
