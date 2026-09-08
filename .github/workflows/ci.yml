@@ -76,7 +76,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install PyYAML
-        run: python scripts/retry_transient.py --label "PyYAML install" -- pip install PyYAML
+        run: python scripts/retry_transient.py --label "PyYAML install" -- pip install "PyYAML==6.0.3"
 
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
