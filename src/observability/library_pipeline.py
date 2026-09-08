@@ -95,7 +95,7 @@ def _format_article_body(batch: list[KBTrigger]) -> str:
 async def _send_batch(batch: list[KBTrigger]) -> None:
     """Create a Library article from a pre-collected batch; called outside the lock."""
     try:
-        from src.library.knowledge_base import get_library
+        from src.library.knowledge_base import ArticleStatus, get_library
 
         worst_severity = "critical" if any(t.severity == "critical" for t in batch) else "security"
         tags = {"observatory", "auto-generated", worst_severity}
@@ -108,6 +108,7 @@ async def _send_batch(batch: list[KBTrigger]) -> None:
             tags=sorted(tags),
             author="observatory",
             source="observatory",
+            status=ArticleStatus.DRAFT,
         )
         logger.debug("Library pipeline created article from %d triggers", len(batch))
     except Exception as exc:  # noqa: BLE001

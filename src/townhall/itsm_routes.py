@@ -184,6 +184,15 @@ def list_changes() -> List[Dict[str, Any]]:
     return [c.to_dict() for c in get_itsm_service().list_changes()]
 
 
+@router.get("/documents/{article_id}/reviews")
+def document_reviews(
+    article_id: str, current_user: dict = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
+    """Return the durable Town Hall approval trail for a Library article."""
+    _require_admin(current_user)
+    return [review.to_dict() for review in get_itsm_service().document_reviews(article_id)]
+
+
 # ── writes ──────────────────────────────────────────────────────────────────
 
 

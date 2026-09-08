@@ -209,11 +209,20 @@ def test_library_create_and_delete_with_auth():
         )
         assert created.status_code == 200
         article_id = created.json()["id"]
+        assert created.json()["status"] == "draft"
 
         assert client.get(f"/library/articles/{article_id}").status_code == 200
         assert client.get("/library/articles/search", params={"q": "Test"}).status_code == 200
+        assert client.post("/library/retention/apply").status_code == 403
+
+        app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+        published = client.post(f"/library/articles/{article_id}/publish")
+        assert published.status_code == 200
+        assert published.json()["status"] == "published"
+        assert published.json()["review_location"] == "The Town Hall"
         assert client.post("/library/retention/apply").status_code == 200
 
+        app.dependency_overrides[get_current_user] = _override("u1")
         deleted = client.delete(f"/library/articles/{article_id}")
         assert deleted.status_code == 200
     finally:
@@ -232,6 +241,35 @@ def test_library_create_rejects_unknown_classification():
         _clear_override()
 
 
+def test_library_draft_is_private_and_admin_publication_is_required():
+    app.dependency_overrides[get_current_user] = _override("author")
+    try:
+        created = client.post("/library/articles", json={"title": "Draft", "body": "Body"})
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("other-user")
+    try:
+        assert client.get(f"/library/articles/{article_id}").status_code == 403
+        assert client.post(f"/library/articles/{article_id}/publish").status_code == 403
+        assert client.delete(f"/library/articles/{article_id}").status_code == 403
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        assert client.post(f"/library/articles/{article_id}/publish").status_code == 200
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("author")
+    try:
+        assert client.delete(f"/library/articles/{article_id}").status_code == 200
+    finally:
+        _clear_override()
+
+
 # ── Classification gates read access, not just write access ─────────────
 
 
@@ -243,6 +281,12 @@ def test_library_restricted_article_hidden_from_other_users():
             json={"title": "Secret", "body": "Body", "classification": "restricted"},
         )
         article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        assert client.post(f"/library/articles/{article_id}/publish").status_code == 200
     finally:
         _clear_override()
 
@@ -398,6 +442,12 @@ def test_library_list_does_not_let_restricted_articles_crowd_out_visible_ones():
     try:
         created = client.post("/library/articles", json={"title": "Visible", "body": "Body"})
         article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        assert client.post(f"/library/articles/{article_id}/publish").status_code == 200
     finally:
         _clear_override()
 

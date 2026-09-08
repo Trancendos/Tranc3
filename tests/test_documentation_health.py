@@ -15,6 +15,12 @@ def contract(**overrides):
         "kind": "how-to",
         "owner": "Platform",
         "source_paths": ("compose.yml",),
+        "custody_location": "The Workshop",
+        "owner_location": "The Library",
+        "review_location": "The Town Hall",
+        "audit_location": "The Observatory",
+        "runtime_intake": "manual-only",
+        "destinations": ("repository",),
     }
     values.update(overrides)
     return DocumentContract(**values)
@@ -57,3 +63,9 @@ def test_catalog_explains_human_review_boundary():
     catalog = render_catalog([contract()])
 
     assert "does not autonomously alter operational or security guidance" in catalog
+
+
+def test_validation_rejects_unknown_lifecycle_location(tmp_path):
+    errors = validate_contracts([contract(owner_location="Unknown Location")], root=tmp_path)
+
+    assert "deployment references unknown platform location: Unknown Location" in errors

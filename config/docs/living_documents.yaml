@@ -8,6 +8,14 @@ documents:
     source_paths:
       - docker-compose.production.yml
       - scripts/compose_contract_audit.py
+    lifecycle:
+      custody_location: The Workshop
+      owner_location: The Library
+      review_location: The Town Hall
+      audit_location: The Observatory
+      runtime_intake: manual-only
+      destinations:
+        - repository documentation
 
   - id: ci-cd-controls
     title: CI/CD audit and operating model
@@ -20,6 +28,14 @@ documents:
       - scripts/ci_diagnostics.py
       - scripts/retry_transient.py
       - scripts/security_backlog.py
+    lifecycle:
+      custody_location: The Workshop
+      owner_location: The Library
+      review_location: The Town Hall
+      audit_location: The Observatory
+      runtime_intake: manual-only
+      destinations:
+        - repository documentation
 
   - id: runtime-api
     title: Runtime API reference
@@ -29,6 +45,14 @@ documents:
     source_paths:
       - api.py
       - src/routers/enhanced_capabilities.py
+    lifecycle:
+      custody_location: The Workshop
+      owner_location: The Library
+      review_location: The Town Hall
+      audit_location: The Observatory
+      runtime_intake: manual-only
+      destinations:
+        - repository documentation
 
   - id: wiki-publication
     title: Wiki source and publishing policy
@@ -38,3 +62,37 @@ documents:
     source_paths:
       - scripts/publish-wiki.sh
       - .github/workflows/publish-wiki.yml
+    lifecycle:
+      custody_location: The Workshop
+      owner_location: The Library
+      review_location: The Town Hall
+      audit_location: The Observatory
+      runtime_intake: manual-only
+      destinations:
+        - repository wiki source
+        - GitHub Wiki mirror
+
+  - id: runtime-library-review
+    title: Runtime Library review and publication
+    canonical: docs/DOCUMENT_LIFECYCLE.md
+    kind: explanation
+    owner: Chief Knowledge Officer
+    source_paths:
+      - src/library/knowledge_base.py
+      - src/library/routes.py
+      - src/library/bridge.py
+      - src/townhall/itsm.py
+      - src/townhall/itsm_routes.py
+      - src/event_bus/wiring.py
+      - src/observability/library_pipeline.py
+      - src/research/section7.py
+      - src/models/knowledge.py
+    lifecycle:
+      custody_location: The Workshop
+      owner_location: The Library
+      review_location: The Town Hall
+      audit_location: The Observatory
+      runtime_intake: library-reviewed
+      destinations:
+        - The Library durable store
+        - Search and RAG consumers

@@ -106,20 +106,29 @@ def publish_advancement_article(proposal: "AdvancementProposal") -> Optional["Ar
     decision itself, which is already durably recorded in
     ModelGovernanceRegistry's own SQLite tables."""
     try:
-        from src.library.knowledge_base import get_library
+        from src.library.knowledge_base import ArticleStatus, get_library
 
         tier = get_orchestration_tier(proposal.model_name)
         job_description = job_description_for_ai(proposal.model_name)
         tags = [ADVANCEMENT_TAG, proposal.skill_domain, tier]
         if job_description:
             tags.append(job_description)
-        return get_library().create(
+        library = get_library()
+        article = library.create(
             title=f"{proposal.model_name}: {proposal.skill_domain} advancement approved",
             body=_format_advancement_body(proposal),
             tags=tags,
             author=proposal.model_name,
             source="models-governance",
+            status=ArticleStatus.DRAFT,
         )
+        reviewer = (
+            proposal.human_decider
+            or proposal.cornelius_reviewer
+            or proposal.prime_reviewer
+            or "models-governance"
+        )
+        return library.publish(article.id, reviewer=reviewer)
     except Exception:
         logger.debug(
             "publish_advancement_article failed for proposal id=%s", proposal.id, exc_info=True

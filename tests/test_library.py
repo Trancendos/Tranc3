@@ -88,7 +88,7 @@ class TestLibrary:
         assert art.body == "Article content"
         assert art.tags == ["new"]
         assert art.author == "tester"
-        assert art.status == ArticleStatus.PUBLISHED
+        assert art.status == ArticleStatus.DRAFT
 
     def test_create_article_default_tags(self):
         art = self.lib.create(title="No Tags", body="Content")
@@ -194,15 +194,14 @@ class TestLibrary:
         assert len(recent) >= 1
 
     def test_recent_filter_by_status(self):
-        self.lib.create(title="Published", body="Content")
         recent = self.lib.recent(status=ArticleStatus.PUBLISHED)
         assert len(recent) >= 1
         assert all(a.status == ArticleStatus.PUBLISHED for a in recent)
 
-    def test_recent_drafts_empty(self):
-        """No drafts in seed data or new articles (create sets PUBLISHED)."""
+    def test_recent_drafts_contains_new_article(self):
+        self.lib.create(title="Draft", body="Content")
         recent = self.lib.recent(status=ArticleStatus.DRAFT)
-        assert len(recent) == 0
+        assert len(recent) == 1
 
     # ── Stats ───────────────────────────────────────────────────────────
 
@@ -353,6 +352,7 @@ class TestBridgeForwardGates:
             "title": "Ordinary title",
             "body": "Ordinary body with nothing sensitive in it.",
             "classification": DataClassification.INTERNAL,
+            "status": ArticleStatus.PUBLISHED,
         }
         defaults.update(kwargs)
         return Article(**defaults)
@@ -429,5 +429,6 @@ class TestBridgeForwardGates:
         monkeypatch.setattr(bridge, "forward_delete", lambda aid: called.append(aid))
         lib = Library()
         art = lib.create(title="Not held", body="Content")
+        art.status = ArticleStatus.PUBLISHED
         lib.delete(art.id)
         assert called == [art.id]

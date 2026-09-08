@@ -27,12 +27,26 @@ def _can_read(article: Article, current_user: dict) -> bool:
     caller (the platform-wide auth gate already covers those). RESTRICTED and
     TOP_SECRET additionally require the caller to be an admin or the article's
     own author."""
+    caller_id = _caller_id(current_user)
+    if article.status is not ArticleStatus.PUBLISHED:
+        return _is_admin(current_user) or caller_id == article.author
     if article.classification not in _RESTRICTED_CLASSIFICATIONS:
         return True
-    if current_user.get("role") == "admin":
+    if _is_admin(current_user):
         return True
-    caller_id = current_user.get("id") or current_user.get("sub")
     return caller_id == article.author
+
+
+def _caller_id(current_user: dict) -> str:
+    return current_user.get("id") or current_user.get("sub") or ""
+
+
+def _is_admin(current_user: dict) -> bool:
+    return current_user.get("role") == "admin"
+
+
+def _can_manage(article: Article, current_user: dict) -> bool:
+    return _is_admin(current_user) or _caller_id(current_user) == article.author
 
 
 @router.get("/stats")
@@ -118,8 +132,8 @@ async def create_article(
     except ValueError:
         valid = [j.value for j in Jurisdiction]
         return JSONResponse({"error": f"Unknown jurisdiction. Valid: {valid}"}, status_code=400)
-    caller_id = current_user.get("id") or current_user.get("sub") or "system"
-    is_admin = current_user.get("role") == "admin"
+    caller_id = _caller_id(current_user) or "system"
+    is_admin = _is_admin(current_user)
     resolved_author = author if author is not None and is_admin else caller_id
     art = get_library().create(
         title=title,
@@ -130,7 +144,24 @@ async def create_article(
         retention_days=retention_days,
         jurisdiction=jurisdiction_enum,
         legal_hold=bool(legal_hold) and is_admin,
+        status=ArticleStatus.DRAFT,
     )
+    return art.to_dict()
+
+
+@router.post("/articles/{article_id}/publish")
+async def publish_article(
+    article_id: str = Path(...),
+    current_user: dict = Depends(get_current_user),
+):
+    if not _is_admin(current_user):
+        return JSONResponse({"error": "Only administrators can publish articles"}, status_code=403)
+    try:
+        art = get_library().publish(article_id, reviewer=_caller_id(current_user) or "admin")
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
+    if not art:
+        return JSONResponse({"error": "Not found"}, status_code=404)
     return art.to_dict()
 
 
@@ -142,7 +173,7 @@ async def delete_article(
     art = get_library().get(article_id)
     if not art:
         return JSONResponse({"error": "Not found"}, status_code=404)
-    if not _can_read(art, current_user):
+    if not _can_manage(art, current_user):
         return JSONResponse({"error": "Forbidden"}, status_code=403)
     get_library().delete(article_id)
     return {"deleted": article_id}
@@ -150,5 +181,7 @@ async def delete_article(
 
 @router.post("/retention/apply")
 async def apply_retention(current_user: dict = Depends(get_current_user)):
+    if not _is_admin(current_user):
+        return JSONResponse({"error": "Only administrators can apply retention"}, status_code=403)
     removed = get_library().apply_retention()
     return {"articles_removed": removed}

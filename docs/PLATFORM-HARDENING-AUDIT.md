@@ -14,6 +14,7 @@ The resulting model is modular and zero-incremental-cost: local Python checks ru
 | Area | Finding | Risk | Disposition |
 |---|---|---|---|
 | Compose networking | `woodpecker-server` and `nexus-ws-rs` both claimed host port `8100`. | Deployment failure or unexpected service exposure. | Fixed: both use internal exposure and existing Traefik routes. |
+| Deployment generator | Newly required `MINIO_ROOT_USER` and `MATTERMOST_DB_PASSWORD` were not emitted by the production environment generator. | Production Gate failed before Compose rendering. | Fixed: the generator now creates both values and the existing coverage check verifies all 55 required variables. |
 | Control plane | Vault, observability, registry, messaging, storage, and proxy administration ports were published on all interfaces. | Administrative-plane attack surface. | Fixed: control-plane bindings use loopback; Traefik keeps public HTTP(S). |
 | Secrets | Production credentials used empty or known fallback values. | Secret bypass or accidental insecure deployment. | Fixed: critical values are now required interpolation variables. |
 | Image updates | Watchtower held Docker socket access and was configured for frequent rolling updates. | Unreviewed image change and restart risk. | Fixed: maintenance profile only, scheduled monitor-only mode, no restarts. |
@@ -21,6 +22,8 @@ The resulting model is modular and zero-incremental-cost: local Python checks ru
 | Documentation | The deployment runbook duplicated stale Compose images, port mappings, and a small infrastructure count. | Misleading operational guidance. | Fixed: Compose is declared authoritative and the static table is historical context only. |
 | API knowledge | A runtime API reference and a Wiki v2 design specification shared the same title, while the runtime document named an archived entry point. | Readers could deploy or test against obsolete APIs. | Fixed: current implementation sources are named and the Wiki page is explicitly historical. |
 | Wiki publication | Repository docs and the live Wiki could diverge if both were edited. | Conflicting guidance. | Controlled: `wiki-content/` remains the reviewed canonical source and the live Wiki is one-way publication. |
+| Document lifecycle | The first documentation catalog named owner roles but did not connect repository Markdown to a verified runtime Location or prevent automatic runtime publication. | False accountability claims and unreviewed knowledge publication. | Fixed: lifecycle mapping is explicit; runtime articles are draft-first and require a durable Town Hall approval record before publication. |
+| Test isolation | `tests/test_backup_service.py` changed `SECRET_KEY` at collection time and leaked it to later modules. | Order-dependent Pytest failure in the canonical CI gate. | Fixed: backup crypto setup is an autouse fixture that restores the prior environment. |
 
 ## Implemented Controls
 
@@ -55,6 +58,8 @@ This separates repairable transient faults from configuration defects. It is sel
 - the generated `docs/DOCUMENTATION_CATALOG.md` remains current.
 
 This is a federated knowledge model, not federated machine learning. Teams retain ownership of domain knowledge; a deterministic local verifier protects shared navigation and source-of-truth boundaries. It deliberately does not auto-generate or auto-publish operational guidance.
+
+`docs/DOCUMENT_LIFECYCLE.md` now distinguishes repository custody from runtime knowledge intake. The Workshop is accountable for source-control custody, The Library for knowledge stewardship, The Town Hall records runtime publication approval, and The Observatory receives post-publication events. Static repository and Wiki documents are not claimed to arrive in DocUtari, The Library, or The Basement because no verified integration currently performs that delivery. The catalog validates those Location names against the platform entity registry rather than accepting arbitrary labels.
 
 The initial forensic scan covered 271 Markdown pages across `docs/` and
 `wiki-content/`. It found no exact-content duplicates and no high-containment

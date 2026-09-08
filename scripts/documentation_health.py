@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,11 +26,14 @@ from typing import Any, Iterable
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 DEFAULT_REGISTRY = ROOT / "config" / "docs" / "living_documents.yaml"
 DEFAULT_CATALOG = ROOT / "docs" / "DOCUMENTATION_CATALOG.md"
 DEFAULT_SIDEBAR = ROOT / "wiki-content" / "_Sidebar.md"
 DOC_DIRECTORIES = (ROOT / "docs", ROOT / "wiki-content")
 VALID_KINDS = frozenset({"tutorial", "how-to", "reference", "explanation"})
+VALID_RUNTIME_INTAKES = frozenset({"manual-only", "library-reviewed"})
 
 
 @dataclass(frozen=True)
@@ -40,6 +44,12 @@ class DocumentContract:
     kind: str
     owner: str
     source_paths: tuple[str, ...]
+    custody_location: str = "The Workshop"
+    owner_location: str = "The Library"
+    review_location: str = "The Town Hall"
+    audit_location: str = "The Observatory"
+    runtime_intake: str = "manual-only"
+    destinations: tuple[str, ...] = ()
 
 
 def _repository_path(path: str, root: Path = ROOT) -> Path:
@@ -61,13 +71,42 @@ def load_contracts(path: Path = DEFAULT_REGISTRY) -> list[DocumentContract]:
     for index, item in enumerate(data["documents"], start=1):
         if not isinstance(item, dict):
             raise ValueError(f"documents[{index}] must be a mapping")
-        fields = ("id", "title", "canonical", "kind", "owner", "source_paths")
+        fields = (
+            "id",
+            "title",
+            "canonical",
+            "kind",
+            "owner",
+            "source_paths",
+            "lifecycle",
+        )
         missing = [field for field in fields if field not in item]
         if missing:
             raise ValueError(f"documents[{index}] missing: {', '.join(missing)}")
         sources = item["source_paths"]
         if not isinstance(sources, list) or not all(isinstance(source, str) for source in sources):
             raise ValueError(f"documents[{index}].source_paths must be a list of strings")
+        lifecycle = item["lifecycle"]
+        if not isinstance(lifecycle, dict):
+            raise ValueError(f"documents[{index}].lifecycle must be a mapping")
+        lifecycle_fields = (
+            "custody_location",
+            "owner_location",
+            "review_location",
+            "audit_location",
+            "runtime_intake",
+            "destinations",
+        )
+        missing_lifecycle = [field for field in lifecycle_fields if field not in lifecycle]
+        if missing_lifecycle:
+            raise ValueError(
+                f"documents[{index}].lifecycle missing: {', '.join(missing_lifecycle)}"
+            )
+        destinations = lifecycle["destinations"]
+        if not isinstance(destinations, list) or not all(
+            isinstance(destination, str) for destination in destinations
+        ):
+            raise ValueError(f"documents[{index}].lifecycle.destinations must be a list of strings")
         contracts.append(
             DocumentContract(
                 identifier=str(item["id"]),
@@ -76,6 +115,12 @@ def load_contracts(path: Path = DEFAULT_REGISTRY) -> list[DocumentContract]:
                 kind=str(item["kind"]),
                 owner=str(item["owner"]),
                 source_paths=tuple(sources),
+                custody_location=str(lifecycle["custody_location"]),
+                owner_location=str(lifecycle["owner_location"]),
+                review_location=str(lifecycle["review_location"]),
+                audit_location=str(lifecycle["audit_location"]),
+                runtime_intake=str(lifecycle["runtime_intake"]),
+                destinations=tuple(destinations),
             )
         )
     return contracts
@@ -83,6 +128,9 @@ def load_contracts(path: Path = DEFAULT_REGISTRY) -> list[DocumentContract]:
 
 def validate_contracts(contracts: Iterable[DocumentContract], root: Path = ROOT) -> list[str]:
     errors: list[str] = []
+    from src.entities.platform import PLATFORM_ENTITIES
+
+    valid_locations = frozenset(PLATFORM_ENTITIES)
     identifiers: set[str] = set()
     canonicals: set[str] = set()
     for contract in contracts:
@@ -96,6 +144,20 @@ def validate_contracts(contracts: Iterable[DocumentContract], root: Path = ROOT)
             errors.append(
                 f"{contract.identifier} uses invalid documentation kind {contract.kind!r}"
             )
+        if contract.runtime_intake not in VALID_RUNTIME_INTAKES:
+            errors.append(
+                f"{contract.identifier} uses invalid runtime intake {contract.runtime_intake!r}"
+            )
+        for location in (
+            contract.custody_location,
+            contract.owner_location,
+            contract.review_location,
+            contract.audit_location,
+        ):
+            if location not in valid_locations:
+                errors.append(
+                    f"{contract.identifier} references unknown platform location: {location}"
+                )
         for path in (contract.canonical, *contract.source_paths):
             if not _repository_path(path, root).exists():
                 errors.append(f"{contract.identifier} references missing path: {path}")
@@ -191,21 +253,24 @@ def render_catalog(contracts: Iterable[DocumentContract]) -> str:
         "",
         "## Living Document Contracts",
         "",
-        "| Topic | Canonical document | Kind | Owner | Change signals |",
-        "|---|---|---|---|---|",
+        "| Topic | Canonical document | Kind | Role owner | Lifecycle | Change signals |",
+        "|---|---|---|---|---|---|",
     ]
     for contract in contracts:
         sources = ", ".join(f"`{source}`" for source in contract.source_paths)
         rows.append(
             f"| {contract.title} | `{contract.canonical}` | {contract.kind} | "
-            f"{contract.owner} | {sources} |"
+            f"{contract.owner} ({contract.owner_location}) | "
+            f"{contract.custody_location} -> {contract.review_location}; "
+            f"intake: {contract.runtime_intake}; destinations: {', '.join(contract.destinations)} | "
+            f"{sources} |"
         )
     rows.extend(
         [
             "",
             "## Documentation Model",
             "",
-            "The catalog uses the four Diataxis forms: tutorials teach, how-to guides solve a task, reference documents state facts, and explanations provide context. The registry is a federated knowledge model: each domain owns its canonical page and change signals while common validation runs centrally. It is not a machine-learning system and does not autonomously alter operational or security guidance.",
+            "The catalog uses the four Diataxis forms: tutorials teach, how-to guides solve a task, reference documents state facts, and explanations provide context. The registry is a federated knowledge model: each domain owns its canonical page and change signals while common validation runs centrally. Lifecycle locations are accountability assignments, not assertions that repository Markdown automatically enters a runtime service; see `docs/DOCUMENT_LIFECYCLE.md`. It is not a machine-learning system and does not autonomously alter operational or security guidance.",
             "",
             "Run `python scripts/documentation_health.py --check --base-ref origin/main --check-catalog` to validate navigation, registry paths, source-to-document review coupling, and the generated catalog.",
             "",

@@ -11,9 +11,6 @@ from pathlib import Path
 
 import pytest
 
-os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
-os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-
 from src.backup.engine import BackupEngine, _decrypt_bytes, _encrypt_bytes
 from src.backup.registry import (
     REGISTRY_BY_TIER,
@@ -26,6 +23,22 @@ from src.backup.registry import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module", autouse=True)
+def backup_crypto_environment():
+    names = ("SECRET_KEY", "TRANC3_DB_ENCRYPTION_DISABLED")
+    previous = {name: os.environ.get(name) for name in names}
+    os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
+    os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
+    try:
+        yield
+    finally:
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
 
 @pytest.fixture()
