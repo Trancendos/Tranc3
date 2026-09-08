@@ -10,6 +10,13 @@ on:
       - 'aeonmind/python/**'
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: python-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     name: Lint
@@ -33,7 +40,7 @@ jobs:
       - name: Ruff format check
         run: ruff format --check .
       - name: MyPy
-        run: mypy aeonmind/ --ignore-missing-imports || true
+        run: mypy aeonmind/ --ignore-missing-imports
 
   test:
     name: Test
