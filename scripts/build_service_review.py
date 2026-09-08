@@ -72,6 +72,36 @@ OUT_MD = ROOT / "docs" / "architecture" / "SERVICE-REVIEW.md"
 ROOT_PACKAGES = {"src", "Dimensional", "shared_core"}
 
 
+def first_difference(expected: Any, actual: Any, path: str = "") -> str | None:
+    """Return the first deterministic difference between JSON-like values."""
+    location = path or "<root>"
+    if type(expected) is not type(actual):
+        return f"{location}: expected {type(expected).__name__}, got {type(actual).__name__}"
+    if isinstance(expected, dict):
+        expected_keys = set(expected)
+        actual_keys = set(actual)
+        for key in sorted(expected_keys - actual_keys):
+            return f"{location}.{key}: missing from generated review"
+        for key in sorted(actual_keys - expected_keys):
+            return f"{location}.{key}: unexpected in generated review"
+        for key in sorted(expected_keys):
+            difference = first_difference(expected[key], actual[key], f"{location}.{key}")
+            if difference:
+                return difference
+        return None
+    if isinstance(expected, list):
+        if len(expected) != len(actual):
+            return f"{location}: expected {len(expected)} items, got {len(actual)}"
+        for index, (old, new) in enumerate(zip(expected, actual, strict=True)):
+            difference = first_difference(old, new, f"{location}[{index}]")
+            if difference:
+                return difference
+        return None
+    if expected != actual:
+        return f"{location}: expected {expected!r}, got {actual!r}"
+    return None
+
+
 # Images we pull rather than build. Their internals are not ours to review, but
 # they are still part of the running estate, so they are counted, not dropped.
 def is_infra(cfg: dict) -> bool:
@@ -835,9 +865,12 @@ def main() -> int:
             old.pop(volatile, None)
             new.pop(volatile, None)
         if old != new:
+            difference = first_difference(old, new)
             print(
                 "service review is stale — rerun scripts/build_service_review.py", file=sys.stderr
             )
+            if difference:
+                print(f"first difference: {difference}", file=sys.stderr)
             return 1
 
         # The Markdown was only checked for existence, so a change to

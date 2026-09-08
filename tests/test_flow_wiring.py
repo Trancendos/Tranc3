@@ -158,7 +158,9 @@ def test_reporter_fails_when_a_configured_endpoint_rejects_the_batch(tmp_path, c
 
 def test_ci_invokes_the_reporter():
     """The script is only a flow if something runs it."""
-    workflow = yaml.safe_load((REPO / ".github" / "workflows" / "test.yml").read_text())
+    workflow = yaml.safe_load(
+        (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    )
     steps = workflow["jobs"]["test"]["steps"]
     reporting = [s for s in steps if "report_tests_to_chaos_party.py" in str(s.get("run", ""))]
     assert len(reporting) == 1
@@ -180,7 +182,7 @@ def test_imaginarium_knows_where_fabulousa_is():
 
 
 def test_compose_gives_imaginarium_the_fabulousa_url():
-    compose = yaml.safe_load((REPO / "docker-compose.production.yml").read_text())
+    compose = yaml.safe_load((REPO / "docker-compose.production.yml").read_text(encoding="utf-8"))
     env = compose["services"]["imaginarium"]["environment"]
     assert any(str(e).startswith("FABULOUSA_URL=") for e in env)
 

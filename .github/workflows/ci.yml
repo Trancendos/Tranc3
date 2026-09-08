@@ -268,6 +268,13 @@ jobs:
             --ignore=tests/test_full_suite.py \
             --cov=Dimensional --cov=src --cov-report=xml:coverage.xml --cov-report=term-missing
 
+      - name: Report test run to The Chaos Party
+        if: always()
+        env:
+          CHAOS_PARTY_URL: ${{ secrets.CHAOS_PARTY_URL }}
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
+        run: python scripts/report_tests_to_chaos_party.py --ran-by github-ci
+
       - name: Upload coverage artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
