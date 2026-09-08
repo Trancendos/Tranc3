@@ -18,8 +18,8 @@ SAFE_RETRY_STEPS = (
     "install dependencies",
     "install ruff",
     "install pyyaml",
-    "restore cache",
-    "setup python",
+    "cache trivy db",
+    "set up python",
 )
 
 
