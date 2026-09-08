@@ -145,6 +145,9 @@ def _is_forwardable(article: Any) -> bool:
     status = getattr(article, "status", None)
     if getattr(status, "value", status) != "published":
         return False
+    channel = getattr(article, "channel", None)
+    if getattr(channel, "value", channel) != "kb":
+        return False
     classification = getattr(article, "classification", None)
     classification_value = getattr(classification, "value", str(classification))
     if classification_value not in _FORWARDABLE_CLASSIFICATIONS:

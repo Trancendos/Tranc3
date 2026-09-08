@@ -12,6 +12,7 @@ from src.library.knowledge_base import (
     ArticleStatus,
     DataClassification,
     Jurisdiction,
+    KnowledgeChannel,
     get_library,
 )
 
@@ -23,13 +24,12 @@ _RESTRICTED_CLASSIFICATIONS = frozenset(
 
 
 def _can_read(article: Article, current_user: dict) -> bool:
-    """PUBLIC/INTERNAL/CONFIDENTIAL articles are readable by any authenticated
-    caller (the platform-wide auth gate already covers those). RESTRICTED and
-    TOP_SECRET additionally require the caller to be an admin or the article's
-    own author."""
+    """Apply publication audience before classification-level access rules."""
     caller_id = _caller_id(current_user)
     if article.status is not ArticleStatus.PUBLISHED:
         return _is_admin(current_user) or caller_id == article.author
+    if article.channel is KnowledgeChannel.WIKI:
+        return _is_admin(current_user)
     if article.classification not in _RESTRICTED_CLASSIFICATIONS:
         return True
     if _is_admin(current_user):
@@ -111,6 +111,10 @@ async def create_article(
         description="Only honored for admin callers; other callers always author as themselves.",
     ),
     classification: str = Body("internal"),
+    channel: str = Body(
+        "kb",
+        description="kb is user-facing; wiki is restricted to administrators.",
+    ),
     retention_days: Optional[int] = Body(None, ge=0),
     jurisdiction: str = Body(
         "GLOBAL",
@@ -128,18 +132,28 @@ async def create_article(
         valid = [c.value for c in DataClassification]
         return JSONResponse({"error": f"Unknown classification. Valid: {valid}"}, status_code=400)
     try:
+        channel_enum = KnowledgeChannel(channel)
+    except ValueError:
+        valid = [item.value for item in KnowledgeChannel]
+        return JSONResponse({"error": f"Unknown channel. Valid: {valid}"}, status_code=400)
+    try:
         jurisdiction_enum = Jurisdiction(jurisdiction.upper())
     except ValueError:
         valid = [j.value for j in Jurisdiction]
         return JSONResponse({"error": f"Unknown jurisdiction. Valid: {valid}"}, status_code=400)
     caller_id = _caller_id(current_user) or "system"
     is_admin = _is_admin(current_user)
+    if channel_enum is KnowledgeChannel.WIKI and not is_admin:
+        return JSONResponse(
+            {"error": "Only administrators can create Wiki articles"}, status_code=403
+        )
     resolved_author = author if author is not None and is_admin else caller_id
     art = get_library().create(
         title=title,
         body=body,
         tags=tags,
         author=resolved_author,
+        channel=channel_enum,
         classification=classification_enum,
         retention_days=retention_days,
         jurisdiction=jurisdiction_enum,

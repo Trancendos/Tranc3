@@ -44,6 +44,7 @@ async def _library_on_ai_event(envelope: EventEnvelope) -> None:
     try:
         from src.library.knowledge_base import (  # noqa: PLC0415
             ArticleStatus,
+            KnowledgeChannel,
             get_library,
         )
 
@@ -69,6 +70,7 @@ async def _library_on_ai_event(envelope: EventEnvelope) -> None:
             tags=["ai", "inference", model, provider],
             author="system:luminous",
             source="observatory",
+            channel=KnowledgeChannel.WIKI,
             status=ArticleStatus.DRAFT,
         )
     except Exception as exc:  # nosec B110
@@ -85,6 +87,7 @@ async def _library_on_workflow_event(envelope: EventEnvelope) -> None:
     try:
         from src.library.knowledge_base import (  # noqa: PLC0415
             ArticleStatus,
+            KnowledgeChannel,
             get_library,
         )
 
@@ -109,6 +112,7 @@ async def _library_on_workflow_event(envelope: EventEnvelope) -> None:
             tags=["workflow", "digital-grid", wf_id],
             author="system:digital-grid",
             source="observatory",
+            channel=KnowledgeChannel.WIKI,
             status=ArticleStatus.DRAFT,
         )
     except Exception as exc:  # nosec B110

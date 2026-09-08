@@ -71,9 +71,18 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 THRESHOLD_PDF_OPS = int(os.getenv("DOCUTARI_PDF_THRESHOLD", "100"))
 THRESHOLD_OCR_OPS = int(os.getenv("DOCUTARI_OCR_THRESHOLD", "50"))
 THRESHOLD_PARSE_OPS = int(os.getenv("DOCUTARI_PARSE_THRESHOLD", "200"))
+MAX_UPLOAD_BYTES = int(os.getenv("DOCUTARI_MAX_UPLOAD_BYTES", str(50 * 1024 * 1024)))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
+
+
+def _safe_upload_filename(raw_filename: Optional[str]) -> str:
+    """Keep every file extension while preventing a client-controlled path."""
+    candidate = Path((raw_filename or "upload").replace("\\", "/")).name
+    if not candidate or candidate in {".", ".."} or "\x00" in candidate:
+        raise HTTPException(status_code=400, detail="Invalid upload filename")
+    return candidate
 
 
 # ---------------------------------------------------------------------------
@@ -518,8 +527,13 @@ async def upload_document(
     owner_id: Optional[str] = None,
 ):
     """Upload a document — store locally, push to Paperless-ngx, parse with Tika."""
-    content = await file.read()
-    filename = file.filename or "upload"
+    filename = _safe_upload_filename(file.filename)
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Upload exceeds the configured {MAX_UPLOAD_BYTES}-byte limit",
+        )
     content_type = (
         file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
     )

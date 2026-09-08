@@ -30,6 +30,13 @@ class ArticleStatus(str, Enum):
     ARCHIVED = "archived"
 
 
+class KnowledgeChannel(str, Enum):
+    """Publication audience for Library knowledge."""
+
+    KB = "kb"
+    WIKI = "wiki"
+
+
 @dataclass
 class Article:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -42,6 +49,7 @@ class Article:
     updated_at: float = field(default_factory=time.time)
     source: str = "internal"  # "internal" | "outline" | "observatory"
     outline_id: Optional[str] = None  # ID in external Outline instance
+    channel: KnowledgeChannel = KnowledgeChannel.WIKI
     # Classification doubles as the article's sensitivity level — this is
     # the same public/internal/confidential/restricted/top_secret taxonomy
     # already enforced for data streams (src/nanoservices/daas_stream), not
@@ -78,6 +86,7 @@ class Article:
             "updated_at": self.updated_at,
             "source": self.source,
             "outline_id": self.outline_id,
+            "channel": self.channel.value,
             "classification": self.classification.value,
             "retention_days": self.retention_days,
             "jurisdiction": self.jurisdiction.value,
@@ -118,6 +127,7 @@ class Library:
         author: str = "system",
         source: str = "internal",
         outline_id: Optional[str] = None,
+        channel: KnowledgeChannel = KnowledgeChannel.WIKI,
         classification: DataClassification = DataClassification.INTERNAL,
         retention_days: Optional[int] = None,
         jurisdiction: Jurisdiction = Jurisdiction.GLOBAL,
@@ -126,12 +136,9 @@ class Library:
     ) -> Article:
         if status is not ArticleStatus.DRAFT:
             raise ValueError("new Library articles must be drafts; use publish after review")
-        # `status` defaults to PUBLISHED so every existing caller is unchanged,
-        # but it has to be settable: Basement promotion creates articles that are
-        # proposals awaiting an admin's judgement, not established knowledge.
-        # Auto-publishing a machine-detected pattern into the knowledge base
-        # would let a false positive become something the platform then treats
-        # as fact.
+        # Basement promotion and automated sources create proposals awaiting an
+        # administrator's judgement, not established knowledge. Auto-publishing
+        # a machine-detected pattern would let a false positive become fact.
         art = Article(
             title=title,
             body=body,
@@ -139,6 +146,7 @@ class Library:
             author=author,
             source=source,
             outline_id=outline_id,
+            channel=channel,
             status=status,
             classification=classification,
             retention_days=retention_days,
@@ -183,6 +191,7 @@ class Library:
             "tags",
             "source",
             "outline_id",
+            "channel",
             "classification",
             "jurisdiction",
             "legal_hold",
@@ -314,17 +323,20 @@ class Library:
         by_status = {}
         by_source = {}
         by_classification = {}
+        by_channel = {}
         for art in self._articles.values():
             by_status[art.status.value] = by_status.get(art.status.value, 0) + 1
             by_source[art.source] = by_source.get(art.source, 0) + 1
             by_classification[art.classification.value] = (
                 by_classification.get(art.classification.value, 0) + 1
             )
+            by_channel[art.channel.value] = by_channel.get(art.channel.value, 0) + 1
         return {
             "total_articles": total,
             "by_status": by_status,
             "by_source": by_source,
             "by_classification": by_classification,
+            "by_channel": by_channel,
             "tags": len(self._tag_index),
         }
 
@@ -344,6 +356,7 @@ class Library:
                     "title": art.title,
                     "tags": art.tags,
                     "status": art.status.value,
+                    "channel": art.channel.value,
                     "review_id": art.review_id,
                 },
             )
@@ -362,6 +375,7 @@ class Library:
                     "author": art.author,
                     "tags": art.tags,
                     "status": art.status.value,
+                    "channel": art.channel.value,
                     "review_id": art.review_id,
                 },
                 source="library",

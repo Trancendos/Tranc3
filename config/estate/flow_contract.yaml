@@ -493,11 +493,12 @@ rules:
     claim: "Produced artifacts are held and analysed by The Artifactory"
     hub: "The Artifactory"
     note: >-
-      The worker is a Zot OCI registry bridge. It has no notion of the
-      three-sided store described -- Internal (platform-produced, linked to
-      users, categories and DocUtari), Meta (value-assessed copies for Think
-      Tank), External (three-gate intake through Ice Box quarantine). Those are
-      an unbuilt design, not an under-populated store.
+      The worker now has a durable, metadata-only three-base custody ledger:
+      Internal User, Internal Admin (with Think Tank review), and External
+      Incomer -> Ice Box -> Store. A clean scan record is required before an
+      external custody record enters Store, and invalid transitions fail.
+      This is not a storage or sandbox integration: it neither moves bytes nor
+      invokes Ice Box/Cryptex, so it remains partial rather than enforced.
     probes:
       - kind: worker_exists
         path: workers/artifactory-service
@@ -505,7 +506,10 @@ rules:
         name: artifactory-service
       - kind: code_pattern
         path: workers/artifactory-service
-        pattern: "meta_store|external_gate|gate_2|gate_3"
+        pattern: "CustodyBase\\.EXTERNAL|ExternalHold\\.ICE_BOX"
+      - kind: http_dependency
+        path: workers/artifactory-service
+        env: ICE_BOX_URL
 
   # ── Identity and entry chain ───────────────────────────────────────────────
 

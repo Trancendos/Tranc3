@@ -361,7 +361,7 @@ def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
         return result
 
     try:
-        from src.library.knowledge_base import ArticleStatus, get_library
+        from src.library.knowledge_base import ArticleStatus, KnowledgeChannel, get_library
 
         library = get_library()
     except Exception as exc:  # noqa: BLE001
@@ -399,6 +399,7 @@ def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
                     tags=tags,
                     author="The Observatory",
                     source="observatory",
+                    channel=KnowledgeChannel.WIKI,
                     # DRAFT, not PUBLISHED: a proposal for an admin, not knowledge.
                     status=ArticleStatus.DRAFT,
                 )

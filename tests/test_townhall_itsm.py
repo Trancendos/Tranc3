@@ -18,6 +18,7 @@ from src.townhall.itsm import (
     UnknownIncidentError,
     resolve_ownership,
 )
+from tests.route_helpers import iter_app_routes
 
 
 @pytest.fixture
@@ -347,7 +348,11 @@ class TestTheRoutesAreReachableAndWritesAreGated:
     def test_the_itsm_routes_are_mounted(self, client):
         import api
 
-        paths = {r.path for r in api.app.routes if "/townhall/itsm" in getattr(r, "path", "")}
+        paths = {
+            route.path
+            for route in iter_app_routes(api.app.routes)
+            if "/townhall/itsm" in getattr(route, "path", "")
+        }
         assert "/townhall/itsm/incidents" in paths
         assert "/townhall/itsm/ownership/{service}" in paths
 

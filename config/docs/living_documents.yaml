@@ -85,6 +85,7 @@ documents:
       - src/townhall/itsm_routes.py
       - src/event_bus/wiring.py
       - src/observability/library_pipeline.py
+      - src/basement/promotion.py
       - src/research/section7.py
       - src/models/knowledge.py
     lifecycle:
@@ -96,3 +97,23 @@ documents:
       destinations:
         - The Library durable store
         - Search and RAG consumers
+
+  - id: asset-lifecycle
+    title: Asset lifecycle and Artifactory custody
+    canonical: docs/ASSET_LIFECYCLE.md
+    kind: reference
+    owner: Platform Security and Supply Chain
+    source_paths:
+      - workers/artifactory-service
+      - workers/files-service
+      - workers/ice-box-service
+      - config/estate/flow_contract.yaml
+    lifecycle:
+      custody_location: The Artifactory
+      owner_location: DocUtari
+      review_location: The Town Hall
+      audit_location: The Observatory
+      runtime_intake: manual-only
+      destinations:
+        - The Artifactory custody ledger
+        - DocUtari durable store

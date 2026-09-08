@@ -4,6 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from tests.route_helpers import iter_app_routes
 
 # This test file requires the full production stack (torch, transformers, etc.)
 # and a SECRET_KEY env var. Skip gracefully when either is absent.
@@ -70,7 +71,7 @@ class TestAuth:
         # db_user_manager instance the running `app` actually uses is only
         # reachable via a route handler's closure, not a fresh import.
         db_user_manager = None
-        for route in app.routes:
+        for route in iter_app_routes(app.routes):
             endpoint = getattr(route, "endpoint", None)
             globals_dict = getattr(endpoint, "__globals__", {})
             if "db_user_manager" in globals_dict:

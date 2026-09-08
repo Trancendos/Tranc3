@@ -235,7 +235,7 @@ class Section7:
 
         # Publish to The Library
         try:
-            from src.library.knowledge_base import ArticleStatus, get_library
+            from src.library.knowledge_base import ArticleStatus, KnowledgeChannel, get_library
 
             get_library().create(
                 title=report.title,
@@ -243,6 +243,7 @@ class Section7:
                 tags=["section7", report.report_type.value, "auto-generated"],
                 author="section7",
                 source="section7",
+                channel=KnowledgeChannel.WIKI,
                 status=ArticleStatus.DRAFT,
             )
         except Exception:

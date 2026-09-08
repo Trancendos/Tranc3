@@ -241,6 +241,64 @@ def test_library_create_rejects_unknown_classification():
         _clear_override()
 
 
+def test_library_user_facing_kb_is_readable_after_review():
+    app.dependency_overrides[get_current_user] = _override("author")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={"title": "KB", "body": "Body", "channel": "kb"},
+        )
+        assert created.status_code == 200
+        article_id = created.json()["id"]
+        assert created.json()["channel"] == "kb"
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        assert client.post(f"/library/articles/{article_id}/publish").status_code == 200
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("another-user")
+    try:
+        assert client.get(f"/library/articles/{article_id}").status_code == 200
+    finally:
+        _clear_override()
+
+
+def test_library_wiki_requires_admin_and_remains_admin_facing():
+    app.dependency_overrides[get_current_user] = _override("author")
+    try:
+        denied = client.post(
+            "/library/articles",
+            json={"title": "Admin notes", "body": "Body", "channel": "wiki"},
+        )
+        assert denied.status_code == 403
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={"title": "Admin notes", "body": "Body", "channel": "wiki"},
+        )
+        assert created.status_code == 200
+        article_id = created.json()["id"]
+        assert client.post(f"/library/articles/{article_id}/publish").status_code == 200
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("another-user")
+    try:
+        assert client.get(f"/library/articles/{article_id}").status_code == 403
+        listed = client.get("/library/articles", params={"limit": 200}).json()
+        assert all(article["id"] != article_id for article in listed)
+    finally:
+        _clear_override()
+
+
 def test_library_draft_is_private_and_admin_publication_is_required():
     app.dependency_overrides[get_current_user] = _override("author")
     try:

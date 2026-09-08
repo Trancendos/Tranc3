@@ -3999,6 +3999,9 @@ services:
       # scripts/check_service_urls.py.
       - ZOT_URL=http://zot:5000
       - PORT=8047
+      - ARTIFACT_CUSTODY_DB=/app/data/custody.db
+    volumes:
+      - artifactory-lifecycle-data:/app/data
     expose:
       - "8047"
     ports:
@@ -4647,6 +4650,8 @@ volumes:
   mattermost-plugins:
     driver: local
   mattermost-db-data:
+    driver: local
+  artifactory-lifecycle-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

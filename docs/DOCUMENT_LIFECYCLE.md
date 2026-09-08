@@ -1,65 +1,94 @@
 # Document Lifecycle and Accountability
 
-This document separates current, verified document flows from intended platform roles. It does not claim that every repository Markdown file is already stored in a platform Location.
+This is the verified document and knowledge model for Tranc3. It distinguishes live controls from intended architecture so a location name is never mistaken for a deployed integration.
 
-## Who Owns What
+## Accountable Locations
 
-| Responsibility | Accountable Location | Seed lead | How to find the current assignee |
-|---|---|---|---|
-| Source-control custody | The Workshop | Larry Lowhammer | `GET /roles/The Workshop` |
-| Knowledge stewardship | The Library | Zimik | `GET /roles/The Library` |
-| Publication review record | The Town Hall | Tristuran | `GET /roles/The Town Hall` |
-| Post-publication audit event | The Observatory | Norman Hawkins | `GET /roles/The Observatory` |
-| Archive and retrieval consumer | The Basement | Gary Glowman (Glow-Worm) | `GET /roles/The Basement` |
+| Responsibility | Accountable Location | Current runtime evidence |
+|---|---|---|
+| Source-control custody | The Workshop | Git repository, pull requests, and CI |
+| User-facing knowledge base | The Library, KB channel | `POST /library/articles` creates a `kb` draft |
+| Admin-facing knowledge base | The Library, Wiki channel | Published `wiki` articles are admin-only |
+| Review decision and audit record | The Town Hall | SQLite ITSM review record with content hash |
+| Runtime event collection | The Observatory | Event-derived draft pipeline |
+| Archive and pattern retrieval | The Basement | Observatory pattern promotion and archive consumer |
+| User file/context intake | DocUtari | Internal authenticated upload, parsing, and storage |
+| Built/dependency artifact custody | The Artifactory | Zot/Gitea bridge plus metadata custody ledger |
 
-The names in the platform entity registry are seed leads, not a substitute for a current assignment. The SQLite-backed role registry is the live authority through the `/roles/{location}` endpoint. There is currently no mapping between those platform roles and GitHub accounts, and the repository has no `CODEOWNERS` file. GitHub pull-request approval must therefore be configured in repository branch protection until an identity mapping is deliberately introduced.
+The entity registry contains seed leads. The live assignment is the SQLite role registry through `GET /roles/{location}`. There is no verified mapping from platform roles to GitHub identities, and this repository has no `CODEOWNERS` file.
 
-## Current Flows
+## Knowledge Routes
 
-### Repository and Wiki Documents
+### User-facing KB
 
 ```mermaid
 flowchart LR
-  A[Git repository or wiki-content] --> B[Pull request and human review]
+  A[Authenticated user author] --> B[Library KB draft]
+  B --> C[Town Hall review and content hash]
+  C --> D[Published KB article]
+  D --> E[Observatory lifecycle event]
+  D --> F[Durable KB bridge when classification permits]
+```
+
+Non-admin callers can create only `kb` articles. Every article begins as a draft. An administrator publishes it through `POST /library/articles/{article_id}/publish`; this first records the reviewer, UTC timestamp, location, and SHA-256 content hash in the Town Hall ITSM database. If that write fails, publication fails. A published KB article remains subject to classification, PII, legal-hold, and jurisdiction gates before it can be copied to the lower-trust durable Library worker.
+
+### Admin-facing Wiki
+
+```mermaid
+flowchart LR
+  A[Observatory or approved automation] --> B[Library Wiki draft]
+  B --> C[Town Hall review and content hash]
+  C --> D[Published admin Wiki]
+  D --> E[Observatory lifecycle event]
+```
+
+Automated Observatory, workflow, research, Basement, and model-governance outputs explicitly use the `wiki` channel and remain drafts until reviewed. A published Wiki article is readable only by an administrator and is deliberately not copied to `workers/library-service`, because that worker does not implement the Library's audience and classification authorization model.
+
+Editing published content, tags, classification, jurisdiction, source, legal-hold state, or channel demotes it to draft and clears its review metadata. A new Town Hall approval is required before republishing.
+
+## Repository Docs and GitHub Wiki
+
+```mermaid
+flowchart LR
+  A[Git or wiki-content] --> B[Pull request and human review]
   B --> C[Repository documentation]
   C --> D[One-way GitHub Wiki publication]
   B --> E[Documentation health check]
 ```
 
-Repository Markdown originates in Git/GitHub and `wiki-content/`; it is not automatically ingested by The Library, DocUtari, or The Basement. The Workshop is the platform's accountability Location for source-control custody, but GitHub remains the actual repository transport and review surface. `scripts/documentation_health.py` validates paths, navigation, lifecycle mappings, and source-to-canonical-document coupling. It does not approve content, publish a draft, or invent documentation.
+Repository Markdown and `wiki-content/` originate in Git/GitHub. They are not automatically ingested into The Library, DocUtari, or The Basement. `scripts/documentation_health.py` checks navigation, lifecycle mappings, and code-to-canonical-document coupling; it does not approve prose or publish runtime knowledge.
 
-### Runtime Library Articles
+The versioned GitHub Wiki source is intended for administrators. The repository cannot prove the live GitHub Wiki's access settings, so making it genuinely admin-only still requires repository or organisation access configuration outside this codebase.
+
+## Observatory, Library, Town Hall, and Basement
+
+The requested direction is correct for event-derived knowledge:
 
 ```mermaid
 flowchart LR
-  A[API author or approved automation] --> B[The Library: draft]
-  B --> C[Admin publication request]
-  C --> D[The Town Hall: SQLite approval record and content hash]
-  D --> E[The Library: published article]
-  E --> F[The Observatory: article.published event]
-  E --> G[Safe bridge: durable Library worker]
-  G --> H[Search and RAG consumers]
+  A[Instrumented locations] --> B[The Observatory]
+  B --> C[The Library split]
+  C --> D[KB user-facing drafts]
+  C --> E[Wiki admin-facing drafts]
+  D --> F[The Town Hall review]
+  E --> F
+  F --> G[Published, audience-controlled knowledge]
 ```
 
-All new runtime articles are drafts. Automated Observatory, workflow, AI-inference, and research summaries remain drafts; they cannot silently become platform knowledge. An administrator publishes through `POST /library/articles/{article_id}/publish`. Publication first writes a durable approval record to The Town Hall's ITSM database with the article ID, reviewer, UTC timestamp, and SHA-256 hash of title plus body. If that write fails, publication fails and the article remains a draft.
+Today, the verified implementation covers eligible Observatory events into Wiki drafts and emits Observatory events after Library lifecycle changes. It does **not** prove that every platform location is instrumented, and static repository documentation remains outside this runtime stream. The established test-evidence route is separate: Chaos Party test evidence can pass through The Observatory and The Basement before a Library Wiki draft is proposed.
 
-Only a published `PUBLIC` or `INTERNAL` article that passes the existing PII, legal-hold, and jurisdiction gates may be sent by the best-effort bridge to `workers/library-service`. The bridge is not an authoritative reader and never receives confidential or restricted content. Publication emits an Observatory event after the Town Hall record exists. An administrator can retrieve a review trail at `GET /townhall/itsm/documents/{article_id}/reviews`.
+The Basement is the archive and retrieval consumer. It is not an automatic mirror of Git or DocUtari, and it must not be used as a substitute for a legal-hold system of record.
 
-Editing a published article's content, tags, classification, jurisdiction, source, or legal-hold state returns it to draft and clears its previous review metadata. When no legal hold applies, the platform also makes a best-effort request to remove the previous durable worker copy before re-review; a legal hold deliberately preserves it. The changed article must receive a new Town Hall approval before republishing. This prevents a reviewed article from being materially altered after approval.
+## DocUtari Boundary
 
-## What Does Not Happen Today
+DocUtari is the internal-authenticated A-to-Z file/context intake point. It accepts `UploadFile` content without an extension allow-list, stores metadata and payload, and can send content to Tika and Paperless. The upload route now strips client path components and enforces `DOCUTARI_MAX_UPLOAD_BYTES` (50 MiB default) before persistence; it does not execute uploads or represent a malware sandbox.
 
-- **DocUtari is not a destination for repository Markdown.** No verified ingestion route currently writes repository or Wiki files to that Location.
-- **The Basement does not receive repository Markdown automatically.** It is a downstream archive/retrieval consumer for eligible Library knowledge, not a source-control mirror.
-- **The Library does not import all repository documents.** Manual promotion remains required while ownership, classification, GitHub identity, deletion propagation, and rollback semantics are not yet fully integrated.
-- **The Observatory does not receive a per-commit document event for static docs.** It observes runtime article lifecycle events; GitHub remains the commit audit source for repository documentation.
-
-These restrictions are intentional safety boundaries. Automatic ingestion will be considered only after the repository has reviewed `CODEOWNERS` and identity mappings, provenance and classification rules, content deletion/rollback synchronization, and a tested approval boundary.
+Files accepted by DocUtari are not automatically Artifactory artifacts, Library articles, or Basement records. Promotion between those locations requires an explicit, reviewable workflow and a provenance decision.
 
 ## Operational Rules
 
-1. Update the canonical document named in `config/docs/living_documents.yaml` whenever its mapped source changes.
-2. Treat the lifecycle Locations in the registry as accountability assignments; check `/roles/{location}` for the live person or agent assigned to a role.
-3. Create or ingest runtime knowledge as a draft. Do not use a direct object construction to bypass `Library.publish()` outside controlled bootstrap fixtures.
-4. Publish only after an accountable administrator has reviewed the exact content. The Town Hall record is the audit evidence, not a substitute for review.
-5. Do not bulk-ingest repository documentation or auto-remediate prose based on heuristics. Deterministic navigation and lifecycle contract failures should fail CI; editorial or semantic ambiguity requires a reviewer.
+1. Use `kb` only for user-facing knowledge; use `wiki` for admin-facing and automated operational knowledge.
+2. Treat the Town Hall hash record as audit evidence, not as an automatic approval authority.
+3. Keep GitHub Wiki access configuration aligned with its admin-facing purpose; this cannot be enforced by a repository workflow alone.
+4. Do not bulk-ingest static docs or auto-publish AI output. Deterministic contract failures fail CI; semantic/editorial ambiguity requires review.
+5. Use the Artifactory custody contract in `docs/ASSET_LIFECYCLE.md` for built artifacts and external dependencies.

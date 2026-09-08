@@ -106,7 +106,7 @@ def publish_advancement_article(proposal: "AdvancementProposal") -> Optional["Ar
     decision itself, which is already durably recorded in
     ModelGovernanceRegistry's own SQLite tables."""
     try:
-        from src.library.knowledge_base import ArticleStatus, get_library
+        from src.library.knowledge_base import ArticleStatus, KnowledgeChannel, get_library
 
         tier = get_orchestration_tier(proposal.model_name)
         job_description = job_description_for_ai(proposal.model_name)
@@ -120,6 +120,7 @@ def publish_advancement_article(proposal: "AdvancementProposal") -> Optional["Ar
             tags=tags,
             author=proposal.model_name,
             source="models-governance",
+            channel=KnowledgeChannel.WIKI,
             status=ArticleStatus.DRAFT,
         )
         reviewer = (
