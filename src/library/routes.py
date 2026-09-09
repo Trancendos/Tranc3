@@ -172,8 +172,8 @@ async def publish_article(
         return JSONResponse({"error": "Only administrators can publish articles"}, status_code=403)
     try:
         art = get_library().publish(article_id, reviewer=_caller_id(current_user) or "admin")
-    except ValueError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=409)
+    except ValueError:
+        return JSONResponse({"error": "Unable to publish article"}, status_code=409)
     if not art:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return art.to_dict()

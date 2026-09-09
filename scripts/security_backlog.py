@@ -214,7 +214,7 @@ def write_issue(repo: str, token: str, body: str) -> None:
     )
     with urllib.request.urlopen(search, timeout=30) as response:  # noqa: S310
         issues = json.load(response)
-    existing = next((issue for issue in issues if ISSUE_MARKER in issue.get("body", "")), None)
+    existing = next((issue for issue in issues if ISSUE_MARKER in (issue.get("body") or "")), None)
     payload = json.dumps({"body": body}).encode()
     if existing:
         request = urllib.request.Request(

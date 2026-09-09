@@ -26,7 +26,7 @@ covered runs created on 2026-09-07. The repeated failures included:
 | Area | Evidence | Finding |
 | --- | --- | --- |
 | CI | 4/4 failures | Ruff found 71 existing violations; the test job was blocked by lint. |
-| Test Suite | 3/3 failures | Both dependency installation and pytest were fail-open with `|| true`. |
+| Test Suite | 3/3 failures | Both dependency installation and pytest were fail-open with `\|\| true`. |
 | Workflow validation | CI failed in `check_workflow_placeholders.py` | SOOS contained `<YOUR-PROJECT-NAME>` and Synopsys IO contained `{{PROJECT_NAME}}`. |
 | Security templates | Pyre, Pysa, Snyk, Synopsys, Frogbot, SOOS, Defender, and Syft had repeated failures | Optional or unconfigured vendor templates were acting as required checks. |
 | Pages | Astro, Gatsby, Hugo, Jekyll, mdBook, Next, Nuxt, and static Pages runs cancelled | Multiple starter workflows shared the `pages` concurrency group. |

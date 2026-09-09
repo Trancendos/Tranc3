@@ -537,7 +537,10 @@ class ItsmService:
     def record_document_approval(
         self, article_id: str, content_hash: str, reviewer: str
     ) -> DocumentReview:
-        if not article_id.strip() or not content_hash.strip() or not reviewer.strip():
+        article_id = article_id.strip()
+        content_hash = content_hash.strip()
+        reviewer = reviewer.strip()
+        if not article_id or not content_hash or not reviewer:
             raise ValueError("document approval requires article, content hash, and reviewer")
         review = DocumentReview(
             id=str(uuid.uuid4()),

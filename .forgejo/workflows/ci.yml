@@ -169,7 +169,7 @@ jobs:
           ENVIRONMENT: test
 
       - name: Report test run to The Chaos Party
-        if: always()
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && always()
         env:
           CHAOS_PARTY_URL: ${{ secrets.CHAOS_PARTY_URL }}
           INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}

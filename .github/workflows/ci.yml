@@ -269,7 +269,7 @@ jobs:
             --cov=Dimensional --cov=src --cov-report=xml:coverage.xml --cov-report=term-missing
 
       - name: Report test run to The Chaos Party
-        if: always()
+        if: ${{ always() && github.event_name == 'push' }}
         env:
           CHAOS_PARTY_URL: ${{ secrets.CHAOS_PARTY_URL }}
           INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
@@ -290,6 +290,7 @@ jobs:
         with:
           files: coverage.xml
           flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
       - name: Capture diagnostics

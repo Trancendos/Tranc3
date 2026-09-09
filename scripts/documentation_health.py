@@ -208,7 +208,7 @@ def changed_paths(base_ref: str, root: Path = ROOT) -> tuple[list[str], str | No
         detail = merge_base.stderr.strip() or f"git merge-base exited {merge_base.returncode}"
         return [], f"cannot resolve documentation comparison base {base_ref!r}: {detail}"
     diff = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{merge_base.stdout.strip()}...HEAD"],
+        ["git", "diff", "--name-only", "--no-renames", "--diff-filter=ACDMRT", f"{merge_base.stdout.strip()}...HEAD"],
         cwd=root,
         text=True,
         capture_output=True,
@@ -261,7 +261,7 @@ def render_catalog(contracts: Iterable[DocumentContract]) -> str:
         rows.append(
             f"| {contract.title} | `{contract.canonical}` | {contract.kind} | "
             f"{contract.owner} ({contract.owner_location}) | "
-            f"{contract.custody_location} -> {contract.review_location}; "
+            f"{contract.custody_location} -> {contract.review_location} -> {contract.audit_location}; "
             f"intake: {contract.runtime_intake}; destinations: {', '.join(contract.destinations)} | "
             f"{sources} |"
         )

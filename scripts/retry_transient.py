@@ -62,7 +62,7 @@ def main() -> int:
                 f"::error title={args.label} failed::classification={classification}; "
                 "deterministic failures are not suppressed"
             )
-            return completed.returncode or 1
+            return completed.returncode if completed.returncode > 0 else 1
         delay = 2**attempt
         print(f"::warning::Transient {args.label} failure; retrying in {delay}s")
         time.sleep(delay)
