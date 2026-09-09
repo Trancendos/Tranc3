@@ -32,13 +32,14 @@ on:
         type: string
         default: "30"
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   report:
     name: Report (and optionally reap) stale branches
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

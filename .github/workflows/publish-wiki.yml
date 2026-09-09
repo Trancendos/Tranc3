@@ -23,8 +23,7 @@ on:
       - ".github/workflows/publish-wiki.yml"
   workflow_dispatch: {}
 
-permissions:
-  contents: write
+permissions: {}
 
 concurrency:
   group: publish-wiki
@@ -34,6 +33,8 @@ jobs:
   publish:
     name: Mirror wiki-content/ → GitHub Wiki
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
