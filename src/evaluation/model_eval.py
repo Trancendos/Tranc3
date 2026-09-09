@@ -519,9 +519,10 @@ class EvalSuite:
     def _cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
         """Cosine similarity between two float vectors."""
         # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
+        # Applying this pattern to norms as well for further speedup
         dot = sum(map(operator.mul, vec_a, vec_b))
-        norm_a = math.sqrt(sum(a * a for a in vec_a))
-        norm_b = math.sqrt(sum(b * b for b in vec_b))
-        if norm_a == 0 or norm_b == 0:
+        norm_a_sq = sum(map(operator.mul, vec_a, vec_a))
+        norm_b_sq = sum(map(operator.mul, vec_b, vec_b))
+        if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
-        return dot / (norm_a * norm_b)
+        return dot / math.sqrt(norm_a_sq * norm_b_sq)
