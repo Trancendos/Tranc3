@@ -635,6 +635,13 @@ class AutoRemediatorV2:
         session: RemediationSession,
     ) -> FixResult:
         """Process all violations in a single file with atomic semantics."""
+        if ".." in filepath:
+            return FixResult(
+                file=filepath,
+                violations_addressed=[],
+                success=False,
+                error="Invalid file path",
+            )
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 source = f.read()

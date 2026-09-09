@@ -260,7 +260,12 @@ fn evaluate_nrc(data: &serde_json::Value) -> serde_json::Value {{
         """Attempt real Rust → WASM compilation via cargo."""
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
-                project_dir = Path(tmpdir) / name
+                base_dir = Path(tmpdir).resolve()
+                project_dir = (base_dir / name).resolve()
+                try:
+                    project_dir.relative_to(base_dir)
+                except ValueError:
+                    raise Exception("Invalid file path")
                 project_dir.mkdir()
 
                 # Create Cargo.toml
@@ -277,7 +282,11 @@ serde_json = "1"
 crate-type = ["cdylib"]
 '''
                 (project_dir / "Cargo.toml").write_text(cargo_toml)
-                src_dir = project_dir / "src"
+                src_dir = (project_dir / "src").resolve()
+                try:
+                    src_dir.relative_to(base_dir)
+                except ValueError:
+                    raise Exception("Invalid file path")
                 src_dir.mkdir()
                 (src_dir / "lib.rs").write_text(rust_source)
 
