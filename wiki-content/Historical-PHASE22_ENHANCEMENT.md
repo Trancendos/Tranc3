@@ -218,7 +218,7 @@ from Dimensional.infinity.proactive_defense import ProactiveDefenseLayer
 defense = ProactiveDefenseLayer(violation_threshold=5, violation_window_seconds=60)
 result = await defense.evaluate_request({"ip": "1.2.3.4", "path": "/api", "method": "GET"})
 # result.allowed: bool
-stats = defense.get_stats()   # → dict with "evaluations", "blocks", "incidents"
+stats = defense.get_stats()  # → dict with "evaluations", "blocks", "incidents"
 blocked = defense.get_blocked_ips()  # → list[str]
 ```
 
