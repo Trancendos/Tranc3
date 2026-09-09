@@ -12,6 +12,7 @@
 
 const path = require('path');
 const express = require('express');
+const helmet = require('helmet');
 const { bundle } = require('@remotion/bundler');
 const { renderMedia, selectComposition } = require('@remotion/renderer');
 
@@ -91,6 +92,7 @@ async function runRender(renderId, payload) {
 }
 
 const app = express();
+app.use(helmet());
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
