@@ -6,19 +6,33 @@ GitHub's starter templates and committed unedited. The result was not eight
 scanners: it was five permanently red checks on every pull request, and the
 slow lesson that a red X means nothing.
 
+None of them is still broken — the ones that could not be configured were
+deleted, and the one that could was driven from a repository variable — so
+the list below is history, kept because it is the shape of the failure this
+check exists to catch rather than a description of the repository today:
+
   cloudrail.yml       an action deleted from the marketplace, running
                       `terraform init` at a root holding no Terraform
+                      (deleted)
   ethicalcheck.yml    `oas-url: http://netbanking.apisec.ai:8080/v2/api-docs`
                       — the vendor's demo host, pen-tested weekly on our
-                      behalf, and `email: xxx@apisec.ai`
+                      behalf, and `email: xxx@apisec.ai` (deleted)
   endorlabs.yml       `namespace: "example"`, the template's own placeholder,
-                      under a comment saying to replace it
+                      under a comment saying to replace it (now driven by the
+                      `ENDOR_NAMESPACE` repository variable, and skipped with
+                      a notice until that is set)
   nowsecure-…-sbom    `group_id: {{ groupId }}`, which is not valid YAML at
                       all, building an Android app this repository does not
-                      contain
+                      contain (deleted)
+
+The same audit later removed the rest of the unedited templates — NeuraLegion
+pointed at a third party's demo target, Snyk, SOOS, Synopsys IO, Pyre, Pysa,
+and the CloudFormation policy validator, each blocking pull requests on
+credentials and paths that do not exist here.
 
 Every one of those is mechanically detectable, and none of it needed a human
-to notice. This is that check.
+to notice. This is that check: it fails on the next one before it is merged,
+rather than after it has been red for weeks.
 
 Two rules:
 
@@ -30,6 +44,22 @@ Two rules:
      a comment that explains a placeholder — including the ones above — is
      documentation, and a check that could not tell the difference would
      punish writing the explanation down.
+
+Two remedies, and which one applies:
+
+  skip with notice  The workflow would scan this repository correctly the
+                    moment someone supplies a credential or a tenant
+                    identifier. `endorlabs.yml`, `zscaler-iac-scan.yml` and
+                    `black-duck-security-scan-ci.yml` each gate their scan on
+                    that value and emit a `::notice` until it is set, because
+                    a scan that cannot authenticate is not a finding about
+                    this repository and should not be reported as one.
+
+  delete            The workflow has nothing here to scan even fully
+                    configured: a sample target we do not own, an analyzer
+                    configuration this repository does not have, or a runner
+                    that no longer exists. No secret makes it valid, so it is
+                    removed rather than suppressed.
 
 Standard library plus PyYAML, which CI already installs.
 """
