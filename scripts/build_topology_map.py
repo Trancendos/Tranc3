@@ -161,7 +161,8 @@ def _load_guard_module():
         "check_duplicate_routers", ROOT / "scripts" / "check_duplicate_routers.py"
     )
     module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
+    if spec.loader is None:
+        raise AssertionError
     spec.loader.exec_module(module)
     return module
 

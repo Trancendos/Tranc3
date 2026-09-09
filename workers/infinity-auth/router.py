@@ -72,7 +72,8 @@ def init_router(db: AuthDatabase, rate_limiter: RateLimiter, worker_kit: Any) ->
 
 
 def _get_db() -> AuthDatabase:
-    assert _db is not None, "Router not initialised — call init_router() first"
+    if _db is None:
+        raise AssertionError("Router not initialised — call init_router() first")
     return _db
 
 
@@ -97,7 +98,8 @@ async def get_current_user(
 
 async def rate_limit_check(request: Request) -> None:
     """Rate limit middleware for auth endpoints."""
-    assert _rate_limiter is not None
+    if _rate_limiter is None:
+        raise AssertionError
     client_ip = request.client.host if request.client else "unknown"
     if not _rate_limiter.is_allowed(f"auth:{client_ip}"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
@@ -109,7 +111,8 @@ async def rate_limit_check(request: Request) -> None:
 @router.get("/health")
 async def health():
     """Health check endpoint."""
-    assert _worker_kit is not None
+    if _worker_kit is None:
+        raise AssertionError
     health_summary_obj = _worker_kit.health.get_health_summary()
     health_summary = (
         health_summary_obj.to_dict()

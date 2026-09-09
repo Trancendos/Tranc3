@@ -143,9 +143,11 @@ class NotebookRegistry:
                 (owner, now, content, visibility, linked_card_id, linked_location),
             )
             self._conn.commit()
-            assert cur.lastrowid is not None
+            if cur.lastrowid is None:
+                raise AssertionError
             entry = self._get_by_id(cur.lastrowid)
-            assert entry is not None
+            if entry is None:
+                raise AssertionError
             return entry
 
     def _get_by_id(self, entry_id: int) -> Optional[NotebookEntry]:

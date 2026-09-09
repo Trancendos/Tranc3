@@ -457,7 +457,8 @@ def get_rotation_service() -> KeyRotationService:
 def _bootstrap_defaults() -> None:
     """Register JWT_SECRET and DB_MASTER_KEY if present in environment."""
     svc = _service
-    assert svc is not None
+    if svc is None:
+        raise AssertionError
 
     jwt_secret = os.environ.get("JWT_SECRET", "")
     if jwt_secret and len(jwt_secret) >= 32:
