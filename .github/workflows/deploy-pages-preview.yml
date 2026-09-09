@@ -1,0 +1,99 @@
+name: Deploy internal PR preview
+
+# Preview deployments are intentionally separate from frontend-build.yml and
+# production deployment. They publish only an internal pull request to a
+# Cloudflare Pages preview branch; main remains the sole production path.
+#
+# Forks are excluded. GitHub withholds secrets from fork pull requests, and
+# executing untrusted fork code with deployment credentials would be unsafe.
+# Those pull requests remain covered by the existing build/test workflow.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'web/**'
+      - 'cloudflare/pages/**'
+      - '.github/workflows/deploy-pages-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Deploy Pages preview
+    # Only repository-owned branches are trusted with a deployment credential.
+    # This expression is evaluated before checkout, so no fork code executes
+    # in this job and no secret can be exposed to it.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build preview bundle
+        run: npm run build
+        env:
+          VITE_API_URL: https://api.trancendos.com
+          VITE_ECOSYSTEM_API_URL: https://api.trancendos.com
+
+      - name: Check preview credential
+        id: credentials
+        env:
+          CF_PAGES_PREVIEW_API_TOKEN: ${{ secrets.CF_PAGES_PREVIEW_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_PAGES_PREVIEW_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Preview was not deployed. Configure CF_PAGES_PREVIEW_API_TOKEN (Cloudflare Pages edit scope, preview only) and CF_ACCOUNT_ID as repository secrets."
+            exit 1
+          fi
+
+      - name: Install pinned Wrangler
+        if: steps.credentials.outputs.present == 'true'
+        run: npm install --global wrangler@4.102.0
+
+      - name: Deploy pull request preview
+        if: steps.credentials.outputs.present == 'true'
+        run: |
+          wrangler pages deploy dist \
+            --project-name=trancendos-frontend \
+            --branch="pr-${{ github.event.pull_request.number }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_PAGES_PREVIEW_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+      - name: Record deployment contract
+        if: always()
+        run: |
+          {
+            echo "## Pages preview deployment"
+            echo
+            echo "- Pull request: #${{ github.event.pull_request.number }}"
+            echo "- Target: Cloudflare Pages preview branch \`pr-${{ github.event.pull_request.number }}\`"
+            echo "- Production changed: no"
+            echo "- Forks: excluded; build/test checks remain secret-free"
+            echo "- Rollback: rerun after correction, or close the pull request; production remains unaffected"
+          } >> "$GITHUB_STEP_SUMMARY"
