@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse, urlunparse
 
 DEFAULT_BACKEND = "https://tranc3-backend.fly.dev"
 GATED_STAGES = {"owner", "private_beta", "extended_beta"}
@@ -50,10 +52,33 @@ TIMEOUT = 15
 PROBE_BODY = {"username": "", "password": "x"}
 
 
+def build_validated_url(base_url: str) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+
+        parsed = urlparse(base_url)
+
+        # Protocol + host checks
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        allowed_domains = ["tranc3-backend.fly.dev", "api.trancendos.com", "trancendos.com"]
+        if parsed.hostname.lower() not in allowed_domains:
+            raise ValueError("Invalid host")
+
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
 def _request(url: str, method: str = "GET", body: dict | None = None) -> tuple[int, str]:
+    validated_url = build_validated_url(url)
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(  # noqa: S310 — https URLs supplied by operator
-        url,
+        validated_url,
         data=data,
         method=method,
         headers={"Content-Type": "application/json", "User-Agent": "cloud-smoke-check"},

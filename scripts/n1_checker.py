@@ -34,6 +34,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 PYPI_URL = "https://pypi.org/pypi/{package}/json"
 CACHE: dict[str, tuple[str, ...]] = {}
@@ -91,6 +92,19 @@ class Report:
         )
 
 
+def build_validated_url(base_url: str, package: str) -> str:
+    try:
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        parsed = urlparse(base_url)
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", package):
+            raise ValueError("Invalid parameter")
+        parsed = parsed._replace(path=f"/pypi/{package}/json")
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
 def _parse_version(v: str) -> tuple[int, ...]:
     """Return numeric tuple from version string, ignoring pre/post/dev."""
     cleaned = re.split(r"[^0-9.]", v)[0]
@@ -111,7 +125,7 @@ def _get_latest_versions(package: str) -> tuple[str, ...]:
     if package in CACHE:
         return CACHE[package]
     try:
-        url = PYPI_URL.format(package=package.lower())
+        url = build_validated_url(PYPI_URL, package.lower())
         req = urllib.request.Request(url, headers={"User-Agent": "tranc3-n1-checker/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
