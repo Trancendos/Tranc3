@@ -217,6 +217,11 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `docs/governance/ACTION-BACKLOG.md` — generated sweep of every outstanding item across 44
   registers, routed to Locations and linked to their solution packs
 - `docs/governance/DVMS-COMPETITIVE-ANALYSIS.md` — DVMS measured against comparable platforms
+- `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — two externally supplied AI
+  assessments of Tranc3 checked claim by claim against the repository. Most of their
+  figures are wrong (12 open issues, not 863; 3,087 files, not 2,259); the one theme
+  they get right — supply-chain blindness — has a different and worse mechanism than
+  they name. Read it before acting on any externally generated report of this estate
 - `docs/governance/REFERENCE-NUMBERING.md` — Wiki (`WIX`, administrative) vs Knowledge Base
   (`KB`, user) reference numbering across three scopes: platform-wide `TKB000001`/`TWIX000042`,
   Location-scoped `Infi-KB-0001`, and personal `#One:KB-0001` (Infinity-One, per-user, private
