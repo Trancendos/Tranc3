@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-09-10T20:05:11.648462+00:00",
+  "commit": "b31ffb98c994c53491cf37a57547d140e89b8357",
+  "count": 22,
+  "occurrences": 36,
+  "sensors": [
+    "bandit",
+    "ruff"
+  ],
+  "note": "Fingerprints of findings present at a known-good commit. Anything not in this set is new, and new is what a pull request answers for. `sensors` records which sensors contributed; findings from a sensor NOT in that list are reported but not gated, because the estate has never measured them. Regenerate deliberately, in a commit that says why. Values are occurrence counts: a finding appearing more times than the baseline records is new.",
+  "fingerprints": {
+    "17e3bbf6df0967334d21": 1,
+    "288f8bf34e9660b3cd8e": 1,
+    "35bd304033fca835733a": 1,
+    "37596151004b0a33e073": 2,
+    "4bef3870275daa6b0eb2": 1,
+    "4f40c51b433e09cde417": 1,
+    "58a03ca5152744ec7ca6": 1,
+    "63108df90f3fd6b984ed": 1,
+    "652655c74a538172918b": 1,
+    "65467f908572e630aa80": 1,
+    "67893c7a167509b73700": 1,
+    "74431b7b15099f6966c3": 1,
+    "790018f610de4efc42dd": 1,
+    "7c9a0f1c7f54036e2adb": 7,
+    "8723f4ac3b8221b689d0": 2,
+    "9015e719838d13ab80ff": 1,
+    "a9df6c67158adf1733bd": 7,
+    "b223bd7dc7294de130fc": 1,
+    "bfabb628ac86291cd03d": 1,
+    "ed9886fbde5171244bc9": 1,
+    "efb4f3f486f38e5978ee": 1,
+    "f1cc8fac401d696cb883": 1
+  }
+}

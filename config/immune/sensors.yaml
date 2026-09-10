@@ -1,0 +1,111 @@
+# The innate layer: which sensors this estate runs, what each one senses, and
+# how to prove it can still see.
+#
+# `required: true` means a run that could not use this sensor is not a clean
+# run -- it is a run with a hole in it, and the immune scan says so rather than
+# reporting the reduced set as if it were the whole picture.
+#
+# `probe` is the part no commercial scanner in this estate's deleted set
+# offered at any price. It plants a known defect in a temporary directory and
+# checks the sensor flags it. A sensor that reports the real tree clean AND
+# fails its own probe is recorded `blind`, because those two facts together
+# mean the clean report carries no information. Only clean runs are probed: a
+# sensor that found something has already shown it can see.
+#
+# Every command must emit machine-readable output on stdout or to a declared
+# `output:` file, and must not need network access to reach a vendor.
+
+sensors:
+
+  ruff:
+    kind: innate
+    senses: "Python correctness and style defects -- unused names, shadowing, unreachable code"
+    location: The Lab
+    binary: ruff
+    command: [ruff, check, ".", "--output-format", "json", "--quiet"]
+    format: ruff-json
+    required: true
+    accept_exit: [0, 1]
+    probe:
+      file: probe.py
+      # F841: a local assigned and never used. Chosen because it is in ruff's
+      # default rule set, so the probe does not depend on this repo's config
+      # being present in the temporary directory.
+      content: |
+        def probe():
+            unused_local = 1
+            return 2
+      expect_rule: F841
+
+  bandit:
+    kind: innate
+    senses: "Python security anti-patterns -- weak crypto, shell injection, unsafe deserialisation"
+    location: Cryptex
+    binary: bandit
+    # -c pyproject.toml is not optional. [tool.bandit] there carries this
+    # estate's decided targets, exclusions and skips, each with a written
+    # reason (B101 asserts, B110 fallback chains, B311 non-cryptographic
+    # randomness). Scanning without it does not scan harder, it scans a
+    # different, undecided thing: the first run of this sensor without the
+    # config returned 13,712 findings, of which 12,770 were B101 -- bandit
+    # objecting to `assert` inside the test suite, which is what a test suite
+    # is made of. That is not detection, it is autoimmunity, and it would have
+    # buried the one genuine error-level finding under 13,711 others.
+    command: [bandit, -c, pyproject.toml, -r, src, api.py, -f, json, -q]
+    format: bandit-json
+    required: true
+    accept_exit: [0, 1]
+    probe:
+      file: probe.py
+      content: |
+        import subprocess
+        def probe(user_input):
+            return subprocess.call(user_input, shell=True)
+      expect_rule: B602
+      command: [bandit, -r, ".", "-f", "json", "-q"]
+
+  pip-audit:
+    kind: innate
+    senses: "Known CVEs in the Python dependency surface"
+    location: Cryptex
+    binary: pip-audit
+    command: [pip-audit, "--format", "json", "--progress-spinner", "off", "-r", "requirements.txt"]
+    format: pip-audit-json
+    required: false
+    accept_exit: [0, 1]
+    # No probe: pip-audit's answer depends on a remote advisory database, so a
+    # planted-vulnerability probe tests the network as much as the tool. The
+    # equivalent guarantee for this sensor is the registry canary in
+    # scripts/vulnerability_census.py, which brackets the real sweep with a
+    # package of known-vulnerable version and fails the run if it comes back
+    # clean. Recording that here rather than leaving the gap unexplained.
+
+  semgrep:
+    kind: innate
+    senses: "Cross-language taint and dataflow patterns that single-file linters miss"
+    location: Cryptex
+    binary: semgrep
+    command: [semgrep, "--config", "auto", "--sarif", "--quiet", "--metrics", "off"]
+    format: sarif
+    required: false
+    accept_exit: [0, 1]
+
+  gitleaks:
+    kind: innate
+    senses: "Credentials committed to the tree or its history"
+    location: The Void
+    binary: gitleaks
+    command: [gitleaks, detect, "--no-git", "--report-format", "json", "--report-path", "/dev/stdout", "--exit-code", "0"]
+    format: gitleaks-json
+    required: false
+    accept_exit: [0, 1]
+
+  trivy-fs:
+    kind: innate
+    senses: "Vulnerable OS and language packages, and misconfigured infrastructure files"
+    location: The Ice Box
+    binary: trivy
+    command: [trivy, fs, ".", "--format", "sarif", "--quiet", "--scanners", "vuln,misconfig"]
+    format: sarif
+    required: false
+    accept_exit: [0]

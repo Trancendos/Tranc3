@@ -1,0 +1,4 @@
+# Suppressions that name a bandit rule but give no written reason.
+# This number may go down and may never go up. Lower it in the same
+# commit that writes the reasons, so the diff shows the work.
+80
