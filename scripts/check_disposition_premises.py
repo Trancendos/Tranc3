@@ -73,18 +73,36 @@ _TOOLING_MANIFEST_MARKERS = ("test", "dev", "security", "lint", "docs", "ci")
 
 #: fflate's decompression surface. `posthog-js` calls only the compression
 #: side, which is why SEC-007 holds.
-_FFLATE_DECOMPRESS = (
+#: fflate's decompression API by name. These are library-specific
+#: identifiers — nothing else in a web codebase is called `unzlibSync` — so
+#: they are searched in every file regardless of what else it imports. That
+#: is the point: a decompression call reached through a wrapper or a
+#: re-export is still a decompression call, and requiring the file to name
+#: fflate is how the first version of this check missed exactly that.
+_DECOMPRESS_UNAMBIGUOUS = (
     "unzipSync",
-    "unzip(",
     "decompressSync",
-    "decompress(",
     "gunzipSync",
-    "gunzip(",
     "inflateSync",
-    "inflate(",
     "unzlibSync",
+)
+
+#: The same operations spelled as plain verbs. `inflate(` and `decompress(`
+#: are ordinary English and appear in UI, animation and layout code that has
+#: nothing to do with archives, so these are only evidence when a compression
+#: library is in play. Scanning them everywhere would have the guard blocking
+#: the gate over a tooltip helper — a false alarm, which costs a gate its
+#: credibility exactly as fast as a miss does.
+_DECOMPRESS_GENERIC = (
+    "unzip(",
+    "decompress(",
+    "gunzip(",
+    "inflate(",
     "unzlib(",
 )
+
+#: Names that put a compression library in play for the generic verbs above.
+_COMPRESSION_LIBRARIES = ("fflate", "pako", "zlib", "jszip", "adm-zip")
 
 _WEB_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".svelte", ".vue"}
 
@@ -109,6 +127,12 @@ _WEB_LOCKFILE = "web/package-lock.json"
 #: resolved. Reading its output is how the version premise becomes checkable
 #: at all rather than remaining a sentence nobody re-reads.
 _SEC_006_MEASURED_NLTK = "3.10.3"
+
+#: SEC-006 disposes of ONE advisory. Matching on the package alone meant a
+#: different, unrelated nltk advisory would satisfy the "still reported"
+#: test and then be measured against this entry's version and fix claims —
+#: an entry vouching for a finding it never assessed.
+_SEC_006_ADVISORY = {"PYSEC-2026-3740", "CVE-2026-81726", "GHSA-8mgp-746c-j5xp"}
 _CENSUS_OUTPUT = "logs/vulnerability_census.json"
 
 
@@ -150,6 +174,22 @@ def _nltk_import_sites(tree: ast.AST) -> list[tuple[int, str, bool]]:
     return found
 
 
+def _signature_expressions(node: ast.AST) -> list[ast.expr]:
+    """Parts of a `def`/`lambda` evaluated where it is written, not when called.
+
+    A function body is deferred. Its decorators and its default arguments are
+    not — they run when the `def` statement executes. Skipping the whole node
+    let an eager `def f(x=_load())` or `@wrap(_load())` hide in a place that
+    looks lazy.
+    """
+    found: list[ast.expr] = list(getattr(node, "decorator_list", []) or [])
+    arguments = getattr(node, "args", None)
+    if arguments is not None:
+        found.extend(d for d in (arguments.defaults or []) if d is not None)
+        found.extend(d for d in (arguments.kw_defaults or []) if d is not None)
+    return found
+
+
 def _import_time_calls(body: list[ast.stmt]) -> set[str]:
     """Names called at import time in this module.
 
@@ -177,6 +217,10 @@ def _import_time_calls(body: list[ast.stmt]) -> set[str]:
         """
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                for expression in _signature_expressions(child):
+                    if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+                        called.add(expression.func.id)
+                    descend(expression)
                 continue
             if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
                 called.add(child.func.id)
@@ -184,6 +228,13 @@ def _import_time_calls(body: list[ast.stmt]) -> set[str]:
 
     for statement in body:
         if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Its body is deferred, but its decorators and default
+            # arguments run right here. Skipping the whole node let an
+            # eager `def f(x=_load())` hide in a place that looks lazy.
+            for expression in _signature_expressions(statement):
+                if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+                    called.add(expression.func.id)
+                descend(expression)
             continue
         if isinstance(statement, ast.Call) and isinstance(statement.func, ast.Name):
             called.add(statement.func.id)
@@ -194,18 +245,40 @@ def _import_time_calls(body: list[ast.stmt]) -> set[str]:
 def _functions_importing_nltk(tree: ast.AST) -> dict[str, int]:
     """Function name -> line, for functions whose body imports nltk."""
     found: dict[str, int] = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        for inner in ast.walk(node):
+
+    def imports_nltk_directly(node: ast.AST) -> bool:
+        """Does calling this function run an nltk import?
+
+        Its own body only. `ast.walk` credited a nested helper's import to the
+        enclosing function, so
+
+            def outer():
+                def inner():
+                    from nltk.corpus import wordnet
+
+        made a module-level `outer()` look eager when it imports nothing — a
+        false alarm on correct code, which is the failure mode this check has
+        already produced once.
+        """
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                continue
             module = None
-            if isinstance(inner, ast.ImportFrom):
-                module = inner.module or ""
-            elif isinstance(inner, ast.Import):
-                module = next((a.name for a in inner.names if a.name.split(".")[0] == "nltk"), None)
+            if isinstance(child, ast.ImportFrom):
+                module = child.module or ""
+            elif isinstance(child, ast.Import):
+                module = next((a.name for a in child.names if a.name.split(".")[0] == "nltk"), None)
             if module and module.split(".")[0] == "nltk":
-                found[node.name] = node.lineno
-                break
+                return True
+            if imports_nltk_directly(child):
+                return True
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (
+            imports_nltk_directly(node)
+        ):
+            found[node.name] = node.lineno
     return found
 
 
@@ -258,7 +331,13 @@ def _census_nltk_premises() -> list[str]:
     seen = False
     for surface in data.get("surfaces") or []:
         for finding in (surface or {}).get("findings") or []:
-            if (finding or {}).get("package") != "nltk":
+            finding = finding or {}
+            if finding.get("package") != "nltk":
+                continue
+            identifiers = {finding.get("id"), *(finding.get("aliases") or [])}
+            if not identifiers & _SEC_006_ADVISORY:
+                # A different nltk advisory. Not this entry's to speak for, and
+                # the census will treat it on its own terms.
                 continue
             seen = True
             version = finding.get("version")
@@ -480,14 +559,16 @@ def check_sec_007() -> list[str]:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        # No `fflate`/`pako` pre-filter. Requiring the file to name the library
-        # meant a decompression call reached through a wrapper, a re-export, or
-        # any other dependency was skipped before the token check ran — the
-        # premise is that `web/` never decompresses, not that it never
-        # decompresses *with fflate specifically*. Measured: zero files in
-        # `web/` match any of these tokens today, so the wider scan costs
-        # nothing and closes the hole.
-        for token in _FFLATE_DECOMPRESS:
+        # Two tiers, because the two failure modes pull opposite ways. The
+        # library-specific names are searched everywhere, so a call reached
+        # through a wrapper is not missed. The generic verbs are searched only
+        # where a compression library is present, so an `inflate(` in layout
+        # code does not block the gate. Measured: zero files in `web/` match
+        # either tier today.
+        tokens = list(_DECOMPRESS_UNAMBIGUOUS)
+        if any(library in text for library in _COMPRESSION_LIBRARIES):
+            tokens += list(_DECOMPRESS_GENERIC)
+        for token in tokens:
             if token in text:
                 failures.append(
                     f"SEC-007: {path.relative_to(ROOT).as_posix()} uses `{token}`. "
