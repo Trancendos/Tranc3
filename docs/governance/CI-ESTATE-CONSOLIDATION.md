@@ -67,16 +67,21 @@ uploads the **entire repository root** as a Pages artifact and publishes it.
 
 ## What was done
 
-| Action | Count | Basis |
-|---|---|---|
-| Deleted — Pages builders with no site | 9 | no source config for any of them |
-| Deleted — commercial scanners, no zero-cost path | 6 | credentials unset, paid products |
-| Deleted — free scanners duplicating existing tooling | 2 | `pyre`/`pysa`; `mypy` already runs in `make lint` |
-| Deleted — starter with no purpose | 1 | `manual.yml` greets a person by name |
-| Fixed | 1 | `.github/labeler.yml` written, in the **v4 schema** the pinned action expects |
-| De-duplicated | 1 | `python.yml` ran the whole suite twice per matrix entry |
+| Action | Count | Files | Basis |
+|---|---|---|---|
+| Deleted — Pages builders with no site | 9 | `astro`, `gatsby`, `hugo`, `jekyll`, `jekyll-gh-pages`, `mdbook`, `nextjs`, `nuxtjs`, `static` | no source config for any of them |
+| Deleted — commercial scanners, no zero-cost path | 8 | `defender-for-devops`, `frogbot-scan-and-fix`, `neuralegion`, `policy-validator-cfn`, `snyk-security`, `soos-dast-scan`, `synopsys-action`, `synopsys-io` | credentials unset, paid products |
+| Deleted — free scanners duplicating existing tooling | 2 | `pyre`, `pysa` | `mypy` already runs in `make lint` |
+| Deleted — starter with no purpose | 1 | `manual` | greets a person by name |
+| Deleted — duplicate coverage run | 1 | `codecov` | ran `ci.yml`'s suite a second time, `\|\| true`-suppressed either way |
+| Fixed | 1 | `label` | `.github/labeler.yml` written, in the **v4 schema** the pinned action expects |
+| De-duplicated | 1 | `python` | ran the whole suite twice per matrix entry |
 
-**48 → 27 workflow files. 24 → 14 firing on a pull request. 38 → 29 jobs.**
+**21 files deleted: 48 → 27 workflow files. 24 → 14 firing on a pull request.
+38 → 29 jobs.** The last two rows change files rather than remove them, so the
+deletion column reconciles on its own: 9 + 8 + 2 + 1 + 1 = 21, and 48 − 21 = 27.
+Verified with `git diff --diff-filter=D --name-only origin/main...HEAD --
+.github/workflows/ | wc -l`.
 
 Nothing that could ever produce a signal was removed. The three gated scanners
 (`black-duck`, `endorlabs`, `zscaler`) stay: configure the secrets and they run.
