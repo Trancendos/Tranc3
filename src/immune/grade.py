@@ -341,9 +341,7 @@ def rank_debt(
     changes = churn(paths, repo_root=repo_root)
     # Search the whole graded population for importers, not just the files
     # being ranked -- otherwise the blast-radius factor is always zero.
-    importers = blast_radius(
-        paths, repo_root=repo_root, searched=sorted(report.files)
-    )
+    importers = blast_radius(paths, repo_root=repo_root, searched=sorted(report.files))
     items = [
         DebtItem(
             path=path,

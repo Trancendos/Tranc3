@@ -213,9 +213,7 @@ def _from_npm_audit(payload: Any, tool: str) -> list[Finding]:
     out: list[Finding] = []
     for name, entry in vulns.items():
         advisories = entry.get("via") or []
-        titles = [
-            a.get("title") for a in advisories if isinstance(a, dict) and a.get("title")
-        ]
+        titles = [a.get("title") for a in advisories if isinstance(a, dict) and a.get("title")]
         out.append(
             Finding(
                 tool=tool,
@@ -298,9 +296,7 @@ def parse_output(text: str, fmt: str, tool: str) -> list[Finding]:
 # ── execution ────────────────────────────────────────────────────────
 
 
-def _run(
-    command: Sequence[str], cwd: Path, timeout: int
-) -> subprocess.CompletedProcess[str]:
+def _run(command: Sequence[str], cwd: Path, timeout: int) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     # A scanner is not the place to discover that colour codes are not JSON.
     env.setdefault("NO_COLOR", "1")
@@ -391,9 +387,7 @@ def run_sensor(
             required=sensor.required,
         )
     except (subprocess.SubprocessError, OSError) as exc:
-        return SensorResult(
-            sensor.name, Outcome.FAILED, detail=str(exc), required=sensor.required
-        )
+        return SensorResult(sensor.name, Outcome.FAILED, detail=str(exc), required=sensor.required)
     if proc.returncode not in sensor.accept_exit:
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
         return SensorResult(
@@ -414,9 +408,7 @@ def run_sensor(
         # subprocess to learn nothing.
         saw, detail = probe_sensor(sensor)
         if not saw:
-            return SensorResult(
-                sensor.name, Outcome.BLIND, detail=detail, required=sensor.required
-            )
+            return SensorResult(sensor.name, Outcome.BLIND, detail=detail, required=sensor.required)
         return SensorResult(
             sensor.name,
             Outcome.OK,

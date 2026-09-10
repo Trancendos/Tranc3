@@ -286,6 +286,7 @@ def split_unmeasured(
     findings = list(findings)
     if not baseline_sensor_names:
         return findings, []
+
     def known(finding: Finding) -> bool:
         return (finding.sensor or finding.tool) in baseline_sensor_names
 

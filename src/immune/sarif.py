@@ -237,9 +237,7 @@ def _rule_levels(run: dict[str, Any]) -> dict[str, str]:
     return levels
 
 
-def findings_from_sarif(
-    document: dict[str, Any], *, tool_hint: str = ""
-) -> list[Finding]:
+def findings_from_sarif(document: dict[str, Any], *, tool_hint: str = "") -> list[Finding]:
     """Flatten a SARIF document into normalised findings."""
     findings: list[Finding] = []
     for run in document.get("runs") or []:
@@ -247,15 +245,11 @@ def findings_from_sarif(
         tool = str(driver.get("name") or tool_hint or "unknown").strip()
         rule_levels = _rule_levels(run)
         for result in run.get("results") or []:
-            rule_id = str(
-                result.get("ruleId") or result.get("rule", {}).get("id") or ""
-            )
+            rule_id = str(result.get("ruleId") or result.get("rule", {}).get("id") or "")
             if not rule_id:
                 rule_id = f"{tool}/unnamed"
             level = result.get("level")
-            level = (
-                normalise_level(level) if level else rule_levels.get(rule_id, "warning")
-            )
+            level = normalise_level(level) if level else rule_levels.get(rule_id, "warning")
             message = str((result.get("message") or {}).get("text") or "").strip()
             start, end, snippet = _region_of(result)
             findings.append(
@@ -365,9 +359,7 @@ def merge(reports: Iterable[tuple[str, list[Finding]]]) -> MergedReport:
         merged.sensors.append(name)
         collected.extend(findings)
     merged.findings = dedupe(collected)
-    merged.findings.sort(
-        key=lambda f: (-f.rank, f.tool, f.path, f.start_line, f.rule_id)
-    )
+    merged.findings.sort(key=lambda f: (-f.rank, f.tool, f.path, f.start_line, f.rule_id))
     return merged
 
 

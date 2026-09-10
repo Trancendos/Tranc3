@@ -554,16 +554,35 @@ Forgejo at `trancendos.com/the-workshop`. Act-runner in `deploy/forgejo/docker-c
 
 ### Pre-commit Hooks (`.pre-commit-config.yaml`)
 
-Runs on every local commit — zero-cost security gate:
-- **ruff** — Fast Python linter
-- **black** — Code formatting
-- **isort** — Import sorting
-- **bandit** — Python security linter
+Runs on every local commit — zero-cost security gate. **22 hooks**, and this
+list is checked against the config by `scripts/check_precommit_documented.py`,
+because it was wrong in both directions until 2026-09-10: it named `black` and
+`isort`, neither of which is configured, and omitted three hooks that rewrite
+files. Anyone who read it, ran `black`, and committed had every file reformatted
+back on the next push — black defaults to line-length 88, this repo formats at
+100 — with nothing anywhere saying why.
+
+- **ruff** — Fast Python linter (import sorting included, via its `I` rules)
+- **ruff-format** — Code formatting. **This is the formatter, not black.**
+  `[tool.ruff] line-length = 100` in `pyproject.toml` is the setting that
+  matters; running `black` locally will fight it on every commit
+- **bandit** — Python security linter, `-c pyproject.toml` so `[tool.bandit]`'s
+  reasoned targets, exclusions and skips apply
 - **semgrep** — Multi-language SAST
 - **gitleaks** — Secret detection
 - **detect-secrets** — Additional secret scanning
-- **safety** — Dependency vulnerability check
-- **typos** — Typo detection
+- **python-safety-dependencies-check** — Dependency vulnerability check (the
+  hook id; the tool is Safety, configured under `[tool.safety]`)
+- **typos** — Typo detection, `pass_filenames: false` so `.typos.toml`'s
+  exclusions actually apply
+- **validate-ea-workbook** — local; EA/CMDB workbook CSV integrity
+- **security-scanner** / **security-autofix** — local; the adaptive scanner and
+  its safe-patch pass. These **modify files**, which is why they belong in a
+  list a contributor reads before wondering what changed their code
+- Plus eleven file-hygiene hooks from **pre-commit-hooks**: trailing whitespace,
+  end-of-file, `check-yaml` / `-json` / `-toml` / `-ast` / `-merge-conflict`,
+  `detect-private-key`, `check-added-large-files`, `no-commit-to-branch`,
+  `debug-statements`
 
 ### Manual deploy (from your machine)
 

@@ -363,6 +363,34 @@ jobs:
       - name: Workflows parse and carry no template placeholders
         run: python scripts/check_workflow_placeholders.py
 
+      # A `# nosec` with no rule id silences EVERY bandit rule on that line,
+      # now and for whatever gets added to it later. Found while calibrating the
+      # immune gate: the comment `# nosec-free on purpose` beside a deliberate
+      # shell injection made bandit 1.9.4 say nothing about it, because bandit
+      # splits comments on non-word characters and `nosec-` is still the token.
+      # An English phrase can disable a security check and the check's own
+      # silence is the only evidence. Blocking half is at zero and stays there;
+      # the 80 rule-scoped-but-unexplained suppressions are a ceiling that may
+      # fall and may not rise.
+      - name: Bandit suppressions name what they silence
+        run: python scripts/check_nosec_specificity.py
+
+      # CLAUDE.md told everyone the repo formats with black. It formats with
+      # ruff-format, at line-length 100 against black's default 88, so anyone
+      # following the documentation had every file reformatted back on the next
+      # push with no error saying why. It also omitted two local hooks that
+      # rewrite files. Documentation that names the wrong tool is worse than
+      # documentation that names none.
+      - name: Pre-commit hooks are documented as configured
+        run: python scripts/check_precommit_documented.py
+
+      # The immune scan's own unit tests. They are calibration tests: each one
+      # plants the defect its guard exists to catch and proves the guard fires,
+      # and the four marked REGRESSION cover defects that were real in that code
+      # on its first run -- every one of which looked exactly like success.
+      - name: Immune system
+        run: python -m pytest tests/test_immune.py -q
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 

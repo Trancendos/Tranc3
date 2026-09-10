@@ -111,7 +111,10 @@ class Suppression:
 def _tracked_python(root: Path) -> list[str]:
     proc = subprocess.run(  # noqa: S603,S607 - fixed argv, no shell
         ["git", "ls-files", "*.py"],
-        cwd=str(root), capture_output=True, text=True, check=False,
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
         return []
@@ -136,9 +139,7 @@ def scan(root: Path = ROOT) -> tuple[list[Suppression], list[Suppression]]:
             # `# nosecure` is prose, not a suppression, and bandit agrees --
             # measured. Skip it rather than reporting a finding on English.
             if rest[:1].isalnum() or rest[:1] == "_":
-                every.append(
-                    Suppression(rel, number, line.strip()[:120], [], "")
-                )
+                every.append(Suppression(rel, number, line.strip()[:120], [], ""))
                 continue
             rules = _RULE.findall(rest)
             reason = _RULE.sub("", rest).strip(" :,-–—").strip()

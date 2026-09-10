@@ -94,13 +94,9 @@ def _sense(args: argparse.Namespace) -> list[SensorResult]:
             for path in sorted(Path().glob(pattern)) or [Path(pattern)]:
                 name = path.stem
                 try:
-                    results.append(
-                        SensorResult(name, Outcome.OK, load_sarif(path, tool_hint=name))
-                    )
+                    results.append(SensorResult(name, Outcome.OK, load_sarif(path, tool_hint=name)))
                 except SarifUnreadable as exc:
-                    results.append(
-                        SensorResult(name, Outcome.UNREADABLE, detail=str(exc))
-                    )
+                    results.append(SensorResult(name, Outcome.UNREADABLE, detail=str(exc)))
         return results
     only = set(args.sensor or [])
     return [
@@ -156,9 +152,7 @@ def main(argv: list[str] | None = None) -> int:
         nargs="*",
         help="merge existing SARIF files instead of running sensors",
     )
-    parser.add_argument(
-        "--sensor", action="append", help="run only this sensor (repeatable)"
-    )
+    parser.add_argument("--sensor", action="append", help="run only this sensor (repeatable)")
     parser.add_argument(
         "--no-probe",
         action="store_true",
@@ -171,20 +165,14 @@ def main(argv: list[str] | None = None) -> int:
         const="origin/main",
         help="grade only files changed against REF (default origin/main)",
     )
-    parser.add_argument(
-        "--sarif", metavar="PATH", help="write the merged SARIF document here"
-    )
-    parser.add_argument(
-        "--json", metavar="PATH", help="write a machine-readable summary here"
-    )
+    parser.add_argument("--sarif", metavar="PATH", help="write the merged SARIF document here")
+    parser.add_argument("--json", metavar="PATH", help="write a machine-readable summary here")
     parser.add_argument(
         "--write-baseline",
         action="store_true",
         help="record the current findings as 'self'",
     )
-    parser.add_argument(
-        "--debt", action="store_true", help="print churn-weighted debt ranking"
-    )
+    parser.add_argument("--debt", action="store_true", help="print churn-weighted debt ranking")
     parser.add_argument(
         "--gate",
         action="store_true",
@@ -232,9 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     population = tracked_files(ROOT, changed_against=args.changed_only or "")
     required = [r for r in results if r.required]
     confidence = (
-        sum(1 for r in required if r.outcome is Outcome.OK) / len(required)
-        if required
-        else 1.0
+        sum(1 for r in required if r.outcome is Outcome.OK) / len(required) if required else 1.0
     )
     graded = grading.grade(
         findings,
@@ -258,9 +244,7 @@ def main(argv: list[str] | None = None) -> int:
             "Run --write-baseline on a commit you are willing to defend."
         )
     else:
-        print(
-            f"  {len(new)} new, {len(known)} already known ({len(baseline)} in baseline)"
-        )
+        print(f"  {len(new)} new, {len(known)} already known ({len(baseline)} in baseline)")
         if unmeasured:
             by_sensor: dict[str, int] = {}
             for finding in unmeasured:
@@ -281,9 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         for fg in graded.worst(8):
             if fg.weighted <= 0:
                 break
-            print(
-                f"  {fg.grade}  {fg.density:7.2f}/KLOC  {fg.findings:3} finding(s)  {fg.path}"
-            )
+            print(f"  {fg.grade}  {fg.density:7.2f}/KLOC  {fg.findings:3} finding(s)  {fg.path}")
 
     if args.debt:
         print("\n── debt, ranked by what keeping it costs ───────────────────")
@@ -297,9 +279,7 @@ def main(argv: list[str] | None = None) -> int:
         target = Path(args.sarif)
         target.parent.mkdir(parents=True, exist_ok=True)
         merged = merge([("immune", findings)])
-        target.write_text(
-            json.dumps(merged.to_sarif(), indent=2) + "\n", encoding="utf-8"
-        )
+        target.write_text(json.dumps(merged.to_sarif(), indent=2) + "\n", encoding="utf-8")
         print(f"\nwrote {target} ({len(findings)} finding(s))")
 
     if args.json:

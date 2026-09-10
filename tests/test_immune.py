@@ -87,9 +87,7 @@ def test_a_rule_level_severity_is_read_when_the_result_omits_one():
                 "tool": {
                     "driver": {
                         "name": "t",
-                        "rules": [
-                            {"id": "R1", "defaultConfiguration": {"level": "error"}}
-                        ],
+                        "rules": [{"id": "R1", "defaultConfiguration": {"level": "error"}}],
                     }
                 },
                 "results": [
@@ -270,13 +268,40 @@ def test_a_probe_that_fires_on_the_wrong_rule_does_not_count_as_seeing():
 def test_every_converter_normalises_its_paths():
     """REGRESSION: only the SARIF reader normalised paths at first."""
     cases = [
-        ("ruff-json", json.dumps([{"code": "F", "filename": "./a.py", "message": "m",
-                                   "location": {"row": 1}, "end_location": {"row": 1}}])),
-        ("bandit-json", json.dumps({"results": [{"test_id": "B1", "filename": "./a.py",
-                                                 "line_number": 1, "issue_text": "m",
-                                                 "issue_severity": "HIGH"}]})),
-        ("gitleaks-json", json.dumps([{"RuleID": "g", "File": "./a.py",
-                                       "StartLine": 1, "Description": "m"}])),
+        (
+            "ruff-json",
+            json.dumps(
+                [
+                    {
+                        "code": "F",
+                        "filename": "./a.py",
+                        "message": "m",
+                        "location": {"row": 1},
+                        "end_location": {"row": 1},
+                    }
+                ]
+            ),
+        ),
+        (
+            "bandit-json",
+            json.dumps(
+                {
+                    "results": [
+                        {
+                            "test_id": "B1",
+                            "filename": "./a.py",
+                            "line_number": 1,
+                            "issue_text": "m",
+                            "issue_severity": "HIGH",
+                        }
+                    ]
+                }
+            ),
+        ),
+        (
+            "gitleaks-json",
+            json.dumps([{"RuleID": "g", "File": "./a.py", "StartLine": 1, "Description": "m"}]),
+        ),
     ]
     for fmt, payload in cases:
         (finding,) = parse_output(payload, fmt, "t")
@@ -286,8 +311,9 @@ def test_every_converter_normalises_its_paths():
 def test_a_leaked_credential_is_always_an_error_level_finding():
     """gitleaks has no severity field. Defaulting it to 'warning' would let a
     live key sit under a grading threshold."""
-    payload = json.dumps([{"RuleID": "aws-key", "File": "a.py", "StartLine": 1,
-                           "Description": "AWS key"}])
+    payload = json.dumps(
+        [{"RuleID": "aws-key", "File": "a.py", "StartLine": 1, "Description": "AWS key"}]
+    )
     (finding,) = parse_output(payload, "gitleaks-json", "gitleaks")
     assert finding.level == "error"
 
@@ -348,9 +374,7 @@ def test_blast_radius_searches_the_whole_tree_not_only_the_ranked_files(tmp_path
     zero. Every debt row read 'x 0 importers'."""
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "target.py").write_text("VALUE = 1\n", encoding="utf-8")
-    (tmp_path / "pkg" / "user.py").write_text(
-        "from pkg.target import VALUE\n", encoding="utf-8"
-    )
+    (tmp_path / "pkg" / "user.py").write_text("from pkg.target import VALUE\n", encoding="utf-8")
     ranked = ["pkg/target.py"]
     whole_tree = ["pkg/target.py", "pkg/user.py"]
     assert blast_radius(ranked, tmp_path)["pkg/target.py"] == 0
@@ -422,9 +446,7 @@ def test_a_list_shaped_baseline_from_an_older_run_still_gates(tmp_path: Path):
     """Reading it as empty would turn the gate off without saying so."""
     path = tmp_path / "baseline.json"
     finding = Finding("t", "R", "warning", "m", "a.py", 1)
-    path.write_text(
-        json.dumps({"fingerprints": [finding.fingerprint]}), encoding="utf-8"
-    )
+    path.write_text(json.dumps({"fingerprints": [finding.fingerprint]}), encoding="utf-8")
     baseline = load_baseline(path)
     assert baseline == {finding.fingerprint: 1}
 
@@ -477,8 +499,12 @@ def test_an_adjudication_missing_provenance_is_reported_as_malformed():
 
 def test_a_well_formed_adjudication_is_silent():
     good = Adjudication(
-        rule_id="R", path="a.py", reason="checked, benign",
-        decided_by="owner", decided_on="2026-09-10", review_by="2099-01-01",
+        rule_id="R",
+        path="a.py",
+        reason="checked, benign",
+        decided_by="owner",
+        decided_on="2026-09-10",
+        review_by="2099-01-01",
     )
     assert good.defects() == []
     assert not good.expired(date(2026, 9, 10))
@@ -489,8 +515,12 @@ def test_an_adjudication_pointing_at_a_deleted_file_is_reported_as_rotted(tmp_pa
     store carries entries keyed on /tmp/pytest-of-root/... directories that
     existed for one test run in May and can never exist again."""
     adj = Adjudication(
-        rule_id="R", path="gone/forever.py", reason="r",
-        decided_by="me", decided_on="2026-01-01", review_by="2099-01-01",
+        rule_id="R",
+        path="gone/forever.py",
+        reason="r",
+        decided_by="me",
+        decided_on="2026-01-01",
+        review_by="2099-01-01",
     )
     _, report = apply_memory([], [adj], repo_root=tmp_path)
     assert any("no longer exists" in why for _, why in report.rotted)
@@ -502,8 +532,12 @@ def test_a_rule_adjudicated_false_across_many_files_is_reported_as_autoimmune():
     instance treats the symptom; the rule is what is wrong."""
     adjudications = [
         Adjudication(
-            rule_id="NOISY", path=f"f{i}.py", reason="r", decided_by="me",
-            decided_on="2026-01-01", review_by="2099-01-01",
+            rule_id="NOISY",
+            path=f"f{i}.py",
+            reason="r",
+            decided_by="me",
+            decided_on="2026-01-01",
+            review_by="2099-01-01",
         )
         for i in range(AUTOIMMUNE_THRESHOLD)
     ]
@@ -515,8 +549,12 @@ def test_a_rule_adjudicated_false_across_many_files_is_reported_as_autoimmune():
 def test_below_the_threshold_a_rule_is_not_called_autoimmune():
     adjudications = [
         Adjudication(
-            rule_id="QUIET", path=f"f{i}.py", reason="r", decided_by="me",
-            decided_on="2026-01-01", review_by="2099-01-01",
+            rule_id="QUIET",
+            path=f"f{i}.py",
+            reason="r",
+            decided_by="me",
+            decided_on="2026-01-01",
+            review_by="2099-01-01",
         )
         for i in range(AUTOIMMUNE_THRESHOLD - 1)
     ]
@@ -527,12 +565,16 @@ def test_below_the_threshold_a_rule_is_not_called_autoimmune():
 def test_an_adjudication_suppresses_only_what_it_names(tmp_path: Path):
     (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
     adj = Adjudication(
-        rule_id="R", path="a.py", reason="r", decided_by="me",
-        decided_on="2026-01-01", review_by="2099-01-01",
+        rule_id="R",
+        path="a.py",
+        reason="r",
+        decided_by="me",
+        decided_on="2026-01-01",
+        review_by="2099-01-01",
     )
     findings = [
-        Finding("t", "R", "warning", "m", "a.py", 1),   # suppressed
-        Finding("t", "R", "warning", "m", "b.py", 1),   # different file
+        Finding("t", "R", "warning", "m", "a.py", 1),  # suppressed
+        Finding("t", "R", "warning", "m", "b.py", 1),  # different file
         Finding("t", "OTHER", "error", "m", "a.py", 1),  # different rule
     ]
     remaining, report = apply_memory(findings, [adj], repo_root=tmp_path)
@@ -542,19 +584,19 @@ def test_an_adjudication_suppresses_only_what_it_names(tmp_path: Path):
 
 def test_a_rule_wide_adjudication_needs_no_path_but_still_needs_a_rule():
     """An adjudication with neither is a blanket suppression of everything."""
-    assert not Adjudication(rule_id="").matches(
-        Finding("t", "R", "warning", "m", "a.py", 1)
-    )
-    assert Adjudication(rule_id="R").matches(
-        Finding("t", "R", "warning", "m", "anywhere.py", 1)
-    )
+    assert not Adjudication(rule_id="").matches(Finding("t", "R", "warning", "m", "a.py", 1))
+    assert Adjudication(rule_id="R").matches(Finding("t", "R", "warning", "m", "anywhere.py", 1))
 
 
 def test_the_report_is_healthy_only_when_memory_itself_is_clean(tmp_path: Path):
     (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
     good = Adjudication(
-        rule_id="R", path="a.py", reason="r", decided_by="me",
-        decided_on="2026-01-01", review_by="2099-01-01",
+        rule_id="R",
+        path="a.py",
+        reason="r",
+        decided_by="me",
+        decided_on="2026-01-01",
+        review_by="2099-01-01",
     )
     _, healthy = apply_memory(
         [Finding("t", "R", "warning", "m", "a.py", 1)], [good], repo_root=tmp_path
