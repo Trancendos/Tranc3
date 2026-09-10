@@ -111,6 +111,13 @@ jobs:
       # alerts, so what you download is what the Security tab shows. The
       # filter step prints every alert it dropped and fails on a surprise, so
       # the suppressed set stays auditable from the job log.
+      #
+      # It worked on the first run that carried it. The five were all
+      # py/path-injection in workers/storage-service/worker.py, all pre-existing
+      # on main, and all now fixed -- SECURITY_ALERT_REGISTER.md SEC-009 has the
+      # alert list, the exploit shapes and the remediation. The same download
+      # also named three critical alerts nobody had ever seen, which is the
+      # actual argument for this step: the count was never the finding.
       - name: Retain SARIF so the alerts can be read outside the Security tab
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

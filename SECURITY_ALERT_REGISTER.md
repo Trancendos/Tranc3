@@ -334,6 +334,99 @@ that deploys is the version the record names. `tests/test_doc_duplication.py`
 asserts both halves — that each override clears the advisory floor, and that
 every locked resolution does too.
 
+### SEC-009 — path traversal in storage-service (the five CodeQL "high" nobody could name)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | `py/path-injection` (CodeQL, security-severity 7.5) x5 |
+| **Scanner** | CodeQL Advanced (`.github/workflows/codeql.yml`, language `python`) |
+| **Location** | `workers/storage-service/worker.py` — `_local_put`, `create_bucket`, `delete_bucket` |
+| **Recorded** | 2026-09-10 |
+
+**How it was found matters as much as what it was.** The PR check "CodeQL"
+reported *5 high / 14 medium* on ten consecutive commits of PR #1150 and never
+said which. The SARIF existed only inside the job: uploaded to the Security tab
+and discarded. So a control was running, reporting, and blocking, and no
+reader — human or agent — could act on it. That is the same defect class this
+branch keeps finding elsewhere, and it was sitting on the estate's own security
+gate.
+
+Fixed by retaining the SARIF as a build artifact (commit `515247a1`), then
+downloading it and reading the alerts. All five are `py/path-injection` at
+severity 7.5, all in one file:
+
+| Line (at `3622d448`) | Site |
+|---|---|
+| 268, 269 | `_local_put` — `LOCAL_ROOT / bucket / key` |
+| 501 | `create_bucket` — `(LOCAL_ROOT / req.name).mkdir(...)` |
+| 516, 517 | `delete_bucket` — `shutil.rmtree(LOCAL_ROOT / bucket)` |
+
+**They were not introduced by that pull request.** The flagged code is
+byte-identical on `main` at the merge base (`5c69056c`). GitHub attributed them
+to the PR because the PR edited an earlier part of the same file, and its own
+summary says so: *"Alerts not introduced by this pull request might have been
+detected because the code changes were too large."* The branch could not have
+gone green on this check without fixing pre-existing defects — which is what
+this entry does.
+
+**The finding is real, and the third site is the serious one.** `key` is
+declared `{key:path}`, so FastAPI hands over the raw remainder of the URL:
+
+- `PUT /buckets/b/objects/..%2f..%2fanything` — arbitrary file **write**.
+- `POST /buckets {"name": "../x"}` — the name comes from a JSON body, so it
+  carries separators freely; a directory is created outside the object root and
+  a matching row is written to SQLite.
+- `DELETE /buckets/..` — `shutil.rmtree` on the object root's **parent**.
+  `_ensure_bucket` does not stop it, because the bucket row exists: step two
+  created it.
+
+**Remediation.** All three sites now route through `_contained()`, which wraps
+`safe_join` from the shared core (`Dimensional/path_validation.py`) — the same
+helper `src/admin_os/files_manager.py` already uses. No new copy of the
+validator was vendored: the storage-service Dockerfile already mounts the
+shared core at `/app/Dimensional/` via the SFSC named build context, so the
+import resolves in the container and in the test tree alike. `create_bucket`
+validates *before* the insert, so SQLite and the filesystem cannot disagree.
+
+**Calibration.** Four regression tests in
+`tests/test_workers_p3.py::TestStorageService`, each verified to fail against
+the unfixed worker and pass against the fixed one. Getting them to fail took
+three attempts, and the two failed attempts are recorded in the test comments
+because both are traps a later reader would fall into:
+
+1. A literal `../../` in the URL is removed by httpx before the request is
+   sent; `%2e%2e` is percent-decoded to `.` and then removed the same way.
+   Only `..%2f` survives to the server. Two of the first three tests passed
+   against known-vulnerable code for this reason.
+2. `{bucket}` matches `[^/]+` against an already-decoded ASGI path, so no
+   encoding puts a separator into `bucket`. The reachable value is the bare
+   `..`, which is one segment and quite enough for a recursive delete, so
+   `delete_bucket` is tested by direct call rather than through the router.
+
+The fourth test asserts that a normal nested key (`a/b/c.txt`) still round-trips,
+because `{key:path}` exists precisely so keys can nest: a containment check that
+rejected every key with a separator would have passed all three attack tests and
+broken the worker.
+
+**Next review.** Closes when a CodeQL run reports zero `py/path-injection`
+alerts in this file. The retained SARIF artifact makes that checkable from
+outside the Security tab:
+
+```
+gh run download <run-id> -n codeql-sarif-python
+python scripts/immune_scan.py --merge sarif-results/python.sarif
+```
+
+Three `critical` alerts (9.8 `py/command-line-injection` in
+`workers/tateking/worker.py`, and two 9.1 `py/partial-ssrf` in
+`workers/notifications/worker.py` and `workers/vault-service/worker.py`) and
+thirteen further `high` alerts are present in the same SARIF, outside the files
+this pull request touched. They are **not** fixed here and are not adjudicated;
+they are named so that the next reader starts from a list rather than from a
+count.
+
+
 ---
 
 ## Closed entries

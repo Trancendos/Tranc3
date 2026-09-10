@@ -38,6 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from Dimensional.path_validation import PathTraversalError, safe_join
 from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -260,11 +261,57 @@ def _record_event(backend: str, success: bool) -> None:
         pass
 
 
+# ── Path containment ──────────────────────────────────────────────────────────
+#
+# `bucket` and `key` are request-controlled and reach the filesystem directly.
+# `key` in particular is declared `{key:path}`, so FastAPI hands over the raw
+# remainder of the URL, separators and all -- `../../etc/cron.d/payload` is a
+# valid value for it. Before this guard existed the three call sites below
+# built a path by plain `/` concatenation, which meant:
+#
+#   PUT    /buckets/b/objects/../../../<anything>   arbitrary file WRITE
+#   POST   /buckets            {"name": "../.."}    directory created outside the root
+#   DELETE /buckets/../..                           shutil.rmtree on that directory
+#
+# The last one is the worst of the three: it is an unauthenticated-shaped
+# recursive delete, and `_ensure_bucket` does not stop it because the attacker
+# creates the traversing bucket row first via the second.
+#
+# CodeQL has reported all five of these (py/path-injection, 7.5) on every
+# commit of this branch and on `main` before it. They were never triaged
+# because the Security tab does not say WHICH alerts it is counting -- the
+# same "a control reports but nobody can act on it" shape this branch keeps
+# finding. `.github/workflows/codeql.yml` now retains the SARIF so the next
+# five can be named on the day they appear.
+#
+# `safe_join` is the shared core's existing helper (Dimensional/
+# path_validation.py) -- the same one `src/admin_os/files_manager.py` uses. It
+# validates each component, rejects `..`, null bytes and absolute segments, and
+# re-checks containment after `resolve()`, so a symlink planted inside the root
+# cannot widen it either.
+
+
+def _contained(*components: str) -> Path:
+    """Join user-supplied components under LOCAL_ROOT, or refuse.
+
+    A traversal attempt is a client error, not a server error: it is a
+    malformed request, and answering 400 keeps it out of the 5xx budget that
+    the ACO backend router reads as backend ill-health. Returning the offending
+    value would echo attacker-controlled text into the response, so the detail
+    is fixed and the specifics go to the log.
+    """
+    try:
+        return safe_join(LOCAL_ROOT, *components)
+    except (PathTraversalError, ValueError) as exc:
+        logger.warning("storage-service rejected a path outside the object root: %s", exc)
+        raise HTTPException(status_code=400, detail="Invalid bucket or object name") from None
+
+
 # ── Backend adapters ──────────────────────────────────────────────────────────
 
 
 def _local_put(bucket: str, key: str, data: bytes) -> tuple[str, Optional[str]]:
-    path = LOCAL_ROOT / bucket / key.replace("/", os.sep)
+    path = _contained(bucket, key)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return "local", str(path)
@@ -490,6 +537,11 @@ def list_buckets() -> Dict[str, Any]:
 
 @_router.post("/buckets", status_code=201)
 def create_bucket(req: BucketCreate) -> Dict[str, Any]:
+    # Validated BEFORE the row is written. Refusing after the insert would
+    # leave a bucket that exists in SQLite and nowhere on disk, and
+    # `_ensure_bucket` -- which is the only gate on every object route --
+    # asks SQLite.
+    bucket_dir = _contained(req.name)
     with _conn() as c:
         if c.execute("SELECT name FROM buckets WHERE name=?", (req.name,)).fetchone():
             raise HTTPException(status_code=409, detail="Bucket already exists")
@@ -498,12 +550,13 @@ def create_bucket(req: BucketCreate) -> Dict[str, Any]:
             (req.name, req.description, time.time()),
         )
         c.commit()
-    (LOCAL_ROOT / req.name).mkdir(parents=True, exist_ok=True)
+    bucket_dir.mkdir(parents=True, exist_ok=True)
     return {"name": req.name}
 
 
 @_router.delete("/buckets/{bucket}", status_code=204)
 def delete_bucket(bucket: str) -> None:
+    bucket_dir = _contained(bucket)
     with _conn() as c:
         if not c.execute("SELECT name FROM buckets WHERE name=?", (bucket,)).fetchone():
             raise HTTPException(status_code=404, detail="Bucket not found")
@@ -512,7 +565,6 @@ def delete_bucket(bucket: str) -> None:
             raise HTTPException(status_code=409, detail=f"Bucket not empty ({n} objects)")
         c.execute("DELETE FROM buckets WHERE name=?", (bucket,))
         c.commit()
-    bucket_dir = LOCAL_ROOT / bucket
     if bucket_dir.exists():
         shutil.rmtree(str(bucket_dir))
 
