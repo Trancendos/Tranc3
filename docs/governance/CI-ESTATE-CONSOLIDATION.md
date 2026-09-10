@@ -159,3 +159,36 @@ gestured at. Three are worth building properly, all at zero cost:
 `actions/labeler` does not check out pull request code, so it is not presently
 exploitable — but that trigger and permission pairing was inherited from a
 template unexamined, and should not be copied.
+
+## The sprawl is Tranc3's alone — and CranBania answers the runner question
+
+Checked the other three repositories in the estate:
+
+| Repository | GitHub workflows | Forgejo workflows | Starter templates |
+|---|---|---|---|
+| **Tranc3** | 48 → 27 | 33 | **~20 before this review** |
+| **CranBania** | none | 4, all bespoke | 0 |
+| **Magna-Carta** | 1 (`layer-b-ci.yml`, bespoke) | — | 0 |
+| **InfinityStyles** | 2 (`codeql.yml`, `node.js.yml`) | — | 0 — and both are *legitimate*: it is a Node repository, and CodeQL is free |
+
+So this is not a platform-wide habit. It is one repository where **Actions → New workflow → Configure** was clicked repeatedly and nothing removed what did not take. Nothing needs fixing in the other three.
+
+**CranBania settles the runner question.** Its four Forgejo workflows —
+`cranbania-agent`, `cranbania-ci`, `cranbania-sla-agent`, `cranbania-sla-check` —
+every one of them declares:
+
+```yaml
+runs-on: ubuntu-latest
+```
+
+Not `self-hosted`. A sibling repository in the same estate, under the same
+Forgejo, runs its CI on a hosted-style runner label today. Tranc3's
+`.forgejo/workflows/` pins `self-hosted` on **24 of 33 files**, including the
+four queue-hygiene audits that have consequently never executed.
+
+That makes the pin a per-file choice, not a platform constraint. Taking
+`pr-readiness-audit`, `branch-integration-audit`, `fork-audit` and
+`stale-branch-cleanup` off `self-hosted` is therefore not a departure from the
+zero-cost, self-hosted-by-default posture — it is aligning Tranc3 with what
+CranBania has been doing all along, for four weekly jobs that are pure git and
+GitHub-API work and need no hardware of their own.
