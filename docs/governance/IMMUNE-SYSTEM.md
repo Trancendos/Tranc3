@@ -306,6 +306,21 @@ checkout root, and falls back to cutting through the last segment matching the
 repository's directory name — which handles the runner's doubled layout and a
 container mount alike. Both are regression-tested.
 
+**Verified by moving the checkout, not by argument.** The baseline was written
+under `/home/user/Tranc3`. The same commit was then scanned from two git
+worktrees at unrelated paths:
+
+```
+/tmp/.../portability/Tranc3            -> 0 new, 49 already known
+/tmp/.../portability/some-other-name   -> 0 new, 49 already known
+```
+
+The second matters more than the first: its directory is not named after the
+repository, so it never exercises the name-matching fallback — it proves the
+primary path, `_REPO_ROOT` derived from the module's own location, carries the
+whole job. A portability claim resting on a fallback that happens to fire is not
+a portability claim.
+
 This is the second time in this document that a path normalisation bug produced
 a confident, wrong answer; the first buried 13,712 findings behind a
 distribution of all-A. Paths are where scanners lie without meaning to.
