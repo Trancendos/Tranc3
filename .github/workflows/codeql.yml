@@ -92,6 +92,34 @@ jobs:
           python3 scripts/filter_codeql_alerts.py \
             sarif-results/python.sarif --strict-surprises
 
+      # The SARIF exists only inside this job. It is uploaded to the Security
+      # tab and then discarded, so the alerts are readable in exactly one
+      # place, behind an authenticated web page, by exactly the people who can
+      # already open it. That is why "5 high / 14 medium" has been reported on
+      # nine consecutive commits of this pull request without anyone -- human
+      # or agent -- being able to say WHICH five.
+      #
+      # A finding nobody can enumerate cannot be triaged, adjudicated, or
+      # argued with. Retaining the artifact costs nothing and makes the alerts
+      # readable by anything that can read SARIF, which now includes this
+      # estate's own scanner:
+      #
+      #     gh run download <run-id> -n codeql-sarif-python
+      #     python scripts/immune_scan.py --merge sarif-results/*.sarif
+      #
+      # Post-filter deliberately: this is the SARIF that actually became the
+      # alerts, so what you download is what the Security tab shows. The
+      # filter step prints every alert it dropped and fails on a surprise, so
+      # the suppressed set stays auditable from the job log.
+      - name: Retain SARIF so the alerts can be read outside the Security tab
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: codeql-sarif-${{ matrix.sarif-name }}
+          path: sarif-results/${{ matrix.sarif-name }}.sarif
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Upload SARIF results
         id: upload_sarif
         uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9

@@ -310,7 +310,38 @@ This is the second time in this document that a path normalisation bug produced
 a confident, wrong answer; the first buried 13,712 findings behind a
 distribution of all-A. Paths are where scanners lie without meaning to.
 
-### 2. CLAUDE.md documented a formatter the repository does not use
+### 1c. The estate's biggest scanner reports where the estate cannot read
+
+`codeql.yml` runs CodeQL, writes SARIF to `sarif-results/`, uploads it to the
+Security tab, and **discards the file**. The alerts are then readable in exactly
+one place, behind an authenticated web page, by exactly the people who can
+already open it.
+
+The cost of that is measurable. **"5 high / 14 medium" was reported on nine
+consecutive commits of pull request #1150** and nobody — human or agent — could
+say *which five*. A finding you cannot enumerate cannot be triaged, adjudicated,
+or argued with. It is a number that produces anxiety and no action.
+
+Fixed by retaining the SARIF as a workflow artifact. It costs nothing, changes
+no gate, and makes the alerts readable by anything that reads SARIF — which now
+includes this estate's own scanner:
+
+```bash
+gh run download <run-id> -n codeql-sarif-python
+python scripts/immune_scan.py --merge sarif-results/*.sarif
+```
+
+The artifact is taken **after** the adjudication filter, so what you download is
+what the Security tab shows; the filter step prints every alert it drops and
+fails on a surprise, so the suppressed set stays auditable from the job log.
+
+One detail that would have made this silently useless: **CodeQL puts severity on
+the rule, not on the result.** A reader that only inspects `result.level` grades
+every CodeQL finding at the fallback severity — turning five `error` alerts into
+five `warning`s and dropping them below the grading threshold. `_rule_levels`
+handles it, and a round-trip test now holds it.
+
+
 
 It described the pre-commit gate as running **black** and **isort**. Neither is
 configured. This repository formats with `ruff-format`, honouring

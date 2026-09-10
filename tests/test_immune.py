@@ -120,6 +120,61 @@ def test_a_rule_level_severity_is_read_when_the_result_omits_one():
     assert finding.level == "error", "rule metadata carried the severity, not the result"
 
 
+def test_codeql_shaped_sarif_reads_back_at_the_right_severity(tmp_path: Path):
+    """CodeQL is the sensor this estate most needs to read and least can.
+
+    Its SARIF is written to `sarif-results/` inside the job, uploaded to the
+    Security tab, and discarded. "5 high / 14 medium" was reported on nine
+    consecutive commits of one pull request without anyone -- human or agent --
+    being able to say WHICH five. codeql.yml now retains the file as an
+    artifact so it can be read by anything that reads SARIF.
+
+    This asserts the shape actually round-trips: CodeQL puts severity on the
+    RULE, not the result, so a reader that only looks at `result.level`
+    silently grades every CodeQL finding at the fallback severity.
+    """
+    document = {
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "CodeQL",
+                        "rules": [
+                            {
+                                "id": "py/path-injection",
+                                "defaultConfiguration": {"level": "error"},
+                                "properties": {"security-severity": "7.5"},
+                            }
+                        ],
+                    }
+                },
+                "results": [
+                    {
+                        "ruleId": "py/path-injection",
+                        "message": {"text": "This path depends on a user-provided value."},
+                        "locations": [
+                            {
+                                "physicalLocation": {
+                                    "artifactLocation": {"uri": "src/example.py"},
+                                    "region": {"startLine": 42},
+                                }
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    path = tmp_path / "python.sarif"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    (finding,) = load_sarif(path, tool_hint="codeql")
+    assert finding.tool == "CodeQL"
+    assert finding.rule_id == "py/path-injection"
+    assert finding.level == "error", "severity lives on the rule, not the result"
+    assert finding.located == "src/example.py:42"
+
+
 def test_unreadable_sarif_raises_rather_than_reporting_zero_findings(tmp_path: Path):
     """An unreadable sensor output is not a clean scan.
 
