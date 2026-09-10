@@ -254,10 +254,29 @@ _YAML_SCALAR = re.compile(
 #: continues onto following lines, which this line-based reader cannot join, and
 #: the shell-quote analysis then sees an unclosed quote and treats the rest as
 #: quoted — hiding an install rather than reporting it. Reported instead.
+#
+#: The body is written as an unrolled loop -- `normal* (special normal*)*` --
+#: rather than the obvious `(?:[^'"]|(?!(?P=quote)).)*`, because in that form a
+#: plain character matches BOTH alternatives. The engine then has two ways to
+#: consume every character, and on a line where the overall match must fail it
+#: tries all of them: exponential time on ordinary input.
+#:
+#: Not theoretical. `.github/workflows/hugo.yml:50` is
+#: `run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"`
+#: -- a perfectly closed scalar, so the match fails, so the blow-up happens --
+#: and it hung this check indefinitely. A gate that never returns is not a
+#: stricter gate; it is an absent one that also costs the job its runner.
+#:
+#: In the unrolled form every character is consumed by exactly one branch:
+#: `[^'"]` takes anything that is not a quote, and the guarded `['"]` takes only
+#: a quote that is not the opening one. Verified equivalent, not assumed --
+#: across all 10,751 lines of this repository's workflow files the two forms
+#: agree on every line the old one can evaluate, and it can evaluate all but the
+#: one above.
 _YAML_SCALAR_OPENER = re.compile(
     r"""^\s*(?:-\s*)?(?:"""
     + "|".join(_COMMAND_KEYS)
-    + r""")\s*:\s*(?P<quote>['"])(?P<body>(?:[^'"]|(?!(?P=quote)).)*)$""",
+    + r""")\s*:\s*(?P<quote>['"])(?P<body>[^'"]*(?:(?!(?P=quote))['"][^'"]*)*)$""",
     re.IGNORECASE,
 )
 

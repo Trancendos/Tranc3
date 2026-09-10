@@ -164,6 +164,7 @@ above, drop this entry and take the fix.
 
 ---
 
+
 ### SEC-006 — nltk model-artifact path-sandbox bypass, no patched release
 
 | Field | Value |
@@ -175,9 +176,9 @@ above, drop this entry and take the fix.
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
-| **Re-evaluate** | On any `nltk` release above 3.10.3 |
+| **Re-evaluate** | On the census resolving any nltk version other than 3.10.3; on the advisory naming a fixed version (a SUPPRESS then means declining an available fix); on nltk becoming a declared runtime dependency; or on any change to how this repository uses nltk — a second import site, an import outside `nltk.corpus`, an import that runs at import time (including a lazy import inside a function the module calls itself), or any call handing nltk a path (`nltk.data.load`, `download`, `find`, `retrieve`). **Every one of these is enforced by `scripts/check_disposition_premises.py`**, which reads the census output, the runtime manifests and every Python file, rather than relying on anyone remembering |
 
-**No patched release exists.** 3.10.3 is the latest version on PyPI, and the GHSA
+**No patched release exists — as resolved today.** The premise checker reads the census output and fails the gate the moment either half of this stops being true: a different resolved version, or a `fix_versions` entry on the advisory. 3.10.3 is the latest version on PyPI, and the GHSA
 record's range is `introduced: 0, last_affected: 3.10.3` — every published release is
 affected. There is deliberately **no Blocked-by row**: a fix is not merely out of
 reach, it does not exist, and that distinction is what keeps this entry failing the
@@ -216,7 +217,7 @@ import raises and the keyword-heuristic fallback runs instead.
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
-| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved, or when `posthog-js` widens its `fflate` range |
+| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved; when `posthog-js` widens its `fflate` range; or as soon as `web/` gains any fflate **decompression** path (`unzipSync`, `unzip`, `decompressSync`, `gunzipSync`, `inflateSync`, `unzlibSync`) or begins processing archives from an untrusted source. **Enforced by `scripts/check_disposition_premises.py`**, not left to memory |
 
 A patched release exists — fflate 0.8.3 — so this is `blocked`, not `SUPPRESS`, and the
 **Blocked-by** row above is what produces that classification.
@@ -239,18 +240,30 @@ CI is unaffected by the ERESOLVE because `frontend-build.yml` runs `npm ci
 today. Resolving that peer conflict is the prerequisite for *any* automated dependency
 remediation in `web/`, this one included.
 
-**Not exploitable as used.** The advisory is an infinite loop in `unzipSync` when
-parsing malformed ZIP64 archives. `posthog-js` uses fflate only to compress *outbound*
-payloads, and the evidence for that is the shipped code, not the dependency graph:
+**Not exploitable as used — at the version `web/` installs.** The advisory is an
+infinite loop in `unzipSync` when parsing malformed ZIP64 archives. `posthog-js` uses
+fflate only to compress *outbound* payloads, and the evidence for that is the shipped
+code, not the dependency graph.
 
-| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` |
+That evidence was read from **one version**, and the conclusion is scoped to it. The
+table below was measured on `posthog-js@1.422.5` — the version `web/package-lock.json`
+resolves — and says nothing about any other release. A different version ships different
+code, so a bump invalidates the measurement rather than inheriting it. Because CI has no
+`node_modules` to re-read the call sites from, the lockfile pin is what makes the scope
+checkable: `scripts/check_disposition_premises.py` fails if `posthog-js` moves off
+1.422.5 or `fflate` off 0.4.8, which is the signal to re-measure before this acceptance
+is relied on again.
+
+| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` — the version `web/package-lock.json` pins, enforced by `scripts/check_disposition_premises.py` |
 |---|---|
 | Sites that import fflate at all | 2 — `lib/src/request.js:77` and `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`, both `require("fflate")` |
 | Symbols those sites call | `gzipSync`, `strToU8`, `strFromU8` (`request.js:143`, `lazy-loaded-session-recorder.js:170`) — compression and UTF-8 conversion only |
 | Decompression entry points reached | **zero** — no `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync` anywhere in the package |
 
-No attacker-supplied archive is ever unzipped, so the vulnerable function is never
-called.
+No attacker-supplied archive is ever unzipped by `posthog-js@1.422.5`, so the vulnerable
+function is never called by the code `web/` actually ships today. Stated no wider than
+that: this is a measurement of one version's call sites, not a general property of
+`posthog-js`, and not a prediction about its next release.
 
 An earlier revision of this entry cited "18 references each to `strToU8` and
 `gzipSync`" and `npm audit`'s `effects: []`. Both are corrected here. The 18 counted

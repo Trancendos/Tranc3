@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -383,8 +384,33 @@ def _entity_nodes_and_links(
 
 
 def _matrix_suite_nodes_and_edges() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The Matrix Suites, or a refusal — never silently none of them.
+
+    `matrix_suites.yaml` lives in the `compliance/magna-carta` submodule. In a
+    checkout where that submodule is not initialised the file is simply absent,
+    and returning `[], []` produced a topology map with every suite node and
+    edge missing, reported as a successful build. `check_topology_map_freshness`
+    would then have called the committed, complete map STALE against that
+    degraded regeneration — and the documented remedy is "run the generator and
+    commit the result", which is how eight suites get deleted from the estate's
+    topology by someone following the instructions.
+
+    Measured, not hypothetical: in an uninitialised checkout the generator
+    printed `0 matrix suites` and `0 stale entity claims` beside otherwise
+    plausible numbers, and nothing in either the build or the freshness check
+    said the input had gone missing.
+    """
     if not MATRIX_SUITES_YAML.exists():
-        return [], []
+        raise SystemExit(
+            # os.path.relpath, not Path.relative_to: the latter raises for a
+            # path outside ROOT, so the error handler would crash instead of
+            # reporting — a message that only works when it is not needed.
+            f"build_topology_map: {os.path.relpath(MATRIX_SUITES_YAML, ROOT)} is missing.\n"
+            "  The Matrix Suites registry lives in the compliance/magna-carta submodule.\n"
+            "  Run `git submodule update --init --recursive` and try again.\n"
+            "  Refusing rather than emitting a map with no suite nodes: that map looks\n"
+            "  like a successful build and deletes eight suites from the estate."
+        )
     data = yaml.safe_load(MATRIX_SUITES_YAML.read_text(encoding="utf-8"))
     suites = (data or {}).get("suites") or []
     nodes = []

@@ -145,17 +145,25 @@ def duplicates() -> dict[str, list[str]]:
     Pointer pages and generically-titled documents are excluded before the
     comparison, so the result contains only genuine competing claims.
     """
-    listed = [
-        entry
-        for entry in subprocess.run(
-            ["git", "ls-files", "-z", "*.md"],
-            cwd=REPO,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.split("\0")
-        if entry
-    ]
+    # Sorted set, not a list: during an unresolved merge `git ls-files` emits
+    # one entry per stage, so a single conflicted file is listed three times
+    # and this check reports it as "claimed by 3 documents" — all of them the
+    # same path. That is a guard crying wolf on a working tree, which costs a
+    # gate its credibility exactly as fast as a miss does. Deduplicated here
+    # rather than with `--deduplicate`, which needs git 2.31.
+    listed = sorted(
+        {
+            entry
+            for entry in subprocess.run(
+                ["git", "ls-files", "-z", "*.md"],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.split("\0")
+            if entry
+        }
+    )
     by_title: dict[str, list[str]] = defaultdict(list)
     for rel in listed:
         if any(skip in rel for skip in _SKIP):

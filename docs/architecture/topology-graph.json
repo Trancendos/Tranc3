@@ -1,12 +1,12 @@
 {
   "summary": {
-    "generated_at": "2026-08-18T01:20:49.122674+00:00",
-    "total_nodes": 228,
-    "total_edges": 112,
+    "generated_at": "2026-09-10T15:29:45.963457+00:00",
+    "total_nodes": 233,
+    "total_edges": 113,
     "locations": 43,
     "lead_ais": 47,
     "deployed_services": 88,
-    "mounted_routers": 35,
+    "mounted_routers": 40,
     "matrix_suites": 8,
     "needs_modularization": 2,
     "confirmed_separate_features": 4,
@@ -15,7 +15,7 @@
     "core_load_bearing": 11,
     "no_worker_exists": 7,
     "safe_duplicate_removed": 7,
-    "stale_claims": 18
+    "stale_claims": 0
   },
   "nodes": [
     {
@@ -691,6 +691,14 @@
       "reason": "CONFIRMED SEPARATE FEATURES: this router is a policy/compliance check engine (GDPR/UK-GDPR/PRINCE2/ITIL4/Zero-Cost policies); workers/cranbania/ (the same-named 'worker') is a completely different product \u2014 a Next.js/TypeScript Kanban/ITSM board with 40+ MCP tools and zero policy-check endpoints, not even the same language/runtime to bridge to. Real caller: research/section7.py, already in-process and already wrapped in try/except (degrades to a debug log, not a hard failure) \u2014 no network hop, so no fail-open/fail-closed question exists here the way it does for basement/cryptex/billing. Same 'same name, different function' pattern as admin_os/search_api/section7 \u2014 see CONFIRMED_SEPARATE_FEATURES in MONOLITH-EXTRACTION-FINDINGS.md."
     },
     {
+      "id": "router:_townhall_itsm_router",
+      "type": "router",
+      "label": "src.townhall.itsm_routes",
+      "mounted": true,
+      "classification": "unclassified",
+      "reason": "Mounted, no worker-duplication question raised in the sweep."
+    },
+    {
       "id": "router:_library_router",
       "type": "router",
       "label": "src.library.routes",
@@ -785,6 +793,38 @@
       "mounted": true,
       "classification": "no_worker_exists",
       "reason": "No worker. Real in-process callers on the registry class (relations/registry.py, personality/role_resolution.py) \u2014 any future extraction needs a bridge, not just an unmount."
+    },
+    {
+      "id": "router:_plm_router",
+      "type": "router",
+      "label": "src.townhall.plm_routes",
+      "mounted": true,
+      "classification": "unclassified",
+      "reason": "Mounted, no worker-duplication question raised in the sweep."
+    },
+    {
+      "id": "router:_townhall_routing_router",
+      "type": "router",
+      "label": "src.townhall.routing_routes",
+      "mounted": true,
+      "classification": "unclassified",
+      "reason": "Mounted, no worker-duplication question raised in the sweep."
+    },
+    {
+      "id": "router:_creative_router",
+      "type": "router",
+      "label": "src.creative.routes",
+      "mounted": true,
+      "classification": "unclassified",
+      "reason": "Mounted, no worker-duplication question raised in the sweep."
+    },
+    {
+      "id": "router:_exchange_router",
+      "type": "router",
+      "label": "src.exchange.routes",
+      "mounted": true,
+      "classification": "unclassified",
+      "reason": "Mounted, no worker-duplication question raised in the sweep."
     },
     {
       "id": "router:_deployment_modes_router",
@@ -1027,8 +1067,8 @@
       "pillar": "Creativity",
       "pid": "PID-STD",
       "primary_function": "Central Hub of the Creativity Center",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/studio/"
+      "claimed_worker_port": 8069,
+      "claimed_worker_path": "workers/the-studio/"
     },
     {
       "id": "location:Sashas Photo Studio",
@@ -1037,8 +1077,8 @@
       "pillar": "Creativity",
       "pid": "PID-SPS",
       "primary_function": "Photo & Image Generation Center",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/studio/"
+      "claimed_worker_port": 8062,
+      "claimed_worker_path": "workers/sashas-photo-studio/"
     },
     {
       "id": "location:TranceFlow",
@@ -1047,8 +1087,8 @@
       "pillar": "Creativity",
       "pid": "PID-TFL",
       "primary_function": "3D Modeling & Games Creation Studio",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/studio/"
+      "claimed_worker_port": 8059,
+      "claimed_worker_path": "workers/tranceflow/"
     },
     {
       "id": "location:TateKing",
@@ -1057,8 +1097,8 @@
       "pillar": "Creativity",
       "pid": "PID-TKG",
       "primary_function": "Video Creation & Editing Platform",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/studio/"
+      "claimed_worker_port": 8061,
+      "claimed_worker_path": "workers/tateking/"
     },
     {
       "id": "location:Fabulousa",
@@ -1067,8 +1107,8 @@
       "pillar": "Creativity",
       "pid": "PID-FAB",
       "primary_function": "Styling, UX, UI & Design Center",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/studio/"
+      "claimed_worker_port": 8048,
+      "claimed_worker_path": "workers/fabulousa-service/"
     },
     {
       "id": "location:Imaginarium",
@@ -1077,8 +1117,8 @@
       "pillar": "Creativity",
       "pid": "PID-IMG",
       "primary_function": "Omni-Creative Masterpiece Wizard",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/studio/"
+      "claimed_worker_port": 8064,
+      "claimed_worker_path": "workers/imaginarium/"
     },
     {
       "id": "location:The Digital Grid",
@@ -1097,8 +1137,8 @@
       "pillar": "Development (Code)",
       "pid": "PID-LAB",
       "primary_function": "Code Creation Platform",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/lab/"
+      "claimed_worker_port": 8055,
+      "claimed_worker_path": "workers/the-lab/"
     },
     {
       "id": "location:The Workshop",
@@ -1117,8 +1157,8 @@
       "pillar": "Development (Code)",
       "pid": "PID-TCP",
       "primary_function": "Central Testing Platform (Wonderland Theme)",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "tests/"
+      "claimed_worker_port": 8079,
+      "claimed_worker_path": "workers/chaos-party/"
     },
     {
       "id": "location:The Artifactory",
@@ -1127,8 +1167,8 @@
       "pillar": "Commercial / Financial",
       "pid": "PID-ART",
       "primary_function": "Central Artifact Repository Library (JFrog style)",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/artifactory/"
+      "claimed_worker_port": 8047,
+      "claimed_worker_path": "workers/artifactory-service/"
     },
     {
       "id": "location:API Marketplace",
@@ -1177,8 +1217,8 @@
       "pillar": "Knowledge",
       "pid": "PID-LIB",
       "primary_function": "Knowledge Base & Wiki",
-      "claimed_worker_port": 8017,
-      "claimed_worker_path": "workers/search-service/"
+      "claimed_worker_port": 8067,
+      "claimed_worker_path": "workers/library-service/"
     },
     {
       "id": "location:The Academy",
@@ -1187,8 +1227,8 @@
       "pillar": "Knowledge",
       "pid": "PID-ACA",
       "primary_function": "Education & Skill Training",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/academy/"
+      "claimed_worker_port": 8056,
+      "claimed_worker_path": "workers/the-academy/"
     },
     {
       "id": "location:DocUtari",
@@ -1207,8 +1247,8 @@
       "pillar": "Knowledge",
       "pid": "PID-BSM",
       "primary_function": "Archived Information Store",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/basement/"
+      "claimed_worker_port": 8068,
+      "claimed_worker_path": "workers/basement/"
     },
     {
       "id": "location:The Spark",
@@ -1257,8 +1297,8 @@
       "pillar": "Security",
       "pid": "PID-WTP",
       "primary_function": "Cryptographic Scanner & Automated Quarantine Transport",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/security/warp_tunnel/"
+      "claimed_worker_port": 8072,
+      "claimed_worker_path": "workers/warp-tunnel/"
     },
     {
       "id": "location:Cryptex",
@@ -1277,8 +1317,8 @@
       "pillar": "Security",
       "pid": "PID-ICB",
       "primary_function": "Inception-Layered Sandbox Threat Isolation & Quarantine Centre",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/security/ice_box/"
+      "claimed_worker_port": 8046,
+      "claimed_worker_path": "workers/ice-box-service/"
     },
     {
       "id": "location:Warp Radio",
@@ -1287,8 +1327,8 @@
       "pillar": "Commercial / Financial",
       "pid": "PID-WRA",
       "primary_function": "Music & Audio Streaming Integration",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/warp_radio/"
+      "claimed_worker_port": 8073,
+      "claimed_worker_path": "workers/warp-radio/"
     },
     {
       "id": "location:Section 7",
@@ -1357,8 +1397,8 @@
       "pillar": "Wellbeing",
       "pid": "PID-TRQ",
       "primary_function": "Wellbeing Central Hub",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/tranquility/"
+      "claimed_worker_port": 8077,
+      "claimed_worker_path": "workers/tranquility/"
     },
     {
       "id": "location:I-Mind",
@@ -1367,8 +1407,8 @@
       "pillar": "Wellbeing",
       "pid": "PID-IMD",
       "primary_function": "Sensitivity to Emotion Engine",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/imind/"
+      "claimed_worker_port": 8075,
+      "claimed_worker_path": "workers/imind/"
     },
     {
       "id": "location:tAimra",
@@ -1377,8 +1417,8 @@
       "pillar": "Wellbeing",
       "pid": "PID-TMR",
       "primary_function": "Opt-in Digital Twin System & Life Assistant",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/taimra/"
+      "claimed_worker_port": 8074,
+      "claimed_worker_path": "workers/taimra/"
     },
     {
       "id": "location:VRAR3D",
@@ -1387,8 +1427,8 @@
       "pillar": "Wellbeing",
       "pid": "PID-VR3",
       "primary_function": "Standalone 3D / VR immersion",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/vrar3d/"
+      "claimed_worker_port": 8060,
+      "claimed_worker_path": "workers/vrar3d/"
     },
     {
       "id": "location:Resonate",
@@ -1397,8 +1437,8 @@
       "pillar": "Wellbeing",
       "pid": "PID-RES",
       "primary_function": "Empathy Engine",
-      "claimed_worker_port": null,
-      "claimed_worker_path": "src/resonate/"
+      "claimed_worker_port": 8076,
+      "claimed_worker_path": "workers/resonate/"
     },
     {
       "id": "ai:Nexus-Prime",
@@ -1915,7 +1955,7 @@
     {
       "source": "location:The Studio",
       "target": "worker:the-studio",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:Sashas Photo Studio",
@@ -1924,8 +1964,8 @@
     },
     {
       "source": "location:Sashas Photo Studio",
-      "target": "worker:the-studio",
-      "kind": "stale_claim"
+      "target": "worker:sashas-photo-studio",
+      "kind": "claim_verified"
     },
     {
       "source": "location:TranceFlow",
@@ -1934,8 +1974,8 @@
     },
     {
       "source": "location:TranceFlow",
-      "target": "worker:the-studio",
-      "kind": "stale_claim"
+      "target": "worker:tranceflow",
+      "kind": "claim_verified"
     },
     {
       "source": "location:TateKing",
@@ -1949,8 +1989,8 @@
     },
     {
       "source": "location:TateKing",
-      "target": "worker:the-studio",
-      "kind": "stale_claim"
+      "target": "worker:tateking",
+      "kind": "claim_verified"
     },
     {
       "source": "location:Fabulousa",
@@ -1959,8 +1999,8 @@
     },
     {
       "source": "location:Fabulousa",
-      "target": "worker:the-studio",
-      "kind": "stale_claim"
+      "target": "worker:fabulousa-service",
+      "kind": "claim_verified"
     },
     {
       "source": "location:Imaginarium",
@@ -1969,8 +2009,8 @@
     },
     {
       "source": "location:Imaginarium",
-      "target": "worker:the-studio",
-      "kind": "stale_claim"
+      "target": "worker:imaginarium",
+      "kind": "claim_verified"
     },
     {
       "source": "location:The Digital Grid",
@@ -1994,8 +2034,8 @@
     },
     {
       "source": "location:The Lab",
-      "target": "worker:lab-service",
-      "kind": "stale_claim"
+      "target": "worker:the-lab",
+      "kind": "claim_verified"
     },
     {
       "source": "location:The Workshop",
@@ -2013,6 +2053,11 @@
       "kind": "runs"
     },
     {
+      "source": "location:The Chaos Party",
+      "target": "worker:chaos-party",
+      "kind": "claim_verified"
+    },
+    {
       "source": "location:The Artifactory",
       "target": "ai:Lunascene",
       "kind": "runs"
@@ -2020,7 +2065,7 @@
     {
       "source": "location:The Artifactory",
       "target": "worker:artifactory-service",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:API Marketplace",
@@ -2084,7 +2129,7 @@
     },
     {
       "source": "location:The Library",
-      "target": "worker:search-service",
+      "target": "worker:library-service",
       "kind": "claim_verified"
     },
     {
@@ -2095,7 +2140,7 @@
     {
       "source": "location:The Academy",
       "target": "worker:the-academy",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:DocUtari",
@@ -2115,7 +2160,7 @@
     {
       "source": "location:The Basement",
       "target": "worker:basement",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:The Spark",
@@ -2165,7 +2210,7 @@
     {
       "source": "location:The Warp Tunnel",
       "target": "worker:warp-tunnel",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:Cryptex",
@@ -2185,7 +2230,7 @@
     {
       "source": "location:The Ice Box",
       "target": "worker:ice-box-service",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:Warp Radio",
@@ -2195,7 +2240,7 @@
     {
       "source": "location:Warp Radio",
       "target": "worker:warp-radio",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:Section 7",
@@ -2250,7 +2295,7 @@
     {
       "source": "location:Tranquility",
       "target": "worker:tranquility",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:I-Mind",
@@ -2260,7 +2305,7 @@
     {
       "source": "location:I-Mind",
       "target": "worker:imind",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:tAimra",
@@ -2270,7 +2315,7 @@
     {
       "source": "location:tAimra",
       "target": "worker:taimra",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:VRAR3D",
@@ -2280,7 +2325,7 @@
     {
       "source": "location:VRAR3D",
       "target": "worker:vrar3d",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "location:Resonate",
@@ -2290,7 +2335,7 @@
     {
       "source": "location:Resonate",
       "target": "worker:resonate",
-      "kind": "stale_claim"
+      "kind": "claim_verified"
     },
     {
       "source": "suite:SUITE-FIN",

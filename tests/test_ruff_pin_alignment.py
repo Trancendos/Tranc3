@@ -714,3 +714,59 @@ def test_a_block_scalar_is_read_normally(checker):
         }
     )
     assert module.main() == 0
+
+
+class TestTheScalarOpenerTerminates:
+    """A gate that never returns is not a stricter gate; it is an absent one.
+
+    `_YAML_SCALAR_OPENER`'s body was `(?:[^'"]|(?!(?P=quote)).)*` — two
+    alternatives that both match a plain character, so the engine had two ways
+    to consume every one of them and, on a line where the overall match must
+    fail, tried all of them. Exponential time on ordinary input.
+
+    Found on real input, not by inspection: `.github/workflows/hugo.yml:50`
+    reads `run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci
+    || true"` — a perfectly closed scalar, so the match fails, so the blow-up
+    happens — and it hung this whole check indefinitely once that starter
+    template arrived on `main`.
+    """
+
+    #: The exact line. Long enough that the old form would not finish this
+    #: century, short enough to keep in a test.
+    HUGO = '        run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"'
+
+    def test_a_long_closed_double_quoted_scalar_returns_promptly(self):
+        import time
+
+        module = _load()
+        start = time.monotonic()
+        result = module.unterminated_yaml_scalar(self.HUGO)
+        elapsed = time.monotonic() - start
+        assert result is False, "the scalar closes on the same line"
+        assert elapsed < 1.0, (
+            f"took {elapsed:.1f}s — the opener pattern is backtracking "
+            "exponentially, which stalls the gate rather than tightening it"
+        )
+
+    @pytest.mark.parametrize(
+        "line,opens",
+        [
+            ('        run: "pip install ruff', True),
+            ("        run: 'pip install ruff", True),
+            ('        run: "pip install ruff"', False),
+            ('        run: "a b c" && d', False),
+            ("        run: pip install ruff", False),
+            ("        run: \"an unclosed value with a ' inside it", True),
+            ("        run: 'an unclosed value with a \" inside it", True),
+            ("        - run: 'still unclosed", True),
+        ],
+    )
+    def test_the_rewrite_decides_the_same_cases(self, line, opens):
+        """The fix must not have changed the answer, only the time taken.
+
+        Checked exhaustively against the previous pattern over all 10,751 lines
+        of this repository's workflow files: the two agree on every line the old
+        one could evaluate, which was all of them but the one above.
+        """
+        module = _load()
+        assert module.unterminated_yaml_scalar(line) is opens

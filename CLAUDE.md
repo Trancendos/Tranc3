@@ -217,6 +217,9 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `docs/governance/ACTION-BACKLOG.md` — generated sweep of every outstanding item across 44
   registers, routed to Locations and linked to their solution packs
 - `docs/governance/DVMS-COMPETITIVE-ANALYSIS.md` — DVMS measured against comparable platforms
+- `docs/ADAPTIVE_REMEDIATION.md` — the probabilistic risk-scoring and safe-patch
+  automation model behind `scripts/adaptive_vulnerability_remediation.py`, which the
+  DVMS census feeds
 - `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — two externally supplied AI
   assessments of Tranc3 checked claim by claim against the repository. Most of their
   figures are wrong (12 open issues, not 863; 3,087 files, not 2,259); the one theme

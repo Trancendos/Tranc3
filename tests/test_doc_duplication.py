@@ -237,3 +237,47 @@ class TestTheRecoveredAdvisories:
                         f"{path.relative_to(REPO)}: {entry} at {meta['version']} is below {floor}"
                     )
         assert offenders == []
+
+
+class TestAConflictedMergeIsNotADuplicate:
+    """The other half of the calibration: this guard must not cry wolf.
+
+    During an unresolved merge `git ls-files` emits one entry per stage, so a
+    single conflicted markdown file is listed three times. The checker read
+    that as three documents claiming one title and printed the same path three
+    times — a finding with no possible remedy, on a working tree, which costs
+    a gate its credibility exactly as fast as a miss does. Found for real while
+    merging `main` into a long-running branch.
+    """
+
+    def test_the_same_path_listed_more_than_once_is_one_document(
+        self, checker, tmp_path, monkeypatch
+    ):
+        import subprocess as sp
+
+        def _staged_three_times(argv, **kwargs):
+            assert argv[:3] == ["git", "ls-files", "-z"]
+            entry = "SECURITY_ALERT_REGISTER.md"
+            return sp.CompletedProcess(argv, 0, stdout="\0".join([entry] * 3) + "\0", stderr="")
+
+        monkeypatch.setattr(checker.subprocess, "run", _staged_three_times)
+        assert checker.duplicates() == {}, (
+            "one conflicted file listed once per merge stage is still one document"
+        )
+
+    def test_two_genuinely_different_paths_still_collide(self, checker, monkeypatch, tmp_path):
+        """And the guard still acts — deduplicating paths must not stop it
+        seeing two real documents that claim the same title."""
+        first = tmp_path / "a.md"
+        second = tmp_path / "b.md"
+        for path in (first, second):
+            path.write_text("# The Very Same Register\n\nbody\n", encoding="utf-8")
+        monkeypatch.setattr(checker, "REPO", tmp_path)
+
+        import subprocess as sp
+
+        def _two_files(argv, **kwargs):
+            return sp.CompletedProcess(argv, 0, stdout="a.md\0b.md\0", stderr="")
+
+        monkeypatch.setattr(checker.subprocess, "run", _two_files)
+        assert checker.duplicates() == {"the very same register": ["a.md", "b.md"]}
