@@ -224,6 +224,13 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `docs/ADAPTIVE_REMEDIATION.md` — the probabilistic risk-scoring and safe-patch
   automation model behind `scripts/adaptive_vulnerability_remediation.py`, which the
   DVMS census feeds
+- `docs/governance/IMMUNE-SYSTEM.md` — what AWS IAM Access Analyzer, Microsoft
+  Security DevOps, CodeFactor and `actions/labeler` each actually do, and the
+  vendor-free equivalents built here (`src/immune/`). The property none of them
+  offer: a sensor that cannot see reports exactly what a clean estate reports,
+  so every sensor declares a **probe** — a planted defect it must flag — and one
+  that reports clean while failing its own probe is recorded blind. Read it
+  before adding any scanner to this estate
 - `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — two externally supplied AI
   assessments of Tranc3 checked claim by claim against the repository. Most of their
   figures are wrong (12 open issues, not 863; 3,087 files, not 2,259); the one theme
@@ -258,6 +265,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 | **Event Bus** | `src/event_bus/` | infinity-adminOS @trancendos/event-bus | Pattern-based routing, subscriptions, SQLite persistence |
 | **AI Gateway** | `src/ai_gateway/` | infinity-adminOS @trancendos/ai-gateway | Priority failover (Ollama→OpenRouter→Offline), token budgets |
 | **Zero Trust IAM** | `src/auth/zero_trust.py` | infinity-adminOS @trancendos/iam | Device posture, MFA, geographic policies, risk scoring |
+| **Immune System** | `src/immune/` | built here, 2026-09-10 | Sensors that report whether they could SEE, SARIF normalisation, adjudication memory with expiry, and a grade that caps itself when a required sensor was blind — see `docs/governance/IMMUNE-SYSTEM.md` |
 
 ### Named subsystems (in this repo)
 

@@ -391,6 +391,24 @@ jobs:
       - name: Immune system
         run: python -m pytest tests/test_immune.py -q
 
+      # Says who owns the change and what it crosses, before anyone reads the
+      # diff. It is not a gate -- `continue-on-error` and no token -- because
+      # its output is context for a reviewer, and a context step that can fail
+      # a build is a context step people delete.
+      #
+      # It exists because `label.yml` cannot do this job here. That workflow
+      # runs on `pull_request_target`, which reads its configuration from the
+      # BASE branch, so a pull request that fixes `.github/labeler.yml` can
+      # never make its own check pass. This runs on the PR's own tree, reads
+      # the same labeler.yml so there is one vocabulary rather than two, and
+      # adds what a path glob cannot know: which of the 43 Locations the change
+      # lands in, and which declared risk surfaces it crosses.
+      - name: Change triage
+        continue-on-error: true
+        run: |
+          python scripts/triage_change.py \
+            --base "${{ github.event.pull_request.base.sha || 'origin/main' }}"
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
