@@ -316,6 +316,7 @@ class TestTheHttpSurface:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
+        from auth import get_current_user
         from src.townhall import plm as plm_module
         from src.townhall.plm_routes import router
 
@@ -323,6 +324,15 @@ class TestTheHttpSurface:
         monkeypatch.setattr(plm_module, "_service", service)
         app = FastAPI()
         app.include_router(router)
+        # The writes take the admin gate, so the surface tests need a principal.
+        # Overridden rather than tokenised: what is under test here is the
+        # routes' own behaviour, and `TestTheWritesAreGated` below covers the
+        # gate itself with the override deliberately absent or downgraded.
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "test-admin",
+            "username": "test-admin",
+            "role": "admin",
+        }
         yield TestClient(app)
         service.close()
 
@@ -614,3 +624,215 @@ class TestLogInjection:
         """
         item = plm.create(title="A game", kind=DeliverableKind.GAME, location="TranceFlow")
         assert plm.get(item.id).location == "TranceFlow"
+
+
+class TestTheGateIsReadInsideTheWriteTransaction:
+    """The window between deciding and writing, and why it had to close.
+
+    The conditional UPDATE in `_advance_from` is conditional on the *stage*,
+    so it catches two callers advancing the same deliverable. It cannot catch
+    a FAIL arriving from `submit_evidence` after the gate was evaluated and
+    before the stage was written: that changes no stage, the row still
+    matched, and the deliverable advanced on evidence already superseded.
+    This module documents that the latest evidence wins; that window was the
+    one place it did not.
+    """
+
+    @staticmethod
+    def _record_transaction_state(plm, monkeypatch) -> list[bool]:
+        """Note whether a write transaction was open each time the gate was read."""
+        seen: list[bool] = []
+        original = plm._gate_status_for
+
+        def _watched(item):
+            seen.append(plm._conn.in_transaction)
+            return original(item)
+
+        monkeypatch.setattr(plm, "_gate_status_for", _watched)
+        return seen
+
+    def test_the_passing_gate_is_evaluated_inside_the_transaction(self, plm, monkeypatch):
+        item = _game(plm)
+        for criterion in criteria_for(item.kind, item.stage):
+            _pass(plm, item, criterion.id)
+        seen = self._record_transaction_state(plm, monkeypatch)
+
+        plm.advance(item.id)
+
+        assert seen, "the gate must actually be evaluated"
+        assert all(seen), (
+            "the gate was read outside the write transaction — a concurrent FAIL "
+            "landing here would be invisible to the decision that follows it"
+        )
+
+    def test_a_blocked_gate_leaves_no_transaction_open(self, plm):
+        """An IMMEDIATE transaction held past the refusal blocks every writer."""
+        item = _game(plm)
+        with pytest.raises(GateBlocked):
+            plm.advance(item.id)
+        assert not plm._conn.in_transaction
+        # And the service is still usable, which is the thing a leaked write
+        # lock would take away.
+        _pass(plm, item, criteria_for(item.kind, item.stage)[0].id)
+
+    def test_a_fail_visible_at_decision_time_blocks_the_advance(self, plm, monkeypatch):
+        """Latest-evidence-wins, exercised at the decision point itself.
+
+        Stated plainly because it matters: this test does NOT discriminate the
+        transaction fix. It passes under both mutations above, because the
+        injected FAIL is written on the same connection immediately before the
+        deciding read either way. It is kept as a scenario check on
+        latest-evidence-wins; `test_the_passing_gate_is_evaluated_inside_the
+        _transaction` is the one that holds the race closed.
+        """
+        item = _game(plm)
+        criteria = criteria_for(item.kind, item.stage)
+        for criterion in criteria:
+            _pass(plm, item, criterion.id)
+
+        original = plm._gate_status_for
+        calls: list[int] = []
+
+        def _fail_arrives_first(deliverable):
+            calls.append(1)
+            if len(calls) == 1:
+                # Written on the same connection, inside the transaction the
+                # advance has already opened — which is exactly what a second
+                # process's committed FAIL looks like from in here.
+                plm._conn.execute(
+                    "INSERT INTO evidence (id, deliverable_id, criterion_id, outcome, "
+                    "reference, recorded_by, recorded_at, detail) VALUES (?,?,?,?,?,?,?,?)",
+                    (
+                        "EV-RACE",
+                        deliverable.id,
+                        criteria[0].id,
+                        Outcome.FAIL.value,
+                        "ref",
+                        "tester",
+                        9_999_999_999.0,
+                        "",
+                    ),
+                )
+            return original(deliverable)
+
+        monkeypatch.setattr(plm, "_gate_status_for", _fail_arrives_first)
+
+        with pytest.raises(GateBlocked):
+            plm.advance(item.id)
+        assert plm.get(item.id).stage is Stage.CONCEPT, "the stage must not have moved"
+
+
+class TestTheWritesAreGated:
+    """Until this existed, every lifecycle write was an unauthenticated call.
+
+    Creating a deliverable, filing PASS evidence, waiving a criterion and
+    advancing a stage are all ways of declaring that a control was satisfied,
+    and all four were reachable by anyone who could reach the port. Worse, the
+    record of who did it came out of the request body — so the audit trail
+    said whatever the caller typed.
+    """
+
+    @staticmethod
+    def _app(tmp_path, monkeypatch, principal):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from auth import get_current_user
+        from src.townhall import plm as plm_module
+        from src.townhall.plm_routes import router
+
+        service = PlmService(db_path=tmp_path / "plm.db")
+        monkeypatch.setattr(plm_module, "_service", service)
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_current_user] = lambda: principal
+        return TestClient(app), service
+
+    @pytest.fixture
+    def as_user(self, tmp_path, monkeypatch):
+        client, service = self._app(
+            tmp_path, monkeypatch, {"sub": "nobody", "username": "nobody", "role": "user"}
+        )
+        yield client
+        service.close()
+
+    @pytest.fixture
+    def as_admin(self, tmp_path, monkeypatch):
+        client, service = self._app(
+            tmp_path, monkeypatch, {"sub": "boss", "username": "boss", "role": "admin"}
+        )
+        yield client
+        service.close()
+
+    @pytest.mark.parametrize(
+        "path,body",
+        [
+            (
+                "/townhall/plm/deliverables",
+                {"title": "T", "kind": "game", "location": "TranceFlow"},
+            ),
+            (
+                "/townhall/plm/deliverables/DL-1/evidence",
+                {"criterion_id": "concept.business-case", "reference": "R"},
+            ),
+            (
+                "/townhall/plm/deliverables/DL-1/waivers",
+                {"criterion_id": "concept.business-case", "reason": "because"},
+            ),
+            ("/townhall/plm/deliverables/DL-1/advance", {}),
+        ],
+    )
+    def test_a_non_admin_cannot_write(self, as_user, path, body):
+        """403 before the handler runs — not 404 from the unknown deliverable.
+
+        The order matters: a 404 here would mean the route reached the store
+        and merely happened to find nothing, which is authorisation deciding
+        after the fact.
+        """
+        assert as_user.post(path, json=body).status_code == 403
+
+    def test_reads_stay_open_to_a_non_admin(self, as_user):
+        """The split is deliberate. Gate state is not a secret; declaring one
+        satisfied is what needed the gate."""
+        assert as_user.get("/townhall/plm/criteria").status_code == 200
+        assert as_user.get("/townhall/plm/deliverables").status_code == 200
+
+    def test_attribution_comes_from_the_token_not_the_body(self, as_admin):
+        """An attribution the caller chooses is not attribution."""
+        created = as_admin.post(
+            "/townhall/plm/deliverables",
+            json={
+                "title": "A platformer",
+                "kind": "game",
+                "location": "TranceFlow",
+                "requested_by": "somebody-else",
+            },
+        ).json()
+        assert created["requested_by"] == "boss"
+
+        as_admin.post(
+            f"/townhall/plm/deliverables/{created['id']}/evidence",
+            json={
+                "criterion_id": "concept.business-case",
+                "reference": "BC-1",
+                "recorded_by": "somebody-else",
+            },
+        )
+        as_admin.post(f"/townhall/plm/deliverables/{created['id']}/advance", json={})
+        entries = as_admin.get(f"/townhall/plm/deliverables/{created['id']}/history").json()[
+            "history"
+        ]
+        assert [e["approver"] for e in entries] == ["boss"]
+
+    def test_a_principal_with_no_identity_is_refused(self, tmp_path, monkeypatch):
+        """Admin role, no name. Writing 'unknown' into a governance record is
+        worse than refusing, because the record still reads as attributed."""
+        client, service = self._app(tmp_path, monkeypatch, {"role": "admin"})
+        try:
+            r = client.post(
+                "/townhall/plm/deliverables",
+                json={"title": "T", "kind": "game", "location": "TranceFlow"},
+            )
+            assert r.status_code == 403
+        finally:
+            service.close()

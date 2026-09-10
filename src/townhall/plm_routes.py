@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
+from auth import get_current_user
 from src.townhall.plm import (
     CRITERIA,
     DeliverableKind,
@@ -25,6 +26,34 @@ from src.townhall.plm import (
 )
 
 router = APIRouter(prefix="/townhall/plm", tags=["townhall", "plm"])
+
+
+def _require_admin(current_user: dict) -> None:
+    """Writes here are governance acts, so they take the admin gate.
+
+    The same split `src/townhall/routing_routes.py` uses: reads are public
+    because the estate's gate state is not a secret, writes are not because
+    creating a deliverable, filing PASS evidence, waiving a criterion and
+    advancing a stage are all ways of declaring that a control was satisfied.
+    Until this existed, every one of those was an unauthenticated call.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required for this action")
+
+
+def _actor(current_user: dict) -> str:
+    """Who the record says did this — taken from the token, never from the body.
+
+    `requested_by`, `recorded_by` and `approver` used to be request fields.
+    They are durably written into the lifecycle history, so accepting them
+    from the caller meant the audit trail recorded whatever name the caller
+    typed. An attribution a caller chooses is not attribution.
+    """
+    for key in ("username", "sub", "id"):
+        value = current_user.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    raise HTTPException(status_code=403, detail="authenticated principal has no identity")
 
 
 def _enum(value: str, enum_cls, label: str):
@@ -53,13 +82,14 @@ async def create_deliverable(
     title: str = Body(...),
     kind: str = Body(...),
     location: str = Body(...),
-    requested_by: str = Body("system"),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
+    _require_admin(current_user)
     item = get_plm().create(
         title=title,
         kind=_enum(kind, DeliverableKind, "kind"),
         location=location,
-        requested_by=requested_by,
+        requested_by=_actor(current_user),
     )
     return item.to_dict()
 
@@ -87,16 +117,17 @@ async def submit_evidence(
     criterion_id: str = Body(...),
     reference: str = Body(...),
     outcome: str = Body("pass"),
-    recorded_by: str = Body("system"),
     detail: str = Body(""),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
+    _require_admin(current_user)
     try:
         ev = get_plm().submit_evidence(
             deliverable_id,
             criterion_id,
             reference,
             _enum(outcome, Outcome, "outcome"),
-            recorded_by,
+            _actor(current_user),
             detail,
         )
     except UnknownDeliverableError as exc:
@@ -113,10 +144,11 @@ async def waive_criterion(
     deliverable_id: str,
     criterion_id: str = Body(...),
     reason: str = Body(...),
-    approver: str = Body(...),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
+    _require_admin(current_user)
     try:
-        waiver = get_plm().waive(deliverable_id, criterion_id, reason, approver)
+        waiver = get_plm().waive(deliverable_id, criterion_id, reason, _actor(current_user))
     except UnknownDeliverableError as exc:
         raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
     except UnknownCriterionError as exc:
@@ -136,7 +168,7 @@ async def gate(deliverable_id: str) -> dict[str, Any]:
 
 @router.post("/deliverables/{deliverable_id}/advance")
 async def advance(
-    deliverable_id: str, approver: str = Body("system", embed=True)
+    deliverable_id: str, current_user: dict = Depends(get_current_user)
 ) -> dict[str, Any]:
     """Move through the gate, or answer 409 with what is still missing.
 
@@ -144,8 +176,9 @@ async def advance(
     own state is what refuses it. The unmet criteria come back in the body
     so a caller does not have to make a second call to find out why.
     """
+    _require_admin(current_user)
     try:
-        item = get_plm().advance(deliverable_id, approver=approver)
+        item = get_plm().advance(deliverable_id, approver=_actor(current_user))
     except UnknownDeliverableError as exc:
         raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
     except GateBlocked as exc:

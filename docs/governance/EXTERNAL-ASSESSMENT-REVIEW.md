@@ -101,10 +101,22 @@ Palette, pre-commit.ci and CodeFactor. They propose the same upgrades twice:
 - `rand` 0.8.8 → 0.10.2 — #1171 (Aikido) and #1103 (Renovate)
 - `google.golang.org/grpc` — #1148 (Dependabot, 1.83.1) and #1092 (Renovate, 1.83.2)
 
-Three separate open PRs are currently removing the same unconfigured scanner
-workflows: **#1152**, **#1175** and **#1177**. #1175 modifies
-`scripts/check_workflow_placeholders.py`, a file that exists only on #1152's
-branch.
+Three separate pull requests set out to remove the same unconfigured scanner
+workflows: **#1152** (merged 2026-09-05), **#1175** and **#1177**, the latter two
+still open and overlapping both each other and what #1152 already landed.
+
+The supply side is the same story. `main` carries **47** workflow files, 28 of
+them added since this branch's merge base and almost all unedited GitHub starter
+templates — `astro.yml`, `gatsby.yml`, `hugo.yml`, `jekyll.yml`,
+`jekyll-gh-pages.yml`, `mdbook.yml`, `nextjs.yml`, `nuxtjs.yml`, `static.yml`
+for a repository that publishes none of those; `pyre.yml`, `pysa.yml`,
+`neuralegion.yml`, `snyk-security.yml`, `soos-dast-scan.yml`,
+`policy-validator-cfn.yml`, `synopsys-io.yml` for scanners nobody configured.
+`label.yml` is the clearest specimen: its own header says "you will need to set
+up a `.github/labeler.yml` file with configuration", that file has never
+existed, and so the `label` check has been failing on every pull request in the
+repository — including on `main`. Adding automation is not the same as
+operating it.
 
 "150 stale PRs" is not a human backlog anyone is failing to review. It is an
 unarbitrated automation estate, and it is the same duplication pathology

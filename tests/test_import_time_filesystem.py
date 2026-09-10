@@ -179,7 +179,7 @@ class TestTheRatchet:
         baseline = tmp_path / "baseline.json"
         baseline.write_text(json.dumps([]), encoding="utf-8")
         monkeypatch.setattr(guard, "BASELINE", baseline)
-        monkeypatch.setattr(guard, "scan", lambda: ["workers/x/worker.py:1: mkdir /data"])
+        monkeypatch.setattr(guard, "scan", lambda: (["workers/x/worker.py:1: mkdir /data"], []))
         assert guard.main([]) == 1
 
     def test_an_unrecorded_improvement_fails(self, guard, monkeypatch, tmp_path):
@@ -191,12 +191,12 @@ class TestTheRatchet:
         baseline = tmp_path / "baseline.json"
         baseline.write_text(json.dumps(["workers/x/worker.py:1: mkdir /data"]), encoding="utf-8")
         monkeypatch.setattr(guard, "BASELINE", baseline)
-        monkeypatch.setattr(guard, "scan", lambda: [])
+        monkeypatch.setattr(guard, "scan", lambda: ([], []))
         assert guard.main([]) == 1
 
     def test_a_missing_baseline_fails_rather_than_passes(self, guard, monkeypatch, tmp_path):
         monkeypatch.setattr(guard, "BASELINE", tmp_path / "absent.json")
-        monkeypatch.setattr(guard, "scan", lambda: [])
+        monkeypatch.setattr(guard, "scan", lambda: ([], []))
         assert guard.main([]) == 1
 
 
@@ -208,7 +208,9 @@ class TestTheLiveTree:
         between a ratchet that holds a backlog and one that holds a fixed
         invariant — and it means a single new entry is unambiguous.
         """
-        assert guard.scan() == []
+        found, unreadable = guard.scan()
+        assert found == []
+        assert unreadable == [], "a file the ratchet cannot read is not a file without writes"
         assert json.loads(guard.BASELINE.read_text(encoding="utf-8")) == []
 
     @pytest.mark.parametrize(
@@ -238,3 +240,49 @@ class TestTheLiveTree:
         assert spec.loader is not None
         spec.loader.exec_module(module)
         assert not target.exists(), f"{worker} created {env_var} at import"
+
+
+class TestAnUnreadableFileIsNotACleanFile:
+    """The ratchet's own blind spot, which it used to report as PASSED.
+
+    `scan_file` returned `[]` when `ast.parse` failed, so a module that could
+    not be inspected was indistinguishable from one inspected and found
+    clean. A syntax error anywhere in the tree therefore removed that file
+    from the gate's coverage silently — the same defect the ratchet exists to
+    catch, sitting inside the ratchet.
+    """
+
+    def test_an_unparsable_file_raises_rather_than_reporting_clean(self, guard, tmp_path):
+        broken = guard.REPO / "tests" / "_unparsable_probe.py"
+        broken.write_text("def f(:\n", encoding="utf-8")
+        try:
+            with pytest.raises(guard.UnreadableSource):
+                guard.scan_file(broken)
+        finally:
+            broken.unlink()
+
+    def test_the_sweep_records_it_instead_of_swallowing_it(self, guard, tmp_path):
+        broken = guard.REPO / "tests" / "_unparsable_probe.py"
+        broken.write_text("class C(\n", encoding="utf-8")
+        try:
+            found, unreadable = guard.scan()
+        finally:
+            broken.unlink()
+        assert any("_unparsable_probe.py" in entry for entry in unreadable)
+        assert not any("_unparsable_probe.py" in entry for entry in found)
+
+    def test_an_unreadable_file_fails_the_gate(self, guard, monkeypatch, tmp_path):
+        baseline = tmp_path / "baseline.json"
+        baseline.write_text(json.dumps([]), encoding="utf-8")
+        monkeypatch.setattr(guard, "BASELINE", baseline)
+        monkeypatch.setattr(guard, "scan", lambda: ([], ["x.py: SyntaxError: bad"]))
+        assert guard.main([]) == 1, "an uninspectable file must not pass"
+
+    def test_a_baseline_is_not_written_over_an_unreadable_tree(self, guard, monkeypatch, tmp_path):
+        """Recording a baseline measured over files that could not be read
+        would bake the blind spot in as the accepted state."""
+        baseline = tmp_path / "baseline.json"
+        monkeypatch.setattr(guard, "BASELINE", baseline)
+        monkeypatch.setattr(guard, "scan", lambda: ([], ["x.py: SyntaxError: bad"]))
+        assert guard.main(["--write-baseline"]) == 1
+        assert not baseline.exists()

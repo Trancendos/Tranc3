@@ -757,54 +757,83 @@ class PlmService:
         if following is None:
             raise GateBlocked(deliverable_id, item.stage, [])
 
-        status = self._gate_status_for(item)
-        if not status.can_advance:
+        # The gate is read INSIDE the transaction that writes the stage, not
+        # before it.
+        #
+        # Reading it outside left a window that the conditional UPDATE below
+        # cannot close. That UPDATE is conditional on the *stage*, so it
+        # catches two callers advancing the same deliverable — but a FAIL
+        # arriving from `submit_evidence` between the read and the write
+        # changes no stage, so the row still matched, and the deliverable
+        # advanced on evidence that had already been superseded. The module
+        # documents that the latest evidence wins; that window was the one
+        # place it did not.
+        #
+        # BEGIN IMMEDIATE, not the mutex alone: `self._lock` coordinates
+        # threads in one process and this worker runs under several. Taking
+        # SQLite's write lock before the read makes a concurrent evidence
+        # insert either land first and be seen, or block until this decision
+        # has committed. Either order is correct; only "neither" was not.
+        now = time.time()
+        blocked: Optional[list[Criterion]] = None
+        with self._lock:
+            if not self._conn.in_transaction:
+                self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                status = self._gate_status_for(item)
+                if not status.can_advance:
+                    self._conn.rollback()
+                    blocked = status.unmet
+                else:
+                    waived = [
+                        cs.criterion.id for cs in status.criteria if cs.waived and not cs.satisfied
+                    ]
+                    decision = GateDecision.WAIVED if waived else GateDecision.PASSED
+                    cursor = self._conn.execute(
+                        "UPDATE deliverables SET stage=? WHERE id=? AND stage=?",
+                        (following.value, deliverable_id, item.stage.value),
+                    )
+                    if cursor.rowcount == 0:
+                        self._conn.rollback()
+                        current = self.get(deliverable_id)
+                        raise GateAlreadyPassed(deliverable_id, item.stage, current.stage)
+                    self._conn.execute(
+                        "INSERT INTO gate_decisions "
+                        "(id, deliverable_id, stage, decision, approver, decided_at, "
+                        "waived_criteria) VALUES (?,?,?,?,?,?,?)",
+                        (
+                            f"GD-{uuid.uuid4().hex[:10].upper()}",
+                            deliverable_id,
+                            item.stage.value,
+                            decision.value,
+                            approver,
+                            now,
+                            json.dumps(waived),
+                        ),
+                    )
+                    self._conn.commit()
+            except GateAlreadyPassed:
+                raise
+            except BaseException:
+                # An open IMMEDIATE transaction held past this frame would
+                # block every writer in the process, so it is never left open
+                # on a path out of here.
+                if self._conn.in_transaction:
+                    self._conn.rollback()
+                raise
+
+        # Emitted after the lock is released: an observer that blocks must not
+        # hold SQLite's write lock while it does.
+        if blocked is not None:
             _emit(
                 PlatformEventType.PLM_GATE_BLOCKED,
                 {
                     "deliverable_id": deliverable_id,
                     "stage": item.stage.value,
-                    "unmet": [c.id for c in status.unmet],
+                    "unmet": [c.id for c in blocked],
                 },
             )
-            raise GateBlocked(deliverable_id, item.stage, status.unmet)
-
-        waived = [cs.criterion.id for cs in status.criteria if cs.waived and not cs.satisfied]
-        decision = GateDecision.WAIVED if waived else GateDecision.PASSED
-        now = time.time()
-        with self._lock:
-            # The stage read above happened outside this lock, so two callers
-            # can both see `concept` and both arrive here. The UPDATE is
-            # therefore conditional on the stage still being what was
-            # evaluated: whichever transaction lands second changes no row,
-            # and is refused rather than writing a second gate decision for a
-            # boundary that was already crossed.
-            #
-            # `self._lock` alone would not do it — it coordinates threads in
-            # one process, and this worker can run under several.
-            cursor = self._conn.execute(
-                "UPDATE deliverables SET stage=? WHERE id=? AND stage=?",
-                (following.value, deliverable_id, item.stage.value),
-            )
-            if cursor.rowcount == 0:
-                self._conn.rollback()
-                current = self.get(deliverable_id)
-                raise GateAlreadyPassed(deliverable_id, item.stage, current.stage)
-            self._conn.execute(
-                "INSERT INTO gate_decisions "
-                "(id, deliverable_id, stage, decision, approver, decided_at, waived_criteria) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (
-                    f"GD-{uuid.uuid4().hex[:10].upper()}",
-                    deliverable_id,
-                    item.stage.value,
-                    decision.value,
-                    approver,
-                    now,
-                    json.dumps(waived),
-                ),
-            )
-            self._conn.commit()
+            raise GateBlocked(deliverable_id, item.stage, blocked)
 
         payload = {
             "deliverable_id": deliverable_id,

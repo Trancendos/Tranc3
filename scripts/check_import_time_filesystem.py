@@ -246,12 +246,24 @@ def _write_target(call: ast.Call, defaults: dict[str, str]) -> tuple[str, str] |
     return (method or "", literal) if literal else None
 
 
+class UnreadableSource(Exception):
+    """A Python file this ratchet could not inspect."""
+
+
 def scan_file(path: Path) -> list[str]:
-    """Absolute-path import-time writes in one file, as `path:line: method`."""
+    """Absolute-path import-time writes in one file, as `path:line: method`.
+
+    Raises `UnreadableSource` when the file cannot be parsed. It used to
+    return an empty list, which made a file that could not be inspected
+    indistinguishable from one inspected and found clean — so a module could
+    become unverifiable while this gate went on reporting PASSED. That is the
+    exact shape of failure this ratchet exists to catch, sitting inside the
+    ratchet.
+    """
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, OSError):
-        return []
+    except (SyntaxError, UnicodeDecodeError, OSError) as exc:
+        raise UnreadableSource(f"{path}: {type(exc).__name__}: {exc}") from exc
 
     # Scope by scope, not one file-wide name table. A class body executes on
     # import, so its writes ARE import-time writes — but its names are its
@@ -302,15 +314,25 @@ def scan_file(path: Path) -> list[str]:
     return found
 
 
-def scan() -> list[str]:
-    """Every import-time absolute-path write in the tree, sorted for stable diffs."""
+def scan() -> tuple[list[str], list[str]]:
+    """Every import-time absolute-path write in the tree, and what could not be read.
+
+    Two lists, not one: the findings are the ratchet's subject, and the
+    unreadable files are the ratchet's own blind spots. Folding the second
+    into the first would make an uninspectable module look clean, which is
+    how a gate reports PASSED over a file it never opened.
+    """
     found: list[str] = []
+    unreadable: list[str] = []
     for path in sorted(REPO.rglob("*.py")):
         posix = path.as_posix()
         if any(skip in posix for skip in _SKIP):
             continue
-        found.extend(scan_file(path))
-    return sorted(found)
+        try:
+            found.extend(scan_file(path))
+        except UnreadableSource as exc:
+            unreadable.append(str(exc))
+    return sorted(found), sorted(unreadable)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -321,7 +343,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    current = scan()
+    current, unreadable = scan()
+
+    # Checked before the baseline comparison, and before --write-baseline:
+    # recording a baseline measured over files that could not be read would
+    # bake the blind spot in as the accepted state.
+    if unreadable:
+        print("Import-time filesystem check: FAILED — files could not be inspected")
+        for entry in unreadable:
+            print(f"  [UNREADABLE] {entry}")
+        print("        A file this ratchet cannot parse is not a file without")
+        print("        import-time writes. Fix the syntax, or add the path to _SKIP")
+        print("        with a reason if it is deliberately not Python this runtime reads.")
+        return 1
 
     if args.write_baseline:
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
