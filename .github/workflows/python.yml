@@ -63,10 +63,16 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e ".[dev]"
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      # One run, not two. `pytest tests/ -v` followed by `pytest tests/ --cov`
+      # executed the whole suite twice per matrix entry — four Python versions,
+      # so four duplicate full runs on every pull request touching
+      # aeonmind/python, for no signal the second run does not already carry.
+      # `-v --tb=short` is kept because that is what makes a failure readable in
+      # the log; coverage is additive to it, not an alternative.
       - name: Run tests with coverage
-        run: pytest tests/ --cov=aeonmind --cov-report=xml --cov-report=term-missing
+        run: >-
+          pytest tests/ -v --tb=short
+          --cov=aeonmind --cov-report=xml --cov-report=term-missing
 
   install-check:
     name: Install Check

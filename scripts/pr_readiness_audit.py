@@ -64,8 +64,27 @@ class PullRequestReadiness:
         )
 
 
+class GhUnavailable(RuntimeError):
+    """`gh` is not installed or not authenticated on this runner."""
+
+
 def _run_gh(args: list[str]) -> str:
-    proc = subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
+    """Run a `gh` subcommand, or say plainly that `gh` is not there.
+
+    `check=False` caught a non-zero exit but not the absence of the binary
+    itself: on a runner without `gh` this raised FileNotFoundError out of
+    `subprocess.run` and the audit died with a traceback whose last line was
+    `No such file or directory: 'gh'` — a stack trace where a one-line
+    prerequisite message belongs. `fork_audit.py` beside it already had a
+    `_gh_available()` check; this one did not.
+    """
+    try:
+        proc = subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
+    except FileNotFoundError as exc:
+        raise GhUnavailable(
+            "the GitHub CLI (`gh`) is not on PATH, so this audit cannot read the "
+            "pull request queue. Install it, or run this on a runner that has it."
+        ) from exc
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or "Unknown gh error")
     return proc.stdout

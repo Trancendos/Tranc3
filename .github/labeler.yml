@@ -1,0 +1,79 @@
+# Configuration for actions/labeler, referenced by .github/workflows/label.yml.
+#
+# The workflow arrived with the starter template and has failed on EVERY pull
+# request since, because this file did not exist — the template's own header
+# says it is required. A check that is red on all 84 open pull requests teaches
+# reviewers to ignore red, which costs more than the labelling is worth.
+#
+# SCHEMA: this is the v4 format, matching `actions/labeler@v4` as pinned in
+# label.yml — a top-level label name mapping to a list of globs. v5 changed it
+# to `changed-files: [{any-glob-to-any-file: [...]}]` and silently labels
+# nothing when handed a v4 file. If the action is ever bumped, this file has to
+# be converted in the same commit.
+#
+# The label names are the ones already in use on the queue (security, ci,
+# worker, ai-framework, dependencies), so existing filters keep working rather
+# than being replaced by a new vocabulary.
+
+ci:
+  - '.github/workflows/**'
+  - '.github/labeler.yml'
+  - '.forgejo/workflows/**'
+  - '.woodpecker.yml'
+  - '.pre-commit-config.yaml'
+  - 'scripts/check_*.py'
+
+security:
+  - 'SECURITY*.md'
+  - '.trivyignore'
+  - 'src/security/**'
+  - 'src/auth/**'
+  - 'src/cryptex/**'
+  - 'src/dvms/**'
+  - 'scripts/vulnerability_census.py'
+  - 'scripts/filter_codeql_alerts.py'
+  - 'compliance/**'
+
+worker:
+  - 'workers/**'
+  - 'docker-compose.production.yml'
+
+ai-framework:
+  - 'aeonmind/**'
+  - 'src/ai_gateway/**'
+  - 'src/bio_neural/**'
+  - 'src/core/**'
+  - 'src/personality/**'
+  - 'src/quantum/**'
+  - 'tranc3-bots/**'
+
+dependencies:
+  - '**/requirements*.txt'
+  - '**/package.json'
+  - '**/package-lock.json'
+  - '**/Cargo.toml'
+  - '**/Cargo.lock'
+  - '**/go.mod'
+  - '**/go.sum'
+  - 'renovate.json'
+  - '.github/dependabot.yml'
+
+documentation:
+  - '**/*.md'
+  - 'docs/**'
+  - 'wiki-content/**'
+
+governance:
+  - 'docs/governance/**'
+  - 'src/townhall/**'
+  - 'config/estate/**'
+
+frontend:
+  - 'web/**'
+  - 'tranc3-ts/**'
+
+infrastructure:
+  - 'deploy/**'
+  - 'monitoring/**'
+  - '**/Dockerfile*'
+  - 'cloudflare/**'
