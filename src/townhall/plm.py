@@ -776,6 +776,11 @@ class PlmService:
         # has committed. Either order is correct; only "neither" was not.
         now = time.time()
         blocked: Optional[list[Criterion]] = None
+        # Bound here, not only inside the passing branch. It is read after the
+        # lock, and the blocked path raises before reaching that read — so the
+        # unbound case is unreachable today and would stop being unreachable the
+        # moment anyone adds a third path out of the block below.
+        waived: list[str] = []
         with self._lock:
             # Rolled back first, not skipped. A transaction left open by an
             # earlier failed write would make `in_transaction` true, and the

@@ -111,9 +111,20 @@ def pack_slug(location: str) -> str:
 
 
 def design_pack(location: str) -> Optional[str]:
-    """The Location's solution pack, relative to the repository root."""
-    pack = PACKS / f"{pack_slug(location)}.md"
-    return str(pack.relative_to(REPO)) if pack.is_file() else None
+    """The Location's solution pack, relative to the repository root.
+
+    `pack_slug` already makes traversal impossible — it replaces every run of
+    non-`[a-z0-9]` characters with a hyphen, so `..` and `/` cannot survive it.
+    The containment check below is therefore belt and braces rather than the
+    only thing standing between a Location name and the filesystem, and it is
+    written down because a reader (and CodeQL, which flagged this line) cannot
+    see a sanitiser three functions away. It costs one `resolve()`.
+    """
+    pack = (PACKS / f"{pack_slug(location)}.md").resolve()
+    root = PACKS.resolve()
+    if root != pack.parent:
+        return None
+    return str(pack.relative_to(REPO.resolve())) if pack.is_file() else None
 
 
 @dataclass
