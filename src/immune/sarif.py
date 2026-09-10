@@ -181,17 +181,53 @@ def _uri_of(result: dict[str, Any]) -> str:
     return ""
 
 
-def _relativise(uri: str) -> str:
+# The repository this module lives in. Used to strip an absolute checkout
+# prefix off a finding's path -- ruff, for one, always reports absolute paths,
+# and the checkout sits at /home/runner/work/Tranc3/Tranc3 on a GitHub runner
+# and somewhere else entirely on anyone's laptop.
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _relativise(uri: str, root: Path | None = None) -> str:
     """Strip the accidents of where a scanner happened to be run.
 
-    Trivy reports absolute container paths, CodeQL reports `file:` URIs, and a
-    locally run tool reports whatever the working directory was. A baseline
-    keyed on any of those would invalidate itself the first time CI moved.
+    Trivy reports absolute container paths, CodeQL reports `file:` URIs, ruff
+    reports the absolute path of the checkout, and a locally run tool reports
+    whatever the working directory was.
+
+    This matters more than tidiness. A finding's fingerprint includes its path,
+    so an un-stripped checkout prefix makes the fingerprint machine-specific: a
+    baseline written on a laptop under /home/user/Tranc3 matches nothing in CI
+    under /home/runner/work/Tranc3/Tranc3, and every finding reads as new. That
+    is a gate that fails on every pull request for a reason nobody can see --
+    found by planting a deliberately tangled function and reading the path in
+    the failure line: `home/user/Tranc3/src/immune/_cx_probe.py`.
     """
     text = uri
     for prefix in ("file://", "file:"):
         if text.startswith(prefix):
             text = text[len(prefix) :]
+    # Strip the checkout root before anything else -- it is the longest and
+    # most specific prefix, and the one that differs between machines.
+    for candidate in (root, _REPO_ROOT):
+        if candidate is None:
+            continue
+        as_posix = candidate.as_posix().rstrip("/")
+        if as_posix and text.startswith(as_posix + "/"):
+            text = text[len(as_posix) + 1 :]
+            break
+    else:
+        # Still absolute: a scanner reporting from a checkout that is not this
+        # one -- a container mount, or a SARIF file produced on the runner and
+        # merged here. Strip through the LAST segment matching this repository's
+        # directory name, which handles the runner's own doubled layout
+        # (/home/runner/work/Tranc3/Tranc3/...) as well as a plain mount.
+        if text.startswith("/"):
+            name = _REPO_ROOT.name
+            marker = f"/{name}/"
+            cut = text.rfind(marker)
+            if cut >= 0:
+                text = text[cut + len(marker) :]
     while text.startswith("./"):
         text = text[2:]
     text = text.lstrip("/")

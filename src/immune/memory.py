@@ -146,6 +146,45 @@ def load_adjudications(path: Path = ADJUDICATIONS) -> list[Adjudication]:
     return [Adjudication.from_mapping(entry) for entry in entries]
 
 
+def _audit_adjudications(
+    adjudications: list[Adjudication],
+    used: set[int],
+    report: "MemoryReport",
+    repo_root: Path,
+    today: date | None,
+) -> None:
+    """Check the store itself: malformed, expired, rotted, autoimmune.
+
+    Split out of `apply_memory` because that function was doing two unrelated
+    jobs -- filtering findings, and auditing the thing doing the filtering --
+    and ruff C901 scored the combination at 12. Splitting them also makes the
+    second job nameable, which matters: auditing your own suppression store is
+    the part everyone skips.
+    """
+    for adj in adjudications:
+        problems = adj.defects()
+        if problems:
+            report.malformed.append((adj, problems))
+        if adj.expired(today):
+            report.expired.append(adj)
+        if adj.path and not (repo_root / adj.path).exists():
+            report.rotted.append((adj, f"path {adj.path} no longer exists"))
+        elif id(adj) not in used:
+            report.rotted.append((adj, "matched nothing in this run"))
+
+    # Autoimmunity: one rule, many unrelated files, all adjudicated false.
+    # Only `false-positive` counts. An accepted risk repeated across many files
+    # is a posture decision, not a misfiring rule.
+    by_rule: dict[str, set[str]] = {}
+    for adj in adjudications:
+        if adj.verdict != "false-positive" or not adj.path:
+            continue
+        by_rule.setdefault(adj.rule_id, set()).add(adj.path)
+    for rule, paths in by_rule.items():
+        if len(paths) >= AUTOIMMUNE_THRESHOLD:
+            report.autoimmune[rule] = sorted(paths)
+
+
 def apply_memory(
     findings: Iterable[Finding],
     adjudications: list[Adjudication],
@@ -170,27 +209,7 @@ def apply_memory(
         used.add(id(hit))
         report.suppressed.append((finding, hit))
 
-    for adj in adjudications:
-        problems = adj.defects()
-        if problems:
-            report.malformed.append((adj, problems))
-        if adj.expired(today):
-            report.expired.append(adj)
-        if adj.path and not (repo_root / adj.path).exists():
-            report.rotted.append((adj, f"path {adj.path} no longer exists"))
-        elif id(adj) not in used:
-            report.rotted.append((adj, "matched nothing in this run"))
-
-    # Autoimmunity: one rule, many unrelated files, all adjudicated false.
-    by_rule: dict[str, set[str]] = {}
-    for adj in adjudications:
-        if adj.verdict != "false-positive" or not adj.path:
-            continue
-        by_rule.setdefault(adj.rule_id, set()).add(adj.path)
-    for rule, paths in by_rule.items():
-        if len(paths) >= AUTOIMMUNE_THRESHOLD:
-            report.autoimmune[rule] = sorted(paths)
-
+    _audit_adjudications(adjudications, used, report, repo_root, today)
     return remaining, report
 
 

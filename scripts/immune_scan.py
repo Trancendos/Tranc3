@@ -143,7 +143,8 @@ def _print_memory(report) -> None:
         )
 
 
-def main(argv: list[str] | None = None) -> int:
+def _parser() -> argparse.ArgumentParser:
+    """Argument surface, kept out of main so main reads as a sequence of steps."""
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -178,7 +179,118 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="exit non-zero on regression or blind sensor",
     )
-    args = parser.parse_args(argv)
+    return parser
+
+
+def _print_vitals(
+    graded,
+    population: list[str],
+    changed_only: str | None,
+    baseline: dict[str, int],
+    new: list,
+    known: list,
+    unmeasured: list,
+) -> None:
+    """Everything the run says about the estate's current state.
+
+    Lifted out of main() together with the parser because ruff C901 scored
+    main at 21 against a threshold of 10, and CodeFactor independently
+    flagged the same function. Both were right: it was doing argument
+    parsing, orchestration, five kinds of reporting, two file writes and
+    the gate decision in one body.
+    """
+    print("\n── vitals ──────────────────────────────────────────────────")
+    print("  " + graded.explain().replace("\n", "\n  "))
+    dist = graded.distribution()
+    print("  distribution  " + "  ".join(f"{k}:{v}" for k, v in dist.items()))
+    scope = f"changed vs {changed_only}" if changed_only else "whole tree"
+    print(f"  scope         {scope} ({len(population)} file(s))")
+
+    print("\n── against baseline ────────────────────────────────────────")
+    if not baseline:
+        print(
+            "  no baseline recorded — everything counts as known. "
+            "Run --write-baseline on a commit you are willing to defend."
+        )
+    else:
+        print(f"  {len(new)} new, {len(known)} already known ({len(baseline)} in baseline)")
+        if unmeasured:
+            by_sensor: dict[str, int] = {}
+            for finding in unmeasured:
+                key = finding.sensor or finding.tool
+                by_sensor[key] = by_sensor.get(key, 0) + 1
+            print(
+                "  not gated — no baseline has ever included these sensors: "
+                + ", ".join(f"{k} ({v})" for k, v in sorted(by_sensor.items()))
+            )
+            print("  regenerate the baseline to bring them under the gate")
+        for finding in sorted(new, key=lambda f: (-f.rank, f.path))[:15]:
+            print(f"    NEW {finding.level:7} {finding.rule_id:24} {finding.located}")
+        if len(new) > 15:
+            print(f"    ... and {len(new) - 15} more")
+
+    if graded.worst():
+        print("\n── worst files ─────────────────────────────────────────────")
+        for fg in graded.worst(8):
+            if fg.weighted <= 0:
+                break
+            print(f"  {fg.grade}  {fg.density:7.2f}/KLOC  {fg.findings:3} finding(s)  {fg.path}")
+
+
+def _write_outputs(args, graded, findings, new, results, memory, confidence) -> None:
+    """The optional artefacts: the debt ranking, the SARIF, the JSON summary.
+
+    Three independent `if args.X:` blocks that share nothing but the data they
+    read. Keeping them in main() bought nothing and cost the function four
+    branches of the complexity budget.
+    """
+    if args.debt:
+        print("\n── debt, ranked by what keeping it costs ───────────────────")
+        for item in grading.rank_debt(graded, repo_root=ROOT, limit=15):
+            print(
+                f"  {item.priority:9.1f}  {item.grade}  {item.path}"
+                f"   (weight {item.weighted:.0f} x {item.changes} changes x {item.importers} importers)"
+            )
+
+    if args.sarif:
+        target = Path(args.sarif)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        merged = merge([("immune", findings)])
+        target.write_text(json.dumps(merged.to_sarif(), indent=2) + "\n", encoding="utf-8")
+        print(f"\nwrote {target} ({len(findings)} finding(s))")
+
+    if args.json:
+        target = Path(args.json)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(
+                {
+                    "grade": graded.grade,
+                    "provisional": graded.provisional,
+                    "density": round(graded.density, 4),
+                    "findings": len(findings),
+                    "new_against_baseline": len(new),
+                    "distribution": graded.distribution(),
+                    "confidence": round(confidence, 3),
+                    "sensors": {r.name: r.outcome.value for r in results},
+                    "memory": {
+                        "suppressed": len(memory.suppressed),
+                        "expired": len(memory.expired),
+                        "rotted": len(memory.rotted),
+                        "malformed": len(memory.malformed),
+                        "autoimmune": sorted(memory.autoimmune),
+                    },
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"wrote {target}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
 
     results = _sense(args)
     _print_sensors(results)
@@ -230,86 +342,9 @@ def main(argv: list[str] | None = None) -> int:
         confidence=confidence,
     )
 
-    print("\n── vitals ──────────────────────────────────────────────────")
-    print("  " + graded.explain().replace("\n", "\n  "))
-    dist = graded.distribution()
-    print("  distribution  " + "  ".join(f"{k}:{v}" for k, v in dist.items()))
-    scope = f"changed vs {args.changed_only}" if args.changed_only else "whole tree"
-    print(f"  scope         {scope} ({len(population)} file(s))")
+    _print_vitals(graded, population, args.changed_only, baseline, new, known, unmeasured)
 
-    print("\n── against baseline ────────────────────────────────────────")
-    if not baseline:
-        print(
-            "  no baseline recorded — everything counts as known. "
-            "Run --write-baseline on a commit you are willing to defend."
-        )
-    else:
-        print(f"  {len(new)} new, {len(known)} already known ({len(baseline)} in baseline)")
-        if unmeasured:
-            by_sensor: dict[str, int] = {}
-            for finding in unmeasured:
-                key = finding.sensor or finding.tool
-                by_sensor[key] = by_sensor.get(key, 0) + 1
-            print(
-                "  not gated — no baseline has ever included these sensors: "
-                + ", ".join(f"{k} ({v})" for k, v in sorted(by_sensor.items()))
-            )
-            print("  regenerate the baseline to bring them under the gate")
-        for finding in sorted(new, key=lambda f: (-f.rank, f.path))[:15]:
-            print(f"    NEW {finding.level:7} {finding.rule_id:24} {finding.located}")
-        if len(new) > 15:
-            print(f"    ... and {len(new) - 15} more")
-
-    if graded.worst():
-        print("\n── worst files ─────────────────────────────────────────────")
-        for fg in graded.worst(8):
-            if fg.weighted <= 0:
-                break
-            print(f"  {fg.grade}  {fg.density:7.2f}/KLOC  {fg.findings:3} finding(s)  {fg.path}")
-
-    if args.debt:
-        print("\n── debt, ranked by what keeping it costs ───────────────────")
-        for item in grading.rank_debt(graded, repo_root=ROOT, limit=15):
-            print(
-                f"  {item.priority:9.1f}  {item.grade}  {item.path}"
-                f"   (weight {item.weighted:.0f} x {item.changes} changes x {item.importers} importers)"
-            )
-
-    if args.sarif:
-        target = Path(args.sarif)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        merged = merge([("immune", findings)])
-        target.write_text(json.dumps(merged.to_sarif(), indent=2) + "\n", encoding="utf-8")
-        print(f"\nwrote {target} ({len(findings)} finding(s))")
-
-    if args.json:
-        target = Path(args.json)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            json.dumps(
-                {
-                    "grade": graded.grade,
-                    "provisional": graded.provisional,
-                    "density": round(graded.density, 4),
-                    "findings": len(findings),
-                    "new_against_baseline": len(new),
-                    "distribution": dist,
-                    "confidence": round(confidence, 3),
-                    "sensors": {r.name: r.outcome.value for r in results},
-                    "memory": {
-                        "suppressed": len(memory.suppressed),
-                        "expired": len(memory.expired),
-                        "rotted": len(memory.rotted),
-                        "malformed": len(memory.malformed),
-                        "autoimmune": sorted(memory.autoimmune),
-                    },
-                },
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        print(f"wrote {target}")
+    _write_outputs(args, graded, findings, new, results, memory, confidence)
 
     if args.write_baseline:
         if blocking or blind:

@@ -37,6 +37,61 @@ sensors:
             return 2
       expect_rule: F841
 
+  complexity:
+    kind: innate
+    senses: "Functions too tangled to review -- the defect class code review misses because reviewers stop reading"
+    location: The Lab
+    binary: ruff
+    # C901 is in `ignore` in pyproject.toml, with the comment "complexity --
+    # warned, not blocked". It is not warned either: an `ignore` entry means
+    # the rule never runs and nobody ever sees it. 183 functions exceed the
+    # default threshold of 10 and nothing in the estate reports one of them.
+    #
+    # Found by cross-checking against CodeFactor's public page, which flagged
+    # seven functions this estate could not see -- including two written the
+    # same day, in the immune system itself. That is the argument for keeping a
+    # free vendor grade to compare against rather than only replacing it: it
+    # was measuring something we had turned off and labelled as on.
+    #
+    # The threshold here is 20, not ruff's default 10. At 10 there are 183
+    # findings, which is a backlog; at 20 there are 14, which is a list. The
+    # baseline stops it growing either way -- this number only decides how much
+    # of the existing pile is visible at once.
+    command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache"]
+    format: ruff-json
+    required: false
+    accept_exit: [0, 1]
+    probe:
+      file: probe.py
+      # Twenty-one branches: comfortably over the threshold, and unambiguous.
+      content: |
+        def tangled(n):
+            total = 0
+            for i in range(n):
+                if i % 2: total += 1
+                elif i % 3: total += 2
+                elif i % 5: total += 3
+                elif i % 7: total += 4
+                elif i % 11: total += 5
+                elif i % 13: total += 6
+                elif i % 17: total += 7
+                elif i % 19: total += 8
+                elif i % 23: total += 9
+                elif i % 29: total += 10
+                elif i % 31: total += 11
+                elif i % 37: total += 12
+                elif i % 41: total += 13
+                elif i % 43: total += 14
+                elif i % 47: total += 15
+                elif i % 53: total += 16
+                elif i % 59: total += 17
+                elif i % 61: total += 18
+                elif i % 67: total += 19
+                else: total += 20
+            return total
+      expect_rule: C901
+      command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache", "--isolated"]
+
   bandit:
     kind: innate
     senses: "Python security anti-patterns -- weak crypto, shell injection, unsafe deserialisation"

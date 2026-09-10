@@ -229,6 +229,87 @@ The README describes "80 documented nosec suppressions". Measured, 80 is exactly
 the count of the **un**documented ones. Nobody wrote that deliberately; it is a
 figure that was true of something once and kept its wording.
 
+### 1a. The cross-check earned its keep on the first day
+
+CodeFactor's public page went from **5 issues to 7** the moment the immune
+system landed. Two of the seven were functions written that afternoon:
+`scripts/immune_scan.py:main` and `scripts/check_nosec_specificity.py:main`.
+
+This estate's own grader said **A** and saw neither. Asking why found something
+worth more than the two functions.
+
+All seven CodeFactor findings are one rule — cognitive complexity. Nothing in
+this estate's sensor set measures it. ruff *can*, via `C901`, and
+`pyproject.toml` said this:
+
+```toml
+"C901",   # complexity — warned, not blocked
+```
+
+**It was not warned either.** An `ignore` entry means ruff never runs the rule,
+so nothing warned anywhere. Measured:
+
+| max-complexity | Functions over it |
+|---|---|
+| 10 (ruff default) | **183** |
+| 15 | 43 |
+| 20 | 14 |
+| 30 | 7 |
+
+One hundred and eighty-three functions exceed the default threshold and no
+control in this estate has ever reported one of them. The comment described a
+warning that does not exist — a control labelled as on, and off.
+
+That is the same defect class as everything else in this document, and it was
+found by keeping a free vendor grade to compare against rather than only
+replacing it. **The point of a second opinion is the disagreement.**
+
+**What was done.** `C901` stays ignored in `pyproject.toml`, because 183 lint
+errors on every pull request is a gate people bypass rather than satisfy — the
+same reasoning as the nosec ceiling. It is measured instead, by a `complexity`
+sensor in `config/immune/sensors.yaml` at a threshold of 20: reported,
+baselined so it cannot grow, ranked by churn. The comment now says what is
+true.
+
+The three functions this work itself added were fixed rather than baselined.
+
+And the ranking immediately said something a raw count cannot:
+
+```
+10944.0  A  api.py   (weight 3 x 151 changes x 23 importers)
+  825.0  B  Dimensional/hive/hive_core.py   (weight 3 x 24 changes x 10 importers)
+  780.0  B  Dimensional/nexus/nexus_core.py  (weight 3 x 25 changes x 9 importers)
+```
+
+`api.py`'s `lifespan` scores 53 against a threshold of 20, has changed 151 times
+in six months, and is imported by 23 modules. It is not the most complex
+function in the estate and it is comfortably the most expensive one to keep.
+
+### 1b. A gate that would have failed everywhere except here
+
+Calibrating the complexity sensor — planting a deliberately tangled function
+and checking the gate went red — worked, and the failure line read:
+
+```
+NEW warning C901   home/user/Tranc3/src/immune/_cx_probe.py:1
+```
+
+That path is wrong, and the way it is wrong matters. **ruff always reports
+absolute paths.** A finding's fingerprint includes its path, so an un-stripped
+checkout prefix makes the fingerprint machine-specific: a baseline written on a
+laptop under `/home/user/Tranc3` matches nothing on a runner under
+`/home/runner/work/Tranc3/Tranc3`, and **every finding reads as new**.
+
+The gate would have passed here and failed on every pull request in CI, for a
+reason nobody reading the output could see. `_relativise` now strips the
+checkout root, and falls back to cutting through the last segment matching the
+repository's directory name — which handles the runner's doubled layout and a
+container mount alike. Both are regression-tested.
+
+This is the second time in this document that a path normalisation bug produced
+a confident, wrong answer; the first buried 13,712 findings behind a
+distribution of all-A. Paths are where scanners lie without meaning to.
+
 ### 2. CLAUDE.md documented a formatter the repository does not use
 
 It described the pre-commit gate as running **black** and **isort**. Neither is

@@ -68,6 +68,14 @@ def test_tool_severity_vocabularies_all_map_onto_sarif_levels():
         ("/app/src/c.py", "src/c.py"),
         ("src/d.py", "src/d.py"),
         ("././src/e.py", "src/e.py"),
+        # REGRESSION: ruff always reports ABSOLUTE paths. Un-stripped, the
+        # checkout prefix goes into the fingerprint, so a baseline written on a
+        # laptop under /home/user/Tranc3 matches nothing on a runner under
+        # /home/runner/work/Tranc3/Tranc3 and every finding reads as new -- a
+        # gate that fails on every pull request for a reason nobody can see.
+        # Found by planting a tangled function and reading the failure line.
+        ("/home/runner/work/Tranc3/Tranc3/src/f.py", "src/f.py"),
+        ("/build/Tranc3/scripts/g.py", "scripts/g.py"),
     ],
 )
 def test_paths_from_every_tool_dialect_normalise_to_repo_relative(raw, expected):

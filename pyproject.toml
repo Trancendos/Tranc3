@@ -29,7 +29,18 @@ select = ["E", "F", "W", "C", "B", "I"]
 ignore = [
   "E501",   # line length — enforced by formatter, not lint
   "B008",   # function calls in default args (FastAPI Depends pattern)
-  "C901",   # complexity — warned, not blocked
+  # C901 complexity. NOT "warned, not blocked" as this line said until
+  # 2026-09-10 — an `ignore` entry means ruff never runs the rule, so nothing
+  # warned anywhere. 183 functions exceed the default threshold of 10 and no
+  # control in the estate reported one of them; CodeFactor's public page was
+  # flagging seven that this repository could not see.
+  #
+  # It stays ignored HERE, because 183 lint errors on every pull request is a
+  # gate people bypass rather than satisfy. It is now measured instead, by the
+  # `complexity` sensor in config/immune/sensors.yaml, at a threshold of 20 —
+  # reported, baselined so it cannot grow, and ranked by churn. See
+  # docs/governance/IMMUNE-SYSTEM.md.
+  "C901",
 ]
 
 [tool.ruff.lint.per-file-ignores]

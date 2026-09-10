@@ -173,6 +173,56 @@ def write_ceiling(count: int, root: Path = ROOT) -> None:
     )
 
 
+def _report(
+    every: list[Suppression],
+    blocking: list[Suppression],
+    unreasoned: list[Suppression],
+    ceiling: int | None,
+) -> bool:
+    """Print the verdicts and return whether any of them fails the run.
+
+    Split out of main() because ruff C901 scored main at 17 against a threshold
+    of 10, and CodeFactor's public page independently flagged the same function
+    -- two different tools, same finding, which is the whole argument for
+    keeping a vendor cross-check rather than only replacing it.
+    """
+    failed = False
+
+    if blocking:
+        failed = True
+        print("\nBARE SUPPRESSIONS — these silence rules nobody has chosen:\n", file=sys.stderr)
+        for item in blocking:
+            print(f"  {item.path}:{item.line}", file=sys.stderr)
+            print(f"    {item.text}", file=sys.stderr)
+            for problem in item.blocking_problems():
+                print(f"    → {problem}", file=sys.stderr)
+
+    if ceiling is None:
+        print(
+            f"\nNo ceiling recorded. Run --set-ceiling to freeze the current "
+            f"{len(unreasoned)} unreasoned suppressions as a maximum."
+        )
+    elif len(unreasoned) > ceiling:
+        failed = True
+        print(
+            f"\nUNREASONED SUPPRESSIONS ROSE: {len(unreasoned)} now, ceiling {ceiling}.\n"
+            "Every `# nosec Bxxx` needs a reason a stranger can evaluate. Write it as\n"
+            "`# nosec B602 - <why this line is safe>`.",
+            file=sys.stderr,
+        )
+        for item in unreasoned[-8:]:
+            print(f"  {item.path}:{item.line}  {item.text}", file=sys.stderr)
+    elif len(unreasoned) < ceiling:
+        print(
+            f"\nunreasoned suppressions fell to {len(unreasoned)} (ceiling {ceiling}). "
+            "Lower the ceiling in this commit: --set-ceiling"
+        )
+    else:
+        print(f"\nunreasoned suppressions holding at the ceiling ({ceiling}).")
+
+    return failed
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -216,39 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nceiling set to {len(unreasoned)}")
         return 0
 
-    failed = False
-
-    if blocking:
-        failed = True
-        print("\nBARE SUPPRESSIONS — these silence rules nobody has chosen:\n", file=sys.stderr)
-        for item in blocking:
-            print(f"  {item.path}:{item.line}", file=sys.stderr)
-            print(f"    {item.text}", file=sys.stderr)
-            for problem in item.blocking_problems():
-                print(f"    → {problem}", file=sys.stderr)
-
-    if ceiling is None:
-        print(
-            f"\nNo ceiling recorded. Run --set-ceiling to freeze the current "
-            f"{len(unreasoned)} unreasoned suppressions as a maximum."
-        )
-    elif len(unreasoned) > ceiling:
-        failed = True
-        print(
-            f"\nUNREASONED SUPPRESSIONS ROSE: {len(unreasoned)} now, ceiling {ceiling}.\n"
-            "Every `# nosec Bxxx` needs a reason a stranger can evaluate. Write it as\n"
-            "`# nosec B602 - <why this line is safe>`.",
-            file=sys.stderr,
-        )
-        for item in unreasoned[-8:]:
-            print(f"  {item.path}:{item.line}  {item.text}", file=sys.stderr)
-    elif len(unreasoned) < ceiling:
-        print(
-            f"\nunreasoned suppressions fell to {len(unreasoned)} (ceiling {ceiling}). "
-            "Lower the ceiling in this commit: --set-ceiling"
-        )
-    else:
-        print(f"\nunreasoned suppressions holding at the ceiling ({ceiling}).")
+    failed = _report(every, blocking, unreasoned, ceiling)
 
     if failed:
         return 1
