@@ -1,16 +1,16 @@
 # Action Backlog — every outstanding item the estate records
 
-**Generated** by `scripts/build_action_backlog.py` from 51 registers across the documentation estate. Do not edit by hand — a hand-kept backlog becomes one more register nobody sweeps.
+**Generated** by `scripts/build_action_backlog.py` from 52 registers across the documentation estate. Do not edit by hand — a hand-kept backlog becomes one more register nobody sweeps.
 
 The estate records outstanding work in dozens of separate registers, each correct about its own domain and blind to the rest. Nobody can answer *what is outstanding across the platform* without reading 320 documents, so nobody asks — and an action in a register nobody sweeps is an action nobody does. This is that sweep.
 
-**201 open items** across **10 epics**.
+**203 open items** across **10 epics**.
 
-**31 of 201 are routed to a Location** and link to that Location's solution pack — its architecture, compose-derived routing, user journey and acceptance criteria. The other 170 name no Location, so they have no design material and no one accountable; routing them is the first story in each case, which is what the +1 in their sizing says. That ratio is the single most useful number in this document.
+**31 of 203 are routed to a Location** and link to that Location's solution pack — its architecture, compose-derived routing, user journey and acceptance criteria. The other 172 name no Location, so they have no design material and no one accountable; routing them is the first story in each case, which is what the +1 in their sizing says. That ratio is the single most useful number in this document.
 
 **0 of those 31 carry a Town Hall routing decision** (`/townhall/routing`, exported to `config/estate/backlog_routing.yaml`): a named authority, a written reason, the Location's design pack and an Observatory event. The rest are routed only because a register row happens to mention a Location by name, which is a hint its author left rather than a decision anybody made or can appeal.
 
-The remaining **170 are a queue the Town Hall owes an answer to**, not a number to be made to go away. Assigning them here by judgement would write a decision nobody made into a generated file that reads as derived fact — the same move that made a routing defect read as deliberate design in twenty solution packs.
+The remaining **172 are a queue the Town Hall owes an answer to**, not a number to be made to go away. Assigning them here by judgement would write a decision nobody made into a generated file that reads as derived fact — the same move that made a routing defect read as deliberate design in twenty solution packs.
 
 ## Definition of Ready
 
@@ -253,7 +253,7 @@ Items carried from earlier assessments — verify before working.
 
 Everything else the estate has recorded as outstanding.
 
-**83 stories · 153 points**
+**85 stories · 157 points**
 
 | Story | Location | Design | Status | Pts | Sized because | Source |
 |---|---|---|---|---|---|---|
@@ -262,6 +262,8 @@ Everything else the estate has recorded as outstanding.
 | Live pack, scoped to what exists; gaps flagged | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md:119` |
 | GOV + RACI + TFM + DSM + ESM + POL + STD only | _unrouted_ | — | Planned | 2 | baseline (+1); no Location named — routing first (+1) | `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md:120` |
 | severely strained standing — but always redeemable | _unrouted_ | — | blocked | 3 | baseline (+1); no Location named — routing first (+1); status `blocked` — impeded, not merely unstarted (+2) | `docs/governance/AI-RELATIONSHIP-MATRIX.md:90` |
+| #1146 closed with a performed restore | _unrouted_ | — | open | 2 | baseline (+1); no Location named — routing first (+1) | `docs/governance/RELEASE-READINESS.md:210` |
+| #991 closed; a bot digest bump merges without going red | _unrouted_ | — | open | 2 | baseline (+1); no Location named — routing first (+1) | `docs/governance/RELEASE-READINESS.md:211` |
 | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this enti… | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `docs/services/api-marketplace/README.md:142` |
 | same monolith router via the `api` service in `docker-compose.uat.yml` | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `docs/services/api-marketplace/README.md:143` |
 | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `cron-servi… | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `docs/services/chronosphere-arcstream/README.md:183` |
@@ -343,6 +345,6 @@ Everything else the estate has recorded as outstanding.
 
 ---
 
-**Total: 201 stories, 469 points.**
+**Total: 203 stories, 473 points.**
 
 Velocity is not asserted here. This estate has no measured throughput to divide by, and a sprint count derived from an invented velocity would be the kind of confident, unfounded number the rest of these documents exist to avoid.

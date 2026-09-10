@@ -83,6 +83,20 @@ deletion column reconciles on its own: 9 + 8 + 2 + 1 + 1 = 21, and 48 − 21 = 2
 Verified with `git diff --diff-filter=D --name-only origin/main...HEAD --
 .github/workflows/ | wc -l`.
 
+The **14** is every file whose `on:` block contains `pull_request` or
+`pull_request_target`, counted by parsing each file rather than by grep — eleven
+that always run and three that are gated on unset credentials and skip cleanly:
+
+| | Files | Jobs |
+|---|---|---|
+| Always run | `ci`(3) `codeql`(1) `frontend-build`(3) `go`(3) `label`(1) `perf-smoke`(1) `production-gate`(1) `python`(3) `rust`(3) `submodule-pins`(1) `trivy`(6) | 26 |
+| Gated, skip without secrets | `black-duck-security-scan-ci`(1) `endorlabs`(1) `zscaler-iac-scan`(1) | 3 |
+| **Total** | **14** | **29** |
+
+`scorecard` is *not* in that set and is the easy one to miscount: its triggers
+are `branch_protection_rule`, `schedule` and `push`, so it never fires on a pull
+request. A review of this document counted it and arrived at 15.
+
 Nothing that could ever produce a signal was removed. The three gated scanners
 (`black-duck`, `endorlabs`, `zscaler`) stay: configure the secrets and they run.
 `scorecard`, `anchore-syft` and `stale` stay and do not gate pull requests.

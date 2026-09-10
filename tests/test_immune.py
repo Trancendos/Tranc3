@@ -14,6 +14,7 @@ because the wrong behaviour in every case looked exactly like success.
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -227,42 +228,91 @@ def test_an_optional_sensor_that_cannot_see_is_recorded_but_does_not_block():
     assert not result.blocking, "'we have no scanner for this' is a written decision"
 
 
-def test_a_working_sensor_passes_its_probe_and_is_not_reported_as_blind():
-    """The false-positive half. A probe that fails on a healthy sensor is worse
-    than no probe: it teaches everyone to pass --no-probe."""
-    honest = Sensor(
-        name="honest",
+def _seeing_sensor(findings_json: str, expect_rule: str = "F841") -> Sensor:
+    """A sensor whose probe genuinely fires, built from python3 alone.
+
+    The first version of these two tests invoked `ruff`. They passed here and
+    failed in CI with "[Errno 2] No such file or directory: 'ruff'", because
+    the Pytest job does not install it. That is this engagement's own defect
+    class turning up in its own test suite: a check that depended on an
+    environment fact it never declared, and whose failure said nothing about
+    the property under test.
+
+    The property is "a probe that fires proves the sensor can see". It does not
+    need a real linter to state, and stating it with one made the assertion
+    hostage to which tools a runner happens to carry. python3 is the one binary
+    a Python test suite can assume.
+    """
+    return Sensor(
+        name="seeing",
         kind="innate",
-        senses="unused locals",
-        command=["ruff", "check", ".", "--output-format", "json", "--quiet"],
+        senses="a planted defect",
+        command=["python3", "-c", f"print({findings_json!r})"],
         fmt="ruff-json",
-        binary="ruff",
+        binary="python3",
         probe={
             "file": "probe.py",
             "content": "def f():\n    unused_local = 1\n    return 2\n",
-            "expect_rule": "F841",
+            "expect_rule": expect_rule,
+            "command": ["python3", "-c", f"print({findings_json!r})"],
         },
     )
-    saw, detail = probe_sensor(honest)
+
+
+_ONE_F841 = json.dumps(
+    [
+        {
+            "code": "F841",
+            "filename": "probe.py",
+            "message": "local variable assigned but never used",
+            "location": {"row": 2},
+            "end_location": {"row": 2},
+        }
+    ]
+)
+
+
+def test_a_sensor_whose_probe_fires_is_not_reported_as_blind():
+    """The false-positive half, and it matters as much as the other.
+
+    A probe that fails on a healthy sensor is worse than no probe: it teaches
+    everyone to pass --no-probe, and then nothing is probed at all.
+    """
+    saw, detail = probe_sensor(_seeing_sensor(_ONE_F841))
     assert saw, detail
+    assert "1 finding" in detail
 
 
 def test_a_probe_that_fires_on_the_wrong_rule_does_not_count_as_seeing():
-    sensor = Sensor(
-        name="wrongrule",
-        kind="innate",
-        senses="x",
-        command=["ruff", "check", ".", "--output-format", "json", "--quiet"],
-        fmt="ruff-json",
-        binary="ruff",
-        probe={
-            "file": "probe.py",
-            "content": "def f():\n    unused_local = 1\n    return 2\n",
-            "expect_rule": "B602",  # a bandit rule ruff will never emit
-        },
-    )
-    saw, detail = probe_sensor(sensor)
-    assert not saw and "B602" in detail
+    """Finding *something* is not evidence of finding the planted thing.
+
+    A sensor that flags an unrelated rule on the probe file has demonstrated it
+    can produce output, not that it can detect the defect class it is claimed
+    to cover.
+    """
+    saw, detail = probe_sensor(_seeing_sensor(_ONE_F841, expect_rule="B602"))
+    assert not saw
+    assert "B602" in detail and "F841" in detail
+
+
+@pytest.mark.skipif(shutil.which("ruff") is None, reason="ruff is not installed here")
+def test_the_shipped_ruff_probe_fires_against_the_real_tool():
+    """The integration half, skipped rather than faked when ruff is absent.
+
+    The synthetic tests above hold the property; this one holds the claim that
+    the manifest's *actual* ruff probe -- its content, its expect_rule, its
+    command -- still matches what ruff does today. A rule renamed upstream
+    would break this and nothing else.
+
+    Skipped, not silently passed. A skip is visible in the pytest summary; a
+    test that quietly does nothing is the anergy this whole subsystem exists to
+    make impossible.
+    """
+    from src.immune.sensors import load_manifest
+
+    ruff = next(s for s in load_manifest(Path("config/immune/sensors.yaml")) if s.name == "ruff")
+    saw, detail = probe_sensor(ruff)
+    assert saw, detail
 
 
 def test_every_converter_normalises_its_paths():
