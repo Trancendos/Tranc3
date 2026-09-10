@@ -1,10 +1,12 @@
-# Review of two external assessments of Tranc3
+# Review of the external assessments of Tranc3
 
-**Reviewed** 2026-09-10, against this checkout at `2f524a15` and the live
-repository on GitHub. Two AI-generated documents were supplied by the owner:
+**Reviewed** 2026-09-10, against this checkout and the live repository on
+GitHub. Three AI-generated documents have been supplied by the owner:
 
 1. *Tranc3 Deep Dive — Forensic Assessment, SWOT & Remediation Roadmap*
 2. *Tranc3 → Production-Ready: PLM-Style Agile Backlog & Delivery Plan*
+3. *TRANC3 — Immune-System Architecture* (Kagi Assistant, supplied later the
+   same day; reviewed in its own section at the end)
 
 Every figure below was measured. Where a claim is marked wrong, the measured
 value and the command that produced it are given, so the correction can be
@@ -166,6 +168,126 @@ Sequencing that follows the measurements instead:
 | 4 | Cut a release | latest is `v0.4.0`, 2026-05-23 |
 | 5 | Measure the `Dimensional/` ↔ `shared_core/` divergence properly | 75 shared paths, **zero identical pairs**; "delete the shadow" would lose behaviour 75 times |
 | 6 | Fold the three TODO files into the Action Backlog | the one planning-artefact finding that was simply correct |
+
+
+---
+
+## Document 3 — the immune-system architecture (added 2026-09-10)
+
+A third assessment arrived from Kagi Assistant. Reviewing it changed the verdict
+on all three, and the change matters more than any individual correction.
+
+### Its issue-level findings are accurate. All of them.
+
+Document 3 lists eleven findings, most citing an issue number. Checked against
+the live tracker:
+
+| Cited | Real issue | Verdict |
+|---|---|---|
+| api-gateway routes AI traffic to legacy `tranc3-ai` | **#284** | real, correctly described |
+| `path_validation.py` symlink TOCTOU in intermediate components | **#337** | real, correctly described |
+| `GridDatabase`/`WorkflowEngineRouter` are module globals | **#336** | real |
+| analytics-service DuckDB reseeding and ambiguous-write dedup | **#334** | real |
+| GitHub Actions broken / need review | **#1180** | real |
+| CodeQL cannot load the repo's own barrier models | **#995** | real |
+| Freshness gate red on `main` from bot digest bumps | **#991** | real |
+| `build-storybook` broken — nine PNGs never committed | **#990** | real |
+| `misp-db` has no backup/restore/DR runbook | **#1146** | real |
+| Supply Chain Watch census failing | **#969** | real |
+| ledger-service internal/external partitioning | **#474** | real |
+
+Eleven for eleven. The twelfth open issue is **#174**, Renovate's Dependency
+Dashboard, which Document 3 also mentions.
+
+**It enumerated the entire open backlog, correctly, and then described that
+backlog as "863 open issues".** Measured: 12.
+
+That is a much more useful reading than "most of its figures are wrong", which
+is what the first review of Documents 1 and 2 concluded and what this document
+said until now. The substance was read from the real tracker. The aggregates
+were not read from anywhere.
+
+### What that changes
+
+**Act on the issue-level findings.** They are this estate's real backlog, they
+are already fully enumerated, and Document 3's Epics 1–4 are a reasonable
+sequencing of them. Nothing in this review contradicts that sequencing.
+
+**Do not run the triage blitz.** Document 3's story S4.2 — "bulk-triage the
+863-issue backlog into epic/bug/debt labels; adopt stale-bot and triage
+rotation" — and its "chronic-debt sweeper" that "batches the 863 backlog into
+curable cohorts" are work for a backlog that does not exist. The 12 issues are
+already individually titled, individually described, and short enough to read in
+one sitting. Building machinery to sort them would cost more than fixing them.
+
+The metaphor Document 3 builds on that figure — "your 863-issue backlog is
+chronic inflammation" — is a diagnosis of a body that is not ill in that way.
+Twelve open issues against 3,102 tracked files is not chronic inflammation. It
+is a small, legible list.
+
+### Where its architecture and this estate's converge, independently
+
+Document 3 and the work landed in this branch were produced in parallel and
+arrived at the same shape: innate sensors, adaptive memory, a self-hosted grade
+replacing CodeFactor, path-triage replacing the labeler, and an explicit
+autoimmunity guard. That convergence is worth something — two independent passes
+over the same problem reaching the same structure is evidence the structure is
+the natural one.
+
+Three of its ideas were adopted directly and are named in
+`docs/governance/IMMUNE-SYSTEM.md`:
+
+- **Churn-weighted debt** (from CodeFactor) — `severity × change frequency`,
+  extended here with blast radius.
+- **Clean as You Code** (from SonarQube) — grade the change, not the tree.
+  Document 3 correctly identifies this as the fix for **#991**, and it is: that
+  gate went red because it measured absolute state.
+- **Autoimmune protection** — its phrase, and the right one. Recorded as a
+  first-class concept in `src/immune/memory.py`.
+
+### Where it goes further than what is built
+
+Its `tranc3-immune` worker — webhook on `workflow_run` failure, diagnose from
+Loki, look up a cure in a defect knowledge base, draft a fix with a local model,
+validate by re-running the failing job, propose a pull request and never
+auto-merge — is a real design and is **not built**. The parts exist
+(`scripts/adaptive_vulnerability_remediation.py`, `scripts/apply_repairs.py`,
+`src/core/mape_k.py`, `src/observability/self_healer.py`) and are not joined.
+
+Two cautions before anyone builds it, neither of which Document 3 raises:
+
+1. **It requires The Workshop.** "Re-run the failing job in an isolated
+   self-hosted runner" needs the Citadel act-runner that the cloud-only phase
+   has not stood back up. On GitHub Actions the same loop consumes exactly the
+   rate-limited minutes the estate's standing policy exists to avoid.
+2. **Its own guard needs the probe property.** An auto-remediation agent that
+   cannot reach the model, or whose validation run silently skips, will report
+   "no cure found" identically to "nothing needed curing". Every layer of this
+   estate has now been caught doing that once. The agent must declare what it
+   could not do, in the same vocabulary the sensors use.
+
+### Its citation quality
+
+Document 3 cites real, openable URLs — codefactor.io, SonarQube comparisons,
+self-healing CI write-ups, an arXiv paper. That is a genuine improvement on
+Documents 1 and 2, whose `[^69d993#3703-3707]` anchors point at nothing anyone
+here can open.
+
+One of those citations turned out to be directly useful: **CodeFactor's public
+repository page is machine-readable without a login.** It rates this repository
+A on `5c69056`, 99.4% A-grade files, and reports **zero open issues** — which is
+itself a small piece of evidence that "851 CodeFactor issues" in Document 1 came
+from nowhere. That page is now a standing cross-check against this estate's own
+grader; see `docs/governance/IMMUNE-SYSTEM.md`.
+
+### Standing verdict across all three
+
+Read the findings. Ignore the totals. The pattern is consistent enough across
+three independent documents to state as a rule for this estate:
+
+> **Externally generated assessments of this repository have reliably read the
+> issue tracker and reliably invented the aggregates.** Every specific,
+> checkable claim about a named artefact has held up. Every count has not.
 
 ## Standing caution
 

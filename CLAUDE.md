@@ -231,11 +231,15 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   so every sensor declares a **probe** — a planted defect it must flag — and one
   that reports clean while failing its own probe is recorded blind. Read it
   before adding any scanner to this estate
-- `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — two externally supplied AI
-  assessments of Tranc3 checked claim by claim against the repository. Most of their
-  figures are wrong (12 open issues, not 863; 3,087 files, not 2,259); the one theme
-  they get right — supply-chain blindness — has a different and worse mechanism than
-  they name. Read it before acting on any externally generated report of this estate
+- `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — three externally supplied AI
+  assessments of Tranc3 checked claim by claim. The rule they establish: **they
+  reliably read the issue tracker and reliably invent the aggregates.** Document 3
+  named all eleven cited issues correctly (#284, #337, #336, #334, #1180, #995,
+  #991, #990, #1146, #969, #474) — the whole open backlog — and then described that
+  backlog as 863 issues. Measured: **12 open issues, 3,102 tracked files** (not 863
+  and 2,259). So act on their findings and ignore their counts, and do not build the
+  "triage blitz" machinery all three propose for a backlog that does not exist.
+  Read it before acting on any externally generated report of this estate
 - `docs/governance/REFERENCE-NUMBERING.md` — Wiki (`WIX`, administrative) vs Knowledge Base
   (`KB`, user) reference numbering across three scopes: platform-wide `TKB000001`/`TWIX000042`,
   Location-scoped `Infi-KB-0001`, and personal `#One:KB-0001` (Infinity-One, per-user, private
