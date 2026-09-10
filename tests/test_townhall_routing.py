@@ -426,3 +426,53 @@ class TestTheRegistrySingleton:
         second = get_routing_registry(tmp_path / "two.db")
         assert first is not second
         assert get_routing_registry(tmp_path / "one.db") is first
+
+
+class TestDesignPackIsALookupNotAPathBuild:
+    """No path is constructed from a caller's string, so there is nothing to
+    traverse.
+
+    `pack_slug` already made traversal impossible — every run of non-`[a-z0-9]`
+    characters becomes a hyphen — but the function still built
+    `PACKS / f"{slug}.md"` from the argument, and CodeQL flagged user data
+    reaching a path expression. Adding a `resolve()` containment check on top
+    made it worse: two path expressions where there had been one, and a second
+    alert. The directory is listed instead, and the slug either matches an
+    entry that exists or it does not.
+    """
+
+    def test_a_real_location_resolves_to_its_pack(self):
+        from src.townhall.routing import design_pack
+
+        assert design_pack("The Spark") == "docs/solution-packs/the-spark.md"
+
+    @pytest.mark.parametrize(
+        "hostile",
+        [
+            "../../etc/passwd",
+            "../" * 12 + "etc/passwd",
+            "/etc/passwd",
+            "the-spark/../../../etc/passwd",
+            "..",
+            ".",
+            "",
+        ],
+    )
+    def test_nothing_outside_the_pack_directory_can_be_named(self, hostile):
+        from src.townhall.routing import design_pack
+
+        result = design_pack(hostile)
+        assert result is None or result.startswith("docs/solution-packs/")
+
+    def test_an_unknown_location_is_none_rather_than_a_path_that_does_not_exist(self):
+        """The old form returned None only after stat-ing a constructed path.
+        This one never names a file that is not already there."""
+        from src.townhall.routing import design_pack
+
+        assert design_pack("Not A Location At All") is None
+
+    def test_every_returned_pack_actually_exists(self):
+        from src.townhall.routing import REPO, _packs_on_disk
+
+        for slug, rel in _packs_on_disk().items():
+            assert (REPO / rel).is_file(), f"{slug} maps to a file that is not there"

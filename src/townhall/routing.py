@@ -110,21 +110,40 @@ def pack_slug(location: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", location.lower()).strip("-")
 
 
+def _packs_on_disk() -> dict[str, str]:
+    """Every solution pack that exists, keyed by slug — read from the directory.
+
+    Rebuilt on each call rather than cached: a pack added during a run should
+    be findable in that run, and the directory holds a few dozen entries.
+    """
+    found: dict[str, str] = {}
+    if not PACKS.is_dir():
+        return found
+    for entry in PACKS.iterdir():
+        if entry.is_file() and entry.suffix == ".md":
+            found[entry.stem] = entry.relative_to(REPO).as_posix()
+    return found
+
+
 def design_pack(location: str) -> Optional[str]:
     """The Location's solution pack, relative to the repository root.
 
-    `pack_slug` already makes traversal impossible — it replaces every run of
-    non-`[a-z0-9]` characters with a hyphen, so `..` and `/` cannot survive it.
-    The containment check below is therefore belt and braces rather than the
-    only thing standing between a Location name and the filesystem, and it is
-    written down because a reader (and CodeQL, which flagged this line) cannot
-    see a sanitiser three functions away. It costs one `resolve()`.
+    A LOOKUP, not a path construction. `pack_slug` already makes traversal
+    impossible — it replaces every run of non-`[a-z0-9]` characters with a
+    hyphen, so neither `..` nor `/` survives it — but an earlier version still
+    built `PACKS / f"{slug}.md"` from the caller's string, and CodeQL flagged
+    it as user data reaching a path expression. Adding a `resolve()`
+    containment check on top made that worse rather than better: two path
+    expressions where there had been one, and CodeQL raised a second alert.
+
+    Answering a static analyser by piling guards onto a construction it does
+    not trust is the wrong move twice over — the analyser is still right that
+    the shape is risky, and the next reader inherits a function that looks
+    defensive without being obviously correct. So no path is constructed from
+    input at all: the directory is listed, and the slug either matches an entry
+    that already exists or it does not. There is nothing left to traverse.
     """
-    pack = (PACKS / f"{pack_slug(location)}.md").resolve()
-    root = PACKS.resolve()
-    if root != pack.parent:
-        return None
-    return str(pack.relative_to(REPO.resolve())) if pack.is_file() else None
+    return _packs_on_disk().get(pack_slug(location))
 
 
 @dataclass
