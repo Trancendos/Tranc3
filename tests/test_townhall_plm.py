@@ -665,6 +665,41 @@ class TestTheGateIsReadInsideTheWriteTransaction:
             "landing here would be invisible to the decision that follows it"
         )
 
+    def test_a_transaction_left_open_by_an_earlier_failure_is_discarded(self, plm):
+        """The "already in one, carry on" reading was itself the hole.
+
+        A transaction left open by an earlier failed write makes
+        `in_transaction` true. Skipping BEGIN IMMEDIATE on that basis puts the
+        gate read back outside the write lock — the exact defect the block
+        exists to close, reachable through the guard meant to close it.
+        """
+        item = _game(plm)
+        for criterion in criteria_for(item.kind, item.stage):
+            _pass(plm, item, criterion.id)
+        # A stale DEFERRED transaction, as an earlier failed write would leave.
+        # DEFERRED takes no write lock, so a gate read inside it is exactly as
+        # exposed as one taken outside any transaction at all — and the end
+        # state is identical either way, which is why this asserts on the
+        # statement issued rather than on what the database looks like after.
+        plm._conn.execute("BEGIN")
+        assert plm._conn.in_transaction
+
+        # set_trace_callback, not a monkeypatched `execute`:
+        # `sqlite3.Connection.execute` is a read-only attribute.
+        issued: list[str] = []
+        plm._conn.set_trace_callback(lambda sql: issued.append(" ".join(sql.split())))
+        try:
+            plm.advance(item.id)
+        finally:
+            plm._conn.set_trace_callback(None)
+
+        assert "BEGIN IMMEDIATE" in issued, (
+            "the advance carried on inside the stale transaction instead of "
+            "opening its own, so the gate read took no write lock"
+        )
+        assert plm.get(item.id).stage is not Stage.CONCEPT, "the advance must still land"
+        assert not plm._conn.in_transaction
+
     def test_a_blocked_gate_leaves_no_transaction_open(self, plm):
         """An IMMEDIATE transaction held past the refusal blocks every writer."""
         item = _game(plm)

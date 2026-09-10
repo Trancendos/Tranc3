@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
+from src.townhall.route_auth import require_admin as _require_admin
 from src.townhall.routing import EXPORT, REPO, RoutingRefused, get_routing_registry
 
 router = APIRouter(prefix="/townhall/routing", tags=["townhall", "routing"])
@@ -38,11 +39,6 @@ class RouteItemRequest(BaseModel):
     location: str = Field(min_length=1)
     reason: str = Field(min_length=1)
     authority: str = Field(min_length=1)
-
-
-def _require_admin(current_user: dict) -> None:
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required for this action")
 
 
 # ── reads ───────────────────────────────────────────────────────────────────

@@ -24,36 +24,10 @@ from src.townhall.plm import (
     criteria_for,
     get_plm,
 )
+from src.townhall.route_auth import actor as _actor
+from src.townhall.route_auth import require_admin as _require_admin
 
 router = APIRouter(prefix="/townhall/plm", tags=["townhall", "plm"])
-
-
-def _require_admin(current_user: dict) -> None:
-    """Writes here are governance acts, so they take the admin gate.
-
-    The same split `src/townhall/routing_routes.py` uses: reads are public
-    because the estate's gate state is not a secret, writes are not because
-    creating a deliverable, filing PASS evidence, waiving a criterion and
-    advancing a stage are all ways of declaring that a control was satisfied.
-    Until this existed, every one of those was an unauthenticated call.
-    """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required for this action")
-
-
-def _actor(current_user: dict) -> str:
-    """Who the record says did this — taken from the token, never from the body.
-
-    `requested_by`, `recorded_by` and `approver` used to be request fields.
-    They are durably written into the lifecycle history, so accepting them
-    from the caller meant the audit trail recorded whatever name the caller
-    typed. An attribution a caller chooses is not attribution.
-    """
-    for key in ("username", "sub", "id"):
-        value = current_user.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    raise HTTPException(status_code=403, detail="authenticated principal has no identity")
 
 
 def _enum(value: str, enum_cls, label: str):

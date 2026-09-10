@@ -777,8 +777,15 @@ class PlmService:
         now = time.time()
         blocked: Optional[list[Criterion]] = None
         with self._lock:
-            if not self._conn.in_transaction:
-                self._conn.execute("BEGIN IMMEDIATE")
+            # Rolled back first, not skipped. A transaction left open by an
+            # earlier failed write would make `in_transaction` true, and the
+            # "already in one, carry on" reading then skipped BEGIN IMMEDIATE
+            # entirely — so the gate read happened outside the write lock again,
+            # which is the whole defect this block exists to close. Whatever is
+            # open is not this decision's transaction, so it is discarded.
+            if self._conn.in_transaction:
+                self._conn.rollback()
+            self._conn.execute("BEGIN IMMEDIATE")
             try:
                 status = self._gate_status_for(item)
                 if not status.can_advance:
