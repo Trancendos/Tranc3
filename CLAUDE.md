@@ -224,6 +224,11 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `docs/ADAPTIVE_REMEDIATION.md` — the probabilistic risk-scoring and safe-patch
   automation model behind `scripts/adaptive_vulnerability_remediation.py`, which the
   DVMS census feeds
+- `docs/governance/RELEASE-READINESS.md` — the **twelve** open issues, grouped by
+  what must be true before a release, with a definition-of-done that can be checked
+  rather than asserted. #1180 ("GitHub Actions need review and fixing") is what PR
+  #1150 is. The highest-consequence item is #1146: the backup engine is SQLite-only
+  and `misp-db` is MySQL, so there is no code path that could back it up
 - `docs/governance/IMMUNE-SYSTEM.md` — what AWS IAM Access Analyzer, Microsoft
   Security DevOps, CodeFactor and `actions/labeler` each actually do, and the
   vendor-free equivalents built here (`src/immune/`). The property none of them
