@@ -384,12 +384,12 @@ jobs:
       - name: Pre-commit hooks are documented as configured
         run: python scripts/check_precommit_documented.py
 
-      # The immune scan's own unit tests. They are calibration tests: each one
-      # plants the defect its guard exists to catch and proves the guard fires,
-      # and the four marked REGRESSION cover defects that were real in that code
-      # on its first run -- every one of which looked exactly like success.
-      - name: Immune system
-        run: python -m pytest tests/test_immune.py -q
+      # tests/test_immune.py is deliberately NOT run here. It was, for one
+      # commit, and failed with "No module named pytest": this job installs the
+      # handful of packages its static checks need, not the test stack. The
+      # Pytest job already runs `pytest tests/ -q`, which includes that file --
+      # so the step was both broken and redundant, and running a suite twice is
+      # exactly what the consolidation removed from python.yml.
 
       # Says who owns the change and what it crosses, before anyone reads the
       # diff. It is not a gate -- `continue-on-error` and no token -- because
