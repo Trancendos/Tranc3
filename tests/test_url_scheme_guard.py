@@ -41,9 +41,7 @@ _NOQA = "noqa" + ":"  # split so ruff does not read these literals as directives
 SUPPRESSION_RE = re.compile(rf"#\s*(?:nosec\s+B310|{_NOQA}\s*S310)")
 # A reason is anything after the suppression on the same line, or -- for the
 # multi-line suppression shape -- a comment block immediately above it.
-REASON_RE = re.compile(
-    rf"#\s*(?:nosec\s+B310|{_NOQA}\s*S310)\s*[—–-]?\s*(?P<reason>.*)"
-)
+REASON_RE = re.compile(rf"#\s*(?:nosec\s+B310|{_NOQA}\s*S310)\s*[—–-]?\s*(?P<reason>.*)")
 
 VALIDATION_MARKERS = (
     "from src.utils.url_guard import",
