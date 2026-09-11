@@ -15,16 +15,19 @@ import os
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from src.utils.url_guard import require_http_url
+
 logger = logging.getLogger("tranc3.ai_gateway.providers.llamacpp")
 
-_BASE = os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091")
+# Operator-supplied, so it selects the scheme -- see the note in vllm.py.
+_BASE = require_http_url(os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091"))
 _DEFAULT_MODEL = os.getenv("LLAMACPP_MODEL", "local")
 
 
 def is_available() -> bool:
     try:
         req = urllib.request.Request(f"{_BASE}/health", method="GET")
-        urllib.request.urlopen(req, timeout=2)  # nosec B310
+        urllib.request.urlopen(req, timeout=2)  # nosec B310 — scheme validated at import
         return True
     except Exception:
         return False
@@ -52,7 +55,7 @@ def chat(
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310
+    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — scheme validated at import
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"]
 

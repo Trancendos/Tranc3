@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from src.utils.url_guard import is_http_url
+
 logger = logging.getLogger("tranc3.ai_gateway.zero_cost")
 
 
@@ -594,10 +596,15 @@ def discover_available_providers() -> Dict[str, bool]:
 
 def _check_ollama_available(host: str) -> bool:
     """Quick check if Ollama is running locally."""
+    if not is_http_url(host):
+        # OLLAMA_HOST is operator-supplied. Without this, a file:// value would make
+        # urlopen read a local file, return successfully, and report Ollama "available".
+        logger.warning("_check_ollama_available: rejecting non-http(s) host %r", host)
+        return False
     try:
         import urllib.request
 
-        urllib.request.urlopen(f"{host}/api/tags", timeout=2)  # nosec B310 — Ollama health on configured localhost host
+        urllib.request.urlopen(f"{host}/api/tags", timeout=2)  # nosec B310 — scheme checked above
         return True
     except Exception:
         return False
@@ -605,10 +612,13 @@ def _check_ollama_available(host: str) -> bool:
 
 def _check_http_available(url: str) -> bool:
     """Quick HTTP probe to check if a local service is running."""
+    if not is_http_url(url):
+        logger.warning("_check_http_available: rejecting non-http(s) URL %r", url)
+        return False
     try:
         import urllib.request
 
-        urllib.request.urlopen(url, timeout=2)  # nosec B310 — probing configured local service URL
+        urllib.request.urlopen(url, timeout=2)  # nosec B310 — scheme checked above
         return True
     except Exception:
         return False

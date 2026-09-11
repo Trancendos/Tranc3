@@ -16,16 +16,22 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from src.utils.url_guard import require_http_url
+
 logger = logging.getLogger("tranc3.ai_gateway.providers.vllm")
 
-_VLLM_BASE = os.getenv("VLLM_BASE_URL", "http://localhost:8090/v1")
+# VLLM_BASE_URL is operator-supplied, so it selects the scheme and therefore which
+# urllib handler runs. Checked once at import rather than at each of the three call
+# sites below, so a bad value fails loudly on startup instead of turning into a
+# "provider unavailable" that looks identical to the service being down.
+_VLLM_BASE = require_http_url(os.getenv("VLLM_BASE_URL", "http://localhost:8090/v1"))
 _DEFAULT_MODEL = os.getenv("VLLM_DEFAULT_MODEL", "meta-llama/Llama-3.2-3B-Instruct")
 
 
 def is_available() -> bool:
     try:
         req = urllib.request.Request(f"{_VLLM_BASE}/models", method="GET")
-        urllib.request.urlopen(req, timeout=2)  # nosec B310 — configured host
+        urllib.request.urlopen(req, timeout=2)  # nosec B310 — scheme validated at import
         return True
     except Exception:
         return False
@@ -34,7 +40,7 @@ def is_available() -> bool:
 def list_models() -> List[str]:
     try:
         req = urllib.request.Request(f"{_VLLM_BASE}/models", method="GET")
-        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
+        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310 — scheme validated at import
             data = json.loads(resp.read())
             return [m["id"] for m in data.get("data", [])]
     except Exception:
@@ -63,7 +69,7 @@ def chat(
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310
+    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — scheme validated at import
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"]
 

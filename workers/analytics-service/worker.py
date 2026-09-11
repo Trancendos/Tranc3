@@ -641,11 +641,16 @@ def metric_timeseries(
     limit: int = Query(90, le=365),
 ) -> Dict[str, Any]:
     fmt = "%Y-%m-%dT%H" if bucket == "hour" else "%Y-%m-%d"
+    # `is not None`, matching get_metric and _polars_aggregate: since=0.0 is a
+    # real bound (midnight 1970) and a truthiness test silently drops it. This
+    # endpoint kept the truthiness form after the other two were fixed, which is
+    # how the same defect survives a fix -- by living in a third place nobody
+    # listed.
     clauses, params = ["name = ?"], [name]
-    if since:
+    if since is not None:
         clauses.append("timestamp >= ?")
         params.append(since)
-    if until:
+    if until is not None:
         clauses.append("timestamp <= ?")
         params.append(until)
     where = "WHERE " + " AND ".join(clauses)

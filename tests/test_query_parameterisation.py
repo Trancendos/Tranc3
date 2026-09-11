@@ -74,20 +74,36 @@ def _interpolation_kind(value: ast.expr) -> str | None:
     did not make: `"... '" + prefix + "'"`, `"...{}".format(prefix)` and
     `"...%s" % prefix` are the same injection and all three would have passed.
     Raised by cubic on PR #1207.
+
+    Then it covered four forms and still missed two -- `str.format_map(mapping)`
+    and `string.Template(...).substitute(...)` / `.safe_substitute(...)` -- which
+    cubic also caught, on the same PR, in the fix for the first miss. The lesson
+    is about the shape of the check rather than the list: an allowlist of known
+    interpolation spellings is open-ended, so the rule below is inverted. A query
+    value is acceptable only if it is a plain string constant; anything else is
+    reported, including a spelling nobody has thought of yet.
     """
+    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+        return None
+
+    # Named forms, so the failure message says what was actually written.
     if isinstance(value, ast.JoinedStr):
         return "f-string"
     if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add):
         return "+ concatenation"
     if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Mod):
         return "% formatting"
-    if (
-        isinstance(value, ast.Call)
-        and isinstance(value.func, ast.Attribute)
-        and value.func.attr in {"format", "join"}
-    ):
-        return f".{value.func.attr}()"
-    return None
+    if isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute):
+        attr = value.func.attr
+        if attr in {"format", "format_map", "join"}:
+            return f".{attr}()"
+        if attr in {"substitute", "safe_substitute"}:
+            return f"string.Template.{attr}()"
+
+    # Anything that is not a plain constant and not a form named above. Reported
+    # rather than waved through, because "I do not recognise this" and "this is
+    # safe" are different answers and only one of them is knowable here.
+    return f"non-constant query expression ({type(value).__name__})"
 
 
 def test_no_cosmos_query_is_built_by_interpolation():
@@ -114,6 +130,23 @@ def test_no_cosmos_query_is_built_by_interpolation():
         ('query = "SELECT * FROM c WHERE id = %s" % path', "% formatting"),
         ('query = "SELECT c.id FROM c"', None),
         ('query = "SELECT c.id FROM c WHERE STARTSWITH(c.id, @prefix)"', None),
+        # The two cubic found missing from the allowlist version.
+        ('query = "SELECT * FROM c WHERE id = {p}".format_map(d)', ".format_map()"),
+        (
+            'query = Template("SELECT * FROM c WHERE id = $p").substitute(p=path)',
+            "string.Template.substitute()",
+        ),
+        (
+            'query = Template("SELECT * FROM c WHERE id = $p").safe_substitute(p=path)',
+            "string.Template.safe_substitute()",
+        ),
+        # The point of inverting the rule: an unnamed form is still reported.
+        (
+            "query = build_query(prefix)",
+            "non-constant query expression (Call)",
+        ),
+        ("query = QUERIES[kind]", "non-constant query expression (Subscript)"),
+        ("query = base_query", "non-constant query expression (Name)"),
     ],
 )
 def test_interpolation_detector_catches_every_form(source, expected):
@@ -256,3 +289,136 @@ def test_match_with_dollar_accepts_a_trailing_newline(candidate):
     """
     assert re.match(r"^[a-zA-Z0-9_]+$", candidate) is not None
     assert re.fullmatch(r"[a-zA-Z0-9_]+", candidate) is None
+
+
+# --------------------------------------------------------------------------
+# Placeholders and bindings must match, per branch
+# --------------------------------------------------------------------------
+
+
+def _placeholders(text: str) -> set[str]:
+    """@names referenced by a Cosmos query string."""
+    return set(re.findall(r"@[A-Za-z_][A-Za-z0-9_]*", text))
+
+
+def _bound_names(node: ast.AST) -> set[str]:
+    """@names bound by `[{"name": "@x", "value": ...}]` literals under `node`."""
+    bound: set[str] = set()
+    for sub in ast.walk(node):
+        if not isinstance(sub, ast.Dict):
+            continue
+        for key, value in zip(sub.keys, sub.values, strict=False):
+            if (
+                isinstance(key, ast.Constant)
+                and key.value == "name"
+                and isinstance(value, ast.Constant)
+                and isinstance(value.value, str)
+                and value.value.startswith("@")
+            ):
+                bound.add(value.value)
+    return bound
+
+
+def _query_texts(node: ast.AST) -> list[str]:
+    return [
+        n.value.value
+        for n in ast.walk(node)
+        if isinstance(n, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "query" for t in n.targets)
+        and isinstance(n.value, ast.Constant)
+        and isinstance(n.value.value, str)
+    ]
+
+
+def _functions_with_query_items() -> list[ast.FunctionDef]:
+    tree = ast.parse(SMART_STORAGE.read_text())
+    out = []
+    for func in ast.walk(tree):
+        if not isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if any(
+            isinstance(c, ast.Call)
+            and isinstance(c.func, ast.Attribute)
+            and c.func.attr == "query_items"
+            for c in ast.walk(func)
+        ):
+            out.append(func)
+    return out
+
+
+def test_every_placeholder_is_bound_and_every_binding_is_used():
+    """A `parameters=` keyword being present is not the property that matters.
+
+    The earlier check asserted only that `parameters=` was passed. It therefore
+    accepted `parameters=None` (correct, on the branch whose query has no
+    placeholder) and would equally have accepted `@prefix` in the query bound as
+    `@prefx` in the parameters -- a runtime failure, not a caught one. CodeRabbit
+    raised this on PR #1207.
+
+    This checks the pairing in both directions, per function: no placeholder
+    goes unbound, and no binding is dead.
+    """
+    functions = _functions_with_query_items()
+    assert functions, "no query_items() call sites found; re-point this test"
+
+    for func in functions:
+        used = (
+            set().union(*(_placeholders(t) for t in _query_texts(func)))
+            if _query_texts(func)
+            else set()
+        )
+        bound = _bound_names(func)
+        assert used <= bound, (
+            f"{func.name}(): query text references {sorted(used - bound)} with no "
+            f"matching binding. Cosmos DB rejects an unbound placeholder at runtime."
+        )
+        assert bound <= used, (
+            f"{func.name}(): binds {sorted(bound - used)}, which no query text "
+            f"references. A binding the query does not use is usually a renamed "
+            f"placeholder that was only half-renamed."
+        )
+
+
+def test_a_query_without_placeholders_binds_nothing():
+    """The empty-prefix branch, stated as a property rather than assumed.
+
+    `list_keys` starts with a plain `SELECT c.id FROM c` and `parameters = None`,
+    and only switches to the `@prefix` form when a prefix was supplied. That is
+    correct, but it is correct *because* the two move together -- so that is what
+    is checked here, rather than the presence of the keyword.
+    """
+    for func in _functions_with_query_items():
+        for text in _query_texts(func):
+            if not _placeholders(text):
+                continue
+            assert _bound_names(func), (
+                f"{func.name}(): query {text!r} carries a placeholder but the "
+                f"function binds no parameters at all."
+            )
+
+
+class TestThePairingCheckWouldCatchIt:
+    def test_a_typo_in_a_binding_is_detected(self):
+        tree = ast.parse(
+            "def f():\n"
+            '    query = "SELECT c.id FROM c WHERE STARTSWITH(c.id, @prefix)"\n'
+            '    parameters = [{"name": "@prefx", "value": prefix}]\n'
+            "    return container.query_items(query=query, parameters=parameters)\n"
+        )
+        func = tree.body[0]
+        used = set().union(*(_placeholders(t) for t in _query_texts(func)))
+        assert used == {"@prefix"}
+        assert _bound_names(func) == {"@prefx"}
+        assert not (used <= _bound_names(func)), "the unbound-placeholder check would not fire"
+
+    def test_a_dead_binding_is_detected(self):
+        tree = ast.parse(
+            "def f():\n"
+            '    query = "SELECT c.id FROM c"\n'
+            '    parameters = [{"name": "@prefix", "value": prefix}]\n'
+            "    return container.query_items(query=query, parameters=parameters)\n"
+        )
+        func = tree.body[0]
+        used = set().union(*(_placeholders(t) for t in _query_texts(func))) or set()
+        assert _bound_names(func) == {"@prefix"} and used == set()
+        assert not (_bound_names(func) <= used), "the dead-binding check would not fire"

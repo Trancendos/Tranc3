@@ -119,13 +119,36 @@ skips = [
   #   health_check, n1_checker) take a URL as a parameter. A justification is
   #   not improved by widening the claim it makes.
   #
-  #   SCOPED STATEMENT, which is the only kind that can be checked. This skip
-  #   applies to what `targets`/`exclude_dirs` above actually scan -- `src` and
-  #   `api.py`. Within that scope every urlopen targets either an internal
-  #   service-mesh endpoint resolved from validated config, or a hardcoded
-  #   public HTTPS prefix whose variable segment is constrained by a fullmatch
-  #   allowlist; neither shape lets a caller choose the scheme. A new call site
-  #   in scope that is neither shape is not covered and needs its own reason.
+  #   The scoped rewrite that followed said no in-scope call site lets a caller
+  #   choose the scheme. cubic checked, and that was wrong too: `vllm.py`,
+  #   `llamacpp.py`, `zero_cost_config.py`'s two probes and `roadmap_generator.py`
+  #   all built their URL from an env var with no scheme check, and `urlopen`'s
+  #   default opener carries a FileHandler -- so `file:///etc/passwd` was a
+  #   successful request returning file contents. `wazuh_connector.py` was a sixth,
+  #   found while fixing those. All six now validate through the shared
+  #   `src/utils/url_guard.py`. The five call sites that already had the check
+  #   (`layer_rotator`, `meilisearch_client`, `web_scraper`, `misp_connector`,
+  #   `security_checks`) keep their inline versions -- they were correct, and
+  #   `meilisearch_client`'s additionally reconstructs the URL to break CodeQL's
+  #   taint chain, which the shared helper deliberately does not do. So this is one
+  #   definition for new code, not a completed consolidation of the old.
+  #
+  #   Three wrong justifications in a row is not a wording problem. A claim written
+  #   in a comment has nothing checking it, so it decays while the code moves. The
+  #   claim therefore now lives in `tests/test_url_scheme_guard.py`, which enforces
+  #   what this paragraph would otherwise only assert:
+  #
+  #     * every urlopen in bandit's scanned scope (`src`, `api.py`) carries an
+  #       explicit B310 suppression -- the blanket skip hides them either way, and
+  #       the marker is what makes them findable;
+  #     * every suppression states a reason;
+  #     * every reason is one of exactly two shapes, verified against the code --
+  #       "scheme validated" requires a real scheme check or a `url_guard` import
+  #       in that file, and "hardcoded https" requires a literal https:// value
+  #       visible from that call's own scope chain.
+  #
+  #   A new in-scope call site that is neither shape fails that test. Read it
+  #   rather than this comment if the two ever disagree.
   #
   #   Call sites OUTSIDE that scope are not covered by this skip because bandit
   #   never reaches them: `scripts/` is in `exclude_dirs`, so B310 does not run
