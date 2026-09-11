@@ -888,7 +888,7 @@ those would pass every attack test while breaking the feature — and the
 guard's blindness case.
 
 **Next review.** The two `py/sql-injection` alerts were predicted to persist,
-and **measured at `bc074c33`, they did** — still reported at `adapter.py:436`
+and **measured at `bc074c33` and again at `6fae9678`, they did** — still reported at `adapter.py:436`
 and `:446`. The prediction holding is the useful part: it confirms the shape is
 an unmodelled sanitiser rather than an unfixed defect, which is what
 distinguishes this entry from a vulnerability. A CodeQL model pack declaring
@@ -1051,13 +1051,25 @@ how it *validates*. The precondition is write access inside `Path.cwd()`, `/tmp`
 or `$HOME`; an attacker with that already has better options against this process
 than racing a scaffold generator. Not fixed, and not silently left out.
 
-**Next review.** Expect both alerts to persist. `_resolve_output_base` still ends
-in a validated `Path` returned to a caller, and CodeQL does not model a raising
-validator as a sanitiser — the limitation SEC-013 and SEC-014 both record. The
-useful test is whether the *flow* changes: the sink at the old `:68` should
-disappear with the dead branch, and the remaining one should point at the
-post-check `resolve()` rather than a pre-check one. Vulnerability-fixed and
-alert-cleared remain different facts, and only a scan settles the second.
+**Next review — measured, and the prediction did NOT hold.** This entry
+predicted both alerts would persist, reasoning that `_resolve_output_base` still
+returns a validated `Path` to a caller and that CodeQL does not model a raising
+validator as a sanitiser.
+
+**Both cleared.** Read from the retained SARIF for `6fae9678`
+(run 34588789164): zero `py/path-injection` alerts on `src/personality/spawner.py`.
+
+The reasoning was wrong in a specific and useful way. The flagged sinks were
+never the *return value* — they were the `Path(...).resolve()` and
+`parent.exists()` probes themselves, which is what this entry's own analysis
+established and then failed to carry into its prediction. Replacing them with
+`os.lstat` and `os.readlink` removed the sinks, so there was nothing left for the
+taint to reach. The unmodelled-sanitiser limitation is real (SEC-014 and SEC-018
+still demonstrate it) but it was never what governed this alert.
+
+Recorded plainly because a prediction that missed is worth more than one that
+held: it says the model of *why* an alert persists was wrong, and that model was
+about to be reused.
 
 
 ---
@@ -1226,12 +1238,13 @@ service is wired in" — so the exposure is latent rather than live. That lowers
 today's urgency and not the severity of the defect: the fix belongs in the code
 before the service is wired in, not after.
 
-**Next review.** Unlike SEC-014 and SEC-015, these three alerts are expected to
-**clear**. The taint no longer reaches a path expression: `safe_join`'s return
-value is declared a barrier for `path-injection` in
-`.github/codeql/tranc3-python-models/models/path-validation.yml`. If they do not
-clear, the model pack is not being applied to `workers/`, and that is the finding
-to chase — not the fix.
+**Next review — measured, and the prediction held.** All three cleared. Read
+from the retained SARIF for `6fae9678` (run 34588789164): zero
+`py/path-injection` alerts on `workers/gateway-service/router.py`.
+
+This also answers the contingency the entry named: the model pack **is** being
+applied to `workers/`, so `safe_join`'s barrier declaration works there. That was
+worth knowing independently of this fix.
 
 
 ---
@@ -1379,10 +1392,13 @@ so that half is tested as deliberately as the refusals.
   rejects it first. Kept as a test, because "already correct, for a different
   reason" is a result worth recording rather than quietly folding into the fix.
 
-**Next review.** The reported alert should clear: `safe_join` is a declared
-barrier in the model pack. The unreported write has no alert to clear, so the
-tests are its only evidence — which is the durable argument for the guard living
-in the test suite rather than in a scanner's expectations.
+**Next review — measured, and the prediction held.** The reported alert
+cleared: zero `py/path-injection` alerts on `src/backup/engine.py` in the
+retained SARIF for `6fae9678` (run 34588789164).
+
+The unreported write still has no alert to clear, which is the durable point: its
+only evidence is the test suite. A scanner that never named the more serious of
+two defects in one file is not the thing to measure that fix against.
 
 
 ---
@@ -1464,10 +1480,14 @@ default. `urlsplit("https://u:p@host:0/").port` is `0`, and `bool(0)` is False.
 Now `is not None`, with a test for the absent-port case too, so the fix cannot
 have become "always append".
 
-**Next review.** All four alerts are expected to **persist**: the code still
-logs variables named `secret_name` and `secret_id`, which is what the rule
-matches on. Renaming them to satisfy a scanner would make the code worse. This
-entry is the standing answer.
+**Next review — measured, and the prediction held.** All four persist in the
+retained SARIF for `6fae9678` (run 34588789164), at `vault_client.py:104`,
+`:107`, `:147` and `jwt_rotator.py:106`. The first three moved by exactly the 39
+lines `_without_userinfo` added — the same three alerts, not new ones.
+
+They will keep persisting: the code still logs variables named `secret_name` and
+`secret_id`, which is what the rule matches on. Renaming them to satisfy a
+scanner would make the code worse. This entry is the standing answer.
 
 
 ### SEC-019 — the fix that would have moved real users (`py/weak-sensitive-data-hashing`, 7.5)
@@ -1518,8 +1538,9 @@ replacement must satisfy: buckets in `[0, 1)`, roughly uniform (a 10% rollout
 reaching 8–12% of a 5,000-user sample), sticky per user, and independent across
 flags — otherwise every 10% rollout would target the same 10% of users.
 
-**Next review.** Expected to **persist**, for the same reason as SEC-018: the
-rule matches the construct, not the risk. Revisit if the platform adopts a
+**Next review — measured, and the prediction held.** Persists at
+`feature_flags.py:296` in the retained SARIF for `6fae9678` (run 34588789164),
+for the same reason as SEC-018: the rule matches the construct, not the risk. Revisit if the platform adopts a
 FIPS-mode interpreter that omits MD5 entirely — `usedforsecurity=False` already
 covers FIPS builds that merely restrict it — in which case the re-bucketing
 becomes unavoidable and should be planned and announced, not slipped in.
