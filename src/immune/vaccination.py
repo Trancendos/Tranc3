@@ -93,6 +93,17 @@ class Immunity:
     def proven(self) -> bool:
         return self.probed and self.outcome == Outcome.OK.value
 
+    @property
+    def absent(self) -> bool:
+        """The tool is not on this machine — a fact about the runner, not the scan.
+
+        Defined here rather than compared inline at each site, because it was
+        already compared inline at three and missed at two more: `render()`
+        printed absent as BLIND, and `stale_sensors()` counted it as a probed
+        sensor that had never proved anything. Both found by cubic on PR #1150.
+        """
+        return self.outcome == Outcome.ABSENT.value
+
     def days_since_proven(self, today: date | None = None) -> int | None:
         """How long since this sensor demonstrated sight. None if it never has."""
         if not self.last_proven:
@@ -329,6 +340,14 @@ def render(report: VaccinationReport, *, today: date | None = None) -> str:
             mark, state = "  ", "unprobed"
         elif record.proven:
             mark, state = "ok", "sees"
+        elif record.absent:
+            # Third state, and it has to be rendered as one. `vaccinate()`
+            # already refuses to collapse absent into blind; printing it as
+            # BLIND put the collapse back at the only place an operator
+            # actually reads. A distinction that survives in the data and dies
+            # in the report is not a distinction anyone has.
+            # Reported by cubic on PR #1150.
+            mark, state = "--", "absent"
         else:
             mark, state = "!!", "BLIND"
         tag = "(required)" if record.required else ""
@@ -362,9 +381,20 @@ def stale_sensors(
     record if nothing has run the probe for a month. This is what catches the
     schedule itself having quietly stopped -- the control that watches the
     watcher, which is the failure this whole module was built around.
+
+    ABSENT SENSORS ARE NOT STALE, and this is the third place that distinction
+    had to be made rather than the first. `blind_required` already excludes
+    them from failures on purpose: a tool that is not installed has nothing to
+    prove here, and asking it to prove something on a schedule makes the
+    declared gap read as an incident. An absent record carries no proof date
+    and never will, so `age is None` matched it on every run and `--max-age`
+    turned a written, accepted gap into IMMUNITY LOST. Reported by cubic on
+    PR #1150.
     """
     out = []
     for record in records:
+        if record.absent:
+            continue
         age = record.days_since_proven(today)
         if age is None or age > max_age_days:
             out.append(record)

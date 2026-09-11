@@ -28,19 +28,39 @@ _ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture(scope="module")
-def tateking(tmp_path_factory):
-    """Import the worker with its media root pointed at a temp directory."""
+def tateking(tmp_path_factory, monkeypatch_module):
+    """Import the worker with its data paths already pointed at a temp directory.
+
+    The env vars are set BEFORE `exec_module`, not after. The worker resolves
+    `DB_PATH` and `MEDIA_DIR` at import and calls `mkdir` on both, so assigning
+    `module.MEDIA_DIR` afterwards was too late: importing it had already created
+    `workers/tateking/data/media/` inside the checkout, on every run. A test
+    that writes into the repository to prove a containment guard works is not a
+    contained test. Reported by cubic on PR #1150.
+    """
     media = tmp_path_factory.mktemp("media")
+    db = tmp_path_factory.mktemp("db") / "tateking.db"
+    monkeypatch_module.setenv("TATEKING_MEDIA_DIR", str(media))
+    monkeypatch_module.setenv("TATEKING_DB_PATH", str(db))
+
     path = _ROOT / "workers" / "tateking" / "worker.py"
     spec = importlib.util.spec_from_file_location("tateking_worker_under_test", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    module.MEDIA_DIR = media
+
+    assert module.MEDIA_DIR == media, "the worker did not honour TATEKING_MEDIA_DIR"
     (media / "clip.mp4").write_bytes(b"not really a video")
     (media / "nested").mkdir()
     (media / "nested" / "b.mp4").write_bytes(b"also not")
     return module
+
+
+@pytest.fixture(scope="module")
+def monkeypatch_module():
+    """`monkeypatch` is function-scoped; this fixture is module-scoped."""
+    with pytest.MonkeyPatch.context() as patcher:
+        yield patcher
 
 
 class TestMediaContainment:
@@ -117,10 +137,11 @@ class TestClipBoundary:
     """
 
     @pytest.fixture()
-    def client(self, tateking, tmp_path, monkeypatch):
+    def client(self, tateking):
         from fastapi.testclient import TestClient
 
-        monkeypatch.setattr(tateking, "DB_PATH", tmp_path / "tateking.db", raising=False)
+        # No path patching here: the module fixture pointed DB_PATH at a temp
+        # location before the import, so this only has to create the schema.
         tateking.init_db()
         secret = getattr(tateking, "INTERNAL_SECRET", "") or ""
         headers = {"X-Internal-Secret": secret} if secret else {}

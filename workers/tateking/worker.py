@@ -28,8 +28,13 @@ from Dimensional.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8066")
 WORKER_NAME = "tateking"
-DB_PATH = Path(__file__).parent / "data" / "tateking.db"
-MEDIA_DIR = Path(__file__).parent / "data" / "media"
+# Env-overridable, matching `VAULT_DB_PATH` and the other workers. Not
+# cosmetic: these two lines run at IMPORT, so anything that imports this module
+# -- the test suite included -- created `workers/tateking/data/media/` inside
+# the checkout. A test that writes into the repository to prove a containment
+# guard works is not a contained test. Reported by cubic on PR #1150.
+DB_PATH = Path(os.getenv("TATEKING_DB_PATH") or Path(__file__).parent / "data" / "tateking.db")
+MEDIA_DIR = Path(os.getenv("TATEKING_MEDIA_DIR") or Path(__file__).parent / "data" / "media")
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -75,8 +80,27 @@ def _contained_media(raw: str) -> Path:
     root = MEDIA_DIR.resolve()
     candidate = Path(raw)
     if candidate.is_absolute():
+        # LEXICALLY relative, with no `.resolve()` on the raw value. The first
+        # version of this guard wrote `candidate.resolve().relative_to(root)`,
+        # and CodeQL kept reporting `py/path-injection` here -- correctly. The
+        # containment verdict was right, but `resolve()` is a filesystem
+        # operation performed ON the attacker's string before anything has
+        # checked it, so the fix for a path-injection alert contained a path
+        # expression built from uncontrolled data. Reported by cubic and by
+        # CodeQL itself on PR #1150.
+        #
+        # Nothing is lost by dropping it, and that was measured rather than
+        # assumed: `safe_join` resolves the JOINED path and re-checks
+        # containment, so every case still lands the same way -- including a
+        # symlink planted inside the root and pointing out of it, which is the
+        # one people expect the early `resolve()` to be carrying.
+        #
+        # One behaviour does narrow, deliberately: a path outside the root that
+        # merely symlinks back in is now refused. Accepting an arbitrary
+        # filesystem path because of where it happens to point is not a
+        # property worth keeping.
         try:
-            parts = candidate.resolve().relative_to(root).parts
+            parts = candidate.relative_to(root).parts
         except ValueError:
             raise PathTraversalError(
                 f"clip file_path is outside the media root: {raw!r} is not under {root}"

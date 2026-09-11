@@ -82,10 +82,24 @@ class Proposal:
     paths: list[str] = field(default_factory=list)
     diff: str = ""
     findings: int = 0
+    #: Set when the fixer could not run or exited in a way that is not a
+    #: verdict. A proposal carrying this is NOT a fix and must never be counted
+    #: as one -- see `empty`. It was previously communicated by writing the
+    #: error into `diff`, which made `empty` false, which made `acted` true, so
+    #: "the tool crashed" rendered as "a fix is proposed" and the audit recorded
+    #: an action. That is the precise confusion this module's own comment warns
+    #: about, reproduced two lines below the warning. Reported by cubic on
+    #: PR #1150.
+    failure: str = ""
+
+    @property
+    def failed(self) -> bool:
+        return bool(self.failure)
 
     @property
     def empty(self) -> bool:
-        return not self.diff.strip()
+        """No fix on offer. A failure is empty: it proposed nothing."""
+        return self.failed or not self.diff.strip()
 
 
 @dataclass
@@ -109,6 +123,13 @@ class AntibodyRun:
             ],
             "refused": [
                 {"reason": r.reason, "detail": r.detail, "paths": r.paths} for r in self.refusals
+            ],
+            # A fixer that could not run is recorded, because an audit trail
+            # that omits "the tool was broken" is one where a run with no
+            # proposals reads the same whether the estate was clean or the
+            # scanner never answered.
+            "could_not_run": [
+                {"rule": p.rule, "failure": p.failure} for p in self.proposals if p.failed
             ],
         }
 
@@ -183,7 +204,12 @@ def screen(
 
     paths = sorted({f.path for f in candidates})
     if len(paths) > max_files:
-        keep = set(paths[:max_files])
+        # `max(0, ...)` because a negative ceiling is a negative slice, and
+        # `paths[:-3]` keeps everything but the last three rather than keeping
+        # nothing. A scope ceiling that widens scope when misconfigured is
+        # worse than no ceiling, since the number still reads like a limit.
+        # Reported by cubic on PR #1150.
+        keep = set(paths[: max(0, max_files)])
         refusals.append(
             Refusal(
                 "scope limit",
@@ -237,11 +263,25 @@ def propose_ruff_fix(
             check=False,
         )
     except (subprocess.SubprocessError, OSError) as exc:
-        # A tool that could not run proposes nothing, and says so in the diff
-        # rather than returning an empty one -- an empty diff and a crashed
-        # scanner look identical to a caller, and this whole codebase exists
-        # because those two states kept getting confused.
-        return Proposal(rule="ruff", paths=list(paths), diff=f"# ruff could not run: {exc}\n")
+        # A tool that could not run proposes nothing, and says so in `failure`
+        # rather than in `diff` -- an empty diff and a crashed scanner look
+        # identical to a caller, and this whole codebase exists because those
+        # two states kept getting confused. Writing the error into `diff` made
+        # them identical in the OTHER direction: non-empty diff, so `acted` was
+        # true and the audit recorded a fix that does not exist.
+        return Proposal(rule="ruff", paths=list(paths), failure=f"ruff could not run: {exc}")
+    # Measured against ruff 0.15.8: `check --diff` exits 0 when there is nothing
+    # to fix and 1 when there is a diff to apply, so 1 is a verdict, not an
+    # error. Anything else is ruff declining to answer -- a bad argument, a
+    # config it cannot parse, an internal failure -- and must not be read as
+    # "no fix needed".
+    if proc.returncode not in (0, 1):
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        return Proposal(
+            rule="ruff",
+            paths=list(paths),
+            failure=f"ruff exited {proc.returncode}: {detail[-1] if detail else 'no output'}",
+        )
     return Proposal(rule="ruff", paths=list(paths), diff=proc.stdout)
 
 
@@ -260,12 +300,26 @@ def render(run: AntibodyRun) -> str:
             if len(refusal.paths) > 5:
                 lines.append(f"        ...and {len(refusal.paths) - 5} more")
 
+    # A fixer that could not run is its own line, not silence and not a fix.
+    # It reads next to REFUSED because that is what it is operationally -- no
+    # change is on offer -- but it is a different fact from a refusal, and the
+    # reader is owed the difference.
+    failed = [p for p in run.proposals if p.failed]
+    if failed:
+        lines.append("")
+        lines.append("  COULD NOT RUN:")
+        for proposal in failed:
+            lines.append(f"    - {proposal.rule}: {proposal.failure}")
+
     acted = [p for p in run.proposals if not p.empty]
     if acted:
         lines.append("")
         lines.append("  PROPOSED (a diff — nothing has been written):")
         for proposal in acted:
-            lines.append(f"    {proposal.rule}: {len(proposal.paths)} file(s)")
+            lines.append(
+                f"    {proposal.rule}: {len(proposal.paths)} file(s) "
+                f"from {proposal.findings} finding(s)"
+            )
             for path in proposal.paths:
                 lines.append(f"        {path}")
     else:

@@ -82,22 +82,38 @@ def main() -> int:
     # weeks back passed `--max-age 3` cleanly. Reported by cubic on PR #1150.
     #
     # Read against the committed record it means something real: "no fresh
-    # proof of sight has been recorded for N days". In CI that is the only
-    # durable signal available, because the job holds no write token by design
-    # and cannot refresh the record itself -- so the remedy it points at is a
-    # person or an agent running `--record` and committing the result.
+    # proof of sight has been recorded for N days". The remedy it points at is
+    # a person or an agent running `--record` and committing the result.
+    #
+    # WHICH IS WHY THE DAILY JOB NO LONGER PASSES IT. That job runs the probes
+    # itself, so the committed record's age tells it nothing about sight, and it
+    # holds no write token by design, so it cannot perform the remedy. Given
+    # enough calendar its only possible outcome was a permanent red nobody
+    # inside the job could clear -- a control shaped exactly like the `label`
+    # check this repository already had to stop believing. It was removed from
+    # `supply-chain-watch.yml` and the reason is written there.
+    #
+    # The flag stays for the caller who CAN act: a person at a terminal, or a
+    # PR-time check where a human is present and the fix is one command.
     if args.max_age is not None:
         if not previous:
             failures.append(
                 f"no immunity record at {args.record_path} — nothing has ever "
                 "recorded that these sensors could see"
             )
-        stale = stale_sensors([r for r in previous.values() if r.probed], max_age_days=args.max_age)
-        for record in stale:
+        # Only sensors the manifest still declares. A record for a sensor that
+        # has since been removed describes a scanner this estate no longer runs,
+        # and failing on its age asks a deleted thing to keep proving itself.
+        # Reported by cubic on PR #1150.
+        current = {r.sensor for r in report.records}
+        candidates = [r for r in previous.values() if r.probed and r.sensor in current]
+        for record in stale_sensors(candidates, max_age_days=args.max_age):
             age = record.days_since_proven()
             failures.append(
                 f"'{record.sensor}' has no recorded proof of sight "
-                + ("at all" if age is None else f"newer than {age} days")
+                # "newer than N days" read backwards -- it described the proof
+                # as recent when N is how long the estate has gone without one.
+                + ("at all" if age is None else f"for {age} days")
                 + f" (limit {args.max_age}) — rerun with --record and commit the result"
             )
 

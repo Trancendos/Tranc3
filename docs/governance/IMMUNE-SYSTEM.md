@@ -448,15 +448,26 @@ not the format:
 
 Not built, and named here so the gap is a decision rather than an omission:
 
-- **Antibodies** — automated fix pull requests per defect class. The parts exist
-  (`scripts/adaptive_vulnerability_remediation.py`, `scripts/apply_repairs.py`,
-  `src/core/mape_k.py`, `src/observability/self_healer.py`) and are not joined
-  to the sensor layer. The right next step, and the one with the most autoimmune
-  risk, which is why it is not a side effect of this work.
-- **Vaccination** — deliberately injecting known-defect mutants across the whole
-  sensor set on a schedule and measuring the detection rate as a service level.
-  The probe mechanism is exactly this, per-sensor and on demand; making it a
-  scheduled estate-wide measurement is a small step from here.
+- **Estate-wide mutation testing** — injecting known-defect mutants across the
+  whole tree (not a per-sensor probe in a temporary directory) and reporting the
+  detection rate as a service level. The probe mechanism is a per-sensor,
+  on-demand version of the same idea; the estate-wide measurement is not built.
+- **Detecting that the schedule itself stopped.** `supply-chain-watch.yml` runs
+  the probes daily. If that workflow stops firing, nothing anywhere notices.
+  `--max-age` was once passed there as the answer and was never capable of being
+  one: a check inside the job that stopped cannot observe that the job stopped,
+  and because the job holds no write token it could never refresh the record it
+  was measuring, so its only eventual outcome was a permanent red nobody could
+  clear. It was removed. This gap is open, and it is recorded as open rather
+  than covered, because a gap with a wrong answer beside it is worse than a
+  blank — nobody re-reads a gap that already looks handled.
+
+**Antibodies and Vaccination were on this list and are now built.** Both moved
+off it in the same pull request that added them, which is the only reason this
+paragraph exists: for one commit the document said "not built" a hundred lines
+above two sections describing the built thing, and a reader could not tell which
+was true. Reported by cubic on PR #1150. See "Antibodies" and "Vaccination"
+below for what each actually does.
 
 ## Vaccination: proving sight on a clock
 

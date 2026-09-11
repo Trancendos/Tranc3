@@ -244,9 +244,24 @@ def _cut_at_repo_content(text: str) -> str:
     the enclosing fallback stop asking what the checkout is called.
 
     When nothing verifies -- a file deleted since the scan, a path from a
-    different revision -- fall back to the LAST match rather than the first.
-    The repository's own directory sits closest to the file it contains, so on
-    a nested path the last match is right far more often than the first.
+    different revision -- the fallback is in two stages, and the docstring used
+    to describe only the second. Reported by cubic on PR #1150: it promised
+    "fall back to the LAST match", which stopped being what the code did once
+    the parent-directory stage was added, so the comment and the function
+    disagreed in a file whose entire subject is making the cut obvious.
+
+    Stage one: the SHALLOWEST candidate whose parent directory is a real,
+    non-root directory of this repository. Shallowest, not last, and on purpose
+    -- the deepest match is the innermost repeated name, which on a path like
+    `/home/src/x/src/gone.py` cuts at the inner `src/` even though nothing
+    around it is real. Anchoring on a directory that exists keeps the cut
+    inside genuine repository structure while the file itself is missing.
+
+    Stage two, only when no candidate has a real parent: the LAST match. At
+    that point nothing about the path can be verified against the tree, and the
+    repository's own directory sits closest to the file it contains, so the
+    deepest match is right more often than the shallowest. That is a tiebreak
+    among unverifiable options, not a preference.
     """
     segments = text.lstrip("/").split("/")
     matches = [i for i, segment in enumerate(segments) if segment in _TOP_LEVEL]

@@ -1224,3 +1224,70 @@ def test_a_path_whose_file_is_gone_still_cuts_at_real_structure():
     assert _relativise("/home/src/checkouts/Tranc3/src/immune/deleted_ages_ago.py") == (
         "src/immune/deleted_ages_ago.py"
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Surfaces — the claim that `touches-the-gate` covers what CI actually runs
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestGateSurfaceCoversCI:
+    """`scripts/*.py` is a claim about this tree, so it gets checked.
+
+    `src/immune/surfaces.py` protects `scripts/*.py` rather than naming the
+    38 non-`check_` scripts CI invokes, on the stated grounds that every file
+    under `scripts/` is estate machinery. cubic's P1 on PR #1150 was that
+    `pre_deploy_quality_gate.py` and `security_score.py` were unprotected and an
+    automated ruff proposal could rewrite the production gate's own entrypoints.
+    The generalisation fixes that; this asserts the generalisation holds.
+    """
+
+    _ROOT = Path(__file__).resolve().parent.parent
+
+    def _workflow_scripts(self) -> set[str]:
+        import re
+
+        found: set[str] = set()
+        for workflow in (self._ROOT / ".github" / "workflows").glob("*.yml"):
+            text = workflow.read_text(encoding="utf-8", errors="ignore")
+            found.update(re.findall(r"scripts/[a-zA-Z_0-9]+\.py", text))
+        return found
+
+    def test_every_script_ci_runs_is_on_the_gate_surface(self):
+        from src.immune.surfaces import surfaces_for
+
+        scripts = sorted(self._workflow_scripts())
+        assert scripts, "found no scripts/*.py in .github/workflows — the regex broke"
+
+        unprotected = [
+            s for s in scripts if "touches-the-gate" not in {e[0] for e in surfaces_for([s])}
+        ]
+        assert not unprotected, (
+            "these scripts gate merges in CI but no surface protects them, so an "
+            f"automated fix could rewrite them: {unprotected}"
+        )
+
+    def test_every_gate_script_is_refused_to_automation(self):
+        """Covered is not the same as protected. `touches-the-gate` must also be
+        in `NEVER_AUTOMATED`, or the label is decoration."""
+        from src.immune.surfaces import forbidden_for_automation
+
+        for script in sorted(self._workflow_scripts()):
+            refusals = forbidden_for_automation([script])
+            assert refusals, f"{script} gates CI but automation is not refused on it"
+
+    def test_scripts_has_no_subdirectories(self):
+        """The generalisation's premise, asserted rather than assumed.
+
+        `scripts/*.py` matches one segment. If someone adds `scripts/lib/x.py`
+        it would fall outside the surface while looking covered, so the premise
+        that makes the glob safe is the thing to test.
+        """
+        nested = sorted(
+            p for p in (self._ROOT / "scripts").rglob("*.py") if p.parent.name != "scripts"
+        )
+        nested = [p for p in nested if "__pycache__" not in str(p)]
+        assert not nested, (
+            "scripts/ has gained subdirectories, so `scripts/*.py` no longer covers it — "
+            f"either flatten these or widen the surface: {[str(p) for p in nested]}"
+        )

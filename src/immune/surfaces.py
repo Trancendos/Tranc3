@@ -29,9 +29,27 @@ SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
     (
         "touches-the-gate",
         (
-            "scripts/check_*.py",
-            "scripts/immune_scan.py",
-            "scripts/vulnerability_census.py",
+            # `scripts/*.py` and not a list of names. The first version named
+            # `check_*.py` plus two files, which left `pre_deploy_quality_gate.py`,
+            # `security_score.py`, `zero_cost_audit.py`, `citadel_preflight.py`
+            # and thirty-odd others unprotected -- an automated ruff proposal
+            # could have rewritten the production gate's own entrypoints.
+            # Reported by cubic on PR #1150.
+            #
+            # Measured: 70 distinct `scripts/*.py` files are invoked by
+            # `.github/workflows/*.yml`, and `check_*.py` covers 32 of them.
+            # Listing the other 38 would be a second inventory to keep in step
+            # with CI, which is the kind of list that goes stale silently.
+            #
+            # The generalisation is honest rather than lazy: this repository's
+            # `scripts/` holds estate machinery only -- checks, builders,
+            # censuses, audits, deploy plans -- and no application code. There
+            # are 135 files there and zero subdirectories, so "a change under
+            # scripts/ touches the gate" is a true statement about this tree,
+            # not a convenient over-approximation. `tests/test_immune.py`
+            # asserts every workflow-invoked script is covered, so the claim is
+            # checked rather than asserted.
+            "scripts/*.py",
             ".github/workflows/production-gate.yml",
             ".github/workflows/ci.yml",
         ),
@@ -82,7 +100,13 @@ SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
     # read from.
     (
         "touches-routing",
-        ("**/docker-compose*.yml", "**/Dockerfile", "api.py"),
+        # `Dockerfile*`, not `Dockerfile`. Measured against this tree, the
+        # exact-name pattern missed four real ones: `docker/Dockerfile.api`,
+        # `Dockerfile.web`, `Dockerfile.worker` and
+        # `deploy/forgejo/runner.Dockerfile` -- images whose CMD decides which
+        # port a service answers on, which is precisely what this surface is
+        # for. Reported by cubic on PR #1150.
+        ("**/docker-compose*.yml", "**/Dockerfile*", "**/*.Dockerfile", "api.py"),
         "changes where traffic goes or which port a service answers on; "
         "the class of defect that leaves a deployed Location unreachable",
     ),
@@ -137,14 +161,43 @@ def matches(path: str, pattern: str) -> bool:
     removes, so the more capable of the two implementations is the one that
     survives.
     """
-    if fnmatch.fnmatch(path, pattern):
+    if _segmented_match(path, pattern):
         return True
-    if "**/" in pattern and fnmatch.fnmatch(path, pattern.replace("**/", "", 1)):
+    if "**/" in pattern and _segmented_match(path, pattern.replace("**/", "", 1)):
         return True
     # `dir/**` should match `dir/file` as well as `dir/a/b`.
     if pattern.endswith("/**") and path.startswith(pattern[:-3] + "/"):
         return True
     return False
+
+
+def _segmented_match(path: str, pattern: str) -> bool:
+    """`fnmatch`, except a single `*` stops at a separator.
+
+    `fnmatch` translates `*` to `.*`, which crosses `/`. So `scripts/*.py`
+    matched `scripts/a/b/c.py`, and — the direction that actually bites —
+    `**/Dockerfile` matched any path ENDING in Dockerfile at any depth only by
+    accident, while `src/auth/**` and `scripts/check_*.py` silently claimed
+    paths they were never meant to. actions/labeler, whose semantics the
+    docstring above promises, treats `*` as within-a-segment and `**` as
+    any-depth. Reported by cubic on PR #1150.
+
+    Implemented by matching segment for segment: the pattern's segments and the
+    path's segments must correspond one to one, with each pair compared by
+    `fnmatch` in isolation so no wildcard can reach past its own segment. The
+    `**` cases are still handled by the caller above, which is where they were
+    already understood.
+    """
+    if "**" in pattern:
+        # Left to the caller's two explicit `**` branches; matching those here
+        # as ordinary segments would re-introduce the crossing this exists to
+        # prevent.
+        return fnmatch.fnmatch(path, pattern)
+    path_parts = path.split("/")
+    pattern_parts = pattern.split("/")
+    if len(path_parts) != len(pattern_parts):
+        return False
+    return all(fnmatch.fnmatch(p, g) for p, g in zip(path_parts, pattern_parts, strict=True))
 
 
 def surfaces_for(paths: list[str]) -> list[tuple[str, str, list[str]]]:

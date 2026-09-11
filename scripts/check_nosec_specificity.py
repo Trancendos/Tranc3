@@ -93,20 +93,39 @@ class Suppression:
     text: str
     rules: list[str]
     reason: str
+    #: Only what follows the `nosec` token. `text` is the whole stripped source
+    #: line, so searching IT for a rule-id pattern also searches the code to the
+    #: left of the comment -- and a line holding a string literal like
+    #: "B101,B102" (a test fixture for this very guard, say) would be reported
+    #: as a malformed suppression while its `# nosec` was perfectly well formed.
+    #: Rule ids can only ever appear after the marker, so everything before it
+    #: is noise this check must not see. Reported by cubic on PR #1150.
+    comment: str = ""
 
     #: A comma with no space after it, between two rule ids. bandit 1.9.4
-    #: parses `B603,B607` as a SINGLE id of that literal text, which matches
-    #: no rule at all -- so the suppression silences only the first id and the
-    #: second is quietly ignored. Measured directly against bandit 1.9.4:
+    #: splits the comment on whitespace, so `B602,B607` arrives as a SINGLE
+    #: token of that literal text, which matches no rule -- and therefore
+    #: silences NOTHING. Not "the first one"; nothing.
     #:
-    #:      # nosec B603,B607   ->  B603 still reported
-    #:      # nosec B603, B607  ->  clean
+    #: Measured directly against bandit 1.9.4, three lines in one file:
     #:
-    #: The line looks like it names two rules. It names one. That is the same
-    #: shape as the bare-`# nosec` defect this file was written for -- a
-    #: suppression whose scope does not match what it says -- except it fails
-    #: in the other direction, leaving a finding visible while the author
-    #: believes it handled. Either way the comment is not true.
+    #:      subprocess.call(cmd, shell=True)  # nosec B602,B607   -> B602 REPORTED
+    #:      subprocess.call(cmd, shell=True)  # nosec B602, B607  -> clean
+    #:      subprocess.call(cmd, shell=True)                      -> B602 REPORTED
+    #:
+    #: The spaceless line behaves exactly like the line with no suppression at
+    #: all. An earlier version of this comment said it "silences only the first
+    #: id", which contradicted the measurement printed two lines above it --
+    #: reported by cubic on PR #1150 and corrected here, because a guard whose
+    #: stated rationale disagrees with its own evidence teaches the next reader
+    #: the wrong thing about the tool.
+    #:
+    #: Why it still blocks: the author wrote a suppression and believes two
+    #: findings are handled. Both are visible. That is the bare-`# nosec`
+    #: defect this file was written for -- a suppression whose real scope is
+    #: not what it says -- failing in the safe direction rather than the
+    #: dangerous one. The comment is still not true, and an untrue comment
+    #: beside a security finding is the thing being refused.
     _SPACELESS_IDS = re.compile(r"B\d+,B\d+")
 
     def blocking_problems(self) -> list[str]:
@@ -116,11 +135,12 @@ class Suppression:
                 "bare `# nosec` — silences every bandit rule on this line, "
                 "including the vulnerability nobody has introduced yet"
             ]
-        if self._SPACELESS_IDS.search(self.text):
+        if self._SPACELESS_IDS.search(self.comment):
             return [
                 "rule ids run together without a space — bandit 1.9.4 reads "
-                "`B603,B607` as one unknown id and honours only the first, so "
-                "this line claims more than it silences. Write `B603, B607`."
+                "`B602,B607` as one unknown id, matches no rule, and silences "
+                "NOTHING. The line behaves exactly as if it were not there. "
+                "Write `B602, B607`."
             ]
         return []
 
@@ -160,11 +180,11 @@ def scan(root: Path = ROOT) -> tuple[list[Suppression], list[Suppression]]:
             # `# nosecure` is prose, not a suppression, and bandit agrees --
             # measured. Skip it rather than reporting a finding on English.
             if rest[:1].isalnum() or rest[:1] == "_":
-                every.append(Suppression(rel, number, line.strip()[:120], [], ""))
+                every.append(Suppression(rel, number, line.strip()[:120], [], "", rest))
                 continue
             rules = _RULE.findall(rest)
             reason = _RULE.sub("", rest).strip(" :,-–—").strip()
-            every.append(Suppression(rel, number, line.strip()[:120], rules, reason))
+            every.append(Suppression(rel, number, line.strip()[:120], rules, reason, rest))
     return every, [s for s in every if s.blocking_problems()]
 
 

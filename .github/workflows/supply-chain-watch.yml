@@ -207,16 +207,33 @@ jobs:
         # when any sensor that could see before cannot now -- optional ones
         # included, because a regression means something changed underneath it.
         #
-        # --max-age 3 catches the case no sensor can report: this schedule
-        # itself having quietly stopped. Three days, not one, so a single
-        # runner outage is not an incident.
-        #
         # `--record` so the uploaded artifact is THIS run's result rather than
         # whatever was last committed. The job holds no write token by design,
-        # so it cannot commit the refreshed record -- the artifact is where a
-        # reader gets today's answer, and `--max-age` reads the committed one
-        # to say how long it has been since anybody wrote a fresh proof down.
-        run: python scripts/vaccinate.py --record --max-age 30
+        # so it cannot commit the refreshed record; the artifact is where a
+        # reader gets today's answer.
+        #
+        # `--max-age` IS DELIBERATELY NOT PASSED HERE, and the reason is worth
+        # the paragraph because the flag was here and had to come out.
+        #
+        # It compares against the record on disk -- the committed one. This job
+        # runs the probes itself, so that comparison cannot tell it anything
+        # about sight; it measures how long since a person committed a refreshed
+        # record. And the job cannot refresh it: no write token, by design. So
+        # the check's only possible outcome, given enough calendar, is a red run
+        # whose stated remedy is something the runner is structurally unable to
+        # perform. A daily job that is guaranteed to end up permanently red is
+        # not a control -- it is the `label` check this repository already had
+        # to stop believing, rebuilt on purpose. Reported by cubic on PR #1150.
+        #
+        # THE GAP THIS LEAVES, NAMED RATHER THAN PAPERED OVER: nothing detects
+        # this schedule itself stopping. `--max-age` was the claimed answer and
+        # was never capable of being one, because a check inside the job that
+        # stopped cannot observe that the job stopped. See
+        # docs/governance/IMMUNE-SYSTEM.md, which records it as an open gap
+        # rather than as covered. `--max-age` remains on the CLI for the caller
+        # who can act on it: a person, or a PR-time check, where "rerun with
+        # --record and commit the result" is a thing the reader can actually do.
+        run: python scripts/vaccinate.py --record
 
       - name: Upload the immunity report
         if: always()

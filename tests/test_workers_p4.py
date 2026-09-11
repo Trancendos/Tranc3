@@ -144,9 +144,21 @@ class TestVaultService:
     def test_openbao_client_cannot_be_steered_off_its_path(self, client):
         """The structural half: even called directly, the client refuses.
 
-        Takes `client` because the class-level `parametrize(..., indirect=True)`
-        requires every test in it to; the fixture's side effect of importing and
-        initialising the worker module is what this test then reaches for.
+        Takes `client` and does not use it. cubic read that as a mistake on
+        PR #1150 -- pytest "only injects a parametrized fixture into tests that
+        declare it", so the parameter looked like noise. Measured, by removing
+        it and running the file:
+
+            ERROR tests/test_workers_p4.py::TestVaultService
+            Failed: In tests/test_workers_p4.py::TestVaultService::
+            test_openbao_client_cannot_be_steered_off_its_path:
+            function uses no fixture 'client'
+
+        A class-level `parametrize(..., indirect=True)` applies to every test in
+        the class, and pytest fails COLLECTION -- the whole class, not just this
+        test -- for any member that does not declare the parametrized argument.
+        So the parameter is load-bearing. Kept, with the error it prevents
+        written down, because this is the second time it was removed.
 
         The 422 above is the boundary. This is the guarantee that a future call
         site which does not go through `SecretCreate` inherits the same refusal
