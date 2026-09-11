@@ -45,6 +45,31 @@ SHARED_CORE = REPO / "shared_core"
 
 SKIP_PARTS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build"}
 
+# Git submodules are separate repositories with their own branches, review and
+# release cadence. The first run of this script walked into `compliance/magna-carta`
+# and rewrote five of its compliance documents, which left the parent with a dirty
+# submodule pointer and the edits sitting in no branch at all. The edits themselves
+# were right -- those documents name `Dimensional/sanitize.py` as the GDPR and HIPAA
+# logging control, and that path stopped existing -- but a rewriter that reaches
+# across a repository boundary decides on its own that another project's compliance
+# text should change, which is not its call to make.
+SKIP_SUBMODULES = True
+
+
+def _submodule_paths() -> set[str]:
+    """Repo-relative paths of every registered submodule."""
+    gitmodules = REPO / ".gitmodules"
+    if not gitmodules.is_file():
+        return set()
+    paths = set()
+    for line in gitmodules.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("path"):
+            _, _, value = stripped.partition("=")
+            if value.strip():
+                paths.add(value.strip())
+    return paths
+
 TEXT_SUFFIXES = {
     ".py",
     ".pyi",
@@ -81,10 +106,16 @@ SUBSTITUTIONS: list[tuple[re.Pattern[str], str]] = [
 
 def _candidate_files() -> list[Path]:
     out = []
+    submodules = _submodule_paths()
     for path in REPO.rglob("*"):
         if not path.is_file():
             continue
+        rel = path.relative_to(REPO).as_posix()
         if any(part in SKIP_PARTS for part in path.relative_to(REPO).parts):
+            continue
+        if SKIP_SUBMODULES and any(
+            rel == sub or rel.startswith(sub + "/") for sub in submodules
+        ):
             continue
         if path.resolve() == Path(__file__).resolve():
             continue  # a rewriter that edits itself mid-run corrupts its own constants
