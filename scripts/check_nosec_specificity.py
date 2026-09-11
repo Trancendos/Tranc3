@@ -174,7 +174,6 @@ def write_ceiling(count: int, root: Path = ROOT) -> None:
 
 
 def _report(
-    every: list[Suppression],
     blocking: list[Suppression],
     unreasoned: list[Suppression],
     ceiling: int | None,
@@ -266,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nceiling set to {len(unreasoned)}")
         return 0
 
-    failed = _report(every, blocking, unreasoned, ceiling)
+    failed = _report(blocking, unreasoned, ceiling)
 
     if failed:
         return 1

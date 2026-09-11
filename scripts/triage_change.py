@@ -109,9 +109,19 @@ SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
         ),
         "The Void — the estate's secret custody",
     ),
+    # `**/` on every filename pattern, deliberately. A bare `requirements*.txt`
+    # or `docker-compose*.yml` is anchored at the repository root, so a change
+    # to `workers/vault-service/requirements-worker.txt` -- which is most of
+    # this estate's dependency surface, 90-odd workers deep -- raised no
+    # surface at all. The two registers disagreed in a way nobody would notice:
+    # `.github/labeler.yml` already uses `**/requirements*.txt`, so the LABEL
+    # said "dependencies" while the triage summary, whose whole job is telling
+    # a reviewer what to look at first, stayed silent. Reported by cubic on
+    # PR #1150; the fix is to make this file match the register it claims to
+    # read from.
     (
         "touches-routing",
-        ("docker-compose*.yml", "**/Dockerfile", "api.py"),
+        ("**/docker-compose*.yml", "**/Dockerfile", "api.py"),
         "changes where traffic goes or which port a service answers on; "
         "the class of defect that leaves a deployed Location unreachable",
     ),
@@ -119,12 +129,12 @@ SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
         "touches-pins",
         (
             ".gitmodules",
-            "requirements*.txt",
-            "package-lock.json",
-            "pnpm-lock.yaml",
-            "Cargo.lock",
-            "go.sum",
-            "poetry.lock",
+            "**/requirements*.txt",
+            "**/package-lock.json",
+            "**/pnpm-lock.yaml",
+            "**/Cargo.lock",
+            "**/go.sum",
+            "**/poetry.lock",
         ),
         "moves the dependency surface the census and the merge gate measure",
     ),

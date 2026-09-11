@@ -26,7 +26,7 @@ they lead with.
 
 | Claim | Source | Measured | Verdict |
 |---|---|---|---|
-| "2,259 files" | Doc 1 §3 | 3,087 tracked (`git ls-files \| wc -l`) | wrong |
+| "2,259 files" | Doc 1 §3 | **3,118 tracked** (`git ls-files \| wc -l`, at `cd7f22a5`) | wrong |
 | "863 GitHub issues" | Doc 1 §2, §3 | **12 open** | wrong by ~70× |
 | "150 PRs" | Doc 1 §2 | **84 open** — and see *The bot fleet* below | wrong, and mischaracterised |
 | "851 open CodeFactor issues" | Doc 1 §2, Doc 2 E4 | not verifiable from the repository; CodeFactor is external and its API is not reachable from here | **unverified** — Doc 2's largest epic rests on it |
@@ -222,8 +222,20 @@ one sitting. Building machinery to sort them would cost more than fixing them.
 
 The metaphor Document 3 builds on that figure — "your 863-issue backlog is
 chronic inflammation" — is a diagnosis of a body that is not ill in that way.
-Twelve open issues against 3,102 tracked files is not chronic inflammation. It
+Twelve open issues against 3,118 tracked files is not chronic inflammation. It
 is a small, legible list.
+
+A note on that figure, because this document of all documents cannot be sloppy
+with one. It read 3,087 in the table above and 3,102 here, and neither was
+wrong when written: the two were measured at different commits of a branch that
+was still adding files. But a document whose argument is *external assessments
+invent their aggregates* cannot carry two different numbers for the same
+quantity and expect to be believed — the reader has no way to tell drift from
+invention, which is precisely the distinction it is asking them to make.
+Caught by cubic on PR #1150. Both now read 3,118, measured at `cd7f22a5`, and
+the commit is named so the next reader can tell a stale measurement from a
+false one. It will drift again; a dated number that drifts is honest, an
+undated one is not.
 
 ### Where its architecture and this estate's converge, independently
 

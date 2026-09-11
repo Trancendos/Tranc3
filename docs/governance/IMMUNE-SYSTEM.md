@@ -356,7 +356,7 @@ every CodeQL finding at the fallback severity — turning five `error` alerts in
 five `warning`s and dropping them below the grading threshold. `_rule_levels`
 handles it, and a round-trip test now holds it.
 
-
+### 2. The pre-commit documentation described a gate that does not exist
 
 It described the pre-commit gate as running **black** and **isort**. Neither is
 configured. This repository formats with `ruff-format`, honouring

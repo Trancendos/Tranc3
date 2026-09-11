@@ -90,7 +90,14 @@ sensors:
                 else: total += 20
             return total
       expect_rule: C901
-      command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache", "--isolated"]
+      # No `--isolated`, and `in_repo: true`: this probe must run in the SAME
+      # config context as the real scan. pyproject.toml lists C901 under
+      # `ignore`, and this sensor only sees anything because `--select C901`
+      # overrides that. A probe outside the tree proves ruff can find tangled
+      # code; it cannot prove `--select` still beats `ignore`, which is the one
+      # thing that would silently zero this sensor. Same command, same context.
+      in_repo: true
+      command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache"]
 
   bandit:
     kind: innate

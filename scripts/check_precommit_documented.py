@@ -82,8 +82,51 @@ def documented_section() -> str:
 
 
 def documented_tools(section: str) -> set[str]:
-    """Tool names the section presents as hooks: the bolded list items."""
-    return {name.strip().lower() for name in re.findall(r"^- \*\*([^*]+)\*\*", section, re.M)}
+    r"""Tool names the section presents as hooks: every bolded name in a list item.
+
+    Every bolded name in the item's LEADING run, not just the first, and not
+    every bold on the line. Two failures bracket the right rule:
+
+    * `^- \*\*([^*]+)\*\*` stopped at the first bold, so
+
+              - **security-scanner** / **security-autofix** -- local; ...
+
+      registered `security-scanner` and dropped `security-autofix`. Deleting
+      that second hook from the config then left this check green -- the exact
+      failure this file exists to prevent, in the file that prevents it.
+      Reported by cubic on PR #1150.
+
+    * Taking every bold on the line instead over-collects, because bold is also
+      used for emphasis mid-sentence:
+
+              - **ruff-format** -- Code formatting. **This is the formatter,
+                not black.**
+
+      That second run is a warning to the reader, not a hook id, and treating
+      it as one makes the check demand a hook called "this is the formatter,
+      not black." -- which is what happened when the naive fix was tried.
+
+    So: consume bold runs from the start of the item, allowing only `/` and `,`
+    between them, and stop at the first ordinary prose. A name is a hook id
+    because of where it sits in the sentence, not because it is bold.
+    """
+    names: set[str] = set()
+    for line in section.splitlines():
+        stripped = line.lstrip()
+        if not stripped.startswith("- **"):
+            continue
+        rest = stripped[2:].lstrip()
+        while True:
+            match = re.match(r"\*\*([^*]+)\*\*", rest)
+            if not match:
+                break
+            names.add(match.group(1).strip().lower())
+            rest = rest[match.end() :]
+            separator = re.match(r"\s*[/,]\s*", rest)
+            if not separator:
+                break
+            rest = rest[separator.end() :]
+    return names
 
 
 def main() -> int:
@@ -95,19 +138,46 @@ def main() -> int:
     hooks = configured_hooks()
     named = documented_tools(section)
     lowered = section.lower()
-    grouped_covered = GROUPED_MARKER in lowered
+    grouped_claimed = GROUPED_MARKER in lowered
+    grouped_configured = [h for h in hooks if h.startswith(GROUPED_PREFIXES)]
 
+    # Matched against the NAMED list, not against the section's prose.
+    #
+    # The original test was `hook.lower() not in lowered` -- a substring search
+    # over the whole section. cubic reported it as a substring bug and proposed
+    # token boundaries, which is better but still wrong in the same direction:
+    # a token search over prose passes any hook id that happens to be an
+    # ordinary English word. Proving that took planting a hook called
+    # `security`, which sailed through a boundary-matched search because the
+    # section opens "zero-cost security gate".
+    #
+    # Matching against the bold list instead removes the whole class: a hook is
+    # documented when the section LISTS it, which is what the sentence
+    # "documented" was always supposed to mean. The looser form only existed
+    # because nobody checked whether the strict one would pass -- it does, on
+    # the nose: 11 non-grouped hooks, 11 names, no difference either way.
     undocumented = []
+    for hook in grouped_configured:
+        if not grouped_claimed:
+            undocumented.append(f"{hook} (and its pre-commit-hooks siblings)")
     for hook in hooks:
         if hook.startswith(GROUPED_PREFIXES):
-            if not grouped_covered:
-                undocumented.append(f"{hook} (and its pre-commit-hooks siblings)")
             continue
-        if hook.lower() not in lowered:
+        if hook.lower() not in named:
             undocumented.append(hook)
 
     configured = {h.lower() for h in hooks}
     phantom = sorted(name for name in named if name not in configured)
+
+    # The group is a claim like any other, so it can go stale like any other.
+    # `grouped_claimed` was only ever read to EXCUSE configured hooks; nothing
+    # checked the reverse. Drop every pre-commit-hooks entry from the config and
+    # the documentation kept describing eleven hygiene hooks that no longer ran,
+    # with this check green -- an unfalsifiable sentence, which is the one thing
+    # a documentation gate must not permit. Reported by cubic on PR #1150.
+    if grouped_claimed and not grouped_configured:
+        phantom.append(f"the '{GROUPED_MARKER}' group (documented, but no such hook is configured)")
+        phantom.sort()
 
     print(f"pre-commit hooks configured: {len(hooks)}")
     print(f"tools named in {DOC.name}: {len(named)}")

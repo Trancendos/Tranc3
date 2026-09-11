@@ -17,6 +17,28 @@ jobs:
       pull-requests: write
 
     steps:
+    # `continue-on-error` because labelling is metadata, not a control. This
+    # check has been red on every pull request the repository has ever had,
+    # because the starter template shipped the workflow without the
+    # `.github/labeler.yml` it requires. A check that is red on all 84 open
+    # pull requests does not communicate anything except that red can be
+    # ignored, which costs more than the labels are worth.
+    #
+    # Two things about the fix, and both are counter-intuitive enough to be
+    # worth writing down:
+    #
+    #   1. `on: [pull_request_target]` means BOTH this workflow file and
+    #      `.github/labeler.yml` are read from the BASE branch, never from the
+    #      pull request's own tree. So neither adding the config nor adding
+    #      this line can turn the check green on the pull request that
+    #      introduces them. Both take effect only once merged. That is not a
+    #      broken fix; it is what `pull_request_target` is for -- it is how a
+    #      fork's pull request gets a write-scoped token without the fork
+    #      getting to choose the code that token runs.
+    #   2. This does not silence a security control. It stops a labeller from
+    #      voting on mergeability. If labelling genuinely breaks, the job log
+    #      still carries the error; what changes is that it no longer blocks.
     - uses: actions/labeler@v4
+      continue-on-error: true
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"

@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `355fea6b`. Regenerate with
+Generated from repo state at `cd7f22a5`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -272,8 +272,9 @@ that none of them import.
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `storage-service`
-- **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored
-  - `workers/storage-service/worker.py:41 Dimensional.service_auth_fastapi`
+- **imports_resolve** — 2 unguarded, 0 guarded, 0 vendored
+  - `workers/storage-service/worker.py:41 Dimensional.path_validation`
+  - `workers/storage-service/worker.py:42 Dimensional.service_auth_fastapi`
 
 ### `taimra`
 - **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored

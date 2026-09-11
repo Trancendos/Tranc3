@@ -241,7 +241,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   reliably read the issue tracker and reliably invent the aggregates.** Document 3
   named all eleven cited issues correctly (#284, #337, #336, #334, #1180, #995,
   #991, #990, #1146, #969, #474) — the whole open backlog — and then described that
-  backlog as 863 issues. Measured: **12 open issues, 3,102 tracked files** (not 863
+  backlog as 863 issues. Measured: **12 open issues, 3,118 tracked files** (not 863
   and 2,259). So act on their findings and ignore their counts, and do not build the
   "triage blitz" machinery all three propose for a backlog that does not exist.
   Read it before acting on any externally generated report of this estate

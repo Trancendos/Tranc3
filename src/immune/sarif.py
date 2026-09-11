@@ -188,6 +188,25 @@ def _uri_of(result: dict[str, Any]) -> str:
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+def _top_level_entries() -> frozenset[str]:
+    """Top-level names in this repository, used to find where content starts.
+
+    Computed once from disk rather than written down, so it cannot drift from
+    the tree it describes. Dot-directories are excluded: `.github` is a real
+    top-level entry, but matching on it would cut an unrelated path at the
+    wrong place far more often than it would help.
+    """
+    try:
+        return frozenset(
+            entry.name for entry in _REPO_ROOT.iterdir() if not entry.name.startswith(".")
+        )
+    except OSError:  # pragma: no cover - only if the checkout vanishes mid-run
+        return frozenset()
+
+
+_TOP_LEVEL = _top_level_entries()
+
+
 def _relativise(uri: str, root: Path | None = None) -> str:
     """Strip the accidents of where a scanner happened to be run.
 
@@ -218,16 +237,30 @@ def _relativise(uri: str, root: Path | None = None) -> str:
             break
     else:
         # Still absolute: a scanner reporting from a checkout that is not this
-        # one -- a container mount, or a SARIF file produced on the runner and
-        # merged here. Strip through the LAST segment matching this repository's
-        # directory name, which handles the runner's own doubled layout
-        # (/home/runner/work/Tranc3/Tranc3/...) as well as a plain mount.
+        # one -- a container mount, or a SARIF produced on the runner and merged
+        # here. Cut at the first segment that is a real top-level entry of THIS
+        # repository.
+        #
+        # The first version cut at the last segment matching `_REPO_ROOT.name`,
+        # and cubic was right that it is fragile -- though its proposed fix,
+        # hardcoding the literal "Tranc3", is fragile in the same way and
+        # additionally wrong: the repository can be renamed, forked, vendored,
+        # or checked out into any directory, and a constant cannot follow it.
+        # Both versions ask "what is this repository called?", which is a
+        # question about a name.
+        #
+        # The right question is "where does this repository's content start?",
+        # which is a question about CONTENT, and the answer is on disk. A path
+        # ending `.../anything/src/immune/sarif.py` starts at `src/` because
+        # `src/` is a directory that exists here -- true whatever the checkout
+        # is called, including a fork with a different name and the runner's
+        # doubled `/home/runner/work/X/X/` layout.
         if text.startswith("/"):
-            name = _REPO_ROOT.name
-            marker = f"/{name}/"
-            cut = text.rfind(marker)
-            if cut >= 0:
-                text = text[cut + len(marker) :]
+            segments = text.lstrip("/").split("/")
+            for index, segment in enumerate(segments):
+                if segment in _TOP_LEVEL:
+                    text = "/".join(segments[index:])
+                    break
     while text.startswith("./"):
         text = text[2:]
     text = text.lstrip("/")

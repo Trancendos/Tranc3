@@ -76,6 +76,19 @@ def test_tool_severity_vocabularies_all_map_onto_sarif_levels():
         # Found by planting a tangled function and reading the failure line.
         ("/home/runner/work/Tranc3/Tranc3/src/f.py", "src/f.py"),
         ("/build/Tranc3/scripts/g.py", "scripts/g.py"),
+        # REGRESSION: and NOT by matching the directory name. The first fix cut
+        # at the last segment equal to the checkout's own name, so it worked
+        # only where the checkout happened to be called "Tranc3"; cubic flagged
+        # it and proposed hardcoding that literal, which fails the same way for
+        # a fork, a rename, or a vendored copy. Normalisation is now keyed on
+        # top-level entries that actually exist in the tree, so these two cases
+        # pass with the checkout under ANY name -- including a directory that
+        # shares no name with the repository at all.
+        (
+            "/opt/some-fork-name/workers/storage-service/worker.py",
+            "workers/storage-service/worker.py",
+        ),
+        ("/mnt/workspace/tests/test_immune.py", "tests/test_immune.py"),
     ],
 )
 def test_paths_from_every_tool_dialect_normalise_to_repo_relative(raw, expected):

@@ -49,6 +49,7 @@ from typing import Any, Sequence
 import yaml
 
 from src.immune.sarif import (
+    _REPO_ROOT,
     Finding,
     SarifUnreadable,
     _relativise,
@@ -340,7 +341,26 @@ def probe_sensor(sensor: Sensor, *, timeout: int = 120) -> tuple[bool, str]:
     command = sensor.probe.get("command") or sensor.command
     if isinstance(command, str):
         command = command.split()
-    with tempfile.TemporaryDirectory(prefix="immune-probe-") as tmp:
+    # WHERE the probe runs is part of what it proves.
+    #
+    # By default the probe gets a system temp dir, which is the right isolation
+    # for a sensor whose job does not depend on this repository's
+    # configuration. But a sensor can exist PRECISELY to defeat a config entry
+    # -- the complexity sensor passes `--select C901` specifically to override
+    # `pyproject.toml`'s `ignore = [... "C901" ...]` -- and for that one, a
+    # probe run outside the tree cannot tell "ruff can see C901" from
+    # "`--select` still beats `ignore`". If a ruff release, or an edit to
+    # `ignore`, ever made the ignore win, the real scan would report zero
+    # findings while the probe kept passing and the sensor was recorded `ok`.
+    # A sensor that reports clean because it was silenced, with a probe that
+    # says it can see, is the exact failure this whole mechanism exists to
+    # catch -- so the probe has to be able to run in the real config context.
+    #
+    # `probe.in_repo: true` puts the probe's temp dir inside the repository, so
+    # ruff's config discovery walks up and finds the real `pyproject.toml`.
+    # Reported by cubic on PR #1150.
+    parent = str(_REPO_ROOT) if sensor.probe.get("in_repo") else None
+    with tempfile.TemporaryDirectory(prefix="immune-probe-", dir=parent) as tmp:
         root = Path(tmp)
         target = root / filename
         target.parent.mkdir(parents=True, exist_ok=True)
