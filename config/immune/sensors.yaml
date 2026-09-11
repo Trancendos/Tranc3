@@ -145,11 +145,25 @@ sensors:
     required: false
     accept_exit: [0, 1]
     # No probe: pip-audit's answer depends on a remote advisory database, so a
-    # planted-vulnerability probe tests the network as much as the tool. The
-    # equivalent guarantee for this sensor is the registry canary in
-    # scripts/vulnerability_census.py, which brackets the real sweep with a
-    # package of known-vulnerable version and fails the run if it comes back
-    # clean. Recording that here rather than leaving the gap unexplained.
+    # planted-vulnerability probe tests the network as much as the tool. That
+    # reasoning stands. The COMPENSATING CONTROL it named did not.
+    #
+    # Until 2026-09-11 this comment pointed at "the registry canary in
+    # scripts/vulnerability_census.py" — and the only canary in that file
+    # guarded `npm audit`. Nothing anywhere checked that the PyPI advisory path
+    # had answered, so a degraded endpoint would have produced a clean Python
+    # surface indistinguishable from a genuinely clean one, on the language
+    # that carries most of this repository.
+    #
+    # A documented gap looks handled. This one was documented and named a
+    # compensation for a different ecosystem, which is worse than leaving it
+    # blank: nobody re-reads a gap that already has an answer beside it.
+    #
+    # `_pypi_advisory_reading()` now exists alongside `_npm_registry_reading()`
+    # and brackets the pip sweep the same way — jinja2==2.11.2 audited in a
+    # tmpdir before and after, every pip surface marked unscannable if the
+    # advisory family does not come back. THAT is this sensor's equivalent
+    # guarantee, and it is checkable.
 
   semgrep:
     kind: innate

@@ -1,8 +1,8 @@
 {
-  "commit": "9598c94b3982111b28922cfa7fbd42633590d9c1",
+  "commit": "122e3f5cb54c98060d7398d4ab32d3750a0a90db",
   "coverage": 0.4286,
   "note": "What each sensor last PROVED about its own sight, and when. Written by `python scripts/vaccinate.py --record`. `outcome` is the probe verdict, not a scan result: `ok` means the sensor flagged a defect deliberately planted for it. `last_proven` is the date it last managed that, and it is NOT updated when a sensor fails -- so a blind sensor's age is readable. `probed: false` is a coverage gap, not a failure: the sensor has never been asked to demonstrate anything. Driving that count to zero is the point of the exercise; see docs/governance/IMMUNE-SYSTEM.md.",
-  "recorded_at": "2026-09-11T01:40:21+00:00",
+  "recorded_at": "2026-09-11T02:12:15+00:00",
   "sensors": {
     "bandit": {
       "detail": "probe flagged 2 finding(s)",

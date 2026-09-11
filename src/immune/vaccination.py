@@ -56,6 +56,7 @@ defect this estate has already been bitten by. Absent is reported as absent.
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -126,10 +127,14 @@ class VaccinationReport:
         headline number would let a deliberate choice look like a failure --
         and, worse, let adding optional sensors dilute a real blindness.
         """
-        required = self.required
-        if not required:
+        # Absent sensors leave the denominator: "what fraction of the
+        # instruments we HAVE proved they can see". Counting them as failures
+        # would make sight a property of the runner's package list; counting
+        # them as successes would let an empty machine score 100%.
+        answerable = [r for r in self.required if r.outcome != Outcome.ABSENT.value]
+        if not answerable:
             return 0.0
-        return sum(1 for r in required if r.proven) / len(required)
+        return sum(1 for r in answerable if r.proven) / len(answerable)
 
     @property
     def coverage(self) -> float:
@@ -146,7 +151,22 @@ class VaccinationReport:
 
     @property
     def blind_required(self) -> list[Immunity]:
-        return [r for r in self.required if r.probed and not r.proven]
+        """Required sensors that RAN and could not see. Absent ones are not here.
+
+        A tool the runner does not install is a gap in the runner, not a
+        failure of the estate's immunity, and failing the run for it would
+        make the control unusable anywhere the full toolchain is not present.
+        It is still reported -- see `absent` -- just not as a loss.
+        """
+        return [
+            r
+            for r in self.required
+            if r.probed and not r.proven and r.outcome != Outcome.ABSENT.value
+        ]
+
+    @property
+    def absent(self) -> list[Immunity]:
+        return [r for r in self.records if r.outcome == Outcome.ABSENT.value]
 
     def failing(self) -> list[str]:
         """Reasons this run should fail, in the order a reader needs them."""
@@ -248,6 +268,37 @@ def vaccinate(
             )
             continue
 
+        # ABSENT IS NOT BLIND, and collapsing them is not a rounding error.
+        #
+        # `blind` says: the tool ran, was handed a defect planted for it, and
+        # reported nothing. That is an incident — the estate believed it was
+        # watching something and was not.
+        #
+        # `absent` says: the tool is not on this machine. That is a fact about
+        # the runner, not about the scanner, and the honest answer to "can
+        # semgrep see?" on a box with no semgrep is "ask a box that has one".
+        #
+        # docs/governance/IMMUNE-SYSTEM.md has claimed this distinction since
+        # the day it was written. The code collapsed it: a missing binary made
+        # `probe_sensor` fail to exec and the result was recorded `blind`. So
+        # the daily job would have cried IMMUNITY LOST for every scanner the
+        # runner does not install — and a gate that cries wolf on a healthy
+        # estate loses its credibility exactly as fast as one that misses.
+        # Found while raising probe coverage, which is what would have
+        # triggered it.
+        if sensor.binary and shutil.which(sensor.binary) is None:
+            report.records.append(
+                Immunity(
+                    sensor=sensor.name,
+                    probed=True,
+                    outcome=Outcome.ABSENT.value,
+                    required=sensor.required,
+                    detail=f"{sensor.binary} is not installed on this machine",
+                    last_proven=was.last_proven if was else "",
+                )
+            )
+            continue
+
         saw, detail = probe_sensor(sensor, timeout=timeout, scan_root=scan_root)
         record = Immunity(
             sensor=sensor.name,
@@ -291,6 +342,12 @@ def render(report: VaccinationReport, *, today: date | None = None) -> str:
     lines.append(f"  coverage      {report.coverage:.0%} of all sensors have a probe at all")
     if report.unprobed:
         lines.append("  never asked   " + ", ".join(sorted(r.sensor for r in report.unprobed)))
+    if report.absent:
+        lines.append(
+            "  not installed "
+            + ", ".join(sorted(r.sensor for r in report.absent))
+            + "  (a gap in this machine, not in the estate)"
+        )
     if report.recoveries:
         lines.append("  recovered     " + ", ".join(sorted(report.recoveries)))
     return "\n".join(lines)
