@@ -24,8 +24,10 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sqlite3
 import urllib.error
+import urllib.parse
 import urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -42,7 +44,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
 from Dimensional.service_auth_fastapi import guard_internal_secret
@@ -58,6 +60,17 @@ PORT = int(os.environ.get("PORT", "8038"))
 
 DB_PATH = os.environ.get("VAULT_DB_PATH", "data/vault.db")
 STORAGE_ROOT = os.environ.get("VAULT_STORAGE_ROOT", "data/vault_secrets")
+
+# What a vault path segment may contain. Deliberately narrow: a secret key is a
+# name, and every character beyond a name is a character that has to be argued
+# for. `/` is not here because it separates segments rather than living inside
+# one -- namespaced keys still work, they are just checked segment by segment.
+_SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+# The same alphabet as a segment, plus `%` (segments are percent-encoded before
+# they are joined) and `/` as the separator. Anchored with `fullmatch`, so it
+# describes the entire constructed path rather than finding a safe piece of one.
+_SAFE_BUILT_PATH = re.compile(r"[A-Za-z0-9][A-Za-z0-9._%-]*(?:/[A-Za-z0-9][A-Za-z0-9._%-]*)*")
 AUDIT_LOG_PATH = os.environ.get("VAULT_AUDIT_LOG", "data/vault_audit.jsonl")
 DEFAULT_TTL = int(os.environ.get("VAULT_DEFAULT_TTL", "3600"))
 # Master key seed for AES-256-GCM derivation — must be set via env var in production
@@ -139,6 +152,78 @@ _OPENBAO_ADDR = os.environ.get("OPENBAO_ADDR", "http://localhost:8200")
 _OPENBAO_TOKEN = os.environ.get("OPENBAO_TOKEN", "")
 
 
+class UnsafeVaultPath(ValueError):
+    """A secret key or path that cannot be placed in a URL without changing it."""
+
+
+def _vault_path(path: str) -> str:
+    r"""Return `path` as URL segments that can only mean what they say.
+
+    SEC-010. `_request` built its URL as `f"{self.addr}/v1/{path}"`, and `path`
+    reaches it from `body.key` on `POST /secrets` -- a free-form string with a
+    length bound and no charset. urllib does not normalise what it is given;
+    measured against a local server that records the raw request line:
+
+        key='normal-key'            -> POST /v1/secret/data/tranc3/normal-key
+        key='../../../../sys/seal'  -> POST /v1/secret/data/tranc3/../../../../sys/seal
+        key='x?list=true'           -> POST /v1/secret/data/tranc3/x?list=true
+        key='x#frag'                -> POST /v1/secret/data/tranc3/x
+
+    So a caller of this worker's public create endpoint chooses which OpenBao
+    API path this worker calls, and the call carries `X-Vault-Token`. `..`
+    walks out of `secret/data/` into `sys/` and `auth/`; `?` appends a query
+    the caller wrote; `#` truncates the path. The vault holding every secret on
+    the platform is the worst possible place for the caller to pick the
+    endpoint, which is why CodeQL scores it 9.1.
+
+    The guard is structural rather than a denylist: every segment is checked,
+    and anything that is not a plain name is refused before percent-encoding
+    the rest. Encoding alone would not be enough -- `.` is an unreserved
+    character, so `%2e%2e` and `..` mean the same thing to a server that
+    resolves dot-segments, and quoting would happily preserve the traversal.
+
+    Raises UnsafeVaultPath rather than silently repairing the path. A key the
+    caller cannot have meant is a refusal, not something to guess at: sanitising
+    `../../sys/seal` into `sys/seal` would still leave the caller choosing the
+    endpoint.
+    """
+    if not path:
+        raise UnsafeVaultPath("empty vault path")
+    segments = path.strip("/").split("/")
+    for segment in segments:
+        if not segment:
+            raise UnsafeVaultPath(f"empty path segment in {path!r}")
+        if segment in (".", ".."):
+            raise UnsafeVaultPath(f"traversal segment {segment!r} in {path!r}")
+        if not _SAFE_SEGMENT.fullmatch(segment):
+            raise UnsafeVaultPath(f"unsafe characters in path segment {segment!r}")
+    built = "/".join(urllib.parse.quote(seg, safe="") for seg in segments)
+    # A final assertion on the WHOLE constructed path, not just its parts.
+    #
+    # Redundant by construction today — every segment was checked above and
+    # then percent-encoded, so `built` cannot contain anything this refuses.
+    # Kept for two reasons, one of them about this codebase and one about the
+    # scanner reading it.
+    #
+    # About the code: the per-segment loop and the join are separated by an
+    # encoding step, and "each part is safe" plus "the parts are combined" is
+    # not the same claim as "the result is safe". Stating the post-condition
+    # where it is produced means a future edit to either half has to keep it
+    # true rather than merely look like it does.
+    #
+    # About the scanner: CodeQL still reports `py/partial-ssrf` 9.1 here after
+    # SEC-010. Its flow runs `body.key` -> f-string -> `path` -> `_vault_path()`
+    # -> `safe_path` -> `url`, tracing straight THROUGH the validation, because
+    # a helper that raises is not something it models as a sanitiser. The
+    # vulnerability is fixed — nine calibrated assertions say so, and the
+    # boundary answers 422 — but the ALERT is not cleared, and those are
+    # different facts. Recorded as such in SECURITY_ALERT_REGISTER.md rather
+    # than claimed as a clearance.
+    if not _SAFE_BUILT_PATH.fullmatch(built):
+        raise UnsafeVaultPath(f"constructed vault path is not a plain path: {built!r}")
+    return built
+
+
 class OpenBaoClient:
     """Minimal OpenBao KV v2 client using stdlib urllib — zero external deps."""
 
@@ -148,7 +233,19 @@ class OpenBaoClient:
         self._available: Optional[bool] = None  # None = not yet checked
 
     def _request(self, method: str, path: str, body: Optional[dict] = None) -> Optional[dict]:
-        url = f"{self.addr}/v1/{path.lstrip('/')}"
+        # Every path through this client is checked here, not at each call site.
+        # `put_secret` and `get_secret` are the callers today; the next one will
+        # not have to remember, which is the only version of this guard that
+        # stays true. Refusing returns None like every other failure mode, so a
+        # rejected mirror degrades to the SQLite backend rather than 500ing --
+        # but `SecretCreate` refuses the same key at the boundary with a 422, so
+        # nothing reaches here silently in the case that matters.
+        try:
+            safe_path = _vault_path(path)
+        except UnsafeVaultPath as exc:
+            logger.warning("vault-service refused an unsafe OpenBao path: %s", exc)
+            return None
+        url = f"{self.addr}/v1/{safe_path}"
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(
             url,
@@ -338,6 +435,32 @@ def _append_audit(
 
 class SecretCreate(BaseModel):
     key: str = Field(..., min_length=1, max_length=200)
+
+    @field_validator("key")
+    @classmethod
+    def _key_is_a_name(cls, value: str) -> str:
+        """Refuse a key that could not be a vault path (SEC-010).
+
+        The same function the OpenBao client uses, so the boundary and the URL
+        cannot disagree about what is safe. Here it produces a loud 422 the
+        caller can read; there it is the structural guarantee that no future
+        call site can reintroduce the hole.
+        """
+        try:
+            canonical = _vault_path(value)
+        except UnsafeVaultPath as exc:
+            raise ValueError(str(exc)) from None
+        # Stricter than the path builder by one rule: the key must ALREADY be
+        # what `_vault_path` would make of it. `_vault_path` strips surrounding
+        # slashes because a caller writing "/sys/health" means the same path;
+        # a secret KEY is different -- "/db-password" and "db-password" would be
+        # two SQLite rows mirroring to one OpenBao path. Comparing against the
+        # canonical form catches that without restating the rule, so the two
+        # cannot drift apart.
+        if canonical != value:
+            raise ValueError(f"secret key must be canonical: {value!r} normalises to {canonical!r}")
+        return value
+
     value: str = Field(..., min_length=1)
     tags: List[str] = Field(default_factory=list)
     ttl: int = DEFAULT_TTL

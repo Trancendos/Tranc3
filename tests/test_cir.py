@@ -20,6 +20,7 @@ from src.townhall.cir import (
     UnknownImprovementError,
 )
 from src.townhall.itsm import IncidentStatus, ItsmService
+from tests.support.routes import mounted_paths
 
 
 @pytest.fixture
@@ -272,7 +273,7 @@ class TestTheRoutesEnforceTheSameGate:
     def test_the_cir_routes_are_mounted(self, client):
         import api
 
-        paths = {getattr(r, "path", "") for r in api.app.routes}
+        paths = mounted_paths(api.app)
         assert "/townhall/itsm/improvements" in paths
         assert "/townhall/itsm/incidents/{incident_id}/accept-as-risk" in paths
 

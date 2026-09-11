@@ -476,8 +476,17 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Sugar-Cube-Bot", "Generates messy mockup databases to test bad dataset handling."
         ),
         bot_04=Bot("Jam-Tart-Bot", "Shuts down minor random services mid-test to check recovery."),
-        worker_port=None,
-        worker_path="tests/",
+        # `tests/` and no port until 2026-09-05, which made The Chaos Party
+        # read as a Location with nowhere to receive traffic. It is deployed:
+        # `docker-compose.production.yml` builds `./workers/chaos-party`,
+        # publishes 8079, sets `PORT=8079`, and gives it its own Traefik rule
+        # (`chaos-party.trancendos.com` + PathPrefix `/chaos-party`) — one of
+        # the few Locations with a dedicated host. `tests/test_chaos.py` is
+        # the suite it runs, not the service; recording the suite as the
+        # service left the service itself unrecorded, so nothing that reads
+        # this register could route to it or hold it accountable.
+        worker_port=8079,
+        worker_path="workers/chaos-party/",
     ),
     "The Artifactory": LocationEntity(
         location="The Artifactory",
@@ -655,8 +664,16 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Spine-Bot", "Ensures all internal page links work, keeping documents connected."
         ),
         bot_04=Bot("Dust-Jacket-Bot", "Generates quick summaries of newly updated documentation."),
-        worker_port=8017,
-        worker_path="workers/search-service/",
+        # workers/library-service/ (8067), not workers/search-service/ (8017).
+        # The evidence is unambiguous in three places: that worker's own app
+        # is titled "The Library — Knowledge Base API", compose's comment on
+        # the service reads "The Library ACO router (Port 8067, Lead AI:
+        # Zimik)", and search-service titles itself "search-service" and is a
+        # full-text/semantic search worker in its own right. No Location
+        # claimed library-service at all, so The Library was pointed at
+        # another service's code while its own went unowned.
+        worker_port=8067,
+        worker_path="workers/library-service/",
     ),
     "The Academy": LocationEntity(
         location="The Academy",

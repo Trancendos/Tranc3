@@ -1,0 +1,41 @@
+# Immunological memory: findings this estate has decided are not defects here.
+#
+# THIS FILE IS NOT A SUPPRESSION LIST. Four rules make it memory rather than
+# scar tissue, and `scripts/immune_scan.py` enforces all four on every run:
+#
+#   1. `rule_id` is mandatory. An entry with no rule suppresses everything.
+#   2. `reason` must be written prose that a stranger can evaluate. "false
+#      positive" is not a reason; it is a restatement of the verdict.
+#   3. `decided_by` names a person or a Location. Anonymous decisions cannot
+#      be questioned, only inherited.
+#   4. `review_by` is a date. An entry past it still suppresses -- nobody
+#      should wake to a wall of red -- but it is reported as expired on every
+#      run until someone renews or drops it. An entry with no review date is
+#      reported as malformed, because a decision nobody will ever revisit is
+#      not a decision, it is a leak.
+#
+# The run also reports ROT (an entry whose file is gone, or that matched
+# nothing) and AUTOIMMUNITY (one rule adjudicated false across three or more
+# unrelated files -- at which point the rule is the problem, not the code, and
+# the fix is to tune the sensor rather than add a fourth entry here).
+#
+# verdict: false-positive | accepted-risk | by-design
+#   false-positive  the sensor is wrong about this code
+#   accepted-risk   the sensor is right and the estate is living with it
+#   by-design       the sensor is right about the pattern and wrong about the
+#                   intent; the pattern is deliberate here
+#
+# The distinction is not cosmetic: only `false-positive` entries count towards
+# autoimmunity, because an accepted risk repeated across many files is a
+# posture decision, not a misfiring rule.
+
+adjudications: []
+
+# Deliberately empty at introduction. Every entry that appears here from now on
+# arrives in a commit that argues for it, which is the only way a suppression
+# store stays readable. The estate's existing machine-written store,
+# .security_learning/suppress.json, is what this replaces: it accumulated
+# entries keyed on /tmp/pytest-of-root/pytest-1/... directories that existed
+# for the duration of one test run in May 2026 and can never exist again. It
+# learned from its own test suite, and nothing in the estate noticed, because
+# nothing ever read it back and asked whether its entries still meant anything.

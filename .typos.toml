@@ -142,6 +142,21 @@ CRITICALS = "CRITICALS"          # field/variable name (report.criticals,
 THREED = "THREED"                # "3D" spelled out where an identifier
                                  # cannot start with a digit (TranceFlow,
                                  # VRAR3D) -- not "THREAD".
+Ligh = "Ligh"                    # the derived Location code for The Lighthouse
+                                 # in config/estate/location_codes.yaml. The
+                                 # scheme takes four letters after "The", so
+                                 # "Ligh" is what it produces -- generated, not
+                                 # typed, and the collision-free set depends on
+                                 # it staying exactly this.
+Thev = "Thev"                    # the code The Void does NOT get, asserted by
+                                 # name in tests/test_library_references.py so
+                                 # a regression to naive prefixing fails loudly.
+thi = "thi"                      # a cell truncated mid-word by the generated
+                                 # ACTION-BACKLOG table's column width.
+synopsys = "synopsys"            # Synopsys, the vendor whose workflow this
+Synopsys = "Synopsys"            # estate deleted -- a company name, and the
+                                 # audit record has to name the file it removed.
+
 
 [type.py]
 extend-ignore-re = [

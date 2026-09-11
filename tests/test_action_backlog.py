@@ -1,0 +1,264 @@
+"""The collated backlog, and the two ways a collation can lie.
+
+The estate records outstanding work in 44 registers. Each is correct about
+its own domain and blind to the rest, so nobody can answer "what is
+outstanding across the platform" without reading 320 documents — and an
+action in a register nobody sweeps is an action nobody does.
+
+A sweep that reports the wrong text, or that goes stale, is worse than none:
+it looks like an answer.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import re
+import sys
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parent.parent
+BACKLOG = REPO / "docs" / "governance" / "ACTION-BACKLOG.md"
+
+
+@pytest.fixture(scope="module")
+def builder():
+    """The backlog generator, loaded from `scripts/` by path."""
+    path = REPO / "scripts" / "build_action_backlog.py"
+    spec = importlib.util.spec_from_file_location("build_action_backlog", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["build_action_backlog"] = module
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestItReadsTheAction:
+    """A backlog that reports a register's notes instead of its actions is worse
+    than one that misses them: it is confidently wrong about work it found.
+    """
+
+    def test_the_header_names_the_action_column(self, builder):
+        """Calibrated: taking the longest cell fails this.
+
+        The first version reported a register's notes as its action —
+        "Fabulousa is reachable but unauthenticated" instead of "Issue
+        PENPOT_TOKEN into The Void". A backlog that says the wrong thing
+        about work it correctly found is worse than one that misses it.
+        """
+        header = ["#", "Action", "Status", "Notes"]
+        assert builder._action_column(header) == 1
+
+    def test_a_status_column_is_never_the_action(self, builder):
+        """A status is what an item *is*, never what to do about it."""
+        header = ["ID", "Status", "Owner"]
+        assert builder._action_column(header) is None
+
+    def test_the_penpot_row_reads_as_its_action(self, builder):
+        """The specific row the heuristic got wrong, asserted by name.
+
+        Rendered fresh rather than read from the committed file: reading the
+        file would pass under the mutation until somebody regenerated, which
+        makes the test a check on the artefact instead of on the rule.
+        """
+        text = builder.render(builder.harvest())
+        assert "| Issue `PENPOT_TOKEN` into The Void |" in text
+        assert "| Fabulousa is reachable but unauthenticated |" not in text
+
+
+class TestSizingIsDerived:
+    """Points come from facts about the item and print their reasons.
+
+    An estimate nobody can interrogate is a number nobody trusts, so each
+    contribution has to be attributable to something observable.
+    """
+
+    def test_an_impeded_item_costs_more_than_an_open_one(self, builder):
+        """Blocked work carries the cost of clearing the blocker as well as doing it."""
+        locations = builder._locations()
+        open_item = {"status": "Open", "location": "Fabulousa", "source": "docs/x.md"}
+        blocked = {"status": "Funding-gated", "location": "Fabulousa", "source": "docs/x.md"}
+        assert builder.size(blocked, locations)[0] > builder.size(open_item, locations)[0]
+
+    def test_an_unrouted_item_costs_more_than_a_routed_one(self, builder):
+        """Finding an owner is real work, and it has to happen before anything else."""
+        locations = builder._locations()
+        routed = {"status": "Open", "location": "Fabulousa", "source": "docs/x.md"}
+        unrouted = {"status": "Open", "location": "", "source": "docs/x.md"}
+        assert builder.size(unrouted, locations)[0] > builder.size(routed, locations)[0]
+
+    def test_every_point_carries_its_reason(self, builder):
+        """Calibrated: returning the number alone fails this.
+
+        A number nobody can interrogate is a number nobody trusts, and an
+        unarguable estimate is how a backlog stops being used.
+        """
+        _, why = builder.size(
+            {"status": "Blocked", "location": "", "source": "docs/compliance/x.md"},
+            builder._locations(),
+        )
+        assert len(why) == 4
+
+    def test_points_land_on_the_fibonacci_scale(self, builder):
+        """Rounding down to Fibonacci keeps a 13 meaningful rather than arithmetic."""
+        locations = builder._locations()
+        for status in ("Open", "Blocked", "Needs owner", "Partial"):
+            for source in ("docs/x.md", "docs/compliance/x.md"):
+                for location in ("", "Fabulousa"):
+                    points, _ = builder.size(
+                        {"status": status, "location": location, "source": source}, locations
+                    )
+                    assert points in builder._FIBONACCI
+
+
+class TestItSweepsCheckboxWorkToo:
+    """Tables were the only shape swept until 2026-09-05.
+
+    81 unchecked `- [ ]` items across 13 documents reached no register —
+    including all three `wiki-content/Todo-*` lists, which exist for no other
+    purpose. A backlog claiming "every outstanding item" that cannot see the
+    commonest way of recording one was overstating its coverage.
+    """
+
+    def test_an_unchecked_item_is_harvested(self, builder):
+        """The shape that was invisible."""
+        items = builder._checkbox_items(
+            "wiki-content/Todo-example.md",
+            "- [ ] Wire the notification service into The Nexus\n",
+            {"The Nexus": "workers/infinity-ws/"},
+        )
+        assert len(items) == 1
+        assert items[0]["action"] == "Wire the notification service into The Nexus"
+        assert items[0]["status"] == "Open"
+        assert items[0]["location"] == "The Nexus"
+        assert items[0]["line"] == 1
+
+    def test_a_checked_item_is_not_outstanding(self, builder):
+        """`- [x]` is done. Sweeping it would report finished work as open."""
+        items = builder._checkbox_items(
+            "wiki-content/Todo-example.md", "- [x] Already shipped this weeks ago\n", {}
+        )
+        assert items == []
+
+    def test_a_runbook_step_is_not_outstanding_work(self, builder):
+        """`- [ ] PRAGMA integrity_check returns ok` is a step in a drill.
+
+        Sweeping the runbooks, the CAB form and the Town Hall templates would
+        add roughly fifty procedure steps to the backlog as though they were
+        unbuilt features — worse than missing the real ones, because it buries
+        them and makes the total meaningless.
+        """
+        step = "- [ ] `PRAGMA integrity_check` returns ok on the restored file\n"
+        assert builder._checkbox_items("docs/runbooks/disaster-recovery.md", step, {}) == []
+        assert builder._checkbox_items("docs/DEPLOYMENT_RUNBOOK.md", step, {}) == []
+        assert builder._checkbox_items("docs/cab/APPROVAL_WORKFLOW.md", step, {}) == []
+        assert builder._checkbox_items("config/townhall/templates/policy.md", step, {}) == []
+        # ...and the same text in an ordinary document IS swept, so the
+        # exclusion is doing the discriminating, not the wording.
+        assert builder._checkbox_items("wiki-content/Todo-todo.md", step, {})
+
+    def test_a_stub_item_is_not_an_action(self, builder):
+        """ "Step 2:" and "TBD" clear no bar the table sweep does not also set."""
+        assert builder._checkbox_items("wiki-content/Todo-x.md", "- [ ] Step 2:\n", {}) == []
+
+    def test_the_todo_lists_now_reach_the_backlog(self, builder):
+        """The three documents that exist only to record outstanding work.
+
+        They were the clearest evidence the sweep was incomplete: a file named
+        `Todo-todo.md` contributing nothing to the backlog.
+        """
+        harvested = {item["source"] for item in builder.harvest()}
+        assert "wiki-content/Todo-todo.md" in harvested
+
+
+class TestTheSweepDoesNotReadItself:
+    """The generated backlog must not be one of the registers it sweeps."""
+
+    def test_the_generated_backlog_is_not_a_register(self, builder):
+        """It is a markdown document full of tables, so it reads as one.
+
+        Every generation re-ingested the previous one: 163 items became 326,
+        then 489, compounding by the same 163 each run. `--check` could never
+        pass, because regenerating produced a different file from the one it
+        had just written — a gate that fails on correct input, which is how a
+        gate gets switched off.
+        """
+        swept = {path.relative_to(builder.REPO).as_posix() for path in builder._documents()}
+        assert "docs/governance/ACTION-BACKLOG.md" not in swept
+
+    def test_generating_twice_produces_the_same_document(self, builder):
+        """The property the exclusion exists to give, asserted directly.
+
+        Reading `_documents()` proves the output is skipped; this proves the
+        sweep as a whole is a function of the registers, which is what
+        `--check` relies on.
+        """
+        first = builder.render(builder.harvest())
+        second = builder.render(builder.harvest())
+        assert first == second
+
+
+class TestEachRoutedItemLinksItsDesign:
+    """A routed item's design material exists; the backlog has to say where."""
+
+    def test_every_pack_link_resolves(self):
+        """A generated link into the void is worse than no link.
+
+        The reader trusts a generated document more than a hand-kept one, so a
+        dead link here is believed for longer.
+        """
+        backlog = REPO / "docs" / "governance" / "ACTION-BACKLOG.md"
+        targets = re.findall(r"\[pack\]\(([^)]+)\)", backlog.read_text(encoding="utf-8"))
+        assert targets, "no pack links at all — the Design column is not being emitted"
+        missing = [t for t in set(targets) if not (backlog.parent / t).resolve().is_file()]
+        assert missing == []
+
+    def test_an_unrouted_item_claims_no_design(self, builder):
+        """It has none. Linking one anyway would name the wrong Location's pack."""
+        assert builder._design_link(None) == "—"
+        assert builder._design_link("") == "—"
+
+    def test_every_location_has_a_pack_to_link(self, builder):
+        """Calibrated against the alternative: a `_no pack_` cell.
+
+        The helper degrades rather than emitting a dead link, and this asserts
+        the degradation is not currently needed — all 43 Locations have one.
+        If a Location is added without a pack, this fails and names it, rather
+        than the backlog quietly printing `_no pack_` where a reader expects a
+        design.
+        """
+        from src.entities.platform import PLATFORM_ENTITIES
+
+        without = [
+            entity.location
+            for entity in PLATFORM_ENTITIES.values()
+            if getattr(entity, "location", None)
+            and builder._design_link(entity.location) == "_no pack_"
+        ]
+        assert without == []
+
+
+class TestTheCommittedCopy:
+    """The file in the tree matches what the registers currently say."""
+
+    def test_it_matches_the_registers(self, builder):
+        """What `--check` asserts in CI, asserted here against the committed file."""
+        assert builder.main(["--check"]) == 0
+
+    def test_it_actually_found_the_estate(self, builder):
+        """A sweep over nothing passes vacuously."""
+        items = builder.harvest()
+        assert len(items) > 100
+        assert len({item["source"] for item in items}) > 30
+
+    def test_it_states_a_definition_of_ready_and_done(self):
+        """Stated once for the whole backlog, not restated per item."""
+        text = BACKLOG.read_text(encoding="utf-8")
+        assert "## Definition of Ready" in text
+        assert "## Definition of Done" in text
+
+    def test_it_does_not_invent_a_velocity(self):
+        """A sprint count from an invented velocity is a confident fiction."""
+        text = BACKLOG.read_text(encoding="utf-8")
+        assert "Velocity is not asserted here" in text

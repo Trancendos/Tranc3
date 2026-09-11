@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `10f7ec84`. Regenerate with
+Generated from repo state at `551970bf`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -124,7 +124,7 @@ that none of them import.
 
 ### `ffmpeg-worker`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/ffmpeg-worker/worker.py:23 Dimensional.service_auth_fastapi`
+  - `workers/ffmpeg-worker/worker.py:24 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `files-service`
@@ -216,7 +216,7 @@ that none of them import.
 
 ### `notifications`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/notifications/worker.py:766 Dimensional.service_auth_fastapi`
+  - `workers/notifications/worker.py:814 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `observatory`
@@ -272,17 +272,19 @@ that none of them import.
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `storage-service`
-- **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored
-  - `workers/storage-service/worker.py:41 Dimensional.service_auth_fastapi`
+- **imports_resolve** — 2 unguarded, 0 guarded, 0 vendored
+  - `workers/storage-service/worker.py:41 Dimensional.path_validation`
+  - `workers/storage-service/worker.py:42 Dimensional.service_auth_fastapi`
 
 ### `taimra`
 - **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored
   - `workers/taimra/worker.py:24 Dimensional.service_auth_fastapi`
 
 ### `tateking`
-- **imports_resolve** — 2 unguarded, 0 guarded, 0 vendored
+- **imports_resolve** — 3 unguarded, 0 guarded, 0 vendored
   - `workers/tateking/main.py:33 Dimensional.service_auth_fastapi`
-  - `workers/tateking/worker.py:26 Dimensional.service_auth_fastapi`
+  - `workers/tateking/worker.py:26 Dimensional.path_validation`
+  - `workers/tateking/worker.py:27 Dimensional.service_auth_fastapi`
 
 ### `the-academy`
 - **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored
@@ -334,7 +336,7 @@ that none of them import.
 
 ### `vault-service`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/vault-service/worker.py:48 Dimensional.service_auth_fastapi`
+  - `workers/vault-service/worker.py:50 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `vrar3d`

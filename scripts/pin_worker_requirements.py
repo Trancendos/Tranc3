@@ -138,7 +138,7 @@ def process(path: Path, write: bool) -> List[Tuple[str, str]]:
         if not stripped or stripped.startswith("-") or "==" in stripped:
             out_lines.append(raw)
             continue
-        match = _REQ.match(stripped)
+        match = _REQ.match(stripped)  # anchored-ok: line parser, not a validator
         if not match:
             out_lines.append(raw)
             continue

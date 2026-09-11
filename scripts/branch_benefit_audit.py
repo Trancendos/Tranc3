@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -63,15 +64,26 @@ def _diff_stats(base: str, branch: str) -> tuple[int, int, int]:
         return 0, 0, 0
     if not stat:
         return 0, 0, 0
+    # Matched by regex rather than by splitting on whitespace and comparing
+    # tokens. git writes `15 files changed, 249 insertions(+), 118 deletions(-)`
+    # -- the counts carry a `(+)` / `(-)` suffix, so `part == "insertions"` never
+    # matched and BOTH numbers came back 0 on every branch this audit has ever
+    # examined. `files` matched only because git spells that one bare.
+    #
+    # It was not a cosmetic column. `_verdict` classifies on `deletions`, so the
+    # "mass deletions -- likely destructive rebase" rule could never fire and
+    # every branch took the `files <= 15 and deletions < 500` path: the audit
+    # was calling branches safe to cherry-pick on a measurement it had not made.
     files = insertions = deletions = 0
-    parts = stat.replace(",", "").split()
-    for i, part in enumerate(parts):
-        if part == "file" or part == "files":
-            files = int(parts[i - 1])
-        elif part == "insertion" or part == "insertions":
-            insertions = int(parts[i - 1])
-        elif part == "deletion" or part == "deletions":
-            deletions = int(parts[i - 1])
+    for count, unit in re.findall(
+        r"(\d+)\s+(files?|insertions?|deletions?)", stat.replace(",", "")
+    ):
+        if unit.startswith("file"):
+            files = int(count)
+        elif unit.startswith("insertion"):
+            insertions = int(count)
+        elif unit.startswith("deletion"):
+            deletions = int(count)
     return files, insertions, deletions
 
 

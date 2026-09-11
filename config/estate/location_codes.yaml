@@ -1,0 +1,55 @@
+# Reference codes issued to Locations, for `src/library/references.py`.
+#
+# APPEND-ONLY. A code here has been issued: documents, citations and printed
+# material carry references built from it, and changing one breaks every
+# reference already using it. Derivation alone could not guarantee that —
+# it extends a code only as far as the current register requires, so adding
+# a Location beginning "Tran" would push `Tranc` to `Trance` and silently
+# invalidate every `Tranc-KB-0001` in existence.
+#
+# Add a Location by appending its derived code. Never edit or remove one;
+# `tests/test_library_references.py` fails if you do.
+codes:
+  API Marketplace: Apim
+  Arcadia: Arcadia
+  Arcadian Exchange: Arcadian
+  ChronosSphere / ArcStream: Chro
+  Cryptex: Cryp
+  DevOcity: Devo
+  DocUtari: Docu
+  Fabulousa: Fabu
+  I-Mind: Imin
+  Imaginarium: Imag
+  Infinity: Infi
+  Luminous: Lumi
+  Resonate: Reso
+  Royal Bank of Arcadia: Roya
+  Sashas Photo Studio: Sash
+  Section 7: Sect
+  TateKing: Tate
+  The Academy: Acad
+  The Artifactory: Arti
+  The Basement: Base
+  The Chaos Party: Chao
+  The Citadel: Cita
+  The Digital Grid: Digi
+  The HIVE: Hive
+  The Ice Box: Iceb
+  The Lab: Lab
+  The Library: Libr
+  The Lighthouse: Ligh
+  The Nexus: Nexu
+  The Observatory: Obse
+  The Spark: Spar
+  The Studio: Stud
+  The Town Hall: Town
+  The Void: Void
+  The Warp Tunnel: Warpt
+  The Workshop: Work
+  Think Tank: Thin
+  TranceFlow: Tranc
+  Tranquility: Tranq
+  Turing's Hub: Turi
+  VRAR3D: Vrar
+  Warp Radio: Warpr
+  tAimra: Taim

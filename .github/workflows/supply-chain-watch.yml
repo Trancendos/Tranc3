@@ -121,7 +121,15 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: vulnerability-census
-          path: logs/vulnerability_census.json
+          # The trend record rides along with the full census. This job checks
+          # out with persist-credentials: false and holds no write token by
+          # design -- see the permissions note above -- so it cannot commit the
+          # appended history line, and the tracked file records only runs a
+          # human landed. Granting this job write access to close that gap is a
+          # real privilege trade-off and has not been made unilaterally.
+          path: |
+            logs/vulnerability_census.json
+            docs/governance/vulnerability-census-history.jsonl
           retention-days: 90
 
   obsolescence:
@@ -155,15 +163,95 @@ jobs:
           path: logs/obsolescence_census.json
           retention-days: 90
 
+  vaccination:
+    name: Immunity check (daily)
+    # Daily, on the vulnerability cadence. A sensor going blind is an event in
+    # the TOOLCHAIN, not in the repository: a scanner release changes a rule's
+    # default, a pinned tool falls out of the runner image, an `ignore` widens
+    # until `--select` stops winning, an output format shifts and the parser
+    # silently yields nothing. None of those produce a commit, so a
+    # push-triggered probe can only ever say "it could see when somebody last
+    # pushed" -- and a quiet fortnight leaves a fortnight-old claim about the
+    # estate's own immunity with nothing anywhere saying so.
+    #
+    # That is the same argument this workflow's header already makes for
+    # abandonment and CVE disclosure, which is why this is a job here rather
+    # than a new workflow file. The standing policy is to avoid adding GitHub
+    # Actions, and this adds none.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 5 * * *'
+    runs-on: ubuntu-latest
+    # Probes are small, synthetic and local -- no registry latency to wait on.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.11'
+
+      - name: Install the sensors being asked to prove themselves
+        # The versions this repository declares, at the same pins the gate uses.
+        # A floating scanner would make "the sensor went blind" and "a different
+        # scanner ran" indistinguishable, and telling those two apart is the
+        # entire job of this step's output.
+        run: |
+          bandit_pin=$(grep -m1 '^bandit==' requirements-security.txt | cut -d'#' -f1 | tr -d ' ')
+          echo "installing ruff==0.15.8 and $bandit_pin"
+          pip install --quiet "ruff==0.15.8" "$bandit_pin"
+
+      - name: Ask every sensor to demonstrate it can still see
+        # Fails when a REQUIRED sensor cannot flag its own planted defect, or
+        # when any sensor that could see before cannot now -- optional ones
+        # included, because a regression means something changed underneath it.
+        #
+        # `--record` so the uploaded artifact is THIS run's result rather than
+        # whatever was last committed. The job holds no write token by design,
+        # so it cannot commit the refreshed record; the artifact is where a
+        # reader gets today's answer.
+        #
+        # `--max-age` IS DELIBERATELY NOT PASSED HERE, and the reason is worth
+        # the paragraph because the flag was here and had to come out.
+        #
+        # It compares against the record on disk -- the committed one. This job
+        # runs the probes itself, so that comparison cannot tell it anything
+        # about sight; it measures how long since a person committed a refreshed
+        # record. And the job cannot refresh it: no write token, by design. So
+        # the check's only possible outcome, given enough calendar, is a red run
+        # whose stated remedy is something the runner is structurally unable to
+        # perform. A daily job that is guaranteed to end up permanently red is
+        # not a control -- it is the `label` check this repository already had
+        # to stop believing, rebuilt on purpose. Reported by cubic on PR #1150.
+        #
+        # THE GAP THIS LEAVES, NAMED RATHER THAN PAPERED OVER: nothing detects
+        # this schedule itself stopping. `--max-age` was the claimed answer and
+        # was never capable of being one, because a check inside the job that
+        # stopped cannot observe that the job stopped. See
+        # docs/governance/IMMUNE-SYSTEM.md, which records it as an open gap
+        # rather than as covered. `--max-age` remains on the CLI for the caller
+        # who can act on it: a person, or a PR-time check, where "rerun with
+        # --record and commit the result" is a thing the reader can actually do.
+        run: python scripts/vaccinate.py --record
+
+      - name: Upload the immunity report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: immunity-record
+          path: config/immune/immunity.json
+          retention-days: 90
+
   alert:
     name: Raise a tracking issue on failure
-    needs: [vulnerability, obsolescence]
+    needs: [vulnerability, obsolescence, vaccination]
     # A scheduled workflow has no pull request to redden and nobody watching the
     # Actions tab at 05:00. Without this job a failure is indistinguishable from
     # a pass — which is the exact defect this workflow exists to correct, so it
     # would be a poor joke to reproduce it here. Runs when either census failed;
     # `always()` is required because a skipped sibling job otherwise cancels it.
-    if: always() && (needs.vulnerability.result == 'failure' || needs.obsolescence.result == 'failure')
+    if: always() && (needs.vulnerability.result == 'failure' || needs.obsolescence.result == 'failure' || needs.vaccination.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -177,6 +265,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           VULN_RESULT: ${{ needs.vulnerability.result }}
           OBSO_RESULT: ${{ needs.obsolescence.result }}
+          VACC_RESULT: ${{ needs.vaccination.result }}
         run: |
           set -euo pipefail
 
@@ -189,23 +278,28 @@ jobs:
             2>/dev/null || true
 
           body=$(cat <<EOF
-          A scheduled supply-chain census failed.
+          A scheduled supply-chain job failed.
 
-          | Census | Result |
+          | Job | Result |
           |---|---|
-          | Vulnerability (daily) | \`${VULN_RESULT}\` |
-          | Obsolescence (weekly) | \`${OBSO_RESULT}\` |
+          | Vulnerability census (daily) | \`${VULN_RESULT}\` |
+          | Obsolescence census (weekly) | \`${OBSO_RESULT}\` |
+          | Immunity check (daily) | \`${VACC_RESULT}\` |
 
           Run: ${RUN_URL}
 
-          Both censuses are fail-closed, so this means one of:
+          All three jobs are fail-closed, so this means one of:
 
           - a **fixable** vulnerability is open — a patch exists and has not been taken;
           - a **stranded** dependency has no reasoned disposition in \`docs/governance/OBSOLESCENCE-ACCEPTED.md\`;
-          - a surface could not be scanned, and is therefore reported as unknown rather than healthy.
+          - a surface could not be scanned, and is therefore reported as unknown rather than healthy;
+          - a **sensor went blind** — it could flag its own planted defect before and cannot now.
 
-          The third case is the one worth checking first: an unreachable registry
-          is a scanning failure, not a finding, and should not be closed as noise.
+          The last two are the ones worth checking first, and for the same reason:
+          neither is a finding about the code. An unreachable registry is a
+          scanning failure. A blind sensor is worse — it reports exactly what a
+          clean estate reports, so every scan that included it since it broke is
+          now unsupported evidence. Do not close either as noise.
 
           ---
           _Filed automatically by \`.github/workflows/supply-chain-watch.yml\`._

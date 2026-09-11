@@ -50,13 +50,18 @@ ever passes through. Fourteen flows sit there. That is the real finding.
 
 ## 3. The measurement
 
-As at 2026-08-21T20:40:00+00:00, across 39 declared flows:
+As at 2026-08-21T20:40:00+00:00, across 39 declared flows — with FLOW-064 revised to
+`enforced` on 2026-09-04 when the Town Hall's PLM gate was wired to the creative
+commission path, and the counts below moved with it. This table is no longer
+maintained by hand: `scripts/flow_conformance.py --check` fails when it disagrees with
+`config/estate/flow_baseline.json`, which is what let it state 22/12 and call FLOW-064
+unwired for a fortnight after it was not.
 
 | Verdict | Count |
 |---|---|
-| `enforced` | 22 |
+| `enforced` | 23 |
 | `partial` | 4 |
-| `unwired` | 12 |
+| `unwired` | 11 |
 | `absent` | 1 |
 | `unknown` | 0 |
 
@@ -80,6 +85,7 @@ As at 2026-08-21T20:40:00+00:00, across 39 declared flows:
 | `FLOW-052` | Infinity | Infinity-One is the central user account and profile hub | **enforced** |
 | `FLOW-062` | The Town Hall | The Town Hall carries ITIL/ITSM, the CI register and CMDB | **enforced** |
 | `FLOW-063` | The Town Hall | The Town Hall carries the War Room and Governance Board Room | **enforced** |
+| `FLOW-064` | The Town Hall | User-requested work passes a PLM gate review before it is signed off | **enforced** |
 | `FLOW-065` | DocUtari | All user documents and files are stored in DocUtari | **enforced** |
 | `FLOW-066` | The Observatory | Diagnostic assessment is aggregated rather than per-service | **enforced** |
 | `FLOW-001` | The Digital Grid | Workflow and pipeline execution routes through The Digital Grid | partial |
@@ -99,7 +105,6 @@ As at 2026-08-21T20:40:00+00:00, across 39 declared flows:
 | `FLOW-053` | Infinity | Infinity Bridge is the transport layer users navigate through | **unwired** |
 | `FLOW-054` | Arcadia | Arcadia is the post-login user entrance with forum, AI chat and email | **unwired** |
 | `FLOW-061` | Arcadian Exchange | Transactions are executed by Arcadian Exchange and regulated by Royal Bank of Arcadia | **unwired** |
-| `FLOW-064` | The Town Hall | User-requested work passes a PLM gate review before it is signed off | **unwired** |
 | `FLOW-012` | The Lighthouse | The Lighthouse cryptographically tags and scans all inbound and outbound traffic | absent |
 
 ## 4. What the numbers actually say

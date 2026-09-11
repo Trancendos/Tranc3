@@ -40,6 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from Dimensional.path_validation import PathTraversalError
 from Dimensional.service_auth import check_internal_secret
 from src.backup.engine import BackupEngine
 from src.backup.registry import (
@@ -213,7 +214,13 @@ async def rpo_status():
 
 @router.get("/list")
 async def list_backups(worker: Optional[str] = None):
-    return {"backups": engine.list_backups(worker)}
+    # SEC-017: `worker` names a directory under the backup root. A name the
+    # engine refuses is the caller's error, not a server fault, so it becomes a
+    # 400 rather than propagating into a 500.
+    try:
+        return {"backups": engine.list_backups(worker)}
+    except (PathTraversalError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 @router.post("/run")

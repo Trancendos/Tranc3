@@ -51,6 +51,19 @@ mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQ
 exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
 or reassign AIs to a role without a code change; every change is recorded in an audit history.
 
+**Backlog Routing Register.** Which Location owns an outstanding item is a Town Hall
+decision, not a lookup: `src/townhall/routing.py` (SQLite-backed, exposed at
+`/townhall/routing` — `src/townhall/routing_routes.py`, mounted in `api.py`) records the
+Location, the named authority, the written reason and the Location's solution pack, emits
+`townhall.item.routed` to The Observatory, and never overwrites — a re-route supersedes and
+both rows stay in `routing_history`. It refuses a Location that is not one of the 43, and one
+with no solution pack, because routing work to a place with no architecture or acceptance
+criteria is what "unrouted" already means. Decisions are exported to
+`config/estate/backlog_routing.yaml`, which is what `scripts/build_action_backlog.py` reads in
+CI — the export is also what makes a routing decision show up in a diff. Items with no
+decision stay `_unrouted_` in the backlog, and that count is a queue the Town Hall owes an
+answer to rather than a number assigned away by judgement.
+
 **Trancendos Models Matrix.** Every named AI's base model is one of the platform's existing
 orchestration tiers — **Trance-One** (Tier 1, Sovereign/Orchestrator, most capable), **T2ance**
 (Tier 2, Primes), or **Tranc3** (Tier 3, Lead AI/AI Base, the default) — via
@@ -137,7 +150,7 @@ mounted in `api.py`).
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
 | **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Code creation platform (Claude Code-style) | ✅ Self-hosted | `workers/the-lab/` (Port 8055) + `workers/lab-service/` (Port 8066) — supersedes the old `src/lab/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
-| **The Chaos Party** | The Mad Hatter + Alice Dream | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
+| **The Chaos Party** | The Mad Hatter + Alice Dream | Central testing platform — validation & compliance (Alice in Wonderland themed) | ✅ Self-hosted | `workers/chaos-party/worker.py` (Port 8079 — its own Traefik host rule `chaos-party.trancendos.com` + PathPrefix `/chaos-party`, one of the few Locations with a dedicated host); `tests/test_chaos.py` and `tests/e2e/` are suites it runs, not the service. `src/entities/platform.py` recorded `tests/` as its `worker_path` with no port until 2026-09-05, which made a deployed, Traefik-routed Location read as having nowhere to receive traffic |
 | **The Artifactory** | Lunascene | Central artifact repository library | ✅ Self-hosted | `workers/artifactory-service/` (Port 8047, Zot OCI registry bridge) — supersedes the old `src/artifactory/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | ✅ In repo | `src/apimarket/` (router registered in `api.py`); Gravitee.io planned integration |
 | **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
@@ -198,6 +211,48 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `wiki-content/Architecture-CROSS_REPO_SYNERGY.md` — Maps all 29 infinity-adminOS TypeScript packages to Python equivalents (moved from repo root during the wiki-content migration — see `docs/WIKI_INDEX.md`)
 - `wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python, describing the Hybrid/Local path once funded (moved from repo root — see `docs/WIKI_INDEX.md`)
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
+- `docs/governance/SWOT-FORENSIC-ASSESSMENT.md` — the current SWOT and forensic assessment,
+  measured rather than carried forward, with the eight findings and the repository state. The
+  five prior phase assessments stay in `wiki-content/Historical-*` and are indexed from it
+- `docs/governance/ACTION-BACKLOG.md` — generated sweep of every outstanding item across 44
+  registers, routed to Locations and linked to their solution packs
+- `docs/governance/DVMS-COMPETITIVE-ANALYSIS.md` — DVMS measured against comparable platforms
+- `docs/governance/CI-ESTATE-CONSOLIDATION.md` — why 84 pull requests were blocked
+  by one cause rather than 84, the 48→27 workflow consolidation that followed, and
+  the four Forgejo queue-hygiene audits that were built for exactly this problem and
+  have never run because they pin `self-hosted` for work needing no machine
+- `docs/ADAPTIVE_REMEDIATION.md` — the probabilistic risk-scoring and safe-patch
+  automation model behind `scripts/adaptive_vulnerability_remediation.py`, which the
+  DVMS census feeds
+- `docs/governance/RELEASE-READINESS.md` — the **twelve** open issues, grouped by
+  what must be true before a release, with a definition-of-done that can be checked
+  rather than asserted. #1180 ("GitHub Actions need review and fixing") is what PR
+  #1150 is. The highest-consequence item is #1146: the backup engine is SQLite-only
+  and `misp-db` is MySQL, so there is no code path that could back it up
+- `docs/governance/IMMUNE-SYSTEM.md` — what AWS IAM Access Analyzer, Microsoft
+  Security DevOps, CodeFactor and `actions/labeler` each actually do, and the
+  vendor-free equivalents built here (`src/immune/`). The property none of them
+  offer: a sensor that cannot see reports exactly what a clean estate reports,
+  so every sensor declares a **probe** — a planted defect it must flag — and one
+  that reports clean while failing its own probe is recorded blind. Read it
+  before adding any scanner to this estate
+- `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — three externally supplied AI
+  assessments of Tranc3 checked claim by claim. The rule they establish: **they
+  reliably read the issue tracker and reliably invent the aggregates.** Document 3
+  named all eleven cited issues correctly (#284, #337, #336, #334, #1180, #995,
+  #991, #990, #1146, #969, #474) — the whole open backlog — and then described that
+  backlog as 863 issues. Measured: **12 open issues, 3,118 tracked files** (not 863
+  and 2,259). So act on their findings and ignore their counts, and do not build the
+  "triage blitz" machinery all three propose for a backlog that does not exist.
+  Read it before acting on any externally generated report of this estate
+- `docs/governance/REFERENCE-NUMBERING.md` — Wiki (`WIX`, administrative) vs Knowledge Base
+  (`KB`, user) reference numbering across three scopes: platform-wide `TKB000001`/`TWIX000042`,
+  Location-scoped `Infi-KB-0001`, and personal `#One:KB-0001` (Infinity-One, per-user, private
+  unless shared). Set by the owner 2026-09-05; implemented in `src/library/references.py`,
+  which derives Location codes rather than tabulating them and extends the three colliding
+  pairs (Arcadia/Arcadian Exchange, TranceFlow/Tranquility, Warp Tunnel/Warp Radio)
+- `docs/architecture/topology-3d.json` — the estate's shape derived from compose, `api.py` and
+  the entity register; regenerated by `scripts/build_topology_3d.py --check`
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
 - `docs/architecture/ea-workbook/` — EA/CMDB workbook (19 CSVs + runbooks/API-spec/compliance
   docs) covering 6 real anchor services in depth (The Spark, The Digital Grid, Infinity,
@@ -219,6 +274,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 | **Event Bus** | `src/event_bus/` | infinity-adminOS @trancendos/event-bus | Pattern-based routing, subscriptions, SQLite persistence |
 | **AI Gateway** | `src/ai_gateway/` | infinity-adminOS @trancendos/ai-gateway | Priority failover (Ollama→OpenRouter→Offline), token budgets |
 | **Zero Trust IAM** | `src/auth/zero_trust.py` | infinity-adminOS @trancendos/iam | Device posture, MFA, geographic policies, risk scoring |
+| **Immune System** | `src/immune/` | built here, 2026-09-10 | Sensors that report whether they could SEE, SARIF normalisation, adjudication memory with expiry, and a grade that caps itself when a required sensor was blind. **Vaccination** (`src/immune/vaccination.py`, `scripts/vaccinate.py`) runs the probes daily from `supply-chain-watch.yml` rather than only on pushes, because a sensor goes blind when the toolchain changes, not when someone commits — it tracks *sight* (required sensors proving they can see), *coverage* (how much of the system has ever been asked), and the age of any blindness. **Antibodies** (`src/immune/antibody.py`, `scripts/antibody.py`) propose automated fixes as a diff and never apply them — refusing outright when the sensor is not `ok`, when the file is on a security-critical surface (`src/immune/surfaces.py`, shared with `scripts/triage_change.py` so the two cannot drift), when it falls outside the change, or when a scope ceiling is hit; every refusal is audited. See `docs/governance/IMMUNE-SYSTEM.md` |
 
 ### Named subsystems (in this repo)
 
@@ -467,12 +523,29 @@ pipelines — but it is dormant, so today GitHub Actions is the only CI that act
 an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
 execute. Describe them as the target state, not as a system currently gating anything.
 
-`.github/workflows/` has **20** files (this said 12 until 2026-08-28; it had not been recounted
-since eight more were added). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint and
-Service Topology checks, `codeql.yml`, `test.yml`, `trivy.yml`, `codecov.yml`, `python.yml`,
-`rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`). Two are
-deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
-`publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
+`.github/workflows/` has **19** files (this said 12 until 2026-08-28 and 20 until 2026-09-03,
+when `codecov.yml` was retired). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint,
+Service Topology and Pytest jobs, `codeql.yml`, `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`,
+`production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`).
+
+**`codecov.yml` was retired on 2026-09-03**, not dropped: coverage is now produced by `ci.yml`'s
+Pytest job, which already ran the same suite. The retired workflow existed only to run that suite
+a second time with `--cov` flags attached, on every PR and every push to `main`, and it was
+suppressed with `|| true` exactly as `ci.yml`'s run is — so it gated nothing either way. Its
+checkout also omitted `submodules: recursive`, so tests reading real `compliance/magna-carta`
+content silently took a "no suites"/404 path; the job coverage now runs in does not. `test.yml`'s
+`Ruff Lint + Format` job went at the same time: it ran the identical ruff command at the identical
+pin as `ci.yml`'s `lint`, and both fire on a push to `main`.
+
+**`ci.yml`'s Pytest job no longer runs with `-x`.** With it, one teardown error stopped the run
+after four tests and `|| true` reported the job green — measured on run 33808374262, whose entire
+pytest output was `....E`. The suppression was not "run everything and ignore failures"; it was
+"run five tests and ignore the result". The error itself was a module-level `os.environ` write in
+`tests/test_backup_service.py` executing during collection; `scripts/check_test_env_isolation.py`
+now fails CI on that pattern.
+
+Two of the 19 are deliberate, narrow exceptions for GitHub-native features with no Forgejo
+equivalent — `publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
 deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
 (PR status checks, CodeQL, Pages/Wiki) rather than being phased out.
@@ -498,16 +571,35 @@ Forgejo at `trancendos.com/the-workshop`. Act-runner in `deploy/forgejo/docker-c
 
 ### Pre-commit Hooks (`.pre-commit-config.yaml`)
 
-Runs on every local commit — zero-cost security gate:
-- **ruff** — Fast Python linter
-- **black** — Code formatting
-- **isort** — Import sorting
-- **bandit** — Python security linter
+Runs on every local commit — zero-cost security gate. **22 hooks**, and this
+list is checked against the config by `scripts/check_precommit_documented.py`,
+because it was wrong in both directions until 2026-09-10: it named `black` and
+`isort`, neither of which is configured, and omitted three hooks that rewrite
+files. Anyone who read it, ran `black`, and committed had every file reformatted
+back on the next push — black defaults to line-length 88, this repo formats at
+100 — with nothing anywhere saying why.
+
+- **ruff** — Fast Python linter (import sorting included, via its `I` rules)
+- **ruff-format** — Code formatting. **This is the formatter, not black.**
+  `[tool.ruff] line-length = 100` in `pyproject.toml` is the setting that
+  matters; running `black` locally will fight it on every commit
+- **bandit** — Python security linter, `-c pyproject.toml` so `[tool.bandit]`'s
+  reasoned targets, exclusions and skips apply
 - **semgrep** — Multi-language SAST
 - **gitleaks** — Secret detection
 - **detect-secrets** — Additional secret scanning
-- **safety** — Dependency vulnerability check
-- **typos** — Typo detection
+- **python-safety-dependencies-check** — Dependency vulnerability check (the
+  hook id; the tool is Safety, configured under `[tool.safety]`)
+- **typos** — Typo detection, `pass_filenames: false` so `.typos.toml`'s
+  exclusions actually apply
+- **validate-ea-workbook** — local; EA/CMDB workbook CSV integrity
+- **security-scanner** / **security-autofix** — local; the adaptive scanner and
+  its safe-patch pass. These **modify files**, which is why they belong in a
+  list a contributor reads before wondering what changed their code
+- Plus eleven file-hygiene hooks from **pre-commit-hooks**: trailing whitespace,
+  end-of-file, `check-yaml` / `-json` / `-toml` / `-ast` / `-merge-conflict`,
+  `detect-private-key`, `check-added-large-files`, `no-commit-to-branch`,
+  `debug-statements`
 
 ### Manual deploy (from your machine)
 

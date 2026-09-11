@@ -77,18 +77,32 @@ def test_wire_platform_events_registers_callbacks():
 # ---------------------------------------------------------------------------
 
 
+# Every expected value here must be a real member of the worker's
+# `SentinelChannel` enum: platform, agents, models, workflows, security, hive,
+# nexus, bridge, pillars, infrastructure, events. This list previously expected
+# "ai", "auth", "users" and "financial" -- none of which exist, so a payload
+# addressed to them is undeliverable. `src/event_bus/wiring.py` was corrected to
+# the real names and these expectations were not, leaving seven tests in this
+# file failing on `main`. Nothing noticed, because `ci.yml`'s Pytest job ran
+# with `-x` and `|| true` and stopped after four tests.
 @pytest.mark.parametrize(
     "event_type,expected_channel",
     [
-        ("ai.inference.complete", "ai"),
-        ("ai.inference.failed", "ai"),
-        ("auth.token.issued", "auth"),
-        ("user.login", "users"),
+        ("ai.inference.complete", "models"),
+        ("ai.inference.failed", "models"),
+        ("auth.token.issued", "security"),
+        ("user.login", "platform"),
         ("workflow.completed", "workflows"),
         ("service.health.changed", "platform"),
         ("secret.stored", "security"),
-        ("order.created", "financial"),
-        ("payment.received", "financial"),
+        # `security.*` is the case the guard in wiring.py exists for: it used to
+        # fall through to the platform default, which is a VALID channel, so
+        # nothing rejected it -- threat detections were delivered to the wrong
+        # subscribers rather than failing loudly.
+        ("security.threat.detected", "security"),
+        # No `financial` channel exists. `platform` is the honest destination.
+        ("order.created", "platform"),
+        ("payment.received", "platform"),
         ("notification.sent", "platform"),
     ],
 )
@@ -328,4 +342,5 @@ async def test_sentinel_forward_posts_to_correct_url():
 
     assert len(posted_payloads) == 1
     assert "sentinel:8041" in posted_payloads[0]["url"]
-    assert posted_payloads[0]["payload"]["channel"] == "ai"
+    # "models", not "ai" -- `ai` is not a SentinelChannel member.
+    assert posted_payloads[0]["payload"]["channel"] == "models"

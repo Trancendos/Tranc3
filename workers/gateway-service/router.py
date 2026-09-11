@@ -12,6 +12,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path as PathLib
+from pathlib import PurePosixPath
 from typing import Any
 
 import httpx
@@ -44,6 +45,7 @@ from database import fetch_access_audit, fetch_events, insert_event
 from Dimensional.infinity.abac import ThreatLevel
 from Dimensional.infinity.nomenclature import Pillar
 from Dimensional.infinity.sentinel_station import SharedSSEGenerator
+from Dimensional.path_validation import PathTraversalError, safe_join
 from models import AgentCreate, EventCreate, TopologySwitch, WorkflowCreate
 
 logger = logging.getLogger("gateway-service")
@@ -736,11 +738,65 @@ async def event_history(limit: int = Query(50, ge=1, le=500), request: Request =
 # ---------------------------------------------------------------------------
 
 
+def _contained_dashboard_file(path: str) -> PathLib:
+    r"""Resolve a dashboard URL path to a file inside DASHBOARD_DIR.
+
+    SEC-016. `py/path-injection`, CodeQL security-severity 7.5, three alerts on
+    what used to be one line:
+
+        file_path = DASHBOARD_DIR / path
+
+    FastAPI's `{path:path}` converter exists to let slashes through, so the
+    handler received the remainder of the URL verbatim and joined it onto a base
+    directory with no containment check at all. `Path.__truediv__` does not
+    normalise `..`, and `exists() and is_file()` is a check that the attacker's
+    chosen file is *there* -- the opposite of a containment check. Nothing on
+    this route requires authentication.
+
+    Measured rather than argued, against the real handler shape:
+
+        GET /dashboard/../../../../etc/passwd            -> 404
+        GET /dashboard/..%2f..%2f..%2f..%2fetc%2fpasswd  -> 200, file contents
+        GET /dashboard/%2e%2e/%2e%2e/etc/passwd          -> 200
+        GET /dashboard/..%2f.git%2fconfig                -> 200, remote URL
+
+    The first is the reason this survived: an HTTP client that normalises `..`
+    before sending -- browsers, httpx, requests -- cannot reach it, so the
+    obvious probe comes back 404 and reads as safe. Percent-encoded separators
+    survive that normalisation, Starlette decodes them after routing, and the
+    traversal arrives intact. Unlike SEC-014 and SEC-015, this alert was simply
+    correct.
+
+    Containment is the fix. `safe_join` validates each component before joining,
+    then resolves the join and re-checks -- so `..` and absolute components are
+    refused by name, and a symlink planted inside the dashboard directory and
+    pointing out of it is refused after resolution. Splitting with
+    `PurePosixPath` keeps the parsing on URL semantics rather than the host's,
+    and drops the empty and `.` segments a URL may legitimately carry.
+
+    Refusals and misses both return 404 from the caller, deliberately: a
+    response that distinguished "you tried to traverse" from "not there" would
+    hand back the map.
+    """
+    # `lstrip("/")` before parsing, not a filter on the parsed parts. POSIX gives
+    # `//` its own meaning, so `PurePosixPath("//etc/passwd").parts[0]` is `"//"`
+    # and not `"/"` -- a parts filter listing `"/"` lets `//etc/passwd` through
+    # with a root component still attached, and the join escapes. Found by the
+    # test, not by reading: `test_absolute_path_is_contained_not_honoured`.
+    parts = [p for p in PurePosixPath((path or "").lstrip("/")).parts if p not in ("", ".")]
+    if not parts:
+        parts = ["index.html"]
+    return safe_join(DASHBOARD_DIR, *parts)
+
+
 @router.get("/dashboard/{path:path}")
 async def serve_dashboard(path: str = "index.html"):
     """Serve the AI Platform dashboard static files."""
-    file_path = DASHBOARD_DIR / path
-    if file_path.exists() and file_path.is_file():
+    try:
+        file_path = _contained_dashboard_file(path)
+    except (PathTraversalError, ValueError):
+        raise HTTPException(404, "File not found") from None
+    if file_path.is_file():
         return FileResponse(str(file_path))
     raise HTTPException(404, "File not found") from None
 

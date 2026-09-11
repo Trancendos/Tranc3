@@ -658,6 +658,113 @@ class TestNotificationsModels:
         assert len(prefs.channels_enabled) == 2
 
 
+class TestNotificationsWebhookTarget:
+    """SEC-011 — what `dispatch_webhook` actually puts on the wire.
+
+    `py/partial-ssrf`, CodeQL 9.1, `workers/notifications/worker.py`. The
+    outbound HOST is taken from the allowlist and is not attacker-chosen; the
+    request TARGET is written entirely by the caller, and the guard that was
+    supposed to hold that line had two defects. Both cases below were run
+    against the unfixed worker: the first passed the wrong target through, the
+    second passed a traversal through. They are regression tests only because
+    they failed before the fix.
+    """
+
+    @staticmethod
+    def _target_for(monkeypatch, url):
+        """Dispatch to `url` and return the request target that reached the wire.
+
+        Nothing is sent: `HTTPSConnection` is replaced, so the test observes the
+        target this worker composed rather than what any server made of it.
+        """
+        import asyncio
+        import http.client
+
+        seen = {}
+
+        class _Conn:
+            def __init__(self, host, port=None, timeout=None):
+                seen["host"] = host
+
+            def request(self, method, target, body=None, headers=None):
+                seen["target"] = target
+
+            def getresponse(self):
+                class _R:
+                    status = 200
+
+                return _R()
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr(http.client, "HTTPSConnection", _Conn)
+        monkeypatch.setattr(
+            notifications_mod, "_WEBHOOK_ALLOWED_DOMAINS", {"allowed.example"}, raising=False
+        )
+        monkeypatch.setattr(notifications_mod, "validate_webhook_url", lambda u: u, raising=False)
+        ok = asyncio.run(notifications_mod.NotificationDispatcher.dispatch_webhook(url, {"a": 1}))
+        return ok, seen.get("target")
+
+    def test_query_string_reaches_the_endpoint_it_was_written_for(self, monkeypatch):
+        """Defect 1: the `?` separator was missing, so every query was mangled.
+
+        Measured against the unfixed worker:
+
+            https://allowed.example/hook?token=abc123  ->  POST /hooktoken=abc123
+
+        A signed webhook has never reached its endpoint, and the 404 it earned
+        read as the remote rejecting the call.
+        """
+        ok, target = self._target_for(monkeypatch, "https://allowed.example/hook?token=abc123")
+        assert ok is True
+        assert target == "/hook?token=abc123", target
+
+        ok, target = self._target_for(monkeypatch, "https://allowed.example/hook?a=1&b=2")
+        assert target == "/hook?a=1&b=2", target
+
+    def test_a_query_cannot_reach_the_path(self, monkeypatch):
+        """Defect 2: the traversal check read `_p.path`, the query reached it.
+
+        The charset allowlist on the query permits `.` and `%`, so `..%2f`
+        passed it, and defect 1 then appended it to the path. Measured against
+        the unfixed worker:
+
+            https://allowed.example/hook?..%2f..%2fadmin  ->  POST /hook..%2f..%2fadmin
+
+        With the separator structural, the query is a query: it is carried
+        verbatim after the `?` and cannot name a different path.
+        """
+        _, target = self._target_for(monkeypatch, "https://allowed.example/hook?..%2f..%2fadmin")
+        assert target is not None
+        assert target.split("?", 1)[0] == "/hook", target
+        assert not target.startswith("/hook.."), target
+
+    def test_path_traversal_is_still_refused(self, monkeypatch):
+        """The guard that already worked keeps working -- no request is made.
+
+        The one test in this class that also PASSES against the unfixed worker,
+        and deliberately so: it is not a regression test for the fix but a
+        non-regression test for the guard the fix left alone. Three of the four
+        here failed before the fix; this is the fourth, and saying which is
+        which is the difference between a calibrated suite and a hopeful one.
+        """
+        ok, target = self._target_for(monkeypatch, "https://allowed.example/hook/../admin")
+        assert ok is False
+        assert target is None
+
+    def test_an_encoded_slash_in_a_query_value_is_not_refused(self, monkeypatch):
+        """And the tightening that was written and then removed stays removed.
+
+        With the `?` present a `/` in the query cannot reach the path, so
+        rejecting `?x=%2Fetc` would break callers to defend against a defect
+        that no longer exists.
+        """
+        ok, target = self._target_for(monkeypatch, "https://allowed.example/hook?x=%2Fetc")
+        assert ok is True
+        assert target == "/hook?x=%2Fetc", target
+
+
 class TestNotificationsRateLimiter:
     """Test the in-memory rate limiter."""
 

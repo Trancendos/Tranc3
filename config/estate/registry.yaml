@@ -43,7 +43,7 @@ components:
     port: 8034
     worker_path: workers/workflow-engine-service/
     docker_service: workflow-engine-service
-    docker_container: tranc3-workflow-engine
+    docker_container: workflow-engine-service-worker
     cf_worker: the-grid-api
     src_module: src/workflow/
     entity_type: service
@@ -59,7 +59,7 @@ components:
     port: 8004
     worker_path: workers/infinity-ws/
     docker_service: infinity-ws
-    docker_container: tranc3-nexus
+    docker_container: infinity-ws-worker
     cf_worker: infinity-ws-api
     src_module: null
     entity_type: service
@@ -75,7 +75,7 @@ components:
     port: 8005
     worker_path: workers/infinity-auth/
     docker_service: infinity-auth
-    docker_container: tranc3-infinity-auth
+    docker_container: infinity-auth-worker
     cf_worker: infinity-auth-api
     src_module: null
     entity_type: service
@@ -106,8 +106,8 @@ components:
     priority: P0
     port: 8001
     worker_path: null
-    docker_service: nanoservices
-    docker_container: tranc3-nanoservices
+    docker_service: null
+    docker_container: null
     cf_worker: null
     src_module: src/nanoservices/
     entity_type: service
@@ -141,7 +141,7 @@ components:
     port: 8042
     worker_path: workers/infinity-portal-service/
     docker_service: infinity-portal
-    docker_container: tranc3-infinity-portal
+    docker_container: infinity-portal-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -157,7 +157,7 @@ components:
     port: null  # embedded in infinity-portal-service (8042)
     worker_path: null
     docker_service: infinity-portal
-    docker_container: tranc3-infinity-portal
+    docker_container: infinity-portal-worker
     cf_worker: null
     src_module: null
     entity_type: subsystem
@@ -173,7 +173,7 @@ components:
     port: 8043
     worker_path: workers/infinity-one-service/
     docker_service: infinity-one
-    docker_container: tranc3-infinity-one
+    docker_container: infinity-one-worker
     cf_worker: infinity-os-identity
     src_module: null
     entity_type: service
@@ -189,7 +189,7 @@ components:
     port: 8044
     worker_path: workers/infinity-admin-service/
     docker_service: infinity-admin
-    docker_container: tranc3-infinity-admin
+    docker_container: infinity-admin-worker
     cf_worker: infinity-adminos-mesh
     src_module: null
     entity_type: service
@@ -205,7 +205,7 @@ components:
     port: 8045
     worker_path: workers/infinity-shards-service/
     docker_service: infinity-shards
-    docker_container: tranc3-infinity-shards
+    docker_container: infinity-shards-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -221,7 +221,7 @@ components:
     port: 8070
     worker_path: workers/infinity-bridge-service/
     docker_service: infinity-bridge
-    docker_container: tranc3-infinity-bridge
+    docker_container: infinity-bridge-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -237,7 +237,7 @@ components:
     port: 8009
     worker_path: workers/infinity-ai/
     docker_service: infinity-ai
-    docker_container: tranc3-infinity-ai
+    docker_container: infinity-ai-worker
     cf_worker: infinity-ai-api
     src_module: src/ai_gateway/
     entity_type: service
@@ -253,7 +253,7 @@ components:
     port: 8006
     worker_path: workers/users-service/
     docker_service: users-service
-    docker_container: tranc3-users
+    docker_container: users-service-worker
     cf_worker: trancendos-users-service
     src_module: null
     entity_type: service
@@ -269,7 +269,7 @@ components:
     port: 8007
     worker_path: workers/monitoring/
     docker_service: monitoring
-    docker_container: tranc3-observatory
+    docker_container: monitoring-worker
     cf_worker: infinity-monitoring-dashboard
     src_module: src/observability/
     entity_type: service
@@ -285,7 +285,7 @@ components:
     port: 8008
     worker_path: workers/notifications/
     docker_service: notifications
-    docker_container: tranc3-notifications
+    docker_container: notifications-worker
     cf_worker: trancendos-notifications-service
     src_module: null
     entity_type: service
@@ -301,7 +301,7 @@ components:
     port: 8010
     worker_path: workers/the-grid/
     docker_service: the-grid
-    docker_container: tranc3-the-grid
+    docker_container: the-grid-worker
     cf_worker: the-grid-api
     src_module: src/workflow/
     entity_type: service
@@ -330,10 +330,10 @@ components:
     status: building
     version: "0.5.0"
     priority: P1
-    port: 8060
+    port: 8051
     worker_path: workers/hive-service/
     docker_service: hive-service
-    docker_container: tranc3-hive
+    docker_container: tranc3-hive-service
     cf_worker: infinity-hive
     src_module: null
     entity_type: service
@@ -351,7 +351,7 @@ components:
     port: 8011
     worker_path: workers/products-service/
     docker_service: products-service
-    docker_container: tranc3-products
+    docker_container: products-service-worker
     cf_worker: trancendos-products-service
     src_module: null
     entity_type: service
@@ -367,7 +367,7 @@ components:
     port: 8012
     worker_path: workers/orders-service/
     docker_service: orders-service
-    docker_container: tranc3-orders
+    docker_container: orders-service-worker
     cf_worker: trancendos-orders-service
     src_module: null
     entity_type: service
@@ -383,7 +383,7 @@ components:
     port: 8013
     worker_path: workers/payments-service/
     docker_service: payments-service
-    docker_container: tranc3-payments
+    docker_container: payments-service-worker
     cf_worker: trancendos-payments-service
     src_module: null
     entity_type: service
@@ -399,7 +399,7 @@ components:
     port: 8014
     worker_path: workers/files-service/
     docker_service: files-service
-    docker_container: tranc3-files
+    docker_container: files-service-worker
     cf_worker: infinity-files-api
     src_module: null
     entity_type: service
@@ -415,7 +415,7 @@ components:
     port: 8015
     worker_path: workers/identity-service/
     docker_service: identity-service
-    docker_container: tranc3-identity
+    docker_container: identity-service-worker
     cf_worker: infinity-os-identity
     src_module: null
     entity_type: service
@@ -431,7 +431,7 @@ components:
     port: 8016
     worker_path: workers/analytics-service/
     docker_service: analytics-service
-    docker_container: tranc3-analytics
+    docker_container: analytics-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -444,10 +444,10 @@ components:
     status: active
     version: "1.0.0"
     priority: P2
-    port: 8040
+    port: 8003
     worker_path: workers/api-gateway/
     docker_service: api-gateway
-    docker_container: tranc3-gateway
+    docker_container: trancendos-api-gateway-worker
     cf_worker: trancendos-api-gateway
     src_module: null
     entity_type: service
@@ -463,7 +463,7 @@ components:
     port: 8041
     worker_path: workers/sentinel-station-service/
     docker_service: sentinel-station-service
-    docker_container: tranc3-sentinel
+    docker_container: tranc3-sentinel-station-service
     cf_worker: null
     src_module: null
     entity_type: service
@@ -476,10 +476,10 @@ components:
     status: building
     version: "0.1.0"
     priority: P2
-    port: 8053
+    port: 8109
     worker_path: workers/swarm-coordinator-service/
-    docker_service: swarm-coordinator
-    docker_container: tranc3-swarm
+    docker_service: swarm-coordinator-service
+    docker_container: tranc3-swarm-coordinator-service
     cf_worker: null
     src_module: null
     entity_type: service
@@ -494,8 +494,8 @@ components:
     priority: P2
     port: 8050
     worker_path: workers/dimensional-nexus-service/
-    docker_service: dimensional-nexus-service
-    docker_container: tranc3-dimensional-nexus
+    docker_service: null
+    docker_container: null
     cf_worker: null
     src_module: null
     entity_type: service
@@ -511,7 +511,7 @@ components:
     port: 8052
     worker_path: workers/ffmpeg-worker/
     docker_service: ffmpeg-worker
-    docker_container: tranc3-ffmpeg
+    docker_container: trancendos-ffmpeg-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -529,7 +529,7 @@ components:
     port: 8017
     worker_path: workers/search-service/
     docker_service: search-service
-    docker_container: tranc3-search
+    docker_container: search-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -545,7 +545,7 @@ components:
     port: 8018
     worker_path: workers/email-service/
     docker_service: email-service
-    docker_container: tranc3-email
+    docker_container: email-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -561,7 +561,7 @@ components:
     port: 8019
     worker_path: workers/sms-service/
     docker_service: sms-service
-    docker_container: tranc3-sms
+    docker_container: sms-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -577,7 +577,7 @@ components:
     port: 8020
     worker_path: workers/storage-service/
     docker_service: storage-service
-    docker_container: tranc3-storage
+    docker_container: storage-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -593,7 +593,7 @@ components:
     port: 8021
     worker_path: workers/cron-service/
     docker_service: cron-service
-    docker_container: tranc3-cron
+    docker_container: cron-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -609,7 +609,7 @@ components:
     port: 8022
     worker_path: workers/queue-service/
     docker_service: queue-service
-    docker_container: tranc3-queue
+    docker_container: queue-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -625,7 +625,7 @@ components:
     port: 8023
     worker_path: workers/cache-service/
     docker_service: cache-service
-    docker_container: tranc3-cache
+    docker_container: cache-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -641,7 +641,7 @@ components:
     port: 8024
     worker_path: workers/config-service/
     docker_service: config-service
-    docker_container: tranc3-config
+    docker_container: config-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -657,7 +657,7 @@ components:
     port: 8025
     worker_path: workers/audit-service/
     docker_service: audit-service
-    docker_container: tranc3-audit
+    docker_container: audit-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -673,7 +673,7 @@ components:
     port: 8026
     worker_path: workers/rate-limit-service/
     docker_service: rate-limit-service
-    docker_container: tranc3-rate-limit
+    docker_container: rate-limit-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -689,7 +689,7 @@ components:
     port: 8027
     worker_path: workers/geo-service/
     docker_service: geo-service
-    docker_container: tranc3-geo
+    docker_container: geo-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -705,7 +705,7 @@ components:
     port: 8028
     worker_path: workers/cdn-service/
     docker_service: cdn-service
-    docker_container: tranc3-cdn
+    docker_container: cdn-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -721,7 +721,7 @@ components:
     port: 8029
     worker_path: workers/health-aggregator/
     docker_service: health-aggregator
-    docker_container: tranc3-health-aggregator
+    docker_container: health-aggregator-worker
     cf_worker: null
     src_module: src/observability/
     entity_type: service
@@ -737,7 +737,7 @@ components:
     port: 8030
     worker_path: workers/gbrain-bridge/
     docker_service: gbrain-bridge
-    docker_container: tranc3-gbrain
+    docker_container: gbrain-bridge-worker
     cf_worker: null
     src_module: src/gbrain/
     entity_type: service
@@ -753,7 +753,7 @@ components:
     port: 8031
     worker_path: workers/topology-service/
     docker_service: topology-service
-    docker_container: tranc3-topology
+    docker_container: topology-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -769,7 +769,7 @@ components:
     port: 8032
     worker_path: workers/ledger-service/
     docker_service: ledger-service
-    docker_container: tranc3-ledger
+    docker_container: ledger-service-worker
     cf_worker: arcadia-royal-bank
     src_module: null
     entity_type: service
@@ -785,7 +785,7 @@ components:
     port: 8033
     worker_path: workers/model-router-service/
     docker_service: model-router-service
-    docker_container: tranc3-model-router
+    docker_container: model-router-service-worker
     cf_worker: null
     src_module: null
     entity_type: service
@@ -798,10 +798,10 @@ components:
     status: building
     version: "0.2.0"
     priority: P3
-    port: 8035
+    port: 8058
     worker_path: workers/turings-hub-service/
     docker_service: turings-hub-service
-    docker_container: tranc3-turings-hub
+    docker_container: tranc3-turings-hub-service
     cf_worker: null
     src_module: src/personality/
     entity_type: service
@@ -817,7 +817,7 @@ components:
     port: 8036
     worker_path: workers/langchain-integration-service/
     docker_service: langchain-integration-service
-    docker_container: tranc3-langchain
+    docker_container: tranc3-langchain-integration-service
     cf_worker: null
     src_module: null
     entity_type: service
@@ -833,7 +833,7 @@ components:
     port: 8037
     worker_path: workers/deepagents-orchestrator-service/
     docker_service: deepagents-orchestrator-service
-    docker_container: tranc3-deepagents
+    docker_container: tranc3-deepagents-orchestrator-service
     cf_worker: null
     src_module: null
     entity_type: service
@@ -849,7 +849,7 @@ components:
     port: 8038
     worker_path: workers/vault-service/
     docker_service: vault-service
-    docker_container: tranc3-vault
+    docker_container: vault-service-worker
     cf_worker: infinity-void
     src_module: cloudflare/infinity-void/
     entity_type: service
@@ -864,8 +864,8 @@ components:
     priority: P3
     port: 8080
     worker_path: tranc3-bots/
-    docker_service: tranc3-bots
-    docker_container: tranc3-bots
+    docker_service: null
+    docker_container: null
     cf_worker: null
     src_module: null
     entity_type: service
@@ -915,7 +915,7 @@ components:
     port: 3456
     worker_path: deploy/forgejo/
     docker_service: forgejo
-    docker_container: tranc3-workshop
+    docker_container: trancendos-forgejo
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1024,10 +1024,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8068
+    worker_path: workers/basement/
+    docker_service: basement
+    docker_container: tranc3-basement
     cf_worker: null
     src_module: src/basement/
     entity_type: platform
@@ -1072,10 +1072,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8059
+    worker_path: workers/tranceflow/
+    docker_service: tranceflow
+    docker_container: tranc3-tranceflow
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1088,10 +1088,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8061
+    worker_path: workers/tateking/
+    docker_service: tateking
+    docker_container: tranc3-tateking
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1120,10 +1120,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8064
+    worker_path: workers/imaginarium/
+    docker_service: imaginarium
+    docker_container: tranc3-imaginarium
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1152,12 +1152,12 @@ components:
     status: building
     version: "0.3.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8079
+    worker_path: workers/chaos-party/
+    docker_service: chaos-party
+    docker_container: tranc3-chaos-party
     cf_worker: null
-    src_module: tests/
+    src_module: null
     entity_type: platform
 
   - ref: TRC-P3-041
@@ -1200,10 +1200,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8053
+    worker_path: workers/cryptex/
+    docker_service: cryptex
+    docker_container: cryptex-worker
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1232,10 +1232,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8072
+    worker_path: workers/warp-tunnel/
+    docker_service: warp-tunnel
+    docker_container: tranc3-warp-tunnel
     cf_worker: null
     src_module: src/security/warp_tunnel/
     entity_type: platform
@@ -1248,10 +1248,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8073
+    worker_path: workers/warp-radio/
+    docker_service: warp-radio
+    docker_container: tranc3-warp-radio
     cf_worker: null
     src_module: src/warp_radio/
     entity_type: platform
@@ -1328,10 +1328,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8110
+    worker_path: workers/devocity/
+    docker_service: devocity
+    docker_container: tranc3-devocity
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1344,10 +1344,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8077
+    worker_path: workers/tranquility/
+    docker_service: tranquility
+    docker_container: tranc3-tranquility
     cf_worker: null
     src_module: src/tranquility/
     entity_type: platform
@@ -1360,10 +1360,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8075
+    worker_path: workers/imind/
+    docker_service: imind
+    docker_container: tranc3-imind
     cf_worker: null
     src_module: src/imind/
     entity_type: platform
@@ -1376,10 +1376,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8074
+    worker_path: workers/taimra/
+    docker_service: taimra
+    docker_container: tranc3-taimra
     cf_worker: null
     src_module: src/taimra/
     entity_type: platform
@@ -1392,10 +1392,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8060
+    worker_path: workers/vrar3d/
+    docker_service: vrar3d
+    docker_container: tranc3-vrar3d
     cf_worker: null
     src_module: null
     entity_type: platform
@@ -1408,10 +1408,10 @@ components:
     status: planned
     version: "0.0.0"
     priority: P3
-    port: null
-    worker_path: null
-    docker_service: null
-    docker_container: null
+    port: 8076
+    worker_path: workers/resonate/
+    docker_service: resonate
+    docker_container: tranc3-resonate
     cf_worker: null
     src_module: src/resonate/
     entity_type: platform
@@ -1445,7 +1445,7 @@ components:
     port: 8200
     worker_path: null
     docker_service: vault
-    docker_container: tranc3-vault-hc
+    docker_container: tranc3-vault
     cf_worker: null
     src_module: null
     entity_type: infrastructure

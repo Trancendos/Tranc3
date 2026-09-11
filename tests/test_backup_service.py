@@ -11,9 +11,6 @@ from pathlib import Path
 
 import pytest
 
-os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
-os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-
 from src.backup.engine import BackupEngine, _decrypt_bytes, _encrypt_bytes
 from src.backup.registry import (
     REGISTRY_BY_TIER,
@@ -22,6 +19,41 @@ from src.backup.registry import (
     BackupTier,
     WorkerDB,
 )
+
+# This module needs SECRET_KEY set and TRANC3_DB_ENCRYPTION_DISABLED unset, and
+# it must leave both exactly as it found them. It previously set them at MODULE
+# level, which is executed during *collection* -- before any fixture runs and
+# before every other test module pytest imports afterwards. So the changed
+# SECRET_KEY was live for the whole session, and conftest.py's
+# _assert_shared_env_unchanged guard duly failed at teardown of
+# tests/core/test_dependencies.py, which is not this module and had done nothing
+# wrong. That misattribution is inherent: the guard can only report which module
+# *finished* with the value wrong, not which one set it.
+#
+# tests/test_encrypted_sqlite.py had exactly this bug, was fixed, and carries a
+# comment explaining it -- this file was missed. Both reads in the backup engine
+# are inside function bodies (`_derive_key` reads SECRET_KEY at call time, and
+# there is no key cache to invalidate), so nothing is captured at import and the
+# fixture below is sufficient.
+_PRIOR_ENV: dict[str, str | None] = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _shared_env():
+    """Apply this module's env, then put it back exactly as it was."""
+    for name in ("SECRET_KEY", "TRANC3_DB_ENCRYPTION_DISABLED"):
+        _PRIOR_ENV[name] = os.environ.get(name)
+    os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
+    os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
+    try:
+        yield
+    finally:
+        for name, prior in _PRIOR_ENV.items():
+            if prior is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = prior
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -202,14 +234,33 @@ def test_verify_tampered_backup(engine, worker_db, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_restore_dry_run(engine, worker_db, tmp_db):
+@pytest.fixture()
+def restore_root_allowed(monkeypatch, tmp_path):
+    """Declare where `restore(target_path=...)` is permitted to write.
+
+    SEC-017. `target_path` used to be honoured verbatim, which made
+    `POST /backup/restore` an arbitrary file write of caller-supplied content
+    once it passed a SQLite integrity check. Permitted destinations are now the
+    live database paths the registry declares, plus anything under
+    `BACKUP_RESTORE_ROOT`.
+
+    `worker_db` here is a fixture-built `WorkerDB` that is deliberately not in
+    the global registry, so these tests take the second route. That is the
+    honest shape: restoring an unregistered worker to a scratch location is a
+    legitimate thing to do, and it now has to say where.
+    """
+    monkeypatch.setenv("BACKUP_RESTORE_ROOT", str(tmp_path))
+    return tmp_path
+
+
+def test_restore_dry_run(engine, worker_db, tmp_db, restore_root_allowed):
     engine.backup(worker_db)
     result = engine.restore(worker_db.worker, target_path=str(tmp_db), dry_run=True)
     assert result.success is True
     assert result.verified is True
 
 
-def test_restore_overwrites_live_db(engine, worker_db, tmp_db):
+def test_restore_overwrites_live_db(engine, worker_db, tmp_db, restore_root_allowed):
     # Create backup
     engine.backup(worker_db)
 
@@ -230,7 +281,7 @@ def test_restore_overwrites_live_db(engine, worker_db, tmp_db):
     assert [r[0] for r in rows] == ["alice", "bob"]
 
 
-def test_restore_creates_pre_restore_backup(engine, worker_db, tmp_db):
+def test_restore_creates_pre_restore_backup(engine, worker_db, tmp_db, restore_root_allowed):
     engine.backup(worker_db)
     engine.restore(worker_db.worker, target_path=str(tmp_db), dry_run=False)
     assert (tmp_db.parent / (tmp_db.stem + ".pre-restore.db")).exists()
@@ -241,7 +292,7 @@ def test_restore_unknown_worker_no_target(engine):
     assert result.success is False
 
 
-def test_restore_no_backups(engine, worker_db, tmp_db):
+def test_restore_no_backups(engine, worker_db, tmp_db, restore_root_allowed):
     # No backup taken yet
     result = engine.restore(worker_db.worker, target_path=str(tmp_db), dry_run=True)
     assert result.success is False

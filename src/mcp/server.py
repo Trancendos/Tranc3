@@ -449,7 +449,6 @@ async def rpc_endpoint(
             content=_err(req_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"),
             status_code=200,
         )
-    return None
 
 
 @router.get("/sse")

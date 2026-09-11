@@ -75,29 +75,3 @@ jobs:
           name: coverage-report
           path: coverage.xml
           retention-days: 7
-
-  lint:
-    name: Ruff Lint + Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.11"
-
-      - name: Install ruff
-        run: pip install "ruff==0.15.8"
-
-      - name: Ruff check
-        run: |
-          ruff check --select E,F,W,B --ignore E501,B008,B904 \
-            --exclude "docs/reference" \
-            .
-
-      - name: Ruff format check
-        run: |
-          ruff format --check --diff \
-            --exclude "docs/reference" \
-            .

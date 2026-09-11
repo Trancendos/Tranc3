@@ -223,7 +223,7 @@ class EncryptedKVStore:
     """
 
     def __init__(self, db_path: str, table: str = "kv_encrypted") -> None:
-        if not _TABLE_NAME_RE.match(table):
+        if not _TABLE_NAME_RE.fullmatch(table):
             raise ValueError(
                 f"[{ErrorCode.DB_INVALID_IDENTIFIER.value}] Invalid table name: {table!r}"
             )

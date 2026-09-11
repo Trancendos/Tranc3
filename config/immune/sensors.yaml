@@ -1,0 +1,202 @@
+# The innate layer: which sensors this estate runs, what each one senses, and
+# how to prove it can still see.
+#
+# `required: true` means a run that could not use this sensor is not a clean
+# run -- it is a run with a hole in it, and the immune scan says so rather than
+# reporting the reduced set as if it were the whole picture.
+#
+# `probe` is the part no commercial scanner in this estate's deleted set
+# offered at any price. It plants a known defect in a temporary directory and
+# checks the sensor flags it. A sensor that reports the real tree clean AND
+# fails its own probe is recorded `blind`, because those two facts together
+# mean the clean report carries no information. Only clean runs are probed: a
+# sensor that found something has already shown it can see.
+#
+# Every command must emit machine-readable output on stdout or to a declared
+# `output:` file, and must not need network access to reach a vendor.
+
+sensors:
+
+  ruff:
+    kind: innate
+    senses: "Python correctness and style defects -- unused names, shadowing, unreachable code"
+    location: The Lab
+    binary: ruff
+    command: [ruff, check, ".", "--output-format", "json", "--quiet"]
+    format: ruff-json
+    required: true
+    accept_exit: [0, 1]
+    probe:
+      file: probe.py
+      # F841: a local assigned and never used. Chosen because it is in ruff's
+      # default rule set, so the probe does not depend on this repo's config
+      # being present in the temporary directory.
+      content: |
+        def probe():
+            unused_local = 1
+            return 2
+      expect_rule: F841
+
+  complexity:
+    kind: innate
+    senses: "Functions too tangled to review -- the defect class code review misses because reviewers stop reading"
+    location: The Lab
+    binary: ruff
+    # C901 is in `ignore` in pyproject.toml, with the comment "complexity --
+    # warned, not blocked". It is not warned either: an `ignore` entry means
+    # the rule never runs and nobody ever sees it. 183 functions exceed the
+    # default threshold of 10 and nothing in the estate reports one of them.
+    #
+    # Found by cross-checking against CodeFactor's public page, which flagged
+    # seven functions this estate could not see -- including two written the
+    # same day, in the immune system itself. That is the argument for keeping a
+    # free vendor grade to compare against rather than only replacing it: it
+    # was measuring something we had turned off and labelled as on.
+    #
+    # The threshold here is 20, not ruff's default 10. At 10 there are 183
+    # findings, which is a backlog; at 20 there are 14, which is a list. The
+    # baseline stops it growing either way -- this number only decides how much
+    # of the existing pile is visible at once.
+    command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache"]
+    format: ruff-json
+    required: false
+    accept_exit: [0, 1]
+    probe:
+      file: probe.py
+      # Twenty-one branches: comfortably over the threshold, and unambiguous.
+      content: |
+        def tangled(n):
+            total = 0
+            for i in range(n):
+                if i % 2: total += 1
+                elif i % 3: total += 2
+                elif i % 5: total += 3
+                elif i % 7: total += 4
+                elif i % 11: total += 5
+                elif i % 13: total += 6
+                elif i % 17: total += 7
+                elif i % 19: total += 8
+                elif i % 23: total += 9
+                elif i % 29: total += 10
+                elif i % 31: total += 11
+                elif i % 37: total += 12
+                elif i % 41: total += 13
+                elif i % 43: total += 14
+                elif i % 47: total += 15
+                elif i % 53: total += 16
+                elif i % 59: total += 17
+                elif i % 61: total += 18
+                elif i % 67: total += 19
+                else: total += 20
+            return total
+      expect_rule: C901
+      # No `--isolated`, and `in_repo: true`: this probe must run in the SAME
+      # config context as the real scan. pyproject.toml lists C901 under
+      # `ignore`, and this sensor only sees anything because `--select C901`
+      # overrides that. A probe outside the tree proves ruff can find tangled
+      # code; it cannot prove `--select` still beats `ignore`, which is the one
+      # thing that would silently zero this sensor. Same command, same context.
+      in_repo: true
+      # `--no-respect-gitignore` on the PROBE only. `.gitignore` carries
+      # `immune-probe-*/` so a killed run cannot leave a deliberately tangled
+      # file staged for commit, and that entry is worth keeping. Measured: ruff
+      # still sees the live probe today, because a path passed explicitly on
+      # the command line bypasses exclusion — but the probe's ability to see
+      # must not rest on that subtlety surviving the next ruff release. This
+      # makes the probe independent of it. Deliberately NOT added to the main
+      # scan command, which should respect .gitignore like everything else.
+      # Reported by cubic on PR #1150.
+      command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache", "--no-respect-gitignore"]
+
+  bandit:
+    kind: innate
+    senses: "Python security anti-patterns -- weak crypto, shell injection, unsafe deserialisation"
+    location: Cryptex
+    binary: bandit
+    # -c pyproject.toml is not optional. [tool.bandit] there carries this
+    # estate's decided targets, exclusions and skips, each with a written
+    # reason (B101 asserts, B110 fallback chains, B311 non-cryptographic
+    # randomness). Scanning without it does not scan harder, it scans a
+    # different, undecided thing: the first run of this sensor without the
+    # config returned 13,712 findings, of which 12,770 were B101 -- bandit
+    # objecting to `assert` inside the test suite, which is what a test suite
+    # is made of. That is not detection, it is autoimmunity, and it would have
+    # buried the one genuine error-level finding under 13,711 others.
+    command: [bandit, -c, pyproject.toml, -r, src, api.py, -f, json, -q]
+    format: bandit-json
+    required: true
+    accept_exit: [0, 1]
+    probe:
+      file: probe.py
+      content: |
+        import subprocess
+        def probe(user_input):
+            return subprocess.call(user_input, shell=True)
+      expect_rule: B602
+      command: [bandit, -r, ".", "-f", "json", "-q"]
+
+  pip-audit:
+    kind: innate
+    senses: "Known CVEs in the Python dependency surface"
+    location: Cryptex
+    binary: pip-audit
+    command: [pip-audit, "--format", "json", "--progress-spinner", "off", "-r", "requirements.txt"]
+    format: pip-audit-json
+    required: false
+    accept_exit: [0, 1]
+    # No probe: pip-audit's answer depends on a remote advisory database, so a
+    # planted-vulnerability probe tests the network as much as the tool. That
+    # reasoning stands. The COMPENSATING CONTROL it named did not.
+    #
+    # Until 2026-09-11 this comment pointed at "the registry canary in
+    # scripts/vulnerability_census.py" — and the only canary in that file
+    # guarded `npm audit`. Nothing anywhere checked that the PyPI advisory path
+    # had answered, so a degraded endpoint would have produced a clean Python
+    # surface indistinguishable from a genuinely clean one, on the language
+    # that carries most of this repository.
+    #
+    # A documented gap looks handled. This one was documented and named a
+    # compensation for a different ecosystem, which is worse than leaving it
+    # blank: nobody re-reads a gap that already has an answer beside it.
+    #
+    # `_pypi_advisory_reading()` now exists alongside `_npm_registry_reading()`
+    # and brackets the pip sweep — jinja2==2.11.2 audited in a tmpdir before
+    # and after, every pip surface marked unscannable if the advisory family
+    # does not come back. THAT is this sensor's equivalent guarantee, and it
+    # is checkable.
+    #
+    # Not "the same way" as npm any more: literally the same code. Both sweeps
+    # run through `_bracketed_sweep()`, because two hand-written copies of one
+    # guard is how the Forgejo production gate came to be missing a step its
+    # GitHub twin kept. The pip copy was the second chance to get that shape
+    # right; a third ecosystem would have been a third chance.
+
+  semgrep:
+    kind: innate
+    senses: "Cross-language taint and dataflow patterns that single-file linters miss"
+    location: Cryptex
+    binary: semgrep
+    command: [semgrep, "--config", "auto", "--sarif", "--quiet", "--metrics", "off"]
+    format: sarif
+    required: false
+    accept_exit: [0, 1]
+
+  gitleaks:
+    kind: innate
+    senses: "Credentials committed to the tree or its history"
+    location: The Void
+    binary: gitleaks
+    command: [gitleaks, detect, "--no-git", "--report-format", "json", "--report-path", "/dev/stdout", "--exit-code", "0"]
+    format: gitleaks-json
+    required: false
+    accept_exit: [0, 1]
+
+  trivy-fs:
+    kind: innate
+    senses: "Vulnerable OS and language packages, and misconfigured infrastructure files"
+    location: The Ice Box
+    binary: trivy
+    command: [trivy, fs, ".", "--format", "sarif", "--quiet", "--scanners", "vuln,misconfig"]
+    format: sarif
+    required: false
+    accept_exit: [0]

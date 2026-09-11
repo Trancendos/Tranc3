@@ -1,7 +1,12 @@
 FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
+# shellcheck is the one non-Python checker small enough to justify here
+# (a few MB). It takes shell from `none` to `lint`, and shell is the language
+# most likely to be generated and pasted straight into a terminal.
+RUN apt-get update && apt-get install --no-install-recommends -y shellcheck && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir -r requirements.txt && \
     adduser --disabled-password --gecos "" appuser
 COPY main.py .
 # --- Shared Functional Services Core (SFSC) — named build contexts ---

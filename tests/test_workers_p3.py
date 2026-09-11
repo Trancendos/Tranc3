@@ -26,6 +26,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from tests._worker_import_utils import import_worker as _import_worker
@@ -602,6 +603,110 @@ class TestStorageService:
         listed = client.get("/buckets")
         assert listed.status_code == 200
         assert all(b["name"] != "del-bucket" for b in listed.json()["buckets"])
+
+    # ── REGRESSION: CWE-022 path traversal (CodeQL py/path-injection, 7.5) ──
+    #
+    # Five alerts, all in this worker, reported on every commit of the branch
+    # that added these tests and on `main` before it. `bucket` and `key` reach
+    # the filesystem, and `{key:path}` means `key` carries separators verbatim.
+    # Each test below is written against the ESCAPE, not the error message: it
+    # asserts that nothing appeared outside the object root. A guard that
+    # returns 400 while still having written the file would pass a
+    # status-code-only test and fail these.
+    #
+    # THE SEPARATOR IS ENCODED AS `..%2f`, AND THAT IS LOAD-BEARING. The first
+    # draft of these tests sent a literal `../../` and two of the three passed
+    # against the KNOWN-VULNERABLE worker -- they were green because httpx
+    # removes dot-segments from the URL before the request is sent, so the
+    # server never saw a traversal and answered 404/405 for an unrelated
+    # reason. `%2e%2e` fails the same way: `.` is unreserved, so httpx
+    # percent-decodes it and then normalises. Only `%2f` survives, because a
+    # slash is reserved and stays encoded until FastAPI unquotes the path
+    # parameter -- which is exactly the shape a real attacker sends, and
+    # exactly what a browser or proxy will not helpfully sanitise for you.
+    #
+    # A test that passes against the unfixed code is not a regression test.
+
+    def test_upload_rejects_traversing_key(self, client, tmp_path):
+        """PUT ../.. must not write outside LOCAL_ROOT."""
+        client.post("/buckets", json={"name": "safe"})
+        outside = tmp_path / "escaped.txt"
+        r = client.put(
+            "/buckets/safe/objects/..%2f..%2fescaped.txt",
+            files={"file": ("escaped.txt", b"pwned", "text/plain")},
+        )
+        assert r.status_code in (400, 404), r.text
+        assert not outside.exists(), "traversing key wrote outside the object root"
+
+    def test_create_bucket_rejects_traversing_name(self, client, tmp_path):
+        """A bucket named `../x` must create no directory outside LOCAL_ROOT."""
+        r = client.post("/buckets", json={"name": "../escaped-bucket"})
+        assert r.status_code == 400, r.text
+        assert not (tmp_path / "escaped-bucket").exists()
+        # And it must not have been recorded either: a row with no directory
+        # would let `_ensure_bucket` wave through every later object call.
+        listed = client.get("/buckets").json()["buckets"]
+        assert all("escaped" not in b["name"] for b in listed)
+
+    def test_delete_bucket_rejects_traversing_name(self, client, tmp_path):
+        """DELETE must not rmtree a directory outside LOCAL_ROOT.
+
+        The worst of the three: `shutil.rmtree` on an attacker-chosen path.
+
+        Two things about the shape of this test, both learned by getting it
+        wrong first:
+
+        1. The handler is called DIRECTLY, not through the URL. ASGI hands
+           Starlette an already-percent-decoded path, so `{bucket}` (which
+           matches `[^/]+`) can never receive a value containing a separator
+           however it is encoded on the wire. What it CAN receive is the bare
+           string `..`, and `LOCAL_ROOT / ".."` is the object root's PARENT --
+           one segment is all a recursive delete needs. Routing it through
+           the client would have tested Starlette's decoder.
+        2. The bucket row is inserted directly too. `delete_bucket` looks the
+           name up in SQLite before deleting anything, so the row must exist
+           for the `rmtree` to be reachable at all -- and going through
+           `POST /buckets` would make this a second test of `create_bucket`'s
+           guard rather than a test of `delete_bucket`'s.
+
+        A row like this is not hypothetical: every bucket created before this
+        commit went in unvalidated, so a database carried over from a running
+        deployment can already hold one.
+        """
+        victim = tmp_path / "victim"
+        victim.mkdir()
+        (victim / "keep.txt").write_text("do not delete")
+
+        with storage_mod._conn() as c:
+            c.execute(
+                "INSERT INTO buckets (name, description, created_at) VALUES (?,?,?)",
+                ("..", None, 0.0),
+            )
+            c.commit()
+
+        with pytest.raises(HTTPException) as excinfo:
+            storage_mod.delete_bucket("..")
+        assert excinfo.value.status_code == 400
+
+        assert (victim / "keep.txt").read_text() == "do not delete"
+
+    def test_normal_nested_key_still_works(self, client):
+        """The guard must not cost the feature it protects.
+
+        `{key:path}` exists so keys can be nested. A containment check that
+        rejected every key containing a separator would pass all three tests
+        above and break the worker, which is the other half of calibration:
+        prove the guard fires on the attack AND stays silent on the traffic.
+        """
+        client.post("/buckets", json={"name": "nested"})
+        r = client.put(
+            "/buckets/nested/objects/a/b/c.txt",
+            files={"file": ("c.txt", b"nested ok", "text/plain")},
+        )
+        assert r.status_code == 201, r.text
+        got = client.get("/buckets/nested/objects/a/b/c.txt")
+        assert got.status_code == 200
+        assert got.content == b"nested ok"
 
 
 # ===========================================================================
@@ -1886,3 +1991,67 @@ class TestEnhancedUsersService:
         fetched = client.get(f"/users/{user_id}").json()
         assert isinstance(fetched["preferences"], dict)
         assert fetched["preferences"]["theme"] == "dark"
+
+
+# ===========================================================================
+# The lazy directory helper the six SQLite workers share
+# ===========================================================================
+
+
+class TestEnsureParentAcceptsEitherSpellingOfAPath:
+    """A regression, not a hypothetical: it took the whole file down.
+
+    Six workers create their data directory on first use rather than at
+    import, through a shared `_ensure_parent` helper. The first version
+    annotated its argument `Path` and used `path.parent` directly — but
+    `DB_PATH` is a configuration value, and every fixture in this file
+    substitutes a plain string for it. The result was
+    `AttributeError: 'str' object has no attribute 'parent'` raised during
+    fixture setup, which pytest reports as a collection ERROR: 41 of them,
+    none naming a real defect in the code under test.
+
+    A helper about filesystem paths has no business rejecting the other
+    spelling of one.
+    """
+
+    @pytest.mark.parametrize(
+        "module",
+        [analytics_mod, storage_mod, cron_mod, cache_mod, audit_mod, health_agg_mod],
+        ids=["analytics", "storage", "cron", "cache", "audit", "health-aggregator"],
+    )
+    def test_the_directory_is_recreated_if_it_disappears(self, module, tmp_path):
+        """The cache must not outlive the thing it caches.
+
+        The first version cached the parent path as a string and skipped
+        `mkdir` on every later call. A volume remounted or a path cleaned up
+        under a running container then left the cache asserting something
+        false, and every subsequent SQLite open failed with "unable to open
+        database file" — a failure with nothing in the logs to explain it,
+        because the code believed it had already done the work.
+        """
+        import shutil
+
+        target = tmp_path / "vanishing" / "worker.db"
+        module._ensure_parent(target)
+        assert target.parent.is_dir()
+
+        shutil.rmtree(target.parent)
+        assert not target.parent.exists()
+
+        module._ensure_parent(target)
+        assert target.parent.is_dir(), "the cache skipped mkdir for a directory that was gone"
+
+    @pytest.mark.parametrize(
+        "module",
+        [analytics_mod, storage_mod, cron_mod, cache_mod, audit_mod, health_agg_mod],
+        ids=["analytics", "storage", "cron", "cache", "audit", "health-aggregator"],
+    )
+    def test_a_string_and_a_path_both_work(self, module, tmp_path):
+        target = tmp_path / "nested" / "deeper" / "worker.db"
+
+        as_string = module._ensure_parent(str(target))
+        assert isinstance(as_string, Path)
+        assert as_string.parent.is_dir()
+
+        as_path = module._ensure_parent(target)
+        assert as_path == as_string

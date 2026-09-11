@@ -41,6 +41,7 @@ from src.townhall.itsm import (
     get_itsm_service,
     resolve_ownership,
 )
+from src.townhall.route_auth import require_admin as _require_admin
 
 router = APIRouter(prefix="/townhall/itsm", tags=["townhall-itsm"])
 
@@ -84,11 +85,6 @@ class CreateChangeRequest(BaseModel):
     title: str = Field(min_length=1)
     change_type: str = "normal"
     service: Optional[str] = None
-
-
-def _require_admin(current_user: dict) -> None:
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required for this action")
 
 
 # ── reads ───────────────────────────────────────────────────────────────────

@@ -127,3 +127,21 @@ storybook-static
 # and ruff_errors.json were -- committed scan output that reads as source.
 ACTION_AUDIT.md
 action-audit.json
+
+# Probe scratch dirs. `TemporaryDirectory` removes these on any normal exit or
+# exception; one only survives a SIGKILL (a cancelled CI job, a reclaimed
+# runner). `_sweep_stale_probes()` clears them at the start of the next probe,
+# but they are ignored here too so a killed run can never leave a deliberately
+# tangled probe file staged for commit.
+immune-probe-*/
+
+# Antibody audit trail — one line per run, written wherever the tool is invoked.
+# Machine-local by nature (it records what a particular run refused on a
+# particular tree), so it is not carried in git; CI uploads it as an artifact.
+#
+# Already covered by the blanket `logs/` rule above, and kept anyway as a
+# deliberate no-op: the path is where someone looks for the antibody's refusals,
+# and finding it named here with its reason beats finding nothing and wondering
+# whether the file was supposed to be committed. Flagged as redundant by cubic
+# on PR #1150 — it is, and the redundancy is the point.
+logs/antibody.jsonl

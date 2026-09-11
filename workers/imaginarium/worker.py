@@ -147,62 +147,158 @@ def init_db() -> None:
         conn.commit()
 
 
-async def _fan_out_creation(project_id: int, brief: str, project_type: str) -> None:
-    """Background: call sub-services and aggregate results."""
-    results = {}
+# Every leg of the fan-out, as data.
+#
+# The previous version hardcoded two legs in an if/else and addressed four
+# more Locations in SERVICE_URLS that it never called. docker-compose gives
+# this worker all six URLs, so the deployment was configured for a fan-out
+# the code did not perform: a `game_assets` brief produced an image and an
+# empty design file, and no game.
+#
+# `payload` builds the sub-service's own request body from the brief. The
+# bodies differ (TranceFlow wants `title`, Warp Radio wants `name`, The
+# Studio wants `title` + `brief`), so each leg carries its own builder
+# rather than one shape being bent to fit all six.
+FAN_OUT_LEGS: tuple[dict, ...] = (
+    {
+        "key": "image",
+        "service": "photo_studio",
+        "path": "/photo/generate",
+        "types": ("mixed", "music_visual", "video_image", "brand", "game_assets"),
+        "payload": lambda title, brief: {
+            "prompt": brief,
+            "width": 512,
+            "height": 512,
+            "generated_by": "imaginarium",
+        },
+    },
+    {
+        "key": "design",
+        "service": "fabulousa",
+        "path": "/fabulousa/projects",
+        "types": ("mixed", "brand", "video_image", "game_assets"),
+        "payload": lambda title, brief: {"name": title[:200], "description": brief},
+    },
+    {
+        "key": "game",
+        "service": "tranceflow",
+        "path": "/tranceflow/projects",
+        "types": ("mixed", "game_assets"),
+        # The deployed TranceFlow is main.py -> router.py, whose ProjectCreate
+        # wants `name`. worker.py's GameIn wants `title` and is not in any
+        # image, so a body shaped for it would 422 against the running service.
+        "payload": lambda title, brief: {
+            "name": title[:200],
+            "description": brief,
+            "project_type": "game_3d",
+        },
+    },
+    {
+        "key": "video",
+        "service": "tateking",
+        "path": "/video/create",
+        "types": ("mixed", "video_image"),
+        # VideoCreateRequest caps title at 200 characters and requires at
+        # least one, so a blank brief would 422 rather than fan out.
+        "payload": lambda title, brief: {
+            "title": title[:200] or "Untitled",
+            "description": brief,
+        },
+    },
+    # Warp Radio has no soundtrack leg, and the omission is deliberate rather
+    # than the oversight this table was written to fix. Its deployed image is
+    # 54 lines of read-only routes — /now-playing and /stations — and serves
+    # no POST at all. The playlist API lives in a worker.py the Dockerfile
+    # does not run. A leg pointing at it would fail on every music_visual and
+    # mixed brief, marking each one "partial" forever, which is a worse lie
+    # than the missing leg: it would look like an outage instead of an
+    # unbuilt feature. scripts/check_creative_routes.py enforces that every
+    # leg below targets a route the deployed entrypoint actually serves, so
+    # this one comes back the day Warp Radio ships its create endpoint.
+    {
+        # The Studio is the creativity centre's hub, so every brief opens a
+        # workspace there regardless of discipline — that is what makes the
+        # brief findable from one place afterwards.
+        "key": "workspace",
+        "service": "the_studio",
+        "path": "/projects",
+        "types": (),  # empty means every project type
+        "payload": lambda title, brief: {
+            "title": title[:200],
+            "brief": brief,
+            "created_by": "imaginarium",
+        },
+    },
+)
+
+
+def _leg_applies(leg: dict, project_type: str) -> bool:
+    """A leg with no declared types runs for every brief."""
+    return not leg["types"] or project_type in leg["types"]
+
+
+async def _call_leg(client, leg: dict, title: str, brief: str, headers: dict) -> tuple[str, dict]:
+    """Run one leg and describe what happened, successfully or not.
+
+    Accepts any 2xx. The previous version tested `status_code == 202` against
+    Sashas Photo Studio's /generate, which answers **200** — so the image
+    result was discarded on every single call, and no error was recorded
+    either. The project completed with an empty results block and looked
+    fine. Anything outside 2xx is recorded with its status so a caller can
+    tell a refusal from an outage.
+    """
+    url = f"{SERVICE_URLS[leg['service']]}{leg['path']}"
+    try:
+        resp = await client.post(url, json=leg["payload"](title, brief), headers=headers)
+    except Exception as exc:  # noqa: BLE001 - one leg failing must not end the brief
+        return leg["key"], {"ok": False, "error": str(exc)}
+    if 200 <= resp.status_code < 300:
+        try:
+            body = resp.json()
+        except Exception:  # noqa: BLE001 - a 2xx with no JSON body is still a success
+            body = {}
+        return leg["key"], {"ok": True, "status": resp.status_code, "result": body}
+    return leg["key"], {"ok": False, "status": resp.status_code, "error": resp.text[:500]}
+
+
+async def _fan_out_creation(
+    project_id: int, brief: str, project_type: str, title: str = ""
+) -> None:
+    """Background: call every applicable sub-service and aggregate results."""
+    results: dict = {}
     headers = {"X-Internal-Secret": INTERNAL_SECRET, "Content-Type": "application/json"}
+    title = title or brief
 
     try:
         import httpx
 
         async with httpx.AsyncClient(timeout=60) as client:
-            # Always try image generation for visual projects
-            if project_type in ("mixed", "music_visual", "video_image", "brand", "game_assets"):
-                try:
-                    resp = await client.post(
-                        f"{SERVICE_URLS['photo_studio']}/generate",
-                        json={
-                            "prompt": brief,
-                            "width": 512,
-                            "height": 512,
-                            "generated_by": "imaginarium",
-                        },
-                        headers=headers,
-                    )
-                    if resp.status_code == 202:
-                        results["image_job"] = resp.json()
-                except Exception as exc:
-                    results["image_error"] = str(exc)
-
-            # Design is a creative discipline like the rest: a brand or mixed
-            # brief opens a Fabulousa design file alongside the imagery, rather
-            # than leaving the one design Location out of the fan-out.
-            if project_type in ("mixed", "brand", "video_image", "game_assets"):
-                try:
-                    resp = await client.post(
-                        f"{SERVICE_URLS['fabulousa']}/fabulousa/projects",
-                        json={"name": brief[:200], "description": brief},
-                        headers=headers,
-                    )
-                    if resp.status_code == 200:
-                        results["design_project"] = resp.json()
-                    else:
-                        results["design_error"] = f"HTTP {resp.status_code}"
-                except Exception as exc:
-                    # Fabulousa answers 503 when Penpot is down. That degrades
-                    # this project's design leg; it does not fail the project.
-                    results["design_error"] = str(exc)
+            for leg in FAN_OUT_LEGS:
+                if not _leg_applies(leg, project_type):
+                    continue
+                key, outcome = await _call_leg(client, leg, title, brief, headers)
+                results[key] = outcome
     except ImportError:
         results["note"] = "httpx not installed — install for fan-out orchestration"
+
+    # A brief whose every leg failed did not succeed, and saying "completed"
+    # for it is the same class of untruth as the 202 check was.
+    attempted = [v for v in results.values() if isinstance(v, dict) and "ok" in v]
+    if attempted and not any(v["ok"] for v in attempted):
+        status = "failed"
+    elif attempted and not all(v["ok"] for v in attempted):
+        status = "partial"
+    else:
+        status = "completed"
 
     now = time.time()
     with get_conn() as conn:
         conn.execute(
-            "UPDATE projects SET status='completed', completed_at=?, results=? WHERE id=?",
-            (now, json.dumps(results), project_id),
+            "UPDATE projects SET status=?, completed_at=?, results=? WHERE id=?",
+            (status, now, json.dumps(results), project_id),
         )
         conn.commit()
-    logger.info("Imaginarium project %d completed: %s", project_id, list(results.keys()))
+    logger.info("Imaginarium project %d %s: %s", project_id, status, list(results.keys()))
 
 
 @asynccontextmanager
@@ -309,7 +405,9 @@ async def create_project(
         )
         conn.commit()
         project_id = cur.lastrowid
-    background_tasks.add_task(_fan_out_creation, project_id, body.brief, body.project_type)
+    background_tasks.add_task(
+        _fan_out_creation, project_id, body.brief, body.project_type, body.title
+    )
     return {"project_id": project_id, "status": "pending", "created_at": now}
 
 

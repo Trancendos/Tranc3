@@ -35,8 +35,21 @@ WORKER_NAME = "triposr-worker"
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", "/app/outputs"))
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", "/app/models"))
-OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure(directory: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` gives importing the module a filesystem side
+    effect, which fails wherever the container's path does not exist and is
+    not writable — every CI runner, for a start. It took nine tests in
+    tests/test_workers_p5.py to PermissionError on `/app` before anything ran,
+    and an import that cannot fail is worth more than a directory created a
+    few milliseconds earlier.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
 
 _internal_secret_raw = os.environ.get("INTERNAL_SECRET")
 if (
@@ -118,6 +131,9 @@ def _get_model() -> Any:
     _MODEL_LOADING = True
     try:
         logger.info("Loading TripoSR model (this may take a minute)…")
+        # MODELS_DIR is where a weights cache lands; created here rather than
+        # at import for the same reason as OUTPUTS_DIR.
+        _ensure(MODELS_DIR)
         t0 = time.time()
         # TripoSR public API — import lazily so missing package doesn't crash on startup
         from tsr.system import TSR  # type: ignore[import]
@@ -286,8 +302,7 @@ async def reconstruct(req: ReconstructRequest):
 
     # Run reconstruction
     run_id = uuid.uuid4().hex[:12]
-    output_dir = OUTPUTS_DIR / run_id
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = _ensure(_ensure(OUTPUTS_DIR) / run_id)
 
     ext = req.output_format.lower().lstrip(".")
     if ext not in ("obj", "glb"):

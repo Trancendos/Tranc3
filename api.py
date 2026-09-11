@@ -947,6 +947,39 @@ from src.roles.routes import (
 
 app.include_router(_roles_router)
 
+# ── Town Hall product lifecycle gates (PRINCE2-shaped, and they refuse) ──────
+# governance.py registers PRINCE2 as a policy with a hardcoded score and no
+# check function. This is the lifecycle: deliverables, stages, evidenced gate
+# criteria, and an advance() that raises rather than warns.
+from src.townhall.plm_routes import (
+    router as _plm_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_plm_router)
+
+# ── Town Hall backlog routing (which Location owns an outstanding item) ──────
+# 170 of the action backlog's 201 items named no Location. Assigning them by
+# judgement in the generator would write a decision nobody made into a file
+# that reads as derived fact, so routing is recorded here instead: a named
+# authority, a written reason, the Location's design pack, and an Observatory
+# event. Items with no decision stay unrouted, and that count is a queue.
+from src.townhall.routing_routes import (
+    router as _townhall_routing_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_townhall_routing_router)
+
+# ── Creative route table (which Location answers a creative request) ─────────
+# The front door for creative work. /creative/resolve names the Location and
+# endpoint; it deliberately does not dispatch, so it can report a capability
+# nobody implements without having to call something that would succeed at
+# doing the wrong thing.
+from src.creative.routes import (
+    router as _creative_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_creative_router)
+
 # ── Arcadian Exchange opportunity book (external/sell-side mandate) ──────────
 # The front half of monetisation: what the estate could sell, what it is worth,
 # and what the eligibility gate refuses. Realised income still books through
@@ -1909,7 +1942,6 @@ async def chat(
         )  # codeql[py/cleartext-logging]
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
-    return None
 
 
 # ── Streaming chat endpoint ───────────────────────────────────────────────────
@@ -2157,7 +2189,6 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
         return {"phi": round(phi, 4), "is_conscious": phi > 2.0, "text": text, "report": report}
     except Exception as e:
         raise HTTPException(status_code=500, detail=safe_error_detail(e, 500))
-    return None
 
 
 # ── Billing ───────────────────────────────────────────────────────────────────
@@ -2508,7 +2539,6 @@ async def error_docs(error_code: str):
         }
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Error code '{error_code}' not found")
-    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

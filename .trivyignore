@@ -8,11 +8,19 @@
 # The v0.2.1 release notes explicitly state "Security fix to address a heap overflow issue".
 # Trivy's vulnerability database may not yet reflect that 0.2.1 is the patched version.
 # This is a confirmed false positive — our pinned version IS the fix.
+# Re-check trigger: Trivy stops reporting it (its DB caught up, drop this entry),
+# or the sentencepiece pin in requirements.txt moves below 0.2.1. Confirmed against
+# OSV on 2026-09-04: the only fix recorded upstream is a commit, not a release, so
+# there is still no version for Trivy's DB to match on.
 CVE-2026-1260
 
 # KSV118 — Helm Tiller deployed (Trivy misidentifies `fmd-distiller` as Tiller)
 # Reason: pod name "fmd-distiller" contains the string "tiller"; there is no Helm Tiller
 # running in this cluster. Suppress on all pod spec templates.
+# Re-check trigger: the `fmd-distiller` pod is renamed (the substring collision goes
+# with it), or Helm Tiller is ever genuinely deployed here — in which case this entry
+# would be hiding a real finding and must be removed the same day.
+# Review-By: 2027-03-01
 KSV118
 
 # CVE-2024-23342 (PYSEC-2026-1325) — python-ecdsa Minerva timing attack on P-256

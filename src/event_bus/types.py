@@ -127,6 +127,18 @@ class PlatformEventType(str, enum.Enum):
     IMPROVEMENT_REALISED = "improvement.realised"
     IMPROVEMENT_ACCEPTED_AS_RISK = "improvement.accepted_as_risk"
 
+    # ── Product lifecycle (The Town Hall PLM) ──────────────────
+    PLM_DELIVERABLE_RAISED = "plm.deliverable.raised"
+    PLM_EVIDENCE_RECORDED = "plm.evidence.recorded"
+    PLM_GATE_PASSED = "plm.gate.passed"
+    PLM_GATE_BLOCKED = "plm.gate.blocked"
+    PLM_CRITERION_WAIVED = "plm.criterion.waived"
+    PLM_DELIVERABLE_CLOSED = "plm.deliverable.closed"
+
+    # The Town Hall routing a backlog item to a Location — a governed
+    # decision with a named authority and a written reason, not a lookup.
+    TOWNHALL_ITEM_ROUTED = "townhall.item.routed"
+
 
 class DeliveryStatus(str, enum.Enum):
     """Event delivery status."""

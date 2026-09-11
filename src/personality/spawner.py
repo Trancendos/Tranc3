@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
+import stat
 import textwrap
 from datetime import datetime
 from pathlib import Path
@@ -35,48 +37,158 @@ _ALLOWED_OUTPUT_ROOTS = [
 _GEN_SCAFFOLD_BIND_HOST = "0.0.0.0"  # nosec B104
 
 
+def _contained_in_roots(path: Path) -> bool:
+    """Lexical containment against the allowed roots. No filesystem access."""
+    return any(path.is_relative_to(root) for root in _ALLOWED_OUTPUT_ROOTS)
+
+
+def _resolve_without_leaving(root: Path, candidate: Path, hop_limit: int = 40) -> Path:
+    """Resolve *candidate* under *root*, refusing any symlink that points out.
+
+    SEC-015, third pass. The walk restarts whenever it expands a link, and that
+    restart is the whole correctness argument.
+
+    The second pass expanded a link, checked the expanded *string* for
+    containment, and then carried on with the next component — never walking the
+    target's own components. So an intermediate symlink inside the target escaped
+    unexamined. Reported by cubic, and reproduced before being accepted:
+
+        <root>/mid -> /etc
+        <root>/hop -> <root>/mid/passwd
+
+        _resolve_output_base("<root>/hop")  ->  ACCEPTED
+        that path really is                ->  /etc/passwd
+
+    ``<root>/mid/passwd`` is lexically under the root, so the containment check
+    passed on a string whose second component was a door out. Expanding a link
+    now re-seeds the pending component list with the target's parts ahead of
+    whatever is left, so every component of every target is itself walked and
+    checked. ``mid`` is then examined in its own right, readlink returns
+    ``/etc``, and the walk refuses.
+
+    ``os.readlink`` reads a target without following it, and ``os.lstat`` does
+    not follow a final symlink, so nothing outside a root is ever stat-ed. A path
+    that does not exist yet has nothing left to follow, which is the ordinary
+    case for a spawn target. ``hop_limit`` bounds total expansions, so a cycle
+    raises instead of hanging.
+
+    **What this does not do**, stated rather than implied: it resolves by name,
+    so a sufficiently determined local attacker who can already write inside an
+    allowed root could swap a component between this walk and the later
+    ``safe_join``/``mkdir`` — a TOCTOU race cubic also raised. Closing that means
+    holding directory descriptors with ``O_NOFOLLOW`` through every scaffold
+    write, which is a redesign of how this module writes files rather than a
+    change to how it validates. The precondition is write access inside
+    ``Path.cwd()``, ``/tmp`` or ``$HOME`` — an attacker who has that already has
+    better options against this process than racing a scaffold generator.
+    Recorded in SEC-015 as a known limit.
+    """
+    resolved = root
+    pending = list(candidate.relative_to(root).parts)
+    hops = 0
+
+    while pending:
+        part = pending.pop(0)
+        nxt = resolved / part
+        try:
+            info = os.lstat(nxt)
+        except OSError:
+            resolved = nxt  # does not exist — nothing to follow
+            continue
+        if not stat.S_ISLNK(info.st_mode):
+            resolved = nxt
+            continue
+
+        hops += 1
+        if hops > hop_limit:
+            raise PathTraversalError(f"symlink chain too long at {part!r}")
+
+        target = os.readlink(nxt)
+        expanded = Path(os.path.normpath(os.path.join(str(resolved), target)))
+        if not _contained_in_roots(expanded):
+            raise PathTraversalError(
+                f"symlink {part!r} points outside every allowed root",
+            )
+
+        # Restart from the root that contains the target, walking ITS components
+        # too. Checking only the expanded string is what let an intermediate
+        # symlink through.
+        new_root = next(r for r in _ALLOWED_OUTPUT_ROOTS if expanded.is_relative_to(r))
+        resolved = new_root
+        pending = list(expanded.relative_to(new_root).parts) + pending
+
+    return resolved
+
+
 def _resolve_output_base(output_dir: str) -> Path:
     """Resolve and validate the output directory against allowed roots.
 
-    The output_dir must resolve to a path under one of the allowed roots.
-    This prevents an attacker from specifying arbitrary filesystem locations.
+    Two containment checks, in this order, and the order is the point:
+
+    1. **Lexical.** ``output_dir`` is joined onto the cwd and normalised with
+       ``os.path.normpath`` — pure string work, no syscall — and checked against
+       the allowed roots. Nothing outside a root is handed to the filesystem, so
+       this function is not an existence oracle for paths the caller was never
+       allowed to name.
+    2. **Symlink-aware, without following anything out.**
+       :func:`_resolve_without_leaving` walks the remaining components, reading
+       each link's target with ``os.readlink`` rather than following it, and
+       refuses the first one that leaves the roots. A symlink *inside* an allowed
+       root pointing out of it is caught — the case the lexical check cannot see,
+       and the case that made the original one-shot ``resolve()`` probe outside
+       the roots before rejecting.
+
+    Previously the order was inverted: ``Path(output_dir).resolve()`` ran on raw
+    input before any check, and a second branch called ``parent.exists()`` on it
+    too. Those two filesystem touches are what CodeQL flagged as py/path-injection
+    at what were then lines 54 and 68 — not the write, which ``safe_join``
+    already guarded.
+
+    The second branch was also dead. It returned ``candidate`` when
+    ``candidate.parent`` was under a root, but ``candidate`` is resolved, so it
+    has no ``..`` left and sits strictly below its parent: any parent under a
+    root puts the candidate under that same root, and the first loop would
+    already have returned. The one path where ``candidate == candidate.parent``
+    is ``/``, whose parent is ``/`` and is under no root. Measured across
+    ``./spawned``, ``/tmp/x/y``, ``/etc/cron.d/evil``, ``/``, ``/etc``, ``..``,
+    ``/tmp``, ``/root/.ssh`` and ``/usr/lib/python3/x``: the second loop returned
+    for nothing the first loop had rejected.
+
+    One deliberate narrowing: a symlink *into* an allowed root from outside it
+    (``/opt/link -> /tmp/x``) was accepted before and is refused now. Step 1
+    judges the name the caller supplied, and that name is outside every root.
 
     Args:
         output_dir: User-supplied output directory string.
 
     Returns:
-        Resolved, validated base Path for output.
+        Validated base Path for output, with contained symlinks expanded.
 
     Raises:
-        PathTraversalError: If the path escapes all allowed roots.
-        FileNotFoundError: If the parent of the path does not exist.
+        PathTraversalError: If the path escapes all allowed roots, lexically or
+            through a symlink.
     """
-    candidate = Path(output_dir).resolve()
+    # Step 1 — lexical. No filesystem access on attacker-controlled input.
+    lexical = Path(os.path.normpath(os.path.join(os.getcwd(), output_dir)))
+    if not _contained_in_roots(lexical):
+        raise PathTraversalError(
+            f"Output directory {output_dir!r} is not under any allowed root. "
+            f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
+        )
 
-    # Allow the path if it already exists and is under an allowed root
-    for allowed_root in _ALLOWED_OUTPUT_ROOTS:
-        try:
-            candidate.relative_to(allowed_root)
-            return candidate
-        except ValueError:
-            continue
+    # Step 2 — walk it without following any link out of the roots.
+    containing_root = next(r for r in _ALLOWED_OUTPUT_ROOTS if lexical.is_relative_to(r))
+    candidate = _resolve_without_leaving(containing_root, lexical)
 
-    # Also allow if the resolved parent exists and is under an allowed root
-    # (this handles the common case where output_dir is "./spawned" which
-    # may not yet exist)
-    parent = candidate.parent
-    if parent.exists():
-        for allowed_root in _ALLOWED_OUTPUT_ROOTS:
-            try:
-                parent.relative_to(allowed_root)
-                return candidate
-            except ValueError:
-                continue
+    # Post-condition. The walk should make this unreachable; it is here because
+    # "each step was checked" and "the result is contained" are different claims.
+    if not _contained_in_roots(candidate):
+        raise PathTraversalError(
+            f"Output directory {output_dir!r} resolves outside every allowed root. "
+            f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
+        )
 
-    raise PathTraversalError(
-        f"Output directory {output_dir!r} is not under any allowed root. "
-        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
-    )
+    return candidate
 
 
 class PersonalitySpawner:

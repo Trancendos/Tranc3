@@ -220,8 +220,20 @@ def evict_expired_cache() -> int:
 
 
 def get_user(request: Request) -> dict[str, Any]:
-    """Extract the authenticated user dict from request.state."""
-    user = getattr(request.state, "user", None)
+    """Extract the authenticated user dict from request.state.
+
+    Both lookups are guarded. The inner `getattr` protected `.user` but the
+    expression still reached `request.state` directly, so a request object
+    without `.state` raised AttributeError instead of returning the anonymous
+    default — which is what `test_get_user_returns_anonymous_when_no_attribute`
+    has always asserted, and it has always failed.
+
+    A real Starlette `Request` always carries `.state`, so this was not reachable
+    in production. It is fixed rather than the test deleted because the test
+    states the function's intended contract, and a defensive `getattr` on an
+    attribute that always exists costs nothing.
+    """
+    user = getattr(getattr(request, "state", None), "user", None)
     return user or {"sub": "anonymous", "tier": "human", "role": "user", "is_active": False}
 
 

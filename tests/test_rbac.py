@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.testclient import TestClient
 
 from src.auth.rbac import get_permissions_for_user, require_permission, user_has_permission
+from tests.support.routes import mounted_routes
 
 
 def _make_client() -> TestClient:
@@ -117,7 +118,7 @@ class TestNoRouteMisusesRequirePermission:
             pytest.skip(f"missing production dependency: {e}")
 
         offenders = []
-        for route in app.routes:
+        for route in mounted_routes(app):
             dependant = getattr(route, "dependant", None)
             if not dependant:
                 continue

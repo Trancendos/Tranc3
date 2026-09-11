@@ -456,3 +456,33 @@ def test_literal_keywords_still_evaluate():
     assert _safe_eval("True and 'yes'", {}) == "yes"
     # A namespace entry never shadows them, because they are not names.
     assert _safe_eval("True", {"True": "shadowed"}) is True
+
+
+def test_oversized_repetition_is_rejected_without_allocating():
+    """_guard_repeat's stated purpose is refusing the repeat *before* it allocates.
+
+    _guard_size catches the same expressions afterwards, so removing
+    _guard_repeat left every other test green — the pre-allocation property
+    was documented and unverified. Peak memory is what distinguishes them:
+    rejecting early stays flat, rejecting late allocates the whole sequence
+    first, which for a large enough repeat is the exhaustion the ceiling
+    exists to prevent.
+
+    Found by scripts/check_guard_calibration.py, which removes each guard and
+    requires the suite to notice.
+    """
+    import tracemalloc
+
+    tracemalloc.start()
+    try:
+        with pytest.raises(ValueError, match="maximum allowed size"):
+            _safe_eval("'a' * 20000000", {})
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    # Rejecting early keeps the peak in kilobytes; allocating the 20 MB string
+    # first and rejecting it afterwards does not.
+    assert peak < 1_000_000, (
+        f"peak {peak / 1e6:.1f} MB — the sequence was built before being refused"
+    )

@@ -198,16 +198,37 @@ def check_port_conflicts(components: list[dict]) -> list[str]:
     return errors
 
 
-def check_container_names(components: list[dict]) -> list[str]:
+def check_container_names(components: list[dict], compose: dict) -> list[str]:
+    """The registry must name the container compose actually creates.
+
+    This used to check the registry's `docker_container` against the
+    `tranc3-` naming convention instead, and it passed — because 45 records
+    held the name the convention *wants* while compose created a different
+    one, and nothing compared the two. Reality was reported separately, as a
+    warning, against compose. So the CMDB stayed green by recording fiction
+    and the gate never noticed: an operator reading a record during an
+    incident got a container name that does not exist on the host.
+
+    `docker_container` is a mirror of a deployment fact, so the only
+    enforceable rule for it is that it mirrors correctly. The naming
+    convention is a judgement about the name itself, and it belongs where
+    the name is set — `check_compose_container_names`, below, which already
+    reports it against every service in the compose file.
+    """
+    services = compose.get("services", {})
     errors = []
     for c in components:
-        container = c.get("docker_container")
-        if not container:
+        service = c.get("docker_service")
+        recorded = c.get("docker_container")
+        if not service or service not in services:
             continue
-        if not container.startswith(CONTAINER_PREFIX):
+        actual = (
+            services[service].get("container_name") if isinstance(services[service], dict) else None
+        )
+        if actual and recorded != actual:
             errors.append(
-                f"BAD CONTAINER NAME [{c.get('ref')}] {c.get('name')}: "
-                f"'{container}' must start with '{CONTAINER_PREFIX}'"
+                f"CONTAINER NAME DOES NOT MATCH COMPOSE [{c.get('ref')}] {c.get('name')}: "
+                f"registry says '{recorded}', compose service '{service}' creates '{actual}'"
             )
     return errors
 
@@ -348,7 +369,7 @@ def main(strict: bool = False) -> int:
     # Run checks
     all_errors += check_duplicate_refs(components)
     all_errors += check_port_conflicts(components)
-    all_errors += check_container_names(components)
+    all_errors += check_container_names(components, compose)
     all_errors += check_missing_short_ids(components)
 
     compose_errors, compose_warnings = check_compose_vs_registry(components, compose)

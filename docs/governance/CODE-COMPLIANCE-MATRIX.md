@@ -45,8 +45,9 @@ pattern), `C901` (complexity — warned, not blocked). Per-file overrides: `test
 
 ## 3. Layer 1 — CI (two systems, deliberately, see `CLAUDE.md`'s CI/CD section)
 
-- **GitHub Actions** (`.github/workflows/`, 12 files): `ci.yml` (Ruff/lint — the PR-blocking gate),
-  `codeql.yml`, `test.yml`, `trivy.yml`, `codecov.yml`, `python.yml`, `rust.yml`, `go.yml`,
+- **GitHub Actions** (`.github/workflows/`, 19 files): `ci.yml` (Ruff/lint, Service Topology and
+  Pytest-with-coverage — the PR-blocking gate),
+  `codeql.yml`, `test.yml`, `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`,
   `publish-wiki.yml`, `publish-matrix-site.yml`, plus `deploy-cloudflare.yml`/`deploy-fly.yml`
   (legacy deploy paths).
 - **Forgejo** (`.forgejo/workflows/`, 30 files) — the primary system for deployment and heavier
