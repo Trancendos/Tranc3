@@ -28,6 +28,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import tempfile
@@ -38,6 +39,7 @@ from typing import List, Optional
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from Dimensional.path_validation import PathTraversalError, safe_join
 from src.backup.registry import (
     RETENTION,
     WORKER_DATABASE_REGISTRY,
@@ -49,6 +51,23 @@ logger = logging.getLogger("tranc3.backup.engine")
 
 BACKUP_ROOT = Path(os.environ.get("BACKUP_ROOT", "/data/backups"))
 _ENC_MAGIC = b"BKPENC1"  # 7-byte sentinel for encrypted backup files
+
+# SEC-017. A worker name indexes a directory under BACKUP_ROOT; it is not a
+# path. `fullmatch` rather than `match` with an anchored pattern, per SEC-014 —
+# `$` also matches immediately before a trailing newline, so `match` on `^...$`
+# admits a character the class forbids. Registry names are of the form
+# `infinity-auth`, `the-lab`, `warp-radio`, all of which this accepts.
+_WORKER_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+# `BACKUP_RESTORE_ROOT`, when set, is an operator-chosen directory that
+# `restore(target_path=...)` may write into, in addition to the live database
+# paths the registry already names. Unset by default, so out of the box the only
+# restore destinations are the ones the registry itself declares.
+#
+# Read at call time, not bound to a module constant here: a constant captured at
+# import cannot be configured by the process that imports it, which would make
+# the one escape hatch this policy offers unusable in exactly the case it exists
+# for — and untestable without reaching into module internals.
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +304,23 @@ class BackupEngine:
                 error=f"Worker '{worker}' not in registry and no target_path given",
             )
 
-        live_path = target_path or (worker_db.resolved_path if worker_db else "")
+        # SEC-017: a caller-supplied destination must be one this service is
+        # allowed to write. Checked before anything is read, so a refused
+        # target never causes a file to be opened.
+        if target_path:
+            try:
+                live_path = str(self._permitted_restore_target(target_path))
+            except PathTraversalError as exc:
+                return RestoreResult(
+                    success=False,
+                    worker=worker,
+                    restored_to="",
+                    backup_path=backup_path or "",
+                    verified=False,
+                    error=str(exc),
+                )
+        else:
+            live_path = worker_db.resolved_path if worker_db else ""
 
         # Find backup file
         if not backup_path:
@@ -300,7 +335,18 @@ class BackupEngine:
                     error=f"No backups found for worker '{worker}'",
                 )
 
-        bp = Path(backup_path)
+        # SEC-017: an explicitly named backup must be under the backup root.
+        try:
+            bp = self._contained_backup_file(backup_path)
+        except (PathTraversalError, ValueError) as exc:
+            return RestoreResult(
+                success=False,
+                worker=worker,
+                restored_to=live_path,
+                backup_path=backup_path,
+                verified=False,
+                error=str(exc),
+            )
         if not bp.exists():
             return RestoreResult(
                 success=False,
@@ -376,10 +422,104 @@ class BackupEngine:
                 error=str(exc),
             )
 
+    def _worker_backup_dir(self, worker: str) -> Path:
+        """Resolve a worker name to its own directory under ``backup_root``.
+
+        SEC-017. `py/path-injection` at what was `list_backups`'s
+        ``self.backup_root / worker``, reached from ``GET /backup/list?worker=``.
+        `Path.__truediv__` neither normalises ``..`` nor refuses an absolute
+        right operand -- it *replaces* the left one -- so the two shapes were:
+
+            ?worker=../../etc   ->  <root>/../../etc      rglob escapes the root
+            ?worker=/           ->  /                     rglob walks the disk
+
+        The second is the sharper of the two. `rglob("*.meta.json")` from ``/``
+        is a full filesystem walk driven by one query parameter, and every
+        ``*.meta.json`` it finds anywhere is parsed and returned in the response
+        body.
+
+        A worker name indexes a directory; it is not a path, so it is checked
+        as a name and then joined with `safe_join`, which validates the
+        component, resolves the join and re-checks containment.
+        """
+        if not _WORKER_NAME.fullmatch(worker or ""):
+            raise PathTraversalError(f"invalid worker name: {worker!r}")
+        return safe_join(self.backup_root, worker)
+
+    def _contained_backup_file(self, backup_path: str) -> Path:
+        """Confirm an explicitly named backup file lies under ``backup_root``.
+
+        SEC-017. ``restore(backup_path=...)`` read whatever path it was handed.
+        A backup is by definition a file this service wrote, so there is no
+        legitimate value outside the backup root.
+        """
+        candidate = Path(backup_path)
+        root = Path(self.backup_root).resolve()
+        parts = candidate.relative_to(root).parts if candidate.is_absolute() else candidate.parts
+        if not parts:
+            raise PathTraversalError(f"backup_path names the backup root itself: {backup_path!r}")
+        return safe_join(root, *parts)
+
+    def _permitted_restore_target(self, target_path: str) -> Path:
+        """Confirm a restore destination is one this service is allowed to write.
+
+        SEC-017, and the more serious half of it. ``restore`` took `target_path`
+        straight from the request body and, after the integrity check, did:
+
+            live.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(tmp_path, str(live))
+
+        which is an arbitrary file write -- creating parent directories on the
+        way -- of content the caller supplied, bounded only by "must gunzip to
+        something that passes a SQLite integrity check". Writing a valid SQLite
+        database over another service's valid SQLite database needs no exotic
+        parsing: it is the obvious use of the primitive, and `infinity-auth`'s
+        user table is the obvious destination.
+
+        CodeQL did not report this one. Only the read at `list_backups` was
+        flagged, which is why the alert list is a place to start reading and not
+        a list of what is wrong.
+
+        The route is not anonymous -- `workers/backup-service/worker.py` gates
+        everything but `/health` behind `x-internal-secret` and fails closed --
+        so this is post-authentication. That is not nothing: `INTERNAL_SECRET`
+        is one shared value across the estate's workers, so the primitive is
+        available to any single compromised worker, which is exactly the lateral
+        move worth denying at the destination as well as the door.
+
+        Permitted destinations are the live database paths the registry itself
+        declares, plus anything under ``BACKUP_RESTORE_ROOT`` when an operator
+        sets it. Unset by default.
+        """
+        from src.backup.registry import WORKER_DATABASE_REGISTRY as _registry
+
+        candidate = Path(target_path)
+        declared = {Path(db.resolved_path) for db in _registry}
+        if candidate in declared:
+            return candidate
+
+        restore_root = os.environ.get("BACKUP_RESTORE_ROOT", "")
+        if restore_root:
+            root = Path(restore_root).resolve()
+            parts = (
+                candidate.relative_to(root).parts
+                if candidate.is_absolute() and candidate.is_relative_to(root)
+                else None
+            )
+            if parts is None and not candidate.is_absolute():
+                parts = candidate.parts
+            if parts:
+                return safe_join(root, *parts)
+
+        raise PathTraversalError(
+            f"restore target {target_path!r} is neither a registry database path nor under "
+            f"BACKUP_RESTORE_ROOT (currently {restore_root or 'unset'})"
+        )
+
     def list_backups(self, worker: Optional[str] = None) -> List[dict]:
         """Return sorted list of backup metadata dicts (newest first)."""
         results = []
-        search_root = self.backup_root / worker if worker else self.backup_root
+        search_root = self._worker_backup_dir(worker) if worker else self.backup_root
         for meta_file in sorted(search_root.rglob("*.meta.json"), reverse=True):
             try:
                 results.append(json.loads(meta_file.read_text()))
@@ -497,7 +637,11 @@ class BackupEngine:
             Path(tmp_path).unlink(missing_ok=True)
 
     def _latest_backup(self, worker: str) -> Optional[str]:
-        worker_dir = self.backup_root / worker
+        # SEC-017: same join as `list_backups` had, reached from `restore`.
+        try:
+            worker_dir = self._worker_backup_dir(worker)
+        except PathTraversalError:
+            return None
         if not worker_dir.exists():
             return None
         backups = sorted(

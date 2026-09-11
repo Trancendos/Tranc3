@@ -1116,6 +1116,138 @@ to chase — not the fix.
 
 ---
 
+### SEC-017 — the alert found the smaller half (`py/path-injection`, 7.5)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** ×2 — one reported, one found by reading around it |
+| **ID** | `py/path-injection` (CodeQL, security-severity 7.5) ×1 |
+| **Scanner** | CodeQL Advanced (the reported half only) |
+| **Location** | `src/backup/engine.py:383` — `list_backups`; and **unreported**, `restore()` |
+| **Recorded** | 2026-09-11 |
+
+**The reported half — a read.** `GET /backup/list?worker=` reached:
+
+```python
+search_root = self.backup_root / worker if worker else self.backup_root
+for meta_file in sorted(search_root.rglob("*.meta.json"), reverse=True):
+    results.append(json.loads(meta_file.read_text()))
+```
+
+`Path.__truediv__` neither normalises `..` nor refuses an absolute right
+operand — it *replaces* the left one. Measured:
+
+| `?worker=` | `search_root` | effect |
+|---|---|---|
+| `gateway` | `<root>/gateway` | intended |
+| `../../etc` | `<root>/../../etc` | escapes the root |
+| `/` | `/` | **`rglob` walks the entire filesystem** |
+
+The `/` row is the sharper one, and the calibration run put a number on it: the
+same test takes **15,222 ms** against the pre-fix engine and under a millisecond
+against every other input in the same parametrisation. One query parameter, a
+full-disk walk, and the contents of every `*.meta.json` found anywhere returned
+in the response body.
+
+**The unreported half — a write, and it is worse.** Reading around the alert
+rather than only at it:
+
+```python
+class RestoreRequest(BaseModel):
+    worker: str
+    backup_path: Optional[str] = None
+    target_path: Optional[str] = None
+    dry_run: bool = True
+```
+
+`restore()` honoured both paths verbatim. `backup_path` was read from anywhere;
+`target_path`, after the SQLite integrity check, reached:
+
+```python
+live.parent.mkdir(parents=True, exist_ok=True)
+if live.exists():
+    live.rename(live.with_suffix(".pre-restore.db"))
+shutil.move(tmp_path, str(live))
+```
+
+That is an arbitrary file write of caller-supplied content, creating parent
+directories on the way, bounded only by "must gunzip to something that passes a
+SQLite integrity check". Writing a valid SQLite database over another service's
+valid SQLite database needs no exotic parsing — it is the obvious use of the
+primitive, and `infinity-auth`'s user table is the obvious destination. The
+existing file is renamed aside first, so the same call is also a destructive
+one.
+
+**CodeQL reported only the read.** That is the entry's point: the alert list is
+a place to start reading, not a list of what is wrong. Three entries in a row
+now — SEC-014's real defect was adjacent to a false positive, SEC-015's was the
+validator rather than the write, and here the reported sink was the less serious
+of two in the same file.
+
+**Both are post-authentication, and that was checked rather than assumed.**
+`workers/backup-service/worker.py` gates every route but `/health` behind
+`x-internal-secret` and fails closed — its own comment records that it once read
+`if _INTERNAL_SECRET and ...`, which a blank secret made falsy so the refusal
+never ran, and that it now answers 503 instead. A control that was found
+non-acting and fixed. So this is not an anonymous primitive, unlike SEC-016.
+
+It is still worth denying at the destination: `INTERNAL_SECRET` is **one shared
+value** across the estate's workers, so any single compromised worker inherits
+arbitrary file write on the service that holds every other worker's database
+backups. That is the lateral move the shared secret makes cheap, and the backup
+service is the worst place in the estate to land it.
+
+Unlike SEC-016, `backup-service` **is** wired into
+`docker-compose.production.yml` — port 8078 published, Traefik router on
+`backup-service.trancendos.com` with TLS.
+
+**The fix.**
+
+* `_worker_backup_dir` — a worker name indexes a directory; it is not a path. It
+  is matched against `[A-Za-z0-9][A-Za-z0-9._-]{0,63}` with `fullmatch` (per
+  SEC-014's rule about `$`) and then joined with `safe_join`. It **raises** on a
+  bad name rather than returning `[]`, because an empty list is what a real
+  worker with no backups yet looks like; the route turns the refusal into a 400.
+* `_contained_backup_file` — a backup is a file this service wrote, so there is
+  no legitimate `backup_path` outside the backup root.
+* `_permitted_restore_target` — destinations are the live database paths the
+  registry itself declares, plus anything under `BACKUP_RESTORE_ROOT` when an
+  operator sets it. Unset by default. The check runs **before** anything is
+  read, so a refused target never causes a file to be opened, and
+  `test_refusal_happens_before_any_write` asserts the destination directory is
+  not created on the way to being refused.
+
+`BACKUP_RESTORE_ROOT` is read at call time, not bound to a module constant: a
+constant captured at import cannot be configured by the process that imports it,
+which would make the one escape hatch this policy offers unusable in exactly the
+case it exists for, and untestable without reaching into module internals.
+
+**Four existing tests broke, and they were right to.** `test_restore_dry_run`,
+`test_restore_overwrites_live_db`, `test_restore_creates_pre_restore_backup` and
+`test_restore_no_backups` all restore a fixture-built `WorkerDB` — deliberately
+not in the global registry — to a `tmp_path` destination. That is a legitimate
+thing to do, and the new policy is that it has to say where. They now take a
+`restore_root_allowed` fixture that sets `BACKUP_RESTORE_ROOT` to the temp
+directory. Changing a test to accommodate a security fix is usually the wrong
+move; it is right here only because the contract genuinely changed and the
+change is written into the fixture's docstring rather than silently applied.
+
+**Calibration.** 32 tests in `tests/test_backup_path_containment.py`; against
+the restored pre-fix engine, **9 fail**, including the 15-second one. The 23 that
+pass in both are the acceptance half — every name in
+`WORKER_DATABASE_REGISTRY` still resolves, a registry-declared restore target
+still needs no env var, and a backup inside the root still restores. An
+over-tight name check would be a self-inflicted outage dressed as a security fix,
+so that half is tested as deliberately as the refusals.
+
+**Next review.** The reported alert should clear: `safe_join` is a declared
+barrier in the model pack. The unreported write has no alert to clear, so the
+tests are its only evidence — which is the durable argument for the guard living
+in the test suite rather than in a scanner's expectations.
+
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
