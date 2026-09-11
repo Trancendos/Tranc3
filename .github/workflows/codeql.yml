@@ -3,9 +3,20 @@
 # This runs alongside Forgejo CI security-scan.yml (bandit + semgrep).
 # CodeQL provides additional taint-tracking analysis that bandit/semgrep lack.
 #
-# Previous CodeQL alerts (#30-#41) were fixed in PR #29 by replacing
-# _assert_under_base() with validate_path() in spawner.py. This workflow
-# must exist on main so CodeQL re-scans and dismisses the resolved alerts.
+# This header used to claim: "Previous CodeQL alerts (#30-#41) were fixed in
+# PR #29 by replacing _assert_under_base() with validate_path() in spawner.py."
+# Corrected 2026-09-11 (SEC-015). validate_path() appears nowhere in
+# src/personality/spawner.py — it never has; the file uses safe_join() and its
+# own _resolve_output_base(). A header asserting a fix in terms of a function
+# the named file does not contain is not evidence about that file, and the
+# scanner was still reporting py/path-injection there when the claim was
+# checked. Those alerts were the validator's own Path(output_dir).resolve() and
+# parent.exists() probes running on raw caller input, which SEC-015 reordered
+# behind a lexical containment check; see src/personality/spawner.py.
+#
+# The rule this leaves behind: a fix is evidence about the code, and only a
+# scan is evidence about the alert. Do not record a dismissal here that a
+# SARIF has not confirmed.
 
 name: "CodeQL Advanced"
 

@@ -898,6 +898,108 @@ and needs a machine that can run CodeQL to calibrate it.
 
 ---
 
+### SEC-015 — the validator was the sink (`py/path-injection`, 7.5)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | `py/path-injection` (CodeQL, security-severity 7.5) ×2 |
+| **Scanner** | CodeQL Advanced |
+| **Location** | `src/personality/spawner.py:54`, `:68` — `_resolve_output_base` |
+| **Recorded** | 2026-09-11 |
+
+**This entry started as a claim to check, not a defect to fix.**
+`.github/workflows/codeql.yml`'s header said:
+
+> Previous CodeQL alerts (#30-#41) were fixed in PR #29 by replacing
+> `_assert_under_base()` with `validate_path()` in spawner.py.
+
+`validate_path()` appears nowhere in `src/personality/spawner.py`. The file uses
+`safe_join()` and its own `_resolve_output_base()`. The only two surviving
+mentions of `_assert_under_base` in the tree are that header and a list of
+recognised guard names in `Dimensional/security_automation/scanner.py`. So the
+header described a fix in terms of a function the named file does not contain,
+while the scanner still reported the rule it claimed was resolved — SEC-013's
+shape, one layer further out.
+
+**The flagged sinks are the validator's own filesystem probes.** Read from the
+`codeFlows` rather than the line numbers, taint runs from
+`POST /turingshub/spawn` to:
+
+```
+src/personality/turingshub/routes.py:75   body            <- POST /turingshub/spawn
+src/personality/turingshub/routes.py:85   body["output_dir"]
+src/personality/spawner.py:104            output_dir      (spawn)
+src/personality/spawner.py:115            output_dir
+src/personality/spawner.py:38             output_dir      (_resolve_output_base)
+src/personality/spawner.py:54             Path(...).resolve()   <- sink
+src/personality/spawner.py:68             parent.exists()       <- sink
+```
+
+Not the scaffold write — `safe_join` already guarded that, and the model pack at
+`.github/codeql/tranc3-python-models/models/path-validation.yml` already declares
+it a barrier. What was unguarded was the *act of validating*: `.resolve()` and
+`.exists()` ran on the raw caller string before anything decided whether that
+string was one this code was willing to touch. A validator that stats what it is
+about to refuse is an existence oracle, and returns the answer through timing and
+through the two distinct error paths.
+
+**The second branch was dead, and its only live effect was that probe.** It
+returned `candidate` when `candidate.parent` sat under an allowed root — but
+`candidate` is resolved, so it has no `..` left and lies strictly below its
+parent: any parent under a root puts the candidate under the same root, and the
+first loop would already have returned. The sole path where
+`candidate == candidate.parent` is `/`, whose parent is `/` and is under no root.
+Measured across `./spawned`, `/tmp/x/y`, `/etc/cron.d/evil`, `/`, `/etc`, `..`,
+`/tmp`, `/root/.ssh`, `/usr/lib/python3/x`: the second loop returned for nothing
+the first had rejected.
+
+**The fix is an ordering, not a new check.** Lexical containment first —
+`os.path.normpath` on the joined path, pure string work, no syscall — and only a
+path that survives it is resolved and checked again. The second check still
+matters: it is what catches a symlink *inside* an allowed root pointing out of
+it, which the lexical check cannot see. One deliberate narrowing: a symlink into
+a root from outside (`/opt/link -> /tmp/x`) was accepted before and is refused
+now, because step 1 judges the name the caller supplied.
+
+**Calibration.** 13 tests in `tests/test_spawner_output_containment.py`. Run
+against the restored pre-fix implementation, `test_no_filesystem_touch_for_rejected_path`
+fails and prints the oracle verbatim:
+
+```
+['resolve:/etc/shadow-probe-target', 'stat:/etc/shadow-probe-target',
+ 'exists:/etc', 'stat:/etc']
+```
+
+Four syscalls on a path that was always going to be refused, including
+`exists:/etc` — the dead branch, caught in the act. The other twelve pass against
+both implementations, which is the honest result: they pin behaviour the old code
+also had, and only this one distinguishes them. Its counterpart
+`test_accepted_path_does_resolve` asserts an accepted path *is* resolved, so the
+absence being measured is specific to rejections rather than to the guard having
+been disabled.
+
+**What this entry does not settle.** `/turingshub/spawn` declares no auth
+dependency of its own, and `RBACMiddleware` does not gate it — its own docstring
+says it "silently skips unauthenticated requests", and its `dispatch` populates
+`request.state.user` and then always calls `call_next`. Another control that runs
+on every request and enforces nothing by itself; enforcement depends on each route
+calling `require_permission()`, and this one does not. `ZeroTrustASGIMiddleware`
+*can* deny and is enabled by default, so whether an anonymous caller reaches the
+spawner at all comes down to that middleware's default policy. **That has not been
+measured**, and it is a separate question from this alert.
+
+**Next review.** Expect both alerts to persist. `_resolve_output_base` still ends
+in a resolved `Path` returned to a caller, and CodeQL does not model a raising
+validator as a sanitiser — the limitation SEC-013 and SEC-014 both record. The
+useful test is whether the *flow* changes: the sink at the old `:68` should
+disappear with the dead branch, and the remaining one should point at the
+post-check `resolve()` rather than a pre-check one. Vulnerability-fixed and
+alert-cleared remain different facts, and only a scan settles the second.
+
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for

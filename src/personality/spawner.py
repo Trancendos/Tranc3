@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import textwrap
 from datetime import datetime
@@ -38,8 +39,35 @@ _GEN_SCAFFOLD_BIND_HOST = "0.0.0.0"  # nosec B104
 def _resolve_output_base(output_dir: str) -> Path:
     """Resolve and validate the output directory against allowed roots.
 
-    The output_dir must resolve to a path under one of the allowed roots.
-    This prevents an attacker from specifying arbitrary filesystem locations.
+    Two containment checks, in this order, and the order is the point:
+
+    1. **Lexical.** ``output_dir`` is joined onto the cwd and normalised with
+       ``os.path.normpath`` — pure string work, no syscall — and checked against
+       the allowed roots. Nothing outside a root is ever handed to the
+       filesystem, so this function is not an existence oracle for paths the
+       caller was never allowed to name.
+    2. **Resolved.** Only once step 1 passes is the path resolved, following
+       symlinks, and checked again. A symlink *inside* an allowed root pointing
+       out of it fails here; the lexical check alone cannot see that.
+
+    Previously the order was inverted: ``Path(output_dir).resolve()`` ran on raw
+    input before any check, and a second branch called ``parent.exists()`` on it
+    too. Those two filesystem touches are what CodeQL flagged as py/path-injection
+    at what were then lines 54 and 68 — not the write, which ``safe_join`` already guarded.
+
+    The second branch was also dead. It returned ``candidate`` when
+    ``candidate.parent`` was under a root, but ``candidate`` is resolved, so it
+    has no ``..`` left and sits strictly below its parent: any parent under a
+    root puts the candidate under that same root, and the first loop would
+    already have returned. The one path where ``candidate == candidate.parent``
+    is ``/``, whose parent is ``/`` and is under no root. Measured across
+    ``./spawned``, ``/tmp/x/y``, ``/etc/cron.d/evil``, ``/``, ``/etc``, ``..``,
+    ``/tmp``, ``/root/.ssh`` and ``/usr/lib/python3/x``: the second loop returned
+    for nothing the first loop had rejected.
+
+    One deliberate narrowing: a symlink *into* an allowed root from outside it
+    (``/opt/link -> /tmp/x``) was accepted before and is refused now. Step 1
+    judges the name the caller supplied, and that name is outside every root.
 
     Args:
         output_dir: User-supplied output directory string.
@@ -48,35 +76,30 @@ def _resolve_output_base(output_dir: str) -> Path:
         Resolved, validated base Path for output.
 
     Raises:
-        PathTraversalError: If the path escapes all allowed roots.
-        FileNotFoundError: If the parent of the path does not exist.
+        PathTraversalError: If the path escapes all allowed roots, either
+            lexically or after symlinks are followed.
     """
-    candidate = Path(output_dir).resolve()
 
-    # Allow the path if it already exists and is under an allowed root
-    for allowed_root in _ALLOWED_OUTPUT_ROOTS:
-        try:
-            candidate.relative_to(allowed_root)
-            return candidate
-        except ValueError:
-            continue
+    def _contained(path: Path) -> bool:
+        return any(path.is_relative_to(root) for root in _ALLOWED_OUTPUT_ROOTS)
 
-    # Also allow if the resolved parent exists and is under an allowed root
-    # (this handles the common case where output_dir is "./spawned" which
-    # may not yet exist)
-    parent = candidate.parent
-    if parent.exists():
-        for allowed_root in _ALLOWED_OUTPUT_ROOTS:
-            try:
-                parent.relative_to(allowed_root)
-                return candidate
-            except ValueError:
-                continue
+    # Step 1 — lexical. No filesystem access on attacker-controlled input.
+    lexical = Path(os.path.normpath(os.path.join(os.getcwd(), output_dir)))
+    if not _contained(lexical):
+        raise PathTraversalError(
+            f"Output directory {output_dir!r} is not under any allowed root. "
+            f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
+        )
 
-    raise PathTraversalError(
-        f"Output directory {output_dir!r} is not under any allowed root. "
-        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
-    )
+    # Step 2 — resolved. Catches a symlink inside a root that points out of it.
+    candidate = lexical.resolve()
+    if not _contained(candidate):
+        raise PathTraversalError(
+            f"Output directory {output_dir!r} resolves outside every allowed root. "
+            f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
+        )
+
+    return candidate
 
 
 class PersonalitySpawner:
