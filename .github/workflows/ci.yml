@@ -286,6 +286,15 @@ jobs:
       - name: Container SBOMs are current
         run: python scripts/build_container_sboms.py --check
 
+      # The domain model generates the database schema, the row-level security
+      # policies and the route table from one description, so the three cannot
+      # drift from each other the way three hand-maintained artifacts do. The
+      # conformance report in the same run records where the estate does not yet
+      # meet the model -- and reports a property it could not evaluate as
+      # unchecked rather than as passing.
+      - name: Domain model, DDL and conformance report are current
+        run: python scripts/build_domain_model.py --check
+
       # The estate records outstanding work in 44 separate registers, each
       # correct about its own domain and blind to the rest — so nobody can
       # answer "what is outstanding across the platform" without reading 320
