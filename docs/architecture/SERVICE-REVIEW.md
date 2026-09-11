@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `cd7f22a5`. Regenerate with
+Generated from repo state at `308e1ec5`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -335,7 +335,7 @@ that none of them import.
 
 ### `vault-service`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/vault-service/worker.py:48 Dimensional.service_auth_fastapi`
+  - `workers/vault-service/worker.py:50 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `vrar3d`

@@ -422,9 +422,95 @@ Three `critical` alerts (9.8 `py/command-line-injection` in
 `workers/tateking/worker.py`, and two 9.1 `py/partial-ssrf` in
 `workers/notifications/worker.py` and `workers/vault-service/worker.py`) and
 thirteen further `high` alerts are present in the same SARIF, outside the files
-this pull request touched. They are **not** fixed here and are not adjudicated;
-they are named so that the next reader starts from a list rather than from a
-count.
+this pull request touched. They were named here so that the next reader starts
+from a list rather than from a count. The first of the three is now adjudicated
+as **SEC-010** below; the other two and the thirteen `high` remain open.
+
+
+---
+
+### SEC-010 — the caller picked the vault's API path (`py/partial-ssrf`, 9.1)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | `py/partial-ssrf` (CodeQL, security-severity 9.1) |
+| **Scanner** | CodeQL Advanced (`.github/workflows/codeql.yml`, language `python`) |
+| **Location** | `workers/vault-service/worker.py:153` — `OpenBaoClient._request` |
+| **Recorded** | 2026-09-11 |
+
+The first of the three `critical` alerts SEC-009 could only name. Taken first
+because it is **The Void**: the service that holds every secret on the platform.
+
+**What it was.** One line built the URL:
+
+```python
+url = f"{self.addr}/v1/{path.lstrip('/')}"
+```
+
+`path` reaches it from `body.key` on `POST /secrets` — a public create endpoint
+whose key field carried a length bound (`min_length=1, max_length=200`) and no
+charset at all. `create_secret` mirrors to OpenBao as
+`put_secret(f"tranc3/{body.key}", ...)`, which becomes
+`secret/data/tranc3/{key}`, which becomes the URL above. So the caller chose
+which OpenBao API path this worker called, and the call carries
+`X-Vault-Token`.
+
+**Measured, not assumed.** Against a local server recording the raw request
+line, urllib normalises nothing:
+
+| `key` | request line emitted |
+|---|---|
+| `normal-key` | `POST /v1/secret/data/tranc3/normal-key` |
+| `../../../../sys/seal` | `POST /v1/secret/data/tranc3/../../../../sys/seal` |
+| `../../../../auth/token/create` | `POST /v1/secret/data/tranc3/../../../../auth/token/create` |
+| `x?list=true` | `POST /v1/secret/data/tranc3/x?list=true` |
+| `x#frag` | `POST /v1/secret/data/tranc3/x` |
+| `x y` | `InvalidURL` raised by `http.client` |
+
+`..` walks out of `secret/data/` into `sys/` and `auth/`; `?` appends a query
+the caller wrote; `#` truncates the path. A space is the only thing stdlib
+already refused. Whether OpenBao resolves the dot-segments itself or redirects
+to the cleaned path is not the question the fix turns on — either way the
+request that leaves this worker is one the caller composed.
+
+**Remediation.** A single `_vault_path()` checks every segment and refuses `.`,
+`..`, empty segments, and anything outside `^[A-Za-z0-9][A-Za-z0-9._-]*$`,
+then percent-encodes what remains. Encoding alone would not have been enough:
+`.` is an unreserved character, so `%2e%2e` and `..` mean the same thing to a
+server that resolves dot-segments, and quoting would have preserved the
+traversal faithfully.
+
+It is applied in **two** places, deliberately:
+
+1. `_request` — so every path through the client is checked once, centrally.
+   `put_secret` and `get_secret` are today's callers; the next one will not
+   have to remember, which is the only version of this guard that stays true.
+   A refusal returns `None` like every other failure mode there, so a rejected
+   mirror degrades to the AES-GCM SQLite backend rather than 500ing.
+2. `SecretCreate.key` — a `field_validator` calling the same function, so the
+   attempt fails loudly with a 422 instead of silently not mirroring. It adds
+   exactly one rule the path builder does not have: the key must already equal
+   its canonical form. `_vault_path` strips surrounding slashes, because a
+   caller writing `/sys/health` means the same path; a secret *key* is
+   different, and `/db-password` and `db-password` would otherwise be two
+   SQLite rows mirroring onto one OpenBao path.
+
+One function, two call sites, so the boundary and the URL cannot drift about
+what "safe" means.
+
+**Calibration.** Nine assertions in
+`tests/test_workers_p4.py::TestVaultService` — eight parametrised key cases and
+one direct client test. **All nine were run against the unfixed worker and all
+nine failed**; all nine pass against the fixed one, alongside the file's other
+100 tests. The direct test covers the structural half: `put_secret` returns
+`False` and `get_secret` returns `None` for a traversal path without any
+request leaving the process, and no OpenBao is needed to reach that refusal.
+
+**Next review.** Closes when a CodeQL run reports zero `py/partial-ssrf`
+alerts in this file. The same two `py/partial-ssrf` in
+`workers/notifications/worker.py` and the 9.8 `py/command-line-injection` in
+`workers/tateking/worker.py` are still open.
 
 
 ---

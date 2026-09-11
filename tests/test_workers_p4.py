@@ -113,6 +113,62 @@ class TestVaultService:
         assert r2.status_code == 200
         assert r2.json()["zeroized"] is True
 
+    # ------------------------------------------------------------------
+    # SEC-010 — py/partial-ssrf, CodeQL 9.1, workers/vault-service/worker.py
+    #
+    # `OpenBaoClient._request` built `f"{self.addr}/v1/{path}"` from `body.key`,
+    # a free-form string on the PUBLIC create endpoint. urllib normalises
+    # nothing, so the caller chose which OpenBao API path this worker called --
+    # with `X-Vault-Token` attached. Each case below was run against the
+    # unfixed worker first and passed the request straight through; they are
+    # regression tests only because they failed before the guard existed.
+    # ------------------------------------------------------------------
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            "../../../../sys/seal",  # walks out of secret/data into sys/
+            "../../auth/token/create",  # mints tokens
+            "x?list=true",  # appends a query the caller wrote
+            "x#frag",  # truncates the path at the fragment
+            "..",  # the bare traversal segment, unencoded
+            "%2e%2e",  # and percent-encoded: `.` is unreserved, so both decode
+            "-leading-dash",  # a segment that is not a name
+            "/absolute",  # empty leading segment
+        ],
+    )
+    def test_create_secret_refuses_a_key_that_is_not_a_name(self, client, key):
+        r = client.post("/secrets", json={"key": key, "value": "v"})
+        assert r.status_code == 422, f"{key!r} was accepted as a secret key"
+
+    def test_openbao_client_cannot_be_steered_off_its_path(self, client):
+        """The structural half: even called directly, the client refuses.
+
+        Takes `client` because the class-level `parametrize(..., indirect=True)`
+        requires every test in it to; the fixture's side effect of importing and
+        initialising the worker module is what this test then reaches for.
+
+        The 422 above is the boundary. This is the guarantee that a future call
+        site which does not go through `SecretCreate` inherits the same refusal
+        rather than having to remember it. Both calls return their failure value
+        without a request leaving the process -- there is no OpenBao here, and
+        the point is that none is needed to reach the refusal.
+        """
+        import importlib
+
+        vault = importlib.import_module("workers.vault-service.worker")
+
+        client = vault.OpenBaoClient(addr="http://openbao:8200", token="root")
+        assert client.put_secret("tranc3/../../sys/seal", {"value": "x"}) is False
+        assert client.get_secret("tranc3/../../auth/token/create") is None
+
+        # A real path still builds exactly the URL it always did.
+        assert (
+            vault._vault_path("secret/data/tranc3/db-password") == "secret/data/tranc3/db-password"
+        )
+        with pytest.raises(vault.UnsafeVaultPath):
+            vault._vault_path("secret/data/tranc3/../../sys/seal")
+
     def test_audit_log(self, client):
         client.post("/secrets", json={"key": "audited", "value": "v"})
         r = client.get("/audit")
