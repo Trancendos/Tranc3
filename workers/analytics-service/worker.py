@@ -316,11 +316,35 @@ def _duckdb_query_events(
 def _polars_aggregate(
     name: str, agg: str, since: Optional[float], until: Optional[float]
 ) -> Optional[float]:
+    """Aggregate one metric, honouring the same time window as the SQL path.
+
+    `since` and `until` were accepted here and then ignored: the query was
+    `SELECT value FROM metrics WHERE name=?` with no time predicate. Because
+    `get_metric` tries this backend FIRST and returns whatever it produces,
+    a request like `/metrics/foo?since=X&until=Y` silently aggregated every
+    timestamp on record whenever polars was selected and succeeded — the same
+    request answered differently depending on which backend won, with no error
+    either way. Raised by CodeAnt on PR #1207.
+
+    The predicate below is the same one `get_metric`'s SQL fallback builds, so
+    the two backends now agree by construction. `is not None` rather than a
+    truthiness test in both places: `since=0.0` is a valid epoch timestamp, and
+    a falsy check would drop the filter for it.
+    """
     try:
         import polars as pl  # type: ignore[import-untyped]
 
+        clauses, params = ["name = ?"], [name]
+        if since is not None:
+            clauses.append("timestamp >= ?")
+            params.append(since)
+        if until is not None:
+            clauses.append("timestamp <= ?")
+            params.append(until)
+        where = "WHERE " + " AND ".join(clauses)
+
         with _db_conn() as c:
-            rows = c.execute("SELECT value FROM metrics WHERE name=?", (name,)).fetchall()
+            rows = c.execute(f"SELECT value FROM metrics {where}", params).fetchall()
         if not rows:
             return None
         df = pl.DataFrame({"value": [r["value"] for r in rows]})
@@ -589,11 +613,14 @@ def get_metric(
             return {"name": name, "aggregation": agg, "result": result, "backend": backend}
         _GUARDS[backend].decay()
 
+    # `is not None`, not truthiness: `since=0.0` is a valid epoch timestamp and a
+    # falsy check silently drops the filter for it. Matches _polars_aggregate so
+    # the two backends cannot answer the same request differently.
     clauses, params = ["name = ?"], [name]
-    if since:
+    if since is not None:
         clauses.append("timestamp >= ?")
         params.append(since)
-    if until:
+    if until is not None:
         clauses.append("timestamp <= ?")
         params.append(until)
     where = "WHERE " + " AND ".join(clauses)
