@@ -12,6 +12,7 @@ import logging
 import os
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
@@ -26,11 +27,49 @@ class VaultError(Exception):
     pass
 
 
+def _without_userinfo(url: str) -> str:
+    """Return *url* with any ``user:password@`` prefix removed.
+
+    SEC-018. `httpx` does not redact userinfo when it builds an error message —
+    measured:
+
+        raise_for_status() ->
+        "Client error '403 Forbidden' for url
+         'https://vaultuser:tOpS3cretToken@vault.internal:8038/secrets'"
+
+    Every `VaultError` in this module interpolates that exception, and
+    `get_secret_sync` and `jwt_rotator`'s rotation loop both log the result. So
+    an operator who put credentials in ``VAULT_SERVICE_URL`` would have them
+    written to the log by the vault client itself, in a module whose whole
+    purpose is keeping secrets out of places like that.
+
+    Nothing is lost by discarding them: this client authenticates with
+    ``VAULT_TOKEN`` in an ``Authorization`` header, so userinfo in the URL is
+    redundant as well as dangerous. Stripping it at construction fixes every
+    downstream message at once, rather than one log call at a time.
+
+    The warning names the variable and never the value.
+    """
+    parts = urlsplit(url)
+    if not (parts.username or parts.password):
+        return url
+    host = parts.hostname or ""
+    if ":" in host:  # IPv6 literal — urlsplit strips the brackets
+        host = f"[{host}]"
+    if parts.port:
+        host = f"{host}:{parts.port}"
+    logger.warning(
+        "Credentials embedded in the vault URL were discarded; "
+        "authenticate with VAULT_TOKEN instead"
+    )
+    return urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
+
+
 class VaultClient:
     """Async client for The Void self-hosted secrets vault."""
 
     def __init__(self, base_url: str = VAULT_URL, token: str = VAULT_TOKEN) -> None:
-        self.base_url = base_url.rstrip("/")
+        self.base_url = _without_userinfo(base_url).rstrip("/")
         self._headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         self._cache: dict[str, tuple[str, datetime]] = {}
 

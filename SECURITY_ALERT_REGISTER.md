@@ -1248,6 +1248,140 @@ in the test suite rather than in a scanner's expectations.
 
 ---
 
+### SEC-018 — four false positives and one real leak beside them (`py/clear-text-logging-sensitive-data`, 7.5)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FP** ×4; **FIX** for what reading around them found |
+| **ID** | `py/clear-text-logging-sensitive-data` (CodeQL, security-severity 7.5) ×4 |
+| **Scanner** | CodeQL Advanced |
+| **Location** | `src/security/vault_client.py:65`, `:68`, `:108`; `src/security/jwt_rotator.py:106` |
+| **Recorded** | 2026-09-11 |
+
+**The four alerts are false positives.** Every logging site in both files was
+enumerated, not sampled:
+
+| site | logs |
+|---|---|
+| `vault_client.py:65` | `secret_name` |
+| `vault_client.py:68` | `secret_name` |
+| `vault_client.py:108` | `secret_name`, and the caught exception |
+| `jwt_rotator.py:106` | `secret_id[:8]` — a UUID4 prefix — and `expires_at` |
+
+A name and an identifier. The values never appear: `vault_client`'s `value` is
+returned and cached but never logged, and `jwt_rotator`'s `new_secret` is
+`secrets.token_hex(64)` that reaches storage only as a truncated SHA-256. The
+rule fires on the *variable names* `secret_name` and `secret_id`.
+
+**`:108` was the one worth checking properly**, because it logs a caught
+exception, and the exception can come from `set_secret` — the one call that
+*receives* a secret value. Measured across the five shapes
+`except Exception` actually catches there:
+
+| inner exception | secret in the final log line |
+|---|---|
+| `httpx.HTTPStatusError` | no |
+| `httpx.ConnectError` | no |
+| `httpx.ReadTimeout` | no |
+| `json.JSONDecodeError` | no |
+| `TypeError` (serialisation) | no |
+| *control:* exception carrying the request body | **yes** |
+
+The control matters. Without it the table would pass equally well against a
+module that never built a message at all, and "the secret did not appear" is
+exactly the kind of claim that passes for the wrong reason. It is kept as a
+test.
+
+**What reading around them found, and it is real.** `httpx` does not redact
+userinfo when it builds an error message:
+
+```
+Client error '403 Forbidden' for url
+'https://vaultuser:tOpS3cretToken@vault.internal:8038/secrets'
+```
+
+Every `VaultError` in the module interpolates that exception, and both
+`get_secret_sync` and `jwt_rotator`'s rotation loop log the result. So an
+operator who put credentials in `VAULT_SERVICE_URL` would have them written to
+the log **by the vault client itself** — in a module whose entire purpose is
+keeping secrets out of places like that. No alert named this.
+
+Fixed at the source rather than at each log site: `VaultClient.__init__` now
+discards userinfo, so every downstream message is safe regardless of which one
+logs it. Nothing is lost — this client authenticates with `VAULT_TOKEN` in an
+`Authorization` header, so userinfo in the URL is redundant as well as
+dangerous. The warning names the variable and never the value, and it does not
+fire when there is nothing to strip, because a guard that warned on every
+start-up would be trained away.
+
+**Calibration.** 16 tests in `tests/test_vault_client_log_hygiene.py`; 2 fail
+against the pre-fix constructor. Five URL shapes are covered including an IPv6
+literal, where `urlsplit().hostname` strips the brackets and a bare `fe80::1` is
+not a host.
+
+**Next review.** All four alerts are expected to **persist**: the code still
+logs variables named `secret_name` and `secret_id`, which is what the rule
+matches on. Renaming them to satisfy a scanner would make the code worse. This
+entry is the standing answer.
+
+
+### SEC-019 — the fix that would have moved real users (`py/weak-sensitive-data-hashing`, 7.5)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FP** — and deliberately not "fixed" |
+| **ID** | `py/weak-sensitive-data-hashing` (CodeQL, security-severity 7.5) ×1 |
+| **Scanner** | CodeQL Advanced |
+| **Location** | `src/nanoservices/feature_flags/feature_flags.py:296` — `_hash_bucket` |
+| **Recorded** | 2026-09-11 |
+
+```python
+def _hash_bucket(self, key: str) -> float:
+    h = hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()
+    return int(h[:8], 16) / 0xFFFFFFFF
+```
+
+called as `_hash_bucket(f"{flag_key}:{user_id}")`. The rule fires because
+`user_id` is classified as sensitive; the code already passes
+`usedforsecurity=False`, which this rule does not consider.
+
+**False positive.** The digest is not a credential, not a stored identifier, and
+not compared against anything an attacker supplies. It is consumed on the next
+line as `bucket < rule.percentage / 100.0` and discarded — never persisted,
+never returned in a `FlagEvaluation`, and `_hash_bucket` has no caller outside
+the module (checked across the tree, not assumed).
+
+**The reason this entry exists is that the obvious fix is not free.** Swapping
+MD5 for SHA-256 or BLAKE2 changes every user's bucket, which silently moves an
+arbitrary fraction of users into and out of every live percentage rollout —
+features appearing and disappearing for real people, with nothing in the diff
+saying so. It is a one-line change that would read as tidying. This is the
+clearest case so far of a scanner finding whose reflexive remediation is more
+harmful than the finding.
+
+So the assignments are pinned instead, in
+`tests/test_feature_flag_bucketing.py` — 210 tests, the pinned table generated
+from the implementation rather than transcribed. Anyone changing the hash now
+gets a failure naming the affected keys, which turns a silent behaviour change
+into a decision. `test_changing_the_hash_would_move_users` quantifies it by
+computing how many of the sample cross a 50% threshold under SHA-256, and fails
+if *none* do — because a sample on which the two digests agree would be useless
+as evidence.
+
+The suite also pins what the hash is actually for, which is the contract any
+replacement must satisfy: buckets in `[0, 1)`, roughly uniform (a 10% rollout
+reaching 8–12% of a 5,000-user sample), sticky per user, and independent across
+flags — otherwise every 10% rollout would target the same 10% of users.
+
+**Next review.** Expected to **persist**, for the same reason as SEC-018: the
+rule matches the construct, not the risk. Revisit if the platform adopts a
+FIPS-mode interpreter that omits MD5 entirely — `usedforsecurity=False` already
+covers FIPS builds that merely restrict it — in which case the re-bucketing
+becomes unavoidable and should be planned and announced, not slipped in.
+
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
