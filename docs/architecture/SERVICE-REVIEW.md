@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `308e1ec5`. Regenerate with
+Generated from repo state at `b306c931`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -216,7 +216,7 @@ that none of them import.
 
 ### `notifications`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/notifications/worker.py:766 Dimensional.service_auth_fastapi`
+  - `workers/notifications/worker.py:814 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `observatory`

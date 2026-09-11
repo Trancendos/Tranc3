@@ -430,15 +430,63 @@ class NotificationDispatcher:
             data = json.dumps(payload).encode()
             import urllib.parse
 
-            _decoded = urllib.parse.unquote(_p.path or "/")
-            if ".." in _decoded.split("/"):
+            # SEC-011 (py/partial-ssrf, 9.1). The host cannot be chosen by the
+            # caller -- it comes from the allowlist above -- so what is left is
+            # the request TARGET, and the caller writes all of it. Two defects
+            # were sitting in the guard meant to hold that line, and the second
+            # existed only because of the first.
+            #
+            # 1. The query was appended with no `?` separator:
+            #
+            #        _safe_path += _p.query or ""
+            #
+            #    Measured:
+            #
+            #        https://allowed.example/hook?token=abc123
+            #          -> POST /hooktoken=abc123
+            #        https://allowed.example/hook?a=1&b=2
+            #          -> POST /hooka=1&b=2
+            #
+            #    A signed webhook -- `?token=...`, the commonest shape there is
+            #    -- has never reached its endpoint. Silently: this function
+            #    returns `_resp.status < 400`, so the resulting 404 read as
+            #    "the remote rejected it" rather than "we asked for the wrong
+            #    thing".
+            #
+            # 2. The traversal check decoded and inspected `_p.path` only. The
+            #    query got a charset allowlist instead, which permits `.` and
+            #    `%`. Because of defect 1 the query landed IN the path, so:
+            #
+            #        https://allowed.example/hook?..%2f..%2fadmin
+            #          -> POST /hook..%2f..%2fadmin
+            #
+            #    The guard decoded the half of the URL that could not reach the
+            #    path, and did not decode the half that did.
+            #
+            # The fix for both is one line: `urlunsplit` puts the separator in,
+            # so the `?` is structural rather than something a future edit has
+            # to remember. Once it is there the query cannot reach the path at
+            # all, which closes defect 2 at the root instead of adding a second
+            # runtime check for it.
+            #
+            # Deliberately NOT tightened further. The obvious next move is to
+            # reject a query whose decoded form contains `/`, and it was
+            # written and then removed: with the separator present a `/` in the
+            # query is harmless, and refusing `?x=%2Fetc` would break callers to
+            # defend against a defect that no longer exists. A guard that cries
+            # wolf on working code costs a gate its credibility as fast as a
+            # miss does. The belt-and-braces against reintroducing defect 1 is a
+            # regression test, not a rejection of valid input.
+            _decoded_path = urllib.parse.unquote(_p.path or "/")
+            if ".." in _decoded_path.split("/"):
                 logger.warning("Webhook dispatch blocked: path traversal in URL path")
                 return False
-            _safe_path = quote(_p.path or "/", safe="/-_.~")
             if _p.query and not all(c.isalnum() or c in "=._-&%[]@" for c in _p.query):
                 logger.warning("Webhook dispatch blocked: suspicious query characters")
                 return False
-            _safe_path += _p.query or ""
+            _safe_path = urllib.parse.urlunsplit(
+                ("", "", quote(_p.path or "/", safe="/-_.~"), _p.query or "", "")
+            )
             _conn = http.client.HTTPSConnection(_conn_host, 443, timeout=10)
             _conn.request(
                 "POST",

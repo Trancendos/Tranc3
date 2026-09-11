@@ -423,8 +423,9 @@ Three `critical` alerts (9.8 `py/command-line-injection` in
 `workers/notifications/worker.py` and `workers/vault-service/worker.py`) and
 thirteen further `high` alerts are present in the same SARIF, outside the files
 this pull request touched. They were named here so that the next reader starts
-from a list rather than from a count. The first of the three is now adjudicated
-as **SEC-010** below; the other two and the thirteen `high` remain open.
+from a list rather than from a count. Two of the three are now adjudicated
+below, as **SEC-010** and **SEC-011**; the 9.8 `py/command-line-injection` in
+`workers/tateking/worker.py` and the thirteen `high` remain open.
 
 
 ---
@@ -508,9 +509,94 @@ nine failed**; all nine pass against the fixed one, alongside the file's other
 request leaving the process, and no OpenBao is needed to reach that refusal.
 
 **Next review.** Closes when a CodeQL run reports zero `py/partial-ssrf`
-alerts in this file. The same two `py/partial-ssrf` in
-`workers/notifications/worker.py` and the 9.8 `py/command-line-injection` in
-`workers/tateking/worker.py` are still open.
+alerts in this file. The second `py/partial-ssrf` is **SEC-011** below; the 9.8
+`py/command-line-injection` in `workers/tateking/worker.py` is still open.
+
+
+---
+
+### SEC-011 — the webhook guard checked the half that could not reach the path (`py/partial-ssrf`, 9.1)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | `py/partial-ssrf` (CodeQL, security-severity 9.1) |
+| **Scanner** | CodeQL Advanced (`.github/workflows/codeql.yml`, language `python`) |
+| **Location** | `workers/notifications/worker.py:443` — `NotificationDispatcher.dispatch_webhook` |
+| **Recorded** | 2026-09-11 |
+
+Second of the three `critical` alerts named in SEC-009.
+
+**This one had already been worked on, which is what makes it interesting.**
+The function carries real SSRF defence: `validate_webhook_url` blocks private
+IPs, metadata endpoints and plaintext; a required allowlist supplies the
+connection host from config rather than from the caller's URL, with a comment
+explaining precisely why. The outbound **host** genuinely is not
+attacker-chosen.
+
+What was left is the request **target**, which the caller writes in full — and
+the guard covering it had two defects, the second existing only because of the
+first.
+
+**Defect 1 — the `?` was missing.**
+
+```python
+_safe_path += _p.query or ""
+```
+
+Measured:
+
+| webhook URL | target put on the wire |
+|---|---|
+| `https://allowed.example/hook?token=abc123` | `POST /hooktoken=abc123` |
+| `https://allowed.example/hook?a=1&b=2` | `POST /hooka=1&b=2` |
+
+A signed webhook — `?token=...`, the commonest shape there is — has never
+reached its endpoint. Silently, because `dispatch_webhook` returns
+`_resp.status < 400`: the 404 that came back read as *the remote rejected it*
+rather than *we asked for the wrong thing*. A security review would not have
+found this, and neither would a monitoring dashboard; only reading the line did.
+
+**Defect 2 — the traversal check read the wrong half.** It decoded and
+inspected `_p.path`. The query got a charset allowlist instead, and that
+allowlist permits `.` and `%`. Because of defect 1 the query landed *in the
+path*:
+
+| webhook URL | target put on the wire |
+|---|---|
+| `https://allowed.example/hook?..%2f..%2fadmin` | `POST /hook..%2f..%2fadmin` |
+| `https://allowed.example/hook/../admin` | rejected — the guard that worked |
+
+So the control decoded the half of the URL that could not reach the path, and
+did not decode the half that did. That is this engagement's defect class once
+more: present, running, reporting, and pointed at the wrong thing.
+
+**Remediation — one line, at the root.** The target is now assembled with
+`urlunsplit`, so the `?` is structural rather than something a future edit has
+to remember. Once the separator is there the query cannot reach the path at
+all, which closes defect 2 by removing its mechanism instead of adding a second
+runtime check for it.
+
+**What was deliberately NOT done, and why it is recorded.** The obvious next
+move is to also reject a query whose decoded form contains `/`. It was written,
+measured, and removed: with the separator present a `/` in a query value is
+harmless, and refusing `?x=%2Fetc` would break callers to defend against a
+defect that no longer exists. A guard that cries wolf on working code costs a
+gate its credibility as fast as a miss does. The belt-and-braces against
+reintroducing defect 1 is a regression test, not a rejection of valid input.
+
+**Calibration.** Four tests in
+`tests/test_workers_p1.py::TestNotificationsWebhookTarget`, which replace
+`HTTPSConnection` and assert on the target this worker *composed* rather than on
+what any server made of it. **Three of the four fail against the unfixed
+worker.** The fourth — path traversal still refused — passes against both, and
+is labelled as such in the test itself: it is a non-regression test for the
+guard the fix left alone, not a regression test for the fix. Saying which is
+which is the difference between a calibrated suite and a hopeful one.
+
+**Next review.** Closes when a CodeQL run reports zero `py/partial-ssrf`
+alerts in this file. The 9.8 `py/command-line-injection` in
+`workers/tateking/worker.py` is the last of the three criticals still open.
 
 
 ---
