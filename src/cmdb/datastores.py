@@ -70,10 +70,19 @@ class Datastore:
     #: because dropping them silently is how an inventory starts under-reporting.
     test_only: bool = False
 
+    #: Disambiguator for stores whose name is not unique. A networked store is
+    #: named after the module that reaches it (`redis@pool`), and this repository
+    #: has several modules called `pool.py` -- so three distinct Redis clients
+    #: collapsed onto one CI id until the qualifier was added. A CMDB that merges
+    #: two Configuration Items because their names collide is worse than one that
+    #: misses them: it reports full coverage of an estate it has under-counted.
+    qualifier: str = ""
+
     @property
     def ci_id(self) -> str:
-        """Stable CI identifier: CI-DS-<engine>-<name>."""
-        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
+        """Stable CI identifier: CI-DS-<engine>-<name>[-<qualifier>]."""
+        parts = [self.name] + ([self.qualifier] if self.qualifier else [])
+        slug = re.sub(r"[^a-z0-9]+", "-", "-".join(parts).lower()).strip("-")
         return f"CI-DS-{self.engine}-{slug}"
 
     def as_ci(self) -> Dict[str, object]:
@@ -165,6 +174,8 @@ def discover() -> List[Datastore]:
                     locator=f"env://{engine.upper()}_URL",
                     file_backed=False,
                     location=location,
+                    # The module path, so two `pool.py` files are two CIs.
+                    qualifier=rel.replace("/", "-").removesuffix(".py"),
                 ),
             )
             store.evidence.append(rel)

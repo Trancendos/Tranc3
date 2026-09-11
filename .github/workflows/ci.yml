@@ -271,6 +271,21 @@ jobs:
       - name: Taxonomy tree is current
         run: python scripts/build_taxonomy_tree.py --check
 
+      # The CMDB's datastore and container Configuration Items are derived by
+      # walking the repository, not typed into a register. That is the only way
+      # they stay true: adding a `sqlite3.connect(...)` or a compose service is a
+      # routine change nobody would think to mirror into a CMDB, and those are
+      # exactly the changes that must not go missing from one. A stale register
+      # fails here rather than quietly describing an estate that has moved on.
+      - name: CI register is current
+        run: python scripts/build_ci_register.py --check
+
+      # Container SBOMs are source-scope and say so in every document. This check
+      # is what keeps that true as containers are added: a new service with no
+      # SBOM, or an SBOM that no longer matches its manifests, fails here.
+      - name: Container SBOMs are current
+        run: python scripts/build_container_sboms.py --check
+
       # The estate records outstanding work in 44 separate registers, each
       # correct about its own domain and blind to the rest — so nobody can
       # answer "what is outstanding across the platform" without reading 320
