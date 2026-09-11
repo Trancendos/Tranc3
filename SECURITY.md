@@ -82,7 +82,7 @@ See `docs/CVE_REMEDIATION_REPORT.md` for the complete list of 66 resolved CVEs.
 | aiohttp | (new) | 3.13.5 | 20 CVEs resolved |
 | cryptography | (new) | 48.0.0 | CVE-2026-26007, CVE-2024-12797, +2 more |
 | undici | (new) | 7.15.0 | CVE-2026-1525, CVE-2026-22036, +3 more |
-| semgrep | 1.164.0 | 1.177.0 | CVE-2026-7246 (click, transitive), CVE-2026-48522/523/524/525/526 (PyJWT, transitive) |
+| semgrep | 1.164.0 | 1.177.0 | CVE-2026-7246 (click, transitive), CVE-2026-48522/523/524/525/526 (PyJWT, transitive), CVE-2026-52869/52870/59950 (mcp, transitive — see SEC-005, retired 2026-09-11) |
 
 ### Accepted Risks (2026-08, documented — not silently suppressed)
 

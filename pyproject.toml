@@ -112,11 +112,27 @@ skips = [
   #   the prefix — but a suppression that is right by accident is a suppression
   #   nobody can check.
   #
-  #   The accurate statement: every urlopen in this estate targets either an
-  #   internal service-mesh endpoint from validated config, or a hardcoded
-  #   public HTTPS API prefix with the variable part constrained by a fullmatch
-  #   allowlist. Neither shape lets a caller choose the scheme. A new call site
-  #   that is neither is not covered by this skip and needs its own reason.
+  #   The replacement said "every urlopen in this estate", which was also
+  #   wrong, in the same direction, and four reviewers caught it on PR #1207.
+  #   Measured: `scripts/` holds 19 urlopen call sites, several of which
+  #   (deploy_cloud._http_ok, cloud_smoke_check._request, wait_for_healthy,
+  #   health_check, n1_checker) take a URL as a parameter. A justification is
+  #   not improved by widening the claim it makes.
+  #
+  #   SCOPED STATEMENT, which is the only kind that can be checked. This skip
+  #   applies to what `targets`/`exclude_dirs` above actually scan -- `src` and
+  #   `api.py`. Within that scope every urlopen targets either an internal
+  #   service-mesh endpoint resolved from validated config, or a hardcoded
+  #   public HTTPS prefix whose variable segment is constrained by a fullmatch
+  #   allowlist; neither shape lets a caller choose the scheme. A new call site
+  #   in scope that is neither shape is not covered and needs its own reason.
+  #
+  #   Call sites OUTSIDE that scope are not covered by this skip because bandit
+  #   never reaches them: `scripts/` is in `exclude_dirs`, so B310 does not run
+  #   there at all, skip or no skip. Several of those files carry their own
+  #   `# nosec B310` / `# noqa: S310` with a local reason, which is the right
+  #   shape; the rest are unscanned. That coverage gap is real and is tracked
+  #   separately -- it is not something this skip grants or withholds.
   "B310",
   # B108: probable insecure temp file usage — all workers run in isolated Docker
   #   containers with no shared /tmp between services; attack surface is contained.

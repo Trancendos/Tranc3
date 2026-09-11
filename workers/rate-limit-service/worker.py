@@ -303,13 +303,25 @@ async def update_policy(name: str, req: PolicyUpdate):
         updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
             # The VALUES are bound, but the COLUMN NAMES are interpolated into
-            # the statement below, so they have to come from a closed set. They
-            # already do -- `model_dump()` can only return PolicyUpdate's own
-            # fields -- but that is a fact about Pydantic held in a reader's
-            # head, and the interpolation is what they have to trust. Bind the
-            # check to the model itself so the two cannot drift: add a field to
-            # PolicyUpdate and it is permitted here automatically; reach this
-            # line with anything else and it is refused.
+            # the statement below, so they have to come from a closed set.
+            #
+            # TODAY THIS BRANCH CANNOT FIRE, and saying so is the point.
+            # `model_dump()` can only return PolicyUpdate's own fields, so
+            # `unexpected` is always empty and the 400 is unreachable. An
+            # earlier version of this comment implied otherwise ("reach this
+            # line with anything else and it is refused"), which overstated a
+            # guard that is really an assertion. Raised by cubic on PR #1207.
+            #
+            # It stays, because what protects the interpolation is a fact about
+            # Pydantic held in a reader's head, and the shapes that break it are
+            # ordinary: switching to `model_dump(by_alias=True)`, merging query
+            # parameters or a PATCH body into `updates`, or adding a
+            # `model_config` that permits extras. Each would make this branch
+            # reachable, and each would otherwise reach the interpolation
+            # instead. Deriving the permitted names from PolicyUpdate rather
+            # than restating them means a new field is allowed automatically and
+            # nothing else ever is -- so the guard cannot drift from the model
+            # it guards.
             unexpected = set(updates) - set(PolicyUpdate.model_fields)
             if unexpected:
                 raise HTTPException(

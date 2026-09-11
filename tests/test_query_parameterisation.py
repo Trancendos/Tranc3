@@ -67,18 +67,65 @@ def test_smart_storage_has_query_assignments_to_check():
     )
 
 
+def _interpolation_kind(value: ast.expr) -> str | None:
+    """Name the interpolation form, or None if the value is a plain constant.
+
+    Checked f-strings ONLY at first, which named the test after a guarantee it
+    did not make: `"... '" + prefix + "'"`, `"...{}".format(prefix)` and
+    `"...%s" % prefix` are the same injection and all three would have passed.
+    Raised by cubic on PR #1207.
+    """
+    if isinstance(value, ast.JoinedStr):
+        return "f-string"
+    if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add):
+        return "+ concatenation"
+    if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Mod):
+        return "% formatting"
+    if (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Attribute)
+        and value.func.attr in {"format", "join"}
+    ):
+        return f".{value.func.attr}()"
+    return None
+
+
 def test_no_cosmos_query_is_built_by_interpolation():
-    """No Cosmos query is an f-string. This is the defect itself, not a proxy for it."""
+    """No Cosmos query is built by ANY interpolation form, not just f-strings."""
     offenders = [
-        node.lineno
+        (node.lineno, kind)
         for node in _cosmos_query_assignments()
-        if isinstance(node.value, ast.JoinedStr)  # an f-string
+        if (kind := _interpolation_kind(node.value)) is not None
     ]
     assert not offenders, (
-        f"smart_storage.py builds a Cosmos DB query by f-string at line(s) {offenders}. "
-        "Caller-supplied text interpolated into query syntax is injection; bind it "
-        "with `parameters=[{'name': '@x', 'value': x}]` instead."
+        "smart_storage.py builds a Cosmos DB query by interpolation:\n"
+        + "\n".join(f"  line {line}: {kind}" for line, kind in offenders)
+        + "\nCaller-supplied text interpolated into query syntax is injection; bind "
+        "it with `parameters=[{'name': '@x', 'value': x}]` instead."
     )
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("query = f\"SELECT * FROM c WHERE id = '{path}'\"", "f-string"),
+        ('query = "SELECT * FROM c WHERE id = \'" + path + "\'"', "+ concatenation"),
+        ('query = "SELECT * FROM c WHERE id = {}".format(path)', ".format()"),
+        ('query = "SELECT * FROM c WHERE id = %s" % path', "% formatting"),
+        ('query = "SELECT c.id FROM c"', None),
+        ('query = "SELECT c.id FROM c WHERE STARTSWITH(c.id, @prefix)"', None),
+    ],
+)
+def test_interpolation_detector_catches_every_form(source, expected):
+    """Probe the detector itself: each form it claims to catch, and two it must not.
+
+    A guard for injection that only recognises one syntax is the kind of control
+    this estate keeps finding -- present, running, and blind to the case that
+    matters.
+    """
+    assigned = ast.parse(source).body[0]
+    assert isinstance(assigned, ast.Assign)
+    assert _interpolation_kind(assigned.value) == expected
 
 
 def test_parameterised_queries_pass_their_parameters():
@@ -172,7 +219,20 @@ def test_permitted_columns_are_read_from_the_model_not_restated():
 def test_column_guard_refuses_with_a_client_error_not_a_crash():
     """Refusal must be an HTTPException; a bare ValueError is a 500."""
     source = RATE_LIMIT.read_text()
-    guard = source[source.index("unexpected = set(updates)") :][:400]
+    start = source.find("unexpected = set(updates)")
+    assert start != -1, (
+        "The update_policy column guard was not found in worker.py. If it was "
+        "renamed or moved, re-point this test rather than deleting it."
+    )
+    # Bound the window at the raise itself, not at a fixed character count: a
+    # guard that grows past an arbitrary 400 chars would silently stop being
+    # checked. Raised by cubic on PR #1207.
+    raise_at = source.find("raise HTTPException(", start)
+    assert raise_at != -1, (
+        "The column guard does not raise HTTPException at all. Raising anything "
+        "else inside a FastAPI handler surfaces as 500."
+    )
+    guard = source[start : raise_at + 200]
     assert "HTTPException" in guard and "status_code=400" in guard, (
         "The column guard must raise HTTPException(400). Raising ValueError "
         "inside a FastAPI handler surfaces as 500 Internal Server Error, which "

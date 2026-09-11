@@ -163,9 +163,23 @@ jobs:
 
       - name: Install semgrep
         # Pinned to match requirements-security.txt / Makefile's security-install --
-        # that pin's accepted-risk notes (mcp==1.23.3, SECURITY.md) are only
-        # authoritative if every semgrep invocation actually uses the same version.
-        run: python3 -m pip install semgrep==1.172.0 --quiet
+        # a pin's dependency reasoning is only authoritative if every semgrep
+        # invocation actually uses the same version.
+        #
+        # This drifted, and the drift pointed the wrong way. requirements-security.txt
+        # moved 1.172.0 -> 1.173.0 -> 1.177.0 while this line stayed at 1.172.0, and
+        # 1.172.0 is the last release that requires `mcp==1.23.3` -- the version
+        # carrying CVE-2026-52869/52870/59950. From 1.173.0 onward semgrep requires
+        # `mcp==1.29.0`, which has zero OSV advisories, and SEC-005 is retired on that
+        # basis. Left alone, this workflow would have been the one environment in the
+        # estate still installing the vulnerable mcp, inside the security scan, after
+        # the register said the risk was gone.
+        #
+        # It has not bitten yet only because Forgejo is dormant -- which is the same
+        # shape as the production merge gate losing a step here unnoticed (CLAUDE.md,
+        # CI/CD): the weaker copy is the one that takes over the day The Workshop
+        # returns. Raised by CodeRabbit on PR #1207.
+        run: python3 -m pip install semgrep==1.177.0 --quiet
 
       - name: Run semgrep (Python security + OWASP + FastAPI + JWT + SQL injection)
         run: |

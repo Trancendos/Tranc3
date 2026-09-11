@@ -121,7 +121,7 @@ release ships.
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** — **RETIRED** (upstream fix landed) |
+| **Disposition** | **RETIRED** (upstream fix landed; not an accepting disposition) |
 | **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950) |
 | **Scanner** | pip-audit |
 | **Component** | `mcp==1.23.3` — transitive via `semgrep`, `requirements-security.txt` |
@@ -136,6 +136,10 @@ release ships.
 **Why it is retired now.** Semgrep upgraded from 1.173.0 to 1.177.0, and semgrep 1.173.0 / 1.175.0 / 1.177.0 all declare `Requires-Dist: mcp==1.29.0`. The estate stopped installing the vulnerable version, and mcp 1.29.0 has zero advisories (re-measured 2026-09-11 against the OSV API). Nothing was suppressed to close this — the pin moved and the advisory count went to zero.
 
 **The process failure.** This entry named its own re-check condition: *"Re-check on every semgrep bump."* The bump to semgrep 1.173.0 landed without that re-check, so the entry went on describing a dependency the estate had already stopped installing. A stale accepted risk reads exactly like a live one, which is why this is retired in place with its measurement rather than deleted. An accepted-risk entry that names its own re-check condition is only as good as someone performing it.
+
+**Why the Disposition word is `RETIRED` and not `ACCEPT — RETIRED`.** The first attempt at this retirement wrote `**ACCEPT** — **RETIRED** (upstream fix landed)`, which reads correctly to a human and did nothing at all to the gate. `accepted_risk_register.registered_ids()` matches the **first word** of the Disposition row against `ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS")`, so all six ids stayed in the accepted set: the census would have classified them `accepted`, and `.trivyignore` governance would have gone on licensing their suppression. Had any of them resurfaced — mcp re-pinned, or another dependency pulling the vulnerable version — the production gate would have passed in silence.
+
+That is the same defect as the stale entry itself, one level up: a retirement that reads retired and behaves accepted. Measured after the change, `registered_ids()` returns none of the six. A disposition here is a machine-read token, not prose; retiring an entry means changing that token to one outside `ACCEPTING_DISPOSITIONS`, and `tests/test_vulnerability_census.py::TestRetiredEntries` now holds that property so the next retirement cannot repeat this. Raised by cubic on PR #1207.
 
 ---
 
