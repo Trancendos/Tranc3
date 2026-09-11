@@ -108,6 +108,44 @@ def mocks():
     return _make_dimensional_mocks()
 
 
+def _test_bearer_token() -> str:
+    """A valid JWT for the gateway's AuthGatewayMiddleware.
+
+    The suite previously needed none, because the conftest replaced both
+    `AuthGatewayMiddleware` and `OWASPHardeningMiddleware` with
+    `MagicMock(return_value=MagicMock())`. `app.add_middleware` then put a plain
+    MagicMock into the ASGI stack, and Starlette's `await self.app(scope, ...)`
+    raised "object MagicMock can't be used in 'await' expression" on the lifespan
+    event — 17 collection errors, every one of them.
+
+    Stubbing those two is worse than the errors it caused. They are the auth
+    gateway and the OWASP hardening: the suite was configured to switch off the
+    security controls it ought to be proving. The OWASP middleware is the one
+    measured, in SEC-016, as what actually refuses traversal probes to
+    `/dashboard/{path:path}` — so with it stubbed, no test here could have said
+    anything about that defence.
+
+    Both are ordinary `BaseHTTPMiddleware` subclasses that import cleanly from
+    the in-repo `Dimensional` package. They now run for real, and the client
+    authenticates the way a caller would.
+    """
+    import datetime
+
+    import jwt
+
+    return jwt.encode(
+        {
+            "sub": "gateway-tester",
+            "username": "gateway-tester",
+            "role": "admin",
+            "tier": "orchestrator",
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1),
+        },
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+
+
 @pytest.fixture(scope="session")
 def client(mocks):
     """Return a TestClient backed by the gateway FastAPI app with all Dimensional deps mocked."""
@@ -126,15 +164,7 @@ def client(mocks):
         patch("Dimensional.infinity.abac.ABACEngine", return_value=mocks["abac"]),
         patch("Dimensional.infinity.abac.get_default_policies", return_value=[]),
         patch(
-            "Dimensional.infinity.auth_gateway.AuthGatewayMiddleware",
-            MagicMock(return_value=MagicMock()),
-        ),
-        patch(
             "Dimensional.infinity.auth_gateway.WebSocketAuthManager", return_value=mocks["ws_auth"]
-        ),
-        patch(
-            "Dimensional.infinity.owasp_hardening.OWASPHardeningMiddleware",
-            MagicMock(return_value=MagicMock()),
         ),
         patch("Dimensional.infinity.rbac.RBACEngine", return_value=mocks["rbac"]),
         patch(
@@ -155,7 +185,11 @@ def client(mocks):
         from main import create_app
 
         app = create_app()
-        with TestClient(app, raise_server_exceptions=False) as c:
+        with TestClient(
+            app,
+            raise_server_exceptions=False,
+            headers={"Authorization": f"Bearer {_test_bearer_token()}"},
+        ) as c:
             yield c
     finally:
         for p in patches:
