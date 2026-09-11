@@ -110,7 +110,12 @@ TEXT_SUFFIXES = {
 SUBSTITUTIONS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bfrom Dimensional(?!s)\b"), "from Dimensionals"),
     (re.compile(r"\bimport Dimensional(?!s)\b"), "import Dimensionals"),
-    (re.compile(r"\bDimensional(?!s)\."), "Dimensionals."),
+    # `\w` after the dot, so this matches attribute access (`Dimensional.registry`)
+    # and not a sentence ending in the singular concept noun. Without it the rule
+    # rewrote "a second worker needing it makes it a Dimensional." into
+    # "...a Dimensionals." -- the over-application cubic flagged, which this
+    # script would have reintroduced on its next run after I corrected it by hand.
+    (re.compile(r"\bDimensional(?!s)\.(?=\w)"), "Dimensionals."),
     (re.compile(r'"Dimensional(?!s)"'), '"Dimensionals"'),
     (re.compile(r"'Dimensional(?!s)'"), "'Dimensionals'"),
     # ── Build-pipeline path shapes ───────────────────────────────────────────
