@@ -7,7 +7,7 @@ workflow execution, step execution, compensation, and saga rollback.
 
 import asyncio  # noqa: I001
 
-from Dimensional.cross_bridge_orchestrator import (
+from Dimensionals.cross_bridge_orchestrator import (
     BridgeDispatcher,
     BridgeTarget,
     CompensationManager,

@@ -39,7 +39,7 @@ from typing import List, Optional
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from Dimensional.path_validation import PathTraversalError, safe_join
+from Dimensionals.path_validation import PathTraversalError, safe_join
 from src.backup.registry import (
     RETENTION,
     WORKER_DATABASE_REGISTRY,

@@ -45,28 +45,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
 
 # Phase 22: Infinity Ecosystem security integration
-from Dimensional.infinity.auth_gateway import DEFAULT_ENFORCED_PATHS, AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import SentinelChannel
-from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import ENDPOINT_PERMISSIONS, Permission, RBACEngine
+from Dimensionals.infinity.auth_gateway import DEFAULT_ENFORCED_PATHS, AuthGatewayMiddleware
+from Dimensionals.infinity.nomenclature import SentinelChannel
+from Dimensionals.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensionals.infinity.rbac import ENDPOINT_PERMISSIONS, Permission, RBACEngine
 
 # Sentinel Station core
-from Dimensional.infinity.sentinel_config import sentinel_config
-from Dimensional.infinity.sentinel_station import (
+from Dimensionals.infinity.sentinel_config import sentinel_config
+from Dimensionals.infinity.sentinel_station import (
     SentinelEvent,
     SharedSSEGenerator,
     get_sentinel_station,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 
 # Phase 22.4: Dimensional Services integration
 

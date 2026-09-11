@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from Dimensional.error_handlers import (
+from Dimensionals.error_handlers import (
     safe_error_detail,  # noqa: F401 – used in generated code template  # codeql[py/unused-import]
 )
 

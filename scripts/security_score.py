@@ -246,7 +246,7 @@ def compute_security_dimension() -> dict:
         ("flux_base_security_context", 12.0, _flux_base_hardened()),
         ("zero_cost_chains_valid", 12.0, _zero_cost_chains_valid()),
         ("hostipc_documented", 8.0, (ROOT / "docs" / "HOSTIPC_RISK_ACCEPTANCE.md").is_file()),
-        ("ssrf_module_present", 7.0, (ROOT / "Dimensional" / "url_validation.py").is_file()),
+        ("ssrf_module_present", 7.0, (ROOT / "Dimensionals" / "url_validation.py").is_file()),
         ("trivyignore_documented", 5.0, (ROOT / ".trivyignore").is_file()),
         ("bandit_gate_signal", 5.0, _bandit_clean_signal()),
         # Weighted heaviest of any single check: an open, fixable CVE is a

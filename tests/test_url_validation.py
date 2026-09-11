@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from Dimensional.url_validation import SSRFError, validate_url, validate_webhook_url
+from Dimensionals.url_validation import SSRFError, validate_url, validate_webhook_url
 
 
 class TestValidateUrlBasics:
@@ -86,11 +86,11 @@ class TestValidateUrlBasics:
 
 
 def _load_dimensional_url_validation():
-    """Load Dimensional/url_validation.py without importing Dimensional package (avoids fastapi)."""
+    """Load Dimensionals/url_validation.py without importing Dimensional package (avoids fastapi)."""
     import importlib.util
     from pathlib import Path
 
-    path = Path(__file__).resolve().parents[1] / "Dimensional" / "url_validation.py"
+    path = Path(__file__).resolve().parents[1] / "Dimensionals" / "url_validation.py"
     spec = importlib.util.spec_from_file_location("dimensional_url_validation", path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)

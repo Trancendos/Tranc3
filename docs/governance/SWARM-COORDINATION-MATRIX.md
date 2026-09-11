@@ -43,7 +43,7 @@ files-service — 12 total including cache-service) plus 4 shared `src/` modules
 `src/ai_gateway/provider_rotation.py`). **These are not literally the same `ThresholdGuard` class
 reused** — spot-checking a sample shows independent implementations of the same idea:
 `files-service/worker.py` defines its own separate `_ThresholdGuard`; `provider_rotation.py` calls
-a differently-named `AntColonyRouter` (`Dimensional.swarm.ant_colony`); `genetic_router.py`
+a differently-named `AntColonyRouter` (`Dimensionals.swarm.ant_colony`); `genetic_router.py`
 implements its own `RouteGene` dataclass with a `pheromone` field and its own
 deposit/decay/desirability methods; `dna_router.py` is a genetic-algorithm wrapper that says it's
 *"compatible with"* the ACO pheromone router rather than being one itself. This doc verifies

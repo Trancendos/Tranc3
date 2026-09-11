@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.dimensionals.registry"""
+"""Backward-compatibility shim — canonical: Dimensionals.dimensionals.registry"""
 
-from Dimensional.dimensionals.registry import *  # noqa: F401, F403
+from Dimensionals.dimensionals.registry import *  # noqa: F401, F403

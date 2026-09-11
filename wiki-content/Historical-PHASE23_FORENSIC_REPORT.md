@@ -202,9 +202,9 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 ### 4.2 Files Modified
 
 **Source Code Fixes** (3 files):
-1. `Dimensional/infinity/adaptive_intelligence.py` — Added `_try_async_schedule()`, replaced 3 `asyncio.get_event_loop()` calls
-2. `Dimensional/infinity/fluidic_gateway.py` — Wrapped `asyncio.get_event_loop()` in try/except with `asyncio.get_running_loop()`
-3. `Dimensional/dimensionals/service_bus.py` — Changed `asyncio.get_event_loop().create_future()` → `asyncio.get_running_loop().create_future()`
+1. `Dimensionals/infinity/adaptive_intelligence.py` — Added `_try_async_schedule()`, replaced 3 `asyncio.get_event_loop()` calls
+2. `Dimensionals/infinity/fluidic_gateway.py` — Wrapped `asyncio.get_event_loop()` in try/except with `asyncio.get_running_loop()`
+3. `Dimensionals/dimensionals/service_bus.py` — Changed `asyncio.get_event_loop().create_future()` → `asyncio.get_running_loop().create_future()`
 
 **Worker Fixes** (6 files):
 4. `workers/infinity-auth/worker.py` — `HealthSummary.to_dict()` fix

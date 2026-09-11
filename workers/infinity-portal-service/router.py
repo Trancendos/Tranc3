@@ -19,15 +19,15 @@ from service import (
 )
 
 from database import db
-from Dimensional.infinity.nomenclature import (
+from Dimensionals.infinity.nomenclature import (
     GATE_ROUTING,
     INFINITY_LOCATIONS,
     InfinityRole,
     Tier,
     TransferSystem,
 )
-from Dimensional.infinity.sentinel_station import SentinelEvent
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.sentinel_station import SentinelEvent
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 from models import (
     GateRoutingResponse,
     PortalLogin,
@@ -58,7 +58,7 @@ router = APIRouter()
 # Sentinel channel shortcut
 # ---------------------------------------------------------------------------
 
-from Dimensional.infinity.nomenclature import SentinelChannel  # noqa: E402
+from Dimensionals.infinity.nomenclature import SentinelChannel  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Health & Status
@@ -68,7 +68,7 @@ from Dimensional.infinity.nomenclature import SentinelChannel  # noqa: E402
 @router.get("/health")
 async def health():
     """Health check for the Infinity Portal service."""
-    from Dimensional.dimensionals import get_dimensional_bus
+    from Dimensionals.dimensionals import get_dimensional_bus
 
     dimensional_bus = get_dimensional_bus()
     health_summary = _worker_kit.health.get_health_summary()
@@ -478,7 +478,7 @@ async def gate_info():
 @router.get("/portal/transfer-systems")
 async def transfer_systems():
     """Get information about the three transfer systems."""
-    from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+    from Dimensionals.infinity.nomenclature import TRANSFER_SYSTEMS
 
     systems = []
     for ts, info in TRANSFER_SYSTEMS.items():
@@ -572,8 +572,8 @@ async def routing_history(request: Request, limit: int = Query(50, ge=1, le=500)
 @router.get("/stats")
 async def stats():
     """Get Infinity Portal service statistics including smart adaptive layer stats."""
-    from Dimensional.dimensionals import get_dimensional_bus
-    from Dimensional.dimensionals import get_sentinel_station as _gss
+    from Dimensionals.dimensionals import get_dimensional_bus
+    from Dimensionals.dimensionals import get_sentinel_station as _gss
 
     dimensional_bus = get_dimensional_bus()
     sentinel = _gss()

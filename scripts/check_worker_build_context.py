@@ -5,7 +5,7 @@ THE FAILURE THIS CATCHES
 
 74 of the services in `docker-compose.production.yml` build from their own
 directory (`context: ./workers/<name>`), not from the repo root. Nothing outside
-that directory is in the image. `src/`, `Dimensional/` and `shared_core/` are
+that directory is in the image. `src/`, `Dimensionals/` and `shared_core/` are
 therefore absent, and any `from src.… import …` executed at import time or during
 FastAPI's `lifespan` raises ImportError *inside the container* while passing
 every local test — because locally the repo root is on `sys.path` and the module
@@ -57,7 +57,7 @@ checks it: every vendored file must be byte-identical to its canonical source.
 
 The one exception is a vendored `__init__.py` that has been deliberately emptied.
 A package `__init__` normally imports the whole package; a worker that vendors
-only `Dimensional.hive` cannot execute that, so blanking the file is the correct
+only `Dimensionals.hive` cannot execute that, so blanking the file is the correct
 move rather than drift. An empty vendored `__init__.py` therefore passes, and a
 non-empty one that differs from canonical does not.
 
@@ -80,7 +80,7 @@ COMPOSE = ROOT / "docker-compose.production.yml"
 # Packages that live at the repo root and are therefore outside an own-context
 # build. `Dimensional` is the platform's Shared Functional Services Core (SFSC);
 # `shared_core` is its backward-compatibility shim layer.
-ROOT_PACKAGES = {"src", "Dimensional", "shared_core"}
+ROOT_PACKAGES = {"src", "Dimensionals", "shared_core"}
 
 
 def own_context_services() -> dict[str, Path]:

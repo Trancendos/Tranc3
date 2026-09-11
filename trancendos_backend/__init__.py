@@ -3,7 +3,7 @@ Trancendos-Backend — Platform Infrastructure Layer
 ====================================================
 Houses everything that is NOT:
   - AI/ML (→ belongs in Tranc3 / Trance-One / T2ance)
-  - A Dimensional shared-core service (→ belongs in Dimensional/)
+  - A Dimensional shared-core service (→ belongs in Dimensionals/)
   - A platform entity (→ belongs in src/entities/locations/<entity>/)
 
 Trancendos-Backend responsibilities:

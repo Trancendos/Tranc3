@@ -7,7 +7,7 @@ touched. These tests pin all three facts so the distinction survives.
 
 WHAT WAS REAL
 
-`Dimensional/architecture/smart_storage.py` built two Cosmos DB queries by
+`Dimensionals/architecture/smart_storage.py` built two Cosmos DB queries by
 f-string interpolation of a caller-supplied `prefix` / `path`. Cosmos DB's SQL
 API is a query language, so closing the quote and appending a clause is
 injection in the ordinary sense even though the store is not relational. Both
@@ -38,7 +38,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SMART_STORAGE = ROOT / "Dimensional" / "architecture" / "smart_storage.py"
+SMART_STORAGE = ROOT / "Dimensionals" / "architecture" / "smart_storage.py"
 RATE_LIMIT = ROOT / "workers" / "rate-limit-service" / "worker.py"
 
 

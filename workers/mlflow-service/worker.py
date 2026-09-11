@@ -66,7 +66,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from path_validation import PathTraversalError, list_validated_children, validate_path
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 

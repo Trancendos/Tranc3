@@ -8,7 +8,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensionals.error_handlers import safe_error_detail
 
 router = APIRouter(prefix="/nexus", tags=["the-nexus"])
 

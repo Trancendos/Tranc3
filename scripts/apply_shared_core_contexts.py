@@ -5,7 +5,7 @@ THE PROBLEM
 
 73 services in `docker-compose.production.yml` build from their own directory
 (`context: ./workers/<name>`), so nothing at the repo root is in their images.
-`Dimensional/` (the SFSC) and `src/observability/` are unreachable to them. The
+`Dimensionals/` (the SFSC) and `src/observability/` are unreachable to them. The
 consequences are measured, not hypothetical:
 
   * 37 of those workers import `src.observability.worker_setup`. The import is
@@ -109,8 +109,8 @@ def needed_contexts(worker: str) -> list[str]:
 
     A worker that already vendors a tree is left alone, because a named context
     would overwrite it rather than merge with it. hive-service is the concrete
-    case: it vendors `Dimensional/` with `__init__.py` deliberately emptied,
-    because the canonical `Dimensional/__init__.py` eagerly imports the whole
+    case: it vendors `Dimensionals/` with `__init__.py` deliberately emptied,
+    because the canonical `Dimensionals/__init__.py` eagerly imports the whole
     package (bus, security, dimensionals, gas, genetics, infinity, liquid) and
     hive-service installs none of those dependencies. Copying the canonical tree
     over the trimmed one would restore that eager import and break the worker at
@@ -121,7 +121,7 @@ def needed_contexts(worker: str) -> list[str]:
         return []
     text = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in wd.rglob("*.py"))
     needed = []
-    if re.search(r"\b(from|import)\s+Dimensional\b", text) and not (wd / "Dimensional").is_dir():
+    if re.search(r"\b(from|import)\s+Dimensional\b", text) and not (wd / "Dimensionals").is_dir():
         needed.append("sharedcore")
     if "src.observability" in text and not (wd / "src" / "observability").is_dir():
         needed.append("observability")

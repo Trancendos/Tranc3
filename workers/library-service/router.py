@@ -9,7 +9,7 @@ from service import LibraryRouter
 
 import config
 from database import LibraryDatabase
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import (
     DocumentCreate,
     DocumentResponse,

@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.microceph_provider"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.microceph_provider"""
 
-from Dimensional.architecture.microceph_provider import *  # noqa: F401, F403
+from Dimensionals.architecture.microceph_provider import *  # noqa: F401, F403

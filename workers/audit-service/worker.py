@@ -40,7 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -462,7 +462,7 @@ def _require_internal(x_internal_secret: Optional[str] = Header(None)) -> None:
 
     compare_digest rather than `!=` so the comparison does not leak the secret's
     prefix through timing. It is stdlib, so this needs no import from `src/` or
-    `Dimensional/` — neither of which is in this worker's build context.
+    `Dimensionals/` — neither of which is in this worker's build context.
     """
     guard_internal_secret(
         x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"

@@ -118,15 +118,15 @@ Each Dimensional Service is a self-contained module that provides cross-cutting 
 
 | Dimensional Service | Current Location | Purpose |
 |---------------------|-----------------|---------|
-| Event Bus | Dimensional/bus.py | Inter-service event communication |
-| Security | Dimensional/security.py | JWT, password hashing, input validation |
-| Auth Middleware | Dimensional/middleware/auth.py | JWT/API key authentication enforcement |
-| Rate Limiter | Dimensional/middleware/rate_limiter.py | Adaptive rate limiting with IAM tiers |
-| Service Registry | Dimensional/registry.py | Service discovery and registration |
-| Sanitize | Dimensional/sanitize.py | Log sanitization and input cleaning |
-| Architecture | Dimensional/architecture/ | Adaptive pulse, audit ledger, proactive orchestration |
-| Security Automation | Dimensional/security_automation/ | Defense engine, scanner, remediator, watchdog |
-| Orchestration | Dimensional/orchestration/ | Config drift, dependency graph, health monitor |
+| Event Bus | Dimensionals/bus.py | Inter-service event communication |
+| Security | Dimensionals/security.py | JWT, password hashing, input validation |
+| Auth Middleware | Dimensionals/middleware/auth.py | JWT/API key authentication enforcement |
+| Rate Limiter | Dimensionals/middleware/rate_limiter.py | Adaptive rate limiting with IAM tiers |
+| Service Registry | Dimensionals/registry.py | Service discovery and registration |
+| Sanitize | Dimensionals/sanitize.py | Log sanitization and input cleaning |
+| Architecture | Dimensionals/architecture/ | Adaptive pulse, audit ledger, proactive orchestration |
+| Security Automation | Dimensionals/security_automation/ | Defense engine, scanner, remediator, watchdog |
+| Orchestration | Dimensionals/orchestration/ | Config drift, dependency graph, health monitor |
 
 ### The Underverse
 

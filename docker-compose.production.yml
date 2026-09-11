@@ -4027,7 +4027,7 @@ services:
   # context is repo root, not ./workers/sentinel-station-service: the Dockerfile's own COPY paths
   # (workers/sentinel-station-service/...) were always written assuming repo-root context - with the
   # isolated context this used to have, the build failed at the first COPY step (nested path never
-  # existed) and worker.py's Dimensional.infinity.* imports were also unresolvable either way.
+  # existed) and worker.py's Dimensionals.infinity.* imports were also unresolvable either way.
   sentinel-station-service:
     build:
       context: .

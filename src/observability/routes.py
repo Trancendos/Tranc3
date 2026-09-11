@@ -28,7 +28,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.observability.observatory import (
     AuditEvent,
     EventCategory,

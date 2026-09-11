@@ -52,7 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.entities.platform import PLATFORM_ENTITIES
 from src.event_bus.types import PlatformEventType
 from src.validation.primitives import validate_non_empty, validate_safe_string

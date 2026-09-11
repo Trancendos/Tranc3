@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

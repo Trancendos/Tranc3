@@ -7,9 +7,9 @@
 > (which services actually have what) — the latter lives in
 > `docs/architecture/ea-workbook/19_access_control_review.csv`, not in this file.
 
-**Code:** `Dimensional/infinity/rbac.py` (`RBACEngine`, `Permission`, `InfinityRole`),
-`Dimensional/infinity/abac.py` (`ABACEngine`, `Policy`, `PolicyEffect`),
-`Dimensional/infinity/nomenclature.py` (`InfinityRole`, `Tier`, `Pillar`),
+**Code:** `Dimensionals/infinity/rbac.py` (`RBACEngine`, `Permission`, `InfinityRole`),
+`Dimensionals/infinity/abac.py` (`ABACEngine`, `Policy`, `PolicyEffect`),
+`Dimensionals/infinity/nomenclature.py` (`InfinityRole`, `Tier`, `Pillar`),
 `src/auth/zero_trust.py` (`ZeroTrustMiddleware` — device posture/MFA/geo, human-user focused),
 `src/roles/registry.py` (`RoleRegistry` — which AI holds which Location's Job Description; an
 organisational assignment record, not an access-control mechanism).
@@ -20,14 +20,14 @@ organisational assignment record, not an access-control mechanism).
 ## 1. Scope and an explicit limit
 
 This document is a **finding and a rollout plan**, not a claim that access control is solved. It
-does not invent a new permission system — `Dimensional/infinity/rbac.py` and
-`Dimensional/infinity/abac.py` already provide one, well-designed, covering exactly the axes this
+does not invent a new permission system — `Dimensionals/infinity/rbac.py` and
+`Dimensionals/infinity/abac.py` already provide one, well-designed, covering exactly the axes this
 review was asked to check:
 
 - **RBAC** (`InfinityRole`): `ADMIN` / `PRIME` / `AI` / `AGENT` / `BOT` / `USER` / `SERVICE` — a
   tier-aware role hierarchy that maps directly onto this platform's own Tier 0–5 taxonomy
   (`PLATFORM_ENTITIES.md`) and onto the "Users, AIs, Agents, Bots" axis this review was asked about.
-- **ABAC** (`Dimensional/infinity/abac.py`): policies conditioned on subject attributes (tier,
+- **ABAC** (`Dimensionals/infinity/abac.py`): policies conditioned on subject attributes (tier,
   pillar, role), **resource attributes (classification, owner, pillar, sensitivity)** — the "Data"
   axis — and **environment attributes (network location, threat level, time)** — the "Locations"
   axis.
@@ -85,7 +85,7 @@ not a permission check.
    the platform's most sensitive data classifications.
 3. **Medium-term:** roll RBAC (at minimum) out to the 62-service `INTERNAL_SECRET`-only tier, using
    `InfinityRole`'s existing `USER`/`AI`/`AGENT`/`BOT`/`SERVICE` roles — no new role taxonomy needed.
-4. **Ongoing:** every *new* service should default to importing `Dimensional.infinity.rbac`/`abac`
+4. **Ongoing:** every *new* service should default to importing `Dimensionals.infinity.rbac`/`abac`
    from day one, the same way `config/zero_cost/providers.yaml` compliance is expected by default —
    this is a code-review convention to adopt, not a mechanism this document can enforce by itself.
 5. **Human decision required:** whether device-posture/MFA (`zero_trust.py`) should extend beyond
@@ -94,7 +94,7 @@ not a permission check.
 
 ## 4. Data / Location dimensions — already covered by ABAC's design, not yet by its usage
 
-`Dimensional/infinity/abac.py`'s `resource_conditions` (classification, owner, pillar, sensitivity)
+`Dimensionals/infinity/abac.py`'s `resource_conditions` (classification, owner, pillar, sensitivity)
 and `environment_conditions` (network location, threat level, time) already model exactly the
 "Data" and "Locations" axes this review was asked about — see `Policy` in that file for the
 declarative syntax. No new policy language is needed; what's needed is services actually

@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
 
 from auth import get_current_user
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.admin_os import backups, cells, domain_model, events, fabric, files_manager, system_viewer
 
 logger = logging.getLogger("tranc3.admin_os")

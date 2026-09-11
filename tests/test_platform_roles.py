@@ -36,13 +36,13 @@ def test_dimensional_is_not_a_location() -> None:
     solve a governance problem — and would silently change every count and
     every consumer that iterates the 43.
     """
-    assert "Dimensional" in PLATFORM_ROLES
-    assert "Dimensional" not in PLATFORM_ENTITIES
+    assert "Dimensionals" in PLATFORM_ROLES
+    assert "Dimensionals" not in PLATFORM_ENTITIES
     assert len(PLATFORM_ENTITIES) == 43
 
 
 def test_queen_holds_the_shared_core(registry: RoleRegistry) -> None:
-    role = registry.get_role("Dimensional")
+    role = registry.get_role("Dimensionals")
     assert role is not None, "the SFSC role must be seeded, not left to an operator"
     assert role.assigned_ai == "The Queen"
     # Her existing HIVE title is the reason she holds it — if that title ever
@@ -52,17 +52,17 @@ def test_queen_holds_the_shared_core(registry: RoleRegistry) -> None:
 
 def test_role_is_reassignable_and_audited(registry: RoleRegistry) -> None:
     """Ownership must be mutable at runtime, or it is documentation, not governance."""
-    registry.assign_ai("Dimensional", "Norman Hawkins", changed_by="test", reason="handover")
-    assert registry.get_role("Dimensional").assigned_ai == "Norman Hawkins"
+    registry.assign_ai("Dimensionals", "Norman Hawkins", changed_by="test", reason="handover")
+    assert registry.get_role("Dimensionals").assigned_ai == "Norman Hawkins"
 
-    history = registry.get_history("Dimensional")
+    history = registry.get_history("Dimensionals")
     assert any(
         h.previous_ai == "The Queen" and h.new_ai == "Norman Hawkins" and h.reason == "handover"
         for h in history
     ), "a reassignment that leaves no audit trail is not accountable"
 
-    registry.assign_ai("Dimensional", "The Queen", changed_by="test", reason="revert")
-    assert registry.get_role("Dimensional").assigned_ai == "The Queen"
+    registry.assign_ai("Dimensionals", "The Queen", changed_by="test", reason="revert")
+    assert registry.get_role("Dimensionals").assigned_ai == "The Queen"
 
 
 def test_unknown_keys_are_still_rejected(registry: RoleRegistry) -> None:
@@ -82,7 +82,7 @@ def test_platform_role_row_is_not_blank(registry: RoleRegistry) -> None:
     It legitimately has no pillar. If primary_function were also empty the row
     would look like corruption, so the role's scope stands in for it.
     """
-    role = registry.get_role("Dimensional")
+    role = registry.get_role("Dimensionals")
     assert role.pillar == ""
     assert "Shared Functional Services Core" in role.primary_function
 

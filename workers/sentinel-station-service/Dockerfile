@@ -5,10 +5,10 @@ WORKDIR /app
 COPY --chown=worker:worker workers/sentinel-station-service/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY --chown=worker:worker workers/sentinel-station-service/worker.py .
-# worker.py imports Dimensional.dimensionals and Dimensional.infinity.* -
+# worker.py imports Dimensionals.dimensionals and Dimensionals.infinity.* -
 # vendored from the repo-root build context (context: . per
 # docker-compose.production.yml), not duplicated locally.
-COPY --chown=worker:worker Dimensional/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensional/
 
 RUN mkdir -p data && chown -R worker:worker data
 

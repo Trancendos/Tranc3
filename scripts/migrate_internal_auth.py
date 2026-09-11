@@ -13,8 +13,8 @@ for one concern. A full AST scan of `workers/` classifies them:
     ships it blank;
   * the rest are correct, by each author's care rather than by policy.
 
-One implementation cannot drift 77 ways. `Dimensional.service_auth` is that
-implementation and `Dimensional.service_auth_fastapi` translates it to
+One implementation cannot drift 77 ways. `Dimensionals.service_auth` is that
+implementation and `Dimensionals.service_auth_fastapi` translates it to
 HTTPException; this script rewrites each gate to call them.
 
 WHAT IT WILL AND WILL NOT REWRITE
@@ -79,7 +79,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKERS = ROOT / "workers"
 
 DELEGATED_CALL = "guard_internal_secret"
-IMPORT_LINE = "from Dimensional.service_auth_fastapi import guard_internal_secret"
+IMPORT_LINE = "from Dimensionals.service_auth_fastapi import guard_internal_secret"
 
 SECRET_NAME = re.compile(r"^_?[A-Z][A-Z0-9_]*SECRET$|internal_secret$", re.I)
 
@@ -568,7 +568,7 @@ def main() -> int:
                 print(
                     f"ERROR: {g.label}: compares the internal secret in-line"
                     + (f" [{', '.join(flags)}]" if flags else "")
-                    + " — call Dimensional.service_auth instead",
+                    + " — call Dimensionals.service_auth instead",
                     file=sys.stderr,
                 )
         for line in all_skipped:

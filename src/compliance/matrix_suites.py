@@ -30,7 +30,7 @@ try:
 except ImportError:  # pragma: no cover - PyYAML is a standard project dependency
     yaml = None  # type: ignore[assignment]
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.observability.observatory import (
     AuditEvent,
     EventCategory,

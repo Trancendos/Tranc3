@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from Dimensional.path_validation import PathTraversalError
+from Dimensionals.path_validation import PathTraversalError
 from src.personality.spawner import _ALLOWED_OUTPUT_ROOTS, _resolve_output_base
 
 

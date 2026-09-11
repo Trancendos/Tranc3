@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.exchange.governance import Decision, Ruling, rule
 from src.exchange.sources import SELLABLE_RESOURCES, get_resource, validate_catalogue
 from src.exchange.valuation import Basis, Valuation, value

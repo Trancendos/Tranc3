@@ -361,7 +361,7 @@ declared `{key:path}`, so FastAPI hands over the raw remainder of the URL:
   created it.
 
 **Remediation.** All three sites now route through `_contained()`, which wraps
-`safe_join` from the shared core (`Dimensional/path_validation.py`) — the same
+`safe_join` from the shared core (`Dimensionals/path_validation.py`) — the same
 helper `src/admin_os/files_manager.py` already uses. No new copy of the
 validator was vendored: the storage-service Dockerfile already mounts the
 shared core at `/app/Dimensional/` via the SFSC named build context, so the
@@ -896,7 +896,7 @@ and needs a machine that can run CodeQL to calibrate it.
 `validate_path()` appears nowhere in `src/personality/spawner.py`. The file uses
 `safe_join()` and its own `_resolve_output_base()`. The only two surviving
 mentions of `_assert_under_base` in the tree are that header and a list of
-recognised guard names in `Dimensional/security_automation/scanner.py`. So the
+recognised guard names in `Dimensionals/security_automation/scanner.py`. So the
 header described a fix in terms of a function the named file does not contain,
 while the scanner still reported the rule it claimed was resolved — SEC-013's
 shape, one layer further out.

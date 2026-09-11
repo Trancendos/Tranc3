@@ -110,7 +110,7 @@ Three specialised bridges handle different classes of inter-service communicatio
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Cross-Bridge Orchestrator                    │
-│          (Dimensional.cross_bridge_orchestrator)                 │
+│          (Dimensionals.cross_bridge_orchestrator)                 │
 └──────────────┬──────────────────┬──────────────────┬────────────┘
                │                  │                  │
       ┌────────▼───────┐ ┌────────▼───────┐ ┌───────▼────────┐
@@ -129,8 +129,8 @@ Three specialised bridges handle different classes of inter-service communicatio
 ### Bridge coordinator import
 
 ```python
-from Dimensional.cross_bridge_orchestrator import CrossBridgeOrchestrator
-from Dimensional.three_bridge_coordinator import ThreeBridgeCoordinator
+from Dimensionals.cross_bridge_orchestrator import CrossBridgeOrchestrator
+from Dimensionals.three_bridge_coordinator import ThreeBridgeCoordinator
 ```
 
 ---
@@ -138,10 +138,10 @@ from Dimensional.three_bridge_coordinator import ThreeBridgeCoordinator
 ## 5. Module Namespace — Dimensional
 
 The platform's core shared library is **`Dimensional`** (renamed from `shared_core` in Phase 24).
-All new imports **must** use `Dimensional.*`.
+All new imports **must** use `Dimensionals.*`.
 
 ```
-Dimensional/
+Dimensionals/
   __init__.py
   bus.py                          ← event bus
   error_handlers.py
@@ -165,10 +165,10 @@ so services start cleanly even when the package isn't installed:
 
 ```python
 try:
-    from Dimensional.gas.pressure import PressureBalancer
-    from Dimensional.liquid.ltc_router import LiquidRouter
-    from Dimensional.genetics.optimizer import GeneticOptimizer
-    from Dimensional.genetics.fitness import LatencyThroughputFitness
+    from Dimensionals.gas.pressure import PressureBalancer
+    from Dimensionals.liquid.ltc_router import LiquidRouter
+    from Dimensionals.genetics.optimizer import GeneticOptimizer
+    from Dimensionals.genetics.fitness import LatencyThroughputFitness
     _DIMENSIONAL_AVAILABLE = True
 except ImportError:
     _DIMENSIONAL_AVAILABLE = False
@@ -184,8 +184,8 @@ Three adaptive subsystems are wired into every T3 Lead AI (and optionally T2 Pri
 ### 6.1 Gas — Maxwell-Boltzmann Pressure Routing
 
 ```python
-from Dimensional.gas.pressure import PressureBalancer
-from Dimensional.gas.kinetic import KineticEnergyTracker
+from Dimensionals.gas.pressure import PressureBalancer
+from Dimensionals.gas.kinetic import KineticEnergyTracker
 
 balancer = PressureBalancer(peers)
 result = balancer.select()          # returns .selected peer
@@ -200,7 +200,7 @@ temp = balancer.system_temperature()  # scalar load indicator
 ### 6.2 Liquid — LTC ODE Router
 
 ```python
-from Dimensional.liquid.ltc_router import LiquidRouter
+from Dimensionals.liquid.ltc_router import LiquidRouter
 
 router = LiquidRouter(peers)
 result = router.route(signals)   # signals: dict[str, float] | None
@@ -213,8 +213,8 @@ Use when request pattern has temporal correlation (e.g. user session affinity).
 ### 6.3 Genetics — NSGA-II Multi-Objective Optimiser
 
 ```python
-from Dimensional.genetics.optimizer import GeneticOptimizer
-from Dimensional.genetics.fitness import LatencyThroughputFitness
+from Dimensionals.genetics.optimizer import GeneticOptimizer
+from Dimensionals.genetics.fitness import LatencyThroughputFitness
 
 optimizer = GeneticOptimizer(fitness=LatencyThroughputFitness())
 result = await optimizer.evolve(generations=30, pop_size=20)
@@ -281,8 +281,8 @@ Every worker in `workers/*/worker.py` follows the same FastAPI structure:
 ```python
 # Standard worker skeleton
 from fastapi import FastAPI
-from Dimensional.architecture.adaptive_pulse import AdaptivePulse
-from Dimensional.architecture.proactive_orchestrator import ProactiveOrchestrator
+from Dimensionals.architecture.adaptive_pulse import AdaptivePulse
+from Dimensionals.architecture.proactive_orchestrator import ProactiveOrchestrator
 
 app = FastAPI(title="<service-name>-worker", version="1.0.0")
 
@@ -351,7 +351,7 @@ from pydantic import BaseModel
 
 # 3. Dimensional (graceful-degradation wrapper)
 try:
-    from Dimensional.gas.pressure import PressureBalancer
+    from Dimensionals.gas.pressure import PressureBalancer
     _GAS_AVAILABLE = True
 except ImportError:
     _GAS_AVAILABLE = False
@@ -456,7 +456,7 @@ Zero paid dependencies target: eliminate all cost-incurring third-party APIs.
 The Nexus (`workers/infinity-ws/`, port 8004) uses Raft for distributed consensus:
 
 ```python
-from Dimensional.nexus.raft.raft_core import RaftNode, RaftState
+from Dimensionals.nexus.raft.raft_core import RaftNode, RaftState
 
 node = RaftNode(node_id="nexus-01", peers=["nexus-02", "nexus-03"])
 await node.start()

@@ -10,7 +10,7 @@ from service import LabRouter
 
 import config
 from database import LabDatabase
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import CodeRequest, CodeResponse, LabStatus
 
 logger = logging.getLogger(config.WORKER_NAME)

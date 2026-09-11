@@ -93,20 +93,20 @@ def stub_dimensional(monkeypatch):
     worker_kit_mock.health.register_daemon = MagicMock()
 
     patches = [
-        patch("Dimensional.dimensionals.get_dimensional_bus", return_value=dim_bus_mock),
-        patch("Dimensional.dimensionals.get_dimensional_registry", return_value=dim_registry_mock),
-        patch("Dimensional.dimensionals.get_underverse_registry", return_value=underverse_mock),
+        patch("Dimensionals.dimensionals.get_dimensional_bus", return_value=dim_bus_mock),
+        patch("Dimensionals.dimensionals.get_dimensional_registry", return_value=dim_registry_mock),
+        patch("Dimensionals.dimensionals.get_underverse_registry", return_value=underverse_mock),
         patch(
-            "Dimensional.infinity.sentinel_station.get_sentinel_station",
+            "Dimensionals.infinity.sentinel_station.get_sentinel_station",
             return_value=sentinel_mock,
         ),
         patch(
-            "Dimensional.infinity.worker_integration.InfinityWorkerKit",
+            "Dimensionals.infinity.worker_integration.InfinityWorkerKit",
             return_value=worker_kit_mock,
         ),
-        patch("Dimensional.infinity.auth_gateway.AuthGatewayMiddleware", MagicMock()),
-        patch("Dimensional.infinity.owasp_hardening.OWASPHardeningMiddleware", MagicMock()),
-        patch("Dimensional.infinity.rbac.RBACEngine", MagicMock()),
+        patch("Dimensionals.infinity.auth_gateway.AuthGatewayMiddleware", MagicMock()),
+        patch("Dimensionals.infinity.owasp_hardening.OWASPHardeningMiddleware", MagicMock()),
+        patch("Dimensionals.infinity.rbac.RBACEngine", MagicMock()),
     ]
     [p.start() for p in patches]
     yield {

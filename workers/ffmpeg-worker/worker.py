@@ -21,7 +21,7 @@ from typing import Dict, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Logging

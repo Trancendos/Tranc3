@@ -1,6 +1,6 @@
 """Tests for the shared CORS allow-list resolver used by Nexus and HIVE.
 
-Covers the two failure modes that motivated `Dimensional/cors.py`: a *set but
+Covers the two failure modes that motivated `Dimensionals/cors.py`: a *set but
 blank* variable silently disabling all cross-origin access, and a configured
 wildcard re-opening the hole this module exists to close.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from Dimensional.cors import DEFAULT_ORIGIN, resolve_cors_origins
+from Dimensionals.cors import DEFAULT_ORIGIN, resolve_cors_origins
 
 
 @pytest.fixture(autouse=True)
@@ -145,7 +145,7 @@ class TestAppsUseTheResolver:
     exists in the helper protects nothing."""
 
     def test_nexus_app_refuses_wildcard(self, monkeypatch):
-        from Dimensional.nexus.nexus_core import create_nexus_app
+        from Dimensionals.nexus.nexus_core import create_nexus_app
 
         monkeypatch.setenv("ENVIRONMENT", "development")
         monkeypatch.setenv("CORS_ORIGINS", "*")
@@ -153,7 +153,7 @@ class TestAppsUseTheResolver:
             create_nexus_app()
 
     def test_hive_app_refuses_wildcard_in_production(self, monkeypatch):
-        from Dimensional.hive.hive_core import create_hive_app
+        from Dimensionals.hive.hive_core import create_hive_app
 
         monkeypatch.setenv("ENVIRONMENT", "production")
         monkeypatch.setenv("CORS_ORIGINS", "*")
@@ -161,8 +161,8 @@ class TestAppsUseTheResolver:
             create_hive_app()
 
     def test_apps_build_normally_with_explicit_origins(self, monkeypatch):
-        from Dimensional.hive.hive_core import create_hive_app
-        from Dimensional.nexus.nexus_core import create_nexus_app
+        from Dimensionals.hive.hive_core import create_hive_app
+        from Dimensionals.nexus.nexus_core import create_nexus_app
 
         monkeypatch.setenv("CORS_ORIGINS", "https://trancendos.com")
         assert create_nexus_app().title == "Tranc3 Nexus"

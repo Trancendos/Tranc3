@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error
+from Dimensionals.error_handlers import log_server_error
 
 logger = logging.getLogger("tranc3.ecosystem")
 
@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     logger.info("Tranc3 Ecosystem API starting up...")
 
     # Start hybrid storage auto-sync if in HYBRID mode
-    from Dimensional.architecture.storage_factory import SystemMode, _get_system_mode
+    from Dimensionals.architecture.storage_factory import SystemMode, _get_system_mode
 
     mode = _get_system_mode()
     if mode == SystemMode.HYBRID:
@@ -105,12 +105,12 @@ app.add_middleware(
 )
 
 # Telemetry — request tracing + metrics collection
-from Dimensional.middleware.telemetry import TelemetryMiddleware
+from Dimensionals.middleware.telemetry import TelemetryMiddleware
 
 app.add_middleware(TelemetryMiddleware)
 
 # Rate Limiting — IAM-tier adaptive
-from Dimensional.middleware.rate_limiter import RateLimitConfig, RateLimitMiddleware
+from Dimensionals.middleware.rate_limiter import RateLimitConfig, RateLimitMiddleware
 
 rate_config = RateLimitConfig(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60")),
@@ -119,27 +119,27 @@ rate_config = RateLimitConfig(
 app.add_middleware(RateLimitMiddleware, config=rate_config)
 
 # Auth — JWT + API Key enforcement
-from Dimensional.middleware.auth import AuthMiddleware
+from Dimensionals.middleware.auth import AuthMiddleware
 
 app.add_middleware(AuthMiddleware)
 
 # ─── Dimensional Imports ─────────────────────────────────────────────────────
 
-from Dimensional.architecture.audit_ledger import AuditLedger
-from Dimensional.architecture.storage_factory import StorageFactory
-from Dimensional.middleware.telemetry import TelemetryCollector
-from Dimensional.orchestration.config_drift import ConfigDriftDetector
-from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
-from Dimensional.orchestration.enhanced_registry import EnhancedServiceRegistry
-from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
-from Dimensional.orchestration.heartbeat_aggregator import (
+from Dimensionals.architecture.audit_ledger import AuditLedger
+from Dimensionals.architecture.storage_factory import StorageFactory
+from Dimensionals.middleware.telemetry import TelemetryCollector
+from Dimensionals.orchestration.config_drift import ConfigDriftDetector
+from Dimensionals.orchestration.dependency_graph import SmartDependencyGraph
+from Dimensionals.orchestration.enhanced_registry import EnhancedServiceRegistry
+from Dimensionals.orchestration.health_monitor import AdaptiveHealthMonitor
+from Dimensionals.orchestration.heartbeat_aggregator import (
     Heartbeat,
     HeartbeatAggregator,
     HeartbeatMetrics,
     ServiceStatus,
 )
-from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
-from Dimensional.security_automation.defense_engine import DefenseEngine, ThreatLevel
+from Dimensionals.security_automation.adaptive_scanner import AdaptiveScanner
+from Dimensionals.security_automation.defense_engine import DefenseEngine, ThreatLevel
 
 # ─── Singleton Instances ─────────────────────────────────────────────────────
 
@@ -662,7 +662,7 @@ async def create_security_incident(req: IncidentCreateRequest):
 @app.get("/api/ecosystem/defense/incidents")
 async def get_security_incidents(status: Optional[str] = None):
     """Get security incidents, optionally filtered by status."""
-    from Dimensional.security_automation.defense_engine import IncidentStatus
+    from Dimensionals.security_automation.defense_engine import IncidentStatus
 
     status_enum = IncidentStatus(status) if status else None
     return {"incidents": _defense_engine.get_incidents(status_enum)}

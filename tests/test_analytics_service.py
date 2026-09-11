@@ -33,7 +33,7 @@ def client(tmp_path_factory):
     _original_internal_secret = os.environ.get("INTERNAL_SECRET")
     # Blanking this used to disable the worker's auth, because its gate was
     # fail-open: `if not INTERNAL_SECRET: return`. That gate now delegates to
-    # Dimensional.service_auth and fails closed, so a blank secret answers 503
+    # Dimensionals.service_auth and fails closed, so a blank secret answers 503
     # rather than admitting the request — which is the point of the change.
     # The fixture therefore sets a real secret and the client presents it,
     # exercising the service the way it is actually deployed instead of with

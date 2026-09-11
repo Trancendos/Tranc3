@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.proactive_defense"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.proactive_defense"""
 
-from Dimensional.infinity.proactive_defense import *  # noqa: F401, F403
+from Dimensionals.infinity.proactive_defense import *  # noqa: F401, F403

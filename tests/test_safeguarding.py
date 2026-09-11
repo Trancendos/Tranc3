@@ -237,7 +237,7 @@ class TestTheLogSanitiserCoversEveryLineBreakPythonKnows:
     """
 
     def test_no_sanitised_value_can_split_into_two_lines(self):
-        from Dimensional.sanitize import sanitize_for_log
+        from Dimensionals.sanitize import sanitize_for_log
 
         for code in (10, 13, 0x85, 0x2028, 0x2029, 11, 12):
             forged = "u1" + chr(code) + "ERROR escalation delivered"
@@ -246,6 +246,6 @@ class TestTheLogSanitiserCoversEveryLineBreakPythonKnows:
             )
 
     def test_a_benign_id_is_left_readable(self):
-        from Dimensional.sanitize import sanitize_for_log
+        from Dimensionals.sanitize import sanitize_for_log
 
         assert sanitize_for_log("user-42_alpha") == "user-42_alpha"

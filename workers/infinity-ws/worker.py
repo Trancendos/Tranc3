@@ -40,7 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sanitize import sanitize_for_log
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")

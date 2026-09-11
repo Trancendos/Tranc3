@@ -27,7 +27,7 @@ pytest.importorskip(
 # ---------------------------------------------------------------------------
 # Module-level imports (verified importable)
 # ---------------------------------------------------------------------------
-from Dimensional.architecture.microceph_provider import (
+from Dimensionals.architecture.microceph_provider import (
     DEFAULT_POOLS,
     MAX_PG_COUNT,
     MICROCEPH_CMD,
@@ -459,7 +459,7 @@ class TestSingletonHelpers:
     @pytest.mark.asyncio
     async def test_get_provider_returns_instance(self):
         """get_microceph_provider() should return a MicroCephProvider instance."""
-        from Dimensional.architecture.microceph_provider import MicroCephProvider
+        from Dimensionals.architecture.microceph_provider import MicroCephProvider
 
         provider = await get_microceph_provider()
         assert isinstance(provider, MicroCephProvider)

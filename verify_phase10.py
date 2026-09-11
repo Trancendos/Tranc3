@@ -46,7 +46,7 @@ def main() -> int:
     print("\n--- 10.1 Proactive Orchestrator Core ---")
 
     try:
-        from Dimensional.architecture.proactive_orchestrator import (
+        from Dimensionals.architecture.proactive_orchestrator import (
             ActionDispatcher,
             ActionPlan,
             ActionPriority,
@@ -167,7 +167,7 @@ def main() -> int:
     print("\n--- 10.2 Adaptive Pulse Controller ---")
 
     try:
-        from Dimensional.architecture.adaptive_pulse import (
+        from Dimensionals.architecture.adaptive_pulse import (
             AdaptivePulseController,
             PulseConfig,
             PulseMode,
@@ -266,7 +266,7 @@ def main() -> int:
     print("\n--- 10.4 Auto-Configuration System ---")
 
     try:
-        from Dimensional.architecture.auto_config import (
+        from Dimensionals.architecture.auto_config import (
             AutoConfigManager,
             ConfigStatus,
             EnvironmentDetector,
@@ -314,7 +314,7 @@ def main() -> int:
     print("\n--- 10.5 Cross-System Integration & Wiring ---")
 
     try:
-        from Dimensional.architecture.proactive_wiring import (
+        from Dimensionals.architecture.proactive_wiring import (
             BridgeType,
             ProactiveSystemBootstrap,
             WiringStatus,
@@ -361,7 +361,7 @@ def main() -> int:
     print("\n--- 10.6 Observability & Metrics ---")
 
     try:
-        from Dimensional.architecture.proactive_metrics import (
+        from Dimensionals.architecture.proactive_metrics import (
             HealthTrend,
             MetricType,
             ProactiveMetricsCollector,
@@ -412,7 +412,7 @@ def main() -> int:
     print("\n--- Architecture __init__.py Exports ---")
 
     try:
-        from Dimensional.architecture import (
+        from Dimensionals.architecture import (
             ActionDispatcher,
             ActionPlan,
             ActionPriority,
@@ -479,7 +479,7 @@ def main() -> int:
 
     # Verify ProactiveOrchestrator health scoring
     try:
-        from Dimensional.architecture.proactive_orchestrator import ProactiveOrchestrator
+        from Dimensionals.architecture.proactive_orchestrator import ProactiveOrchestrator
 
         po = ProactiveOrchestrator()
         health = po.get_health_profile()
@@ -492,7 +492,7 @@ def main() -> int:
 
     # Verify AdaptivePulseController interval management
     try:
-        from Dimensional.architecture.adaptive_pulse import (
+        from Dimensionals.architecture.adaptive_pulse import (
             AdaptivePulseController,
             PulseConfig,
             PulseMode,
@@ -529,7 +529,7 @@ def main() -> int:
 
     # Verify AutoConfigManager profiles
     try:
-        from Dimensional.architecture.auto_config import AutoConfigManager
+        from Dimensionals.architecture.auto_config import AutoConfigManager
 
         acm = AutoConfigManager()
         profiles = acm.list_profiles()
@@ -539,7 +539,7 @@ def main() -> int:
 
     # Verify ProactiveMetricsCollector Prometheus export
     try:
-        from Dimensional.architecture.proactive_metrics import ProactiveMetricsCollector
+        from Dimensionals.architecture.proactive_metrics import ProactiveMetricsCollector
 
         pmc = ProactiveMetricsCollector()
         prom_output = pmc.export_prometheus()
@@ -550,7 +550,7 @@ def main() -> int:
 
     # Verify ProactiveSystemBootstrap status
     try:
-        from Dimensional.architecture.proactive_wiring import ProactiveSystemBootstrap
+        from Dimensionals.architecture.proactive_wiring import ProactiveSystemBootstrap
 
         psb = ProactiveSystemBootstrap()
         status = psb.get_status()

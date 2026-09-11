@@ -261,6 +261,16 @@ jobs:
       - name: Topology map data is current
         run: python scripts/build_topology_3d.py --check
 
+      # The taxonomy (Locations / AIs / Dimensionals) is the owner's structure,
+      # and the tree published under docs/architecture/ is derived from
+      # PLATFORM_ENTITIES, the personality profiles, the shard catalogue and the
+      # Dimensionals package -- never typed. This check is what stops it becoming
+      # another hand-maintained register describing a platform that has moved on:
+      # add a Location, rename an AI, or add a nano-service, and a stale tree
+      # fails here instead of quietly describing last month's estate.
+      - name: Taxonomy tree is current
+        run: python scripts/build_taxonomy_tree.py --check
+
       # The estate records outstanding work in 44 separate registers, each
       # correct about its own domain and blind to the rest — so nobody can
       # answer "what is outstanding across the platform" without reading 320

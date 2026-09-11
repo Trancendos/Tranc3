@@ -27,7 +27,7 @@ from fastapi import (
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ── Config ───────────────────────────────────────────────────────────────────
 SERVICE_NAME = "deepagents-orchestrator"

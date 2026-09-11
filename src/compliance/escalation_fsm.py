@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 
 import jsonschema
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.compliance.ai_governance import IncidentSeverity, log_ai_incident
 from src.compliance.cab_gate import cab_gate
 from src.observability.observatory import EventCategory, EventSeverity, get_observatory

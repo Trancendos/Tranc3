@@ -9,7 +9,7 @@ from service import TranceFlowRouter
 
 import config
 from database import TranceFlowDatabase
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import (
     ExportRequest,
     ExportResponse,

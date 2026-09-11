@@ -15,15 +15,15 @@ Tests verify:
 
 import asyncio
 
-from Dimensional.hive.hive_core import Hive
-from Dimensional.infinity.bridge.bridge_core import (
+from Dimensionals.hive.hive_core import Hive
+from Dimensionals.infinity.bridge.bridge_core import (
     InfinityBridge,
 )
-from Dimensional.nexus.nexus_core import Nexus
+from Dimensionals.nexus.nexus_core import Nexus
 
 # Note: Direct _sentinel_station assignment used instead of patch.object
 # because sentinel_station is a property without a setter
-from Dimensional.three_bridge_coordinator import (
+from Dimensionals.three_bridge_coordinator import (
     BridgeIdentity,
     CoordinatorState,
     CrossBridgeEvent,
@@ -390,7 +390,7 @@ class TestCoordinatorSingleton:
 
     def test_get_coordinator_returns_same_instance(self):
         """get_coordinator() returns the same instance."""
-        import Dimensional.three_bridge_coordinator as tbc
+        import Dimensionals.three_bridge_coordinator as tbc
 
         tbc._coordinator_instance = None
         c1 = get_coordinator()

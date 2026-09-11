@@ -9,7 +9,7 @@ from service import SecurityEngineRouter
 
 import config
 from database import CryptexDatabase
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import ScanRequest, ThreatIndicator
 
 

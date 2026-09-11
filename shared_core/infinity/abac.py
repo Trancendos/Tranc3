@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.abac"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.abac"""
 
-from Dimensional.infinity.abac import *  # noqa: F401, F403
+from Dimensionals.infinity.abac import *  # noqa: F401, F403

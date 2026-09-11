@@ -16,7 +16,7 @@ The Nexus now supports multi-node clustering using the Raft consensus algorithm 
 high availability. The implementation includes leader election, log replication, and
 commitment protocols that ensure consistent state across all Nexus nodes.
 
-**Source**: `Dimensional/nexus/raft/raft_core.py`
+**Source**: `Dimensionals/nexus/raft/raft_core.py`
 **Key Classes**: `RaftConfig`, `RaftLog`, `RaftNode`, `NexusCluster`, `NexusClusterNode`
 **FastAPI Endpoints**: `/cluster/status`, `/cluster/nodes/{node_id}`, `/cluster/propose`
 
@@ -32,7 +32,7 @@ count based on configurable policies. It uses a predictive scaling engine with l
 regression on load factors for pre-emptive capacity adjustments, plus a cooldown
 manager to prevent flapping (oscillating scale-up/scale-down cycles).
 
-**Source**: `Dimensional/hive/autoscaler.py`
+**Source**: `Dimensionals/hive/autoscaler.py`
 **Key Classes**: `ThroughputMetrics`, `ScalingPolicyConfig`, `ScalingAction`, `MetricsCollector`,
 `CooldownManager`, `ScalingDecisionEngine`, `AutoScalerEngine`
 **FastAPI Endpoints**: `/autoscaler/status`, `/autoscaler/swarms/{swarm_id}/register`,
@@ -51,7 +51,7 @@ capacity (10%), with the highest-scoring path selected for routing. A fallback r
 provides alternative routes when the primary path degrades, and a health monitor tracks
 path conditions in real time.
 
-**Source**: `Dimensional/infinity/bridge/path_optimizer.py`
+**Source**: `Dimensionals/infinity/bridge/path_optimizer.py`
 **Key Classes**: `PathMetrics`, `PathOptimizerConfig`, `OptimizationStrategy`, `PathScorer`,
 `PathHealthMonitor`, `FallbackRouter`, `PathOptimizationEngine`
 **Strategies**: `LOWEST_LATENCY`, `LEAST_LOADED`, `BALANCED`, `PRIORITY_WEIGHTED`
@@ -69,7 +69,7 @@ The cross-bridge orchestrator coordinates workflows that span all three bridges
 Each workflow step targets a specific bridge, and if any step fails, the compensation
 manager runs compensating actions for all completed steps in reverse order.
 
-**Source**: `Dimensional/cross_bridge_orchestrator.py`
+**Source**: `Dimensionals/cross_bridge_orchestrator.py`
 **Key Classes**: `BridgeTarget`, `StepStatus`, `WorkflowStatus`, `OrchestrationStep`,
 `OrchestrationWorkflow`, `BridgeDispatcher`, `StepExecutor`, `CompensationManager`,
 `CrossBridgeOrchestrator`
@@ -88,7 +88,7 @@ failover, partition detection, and slot-based data distribution. Nodes can be pr
 or replica, and the cluster monitors node health to trigger failover when a primary
 becomes unavailable.
 
-**Source**: `Dimensional/infinity/sentinel_cluster.py`
+**Source**: `Dimensionals/infinity/sentinel_cluster.py`
 **Key Classes**: `NodeRole`, `NodeState`, `ClusterHealth`, `FailoverPolicy`, `SentinelClusterNode`,
 `ClusterPartition`, `ClusterConfig`, `SentinelCluster`, `SentinelClusterManager`
 **FastAPI App**: `create_sentinel_cluster_app()` — full cluster management API
@@ -112,7 +112,7 @@ platform locations. Each location follows the same structure:
 
 **Total: 8 entities per location × 9 locations = 72 entities**
 
-**Source**: `Dimensional/pillars/entities.py`
+**Source**: `Dimensionals/pillars/entities.py`
 **Key Classes**: `EntityTier`, `EntityType`, `PillarLocation`, `PillarEntity`, `PillarLocationConfig`,
 `PillarRegistry`
 **FastAPI Endpoints**: `/pillars/locations`, `/pillars/locations/{location}`, `/pillars/tiers`

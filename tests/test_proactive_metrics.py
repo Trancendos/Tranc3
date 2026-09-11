@@ -1,5 +1,5 @@
 """
-Tests for Dimensional.architecture.proactive_metrics.
+Tests for Dimensionals.architecture.proactive_metrics.
 
 Covers: MetricType, HealthTrend, SubsystemMetrics, SystemVitals,
 MetricsSnapshot, ProactiveMetricsCollector.
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 
-from Dimensional.architecture.proactive_metrics import (
+from Dimensionals.architecture.proactive_metrics import (
     HealthTrend,
     MetricsSnapshot,
     MetricType,
