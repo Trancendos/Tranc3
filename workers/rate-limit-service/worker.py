@@ -302,6 +302,20 @@ async def update_policy(name: str, req: PolicyUpdate):
             raise HTTPException(status_code=404, detail="Policy not found")
         updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
+            # The VALUES are bound, but the COLUMN NAMES are interpolated into
+            # the statement below, so they have to come from a closed set. They
+            # already do -- `model_dump()` can only return PolicyUpdate's own
+            # fields -- but that is a fact about Pydantic held in a reader's
+            # head, and the interpolation is what they have to trust. Bind the
+            # check to the model itself so the two cannot drift: add a field to
+            # PolicyUpdate and it is permitted here automatically; reach this
+            # line with anything else and it is refused.
+            unexpected = set(updates) - set(PolicyUpdate.model_fields)
+            if unexpected:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown policy fields: {sorted(unexpected)}",
+                )
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
                 f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
