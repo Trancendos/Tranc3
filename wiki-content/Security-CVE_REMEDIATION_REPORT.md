@@ -148,7 +148,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-71176 — pytest (CVSS 6.8)
 - **Impact:** tempfile race condition
-- **Fix:** pytest==9.0.3
+- **Fix:** pytest==9.1.1
 
 ### CVE-2026-28684 — python-dotenv (CVSS 6.6)
 - **Impact:** Path traversal in .env file loading
@@ -238,7 +238,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 | aiohttp | (new dep) | 3.13.5 | 20 |
 | python-multipart | (new dep) | 0.0.29 | 4 |
 | python-dotenv | (new dep) | 1.2.2 | 1 |
-| pytest | (new dep) | 9.0.3 | 1 |
+| pytest | (new dep) | 9.1.1 | 1 |
 | langchain-community | (new dep) | 0.4.1 | 1 |
 | langfuse | (new dep) | 4.6.1 | 1 |
 
