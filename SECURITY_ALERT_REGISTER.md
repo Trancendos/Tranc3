@@ -1000,6 +1000,122 @@ alert-cleared remain different facts, and only a scan settles the second.
 
 ---
 
+### SEC-016 — the one that was real (`py/path-injection`, 7.5)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** — exploitable, confirmed by proof of concept |
+| **ID** | `py/path-injection` (CodeQL, security-severity 7.5) ×3 |
+| **Scanner** | CodeQL Advanced |
+| **Location** | `workers/gateway-service/router.py:743` ×2, `:744` — `serve_dashboard` |
+| **Recorded** | 2026-09-11 |
+
+**Unauthenticated arbitrary file read.** Three alerts on one line:
+
+```python
+@router.get("/dashboard/{path:path}")
+async def serve_dashboard(path: str = "index.html"):
+    file_path = DASHBOARD_DIR / path
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(str(file_path))
+```
+
+FastAPI's `{path:path}` converter exists precisely to let separators through, so
+the handler received the remainder of the URL verbatim. `Path.__truediv__` does
+not normalise `..`, and `exists() and is_file()` checks that the attacker's
+chosen file is *there* — the opposite of containment. The route declares no auth
+dependency.
+
+Unlike SEC-014 and SEC-015, **the alert was simply correct**, and the flow is
+three lines with no interprocedural hop: source at `:740`, join at `:742`, sink
+at `:743`/`:744`. That shortness is worth noting — the two entries above it
+needed the `codeFlows` read carefully to establish they were false positives;
+this one needed the line read carefully to establish it was not.
+
+**Proof of concept**, measured against the real handler shape:
+
+| request | result |
+|---|---|
+| `GET /dashboard/../../../../etc/passwd` | 404 |
+| `GET /dashboard/..%2f..%2f..%2f..%2fetc%2fpasswd` | **200**, `root:x:0:0:root:/root:/bin/bash…` |
+| `GET /dashboard/%2e%2e/%2e%2e/etc/passwd` | **200** |
+| `GET /dashboard/..%2f.git%2fconfig` | **200**, `[core]… [remote "origin"]…` |
+
+**The first row is why this survived.** Every normal HTTP client — browsers,
+`httpx`, `requests` — collapses `..` before the request leaves, so the obvious
+probe comes back 404 and the route reads as safe. Percent-encoded separators
+survive that normalisation and Starlette decodes them *after* routing, so the
+traversal arrives intact. A reviewer testing by hand with curl or a browser
+would have been told the route was fine.
+
+`.git/config` is the sharper of the two reads: in a deployed container it
+returns the remote URL, which is where an embedded token would be.
+
+**The fix is containment via `safe_join`** — the same helper SEC-009 and SEC-012
+use, deliberately, because a second copy of a path validator is a second thing
+to keep right. Components are validated by name before the join, then the join is
+resolved and re-checked, so `..` and absolute components are refused and a
+symlink planted inside the dashboard directory pointing out of it is refused
+after resolution. Splitting with `PurePosixPath` keeps parsing on URL semantics.
+Traversals and genuine misses both return 404, so the response does not
+distinguish "you tried to traverse" from "not there".
+
+**The fix had a hole, and the test found it — not the reading.** The first
+version filtered `"/"` out of the parsed parts. POSIX gives `//` its own meaning,
+so `PurePosixPath("//etc/passwd").parts[0]` is `"//"`, not `"/"`, and
+`//etc/passwd` passed through with a root component still attached and escaped
+the join. `test_absolute_path_is_contained_not_honoured` failed on exactly that
+case. Now the leading separators are stripped from the string before it is
+parsed, which no enumeration of separator spellings can get wrong.
+
+That test had *already* corrected me once: it first asserted that `/etc/passwd`
+raises, and it does not — the leading separator is dropped and it resolves to
+`DASHBOARD_DIR/etc/passwd`, contained and harmless, which is what every static
+file server does. Refusal and containment are both acceptable; containment is
+what the requirement names, so that is what it now asserts.
+
+**Calibration.** 21 tests in `tests/test_gateway_dashboard_containment.py`.
+Against the restored vulnerable route, **17 fail**, including all three
+percent-encoded route-level probes. The four that pass in both are the plain
+filename, nested filename and containment cases — they pin behaviour the
+vulnerable code also had, which is what they are for. The route-level probe with
+plain `../` passes against both, for the same reason it returned 404 in the PoC
+table; keeping it in the suite records that asymmetry rather than hiding it.
+
+**Where the test lives, and why that is itself a finding.**
+`workers/gateway-service/tests/` already exists, with a `conftest.py`, a
+`TestClient` and two test modules. **No workflow runs it.** `ci.yml`'s Pytest job
+runs `pytest tests/ -q`, `pyproject.toml` sets `testpaths = ["tests"]`, and
+nothing under `.github/workflows/` names a worker suite. A regression test for an
+exploitable traversal placed there would never have gated anything, so this one
+lives in `tests/` and puts the worker directory on `sys.path` itself, at module
+scope, so a broken import is a red test rather than a silent skip.
+
+That is the estate's recurring shape once more — a control that exists, runs when
+invoked, and is never invoked. It is not fixed here: how many of the ~70 worker
+suites currently pass is unmeasured, and turning them all on in one commit would
+convert an unknown number of pre-existing failures into a blocked queue. Tracked
+separately.
+
+**Also not settled.** `serve_dashboard` has no auth dependency, and
+`RBACMiddleware` does not supply one — see SEC-015. Whether this route was
+reachable anonymously in a deployment depends on `ZeroTrustASGIMiddleware`'s
+default policy, unmeasured. `gateway-service` is **not currently wired into**
+`docker-compose.production.yml` — its own Dockerfile comment says "if/when this
+service is wired in" — so the exposure is latent rather than live. That lowers
+today's urgency and not the severity of the defect: the fix belongs in the code
+before the service is wired in, not after.
+
+**Next review.** Unlike SEC-014 and SEC-015, these three alerts are expected to
+**clear**. The taint no longer reaches a path expression: `safe_join`'s return
+value is declared a barrier for `path-injection` in
+`.github/codeql/tranc3-python-models/models/path-validation.yml`. If they do not
+clear, the model pack is not being applied to `workers/`, and that is the finding
+to chase — not the fix.
+
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
