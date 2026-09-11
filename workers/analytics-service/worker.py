@@ -346,7 +346,14 @@ def _polars_aggregate(
         with _db_conn() as c:
             rows = c.execute(f"SELECT value FROM metrics {where}", params).fetchall()
         if not rows:
-            return None
+            # `count` of an empty window is 0; every other aggregation of an
+            # empty window is genuinely unknown. Returning None for all five made
+            # the two backends disagree on exactly one case -- SQLite's
+            # COUNT(value) over zero rows is 0, not NULL -- so
+            # `?agg=count&since=<future>` answered `null` when polars won and `0`
+            # when SQL did. Found by adding `count` to the differential test, at
+            # cubic's suggestion on PR #1207.
+            return 0.0 if agg == "count" else None
         df = pl.DataFrame({"value": [r["value"] for r in rows]})
         if agg == "avg":
             return df["value"].mean()

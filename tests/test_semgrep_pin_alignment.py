@@ -33,8 +33,22 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # why 1.172.0 was wrong) does not register as an install site.
 PIN_RE = re.compile(r"semgrep==([0-9]+(?:\.[0-9]+)*)")
 
-SEARCH_SUFFIXES = {".txt", ".yml", ".yaml", ".sh", ".cfg", ".toml", ".in"}
+SEARCH_SUFFIXES = {".txt", ".yml", ".yaml", ".sh", ".cfg", ".toml", ".in", ".dockerfile"}
 SEARCH_NAMES = {"Makefile"}
+
+
+#: Dockerfiles install things too, and this guard did not look at them. It
+#: claimed to watch every install site while `deploy/forgejo/runner.Dockerfile`
+#: pinned semgrep==1.100.0 -- 73 releases below the mcp-fix floor -- and both
+#: alignment tests passed. cubic caught it on PR #1207.
+#:
+#: Matched by prefix AND suffix on purpose: the file that was missed is named
+#: `runner.Dockerfile`, so a `Dockerfile*` prefix match alone would still not
+#: see it. That naming variant is the whole reason the blind spot existed.
+def _is_dockerfile(path: Path) -> bool:
+    name = path.name.lower()
+    return name.startswith("dockerfile") or name.endswith(".dockerfile")
+
 
 SKIP_DIRS = {
     ".git",
@@ -58,7 +72,7 @@ def _candidate_files() -> list[Path]:
         rel = path.relative_to(REPO_ROOT).as_posix()
         if any(rel == d or rel.startswith(d + "/") for d in SKIP_DIRS):
             continue
-        if path.suffix in SEARCH_SUFFIXES or path.name in SEARCH_NAMES:
+        if path.suffix in SEARCH_SUFFIXES or path.name in SEARCH_NAMES or _is_dockerfile(path):
             files.append(path)
     return files
 
@@ -104,6 +118,7 @@ def test_the_three_known_install_sites_still_pin_semgrep():
         "requirements-security.txt",
         "Makefile",
         ".forgejo/workflows/security-scan.yml",
+        "deploy/forgejo/runner.Dockerfile",
     ):
         assert expected in pins, (
             f"{expected} no longer pins semgrep. If that is intentional, remove it "
@@ -147,6 +162,13 @@ class TestTheGuardWouldCatchIt:
     def test_prose_about_a_pin_is_not_an_install_site(self):
         assert _pins_in("# semgrep==1.172.0 was the last vulnerable release\n") == []
         assert _pins_in("  #   pip download --no-deps semgrep==<version>\n") == []
+
+    def test_a_dockerfile_is_recognised_in_both_spellings(self):
+        """The blind spot, as a test rather than a memory."""
+        assert _is_dockerfile(Path("Dockerfile"))
+        assert _is_dockerfile(Path("workers/x/Dockerfile.prod"))
+        assert _is_dockerfile(Path("deploy/forgejo/runner.Dockerfile"))
+        assert not _is_dockerfile(Path("notes-about-dockerfile-usage.md"))
 
     def test_an_old_pin_fails_the_floor(self):
         parts = tuple(int(p) for p in "1.172.0".split("."))

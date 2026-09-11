@@ -12,7 +12,7 @@ COPY --chown=worker:worker requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 
 COPY --chown=worker:worker worker.py .
-COPY --chown=worker:worker Dimensionals/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 COPY --chown=worker:worker src/ ./src/
 
 # --- Shared Functional Services Core (SFSC) — named build contexts ---

@@ -17,7 +17,7 @@ RUN mkdir -p /data/assets && chown vrar3d:vrar3d /data /data/assets
 # repo root. Supplied by docker-compose.production.yml, or for a direct
 #   docker build --build-context sharedcore=../../Dimensional .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=vrar3d:vrar3d . /app/Dimensional/
+COPY --from=sharedcore --chown=vrar3d:vrar3d . /app/Dimensionals/
 ENV PYTHONPATH=/app
 # --- end SFSC ---
 

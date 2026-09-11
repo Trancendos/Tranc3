@@ -57,7 +57,7 @@ greedy pick. No islands, no Redis, no MMAS bounds, no migration.
 
 ## 2. What's real: The HIVE's `SwarmCoordinator` — group lifecycle, not emergent coordination
 
-`workers/hive-service/Dimensional/hive/hive_core.py` is real, deployed (see §3), and does exactly
+`workers/hive-service/Dimensionals/hive/hive_core.py` is real, deployed (see §3), and does exactly
 what its own docstring claims: *"data movement and swarm system coordination"* — `SwarmCoordinator`
 creates named `Swarm` objects (purpose: ETL / aggregation / replication), tracks `SwarmNode`
 membership and `SwarmStatus` (forming → active → …), and `FlowMonitor` records per-pipeline

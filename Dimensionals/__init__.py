@@ -69,7 +69,7 @@ _EXPORTS: dict[str, str] = {
 }
 
 # Subpackages that were previously imported eagerly so they were reachable as
-# attributes of `Dimensional` after a bare `import Dimensionals`. They stay
+# attributes of `Dimensionals` after a bare `import Dimensionals`. They stay
 # reachable, on demand. `import Dimensionals.infinity` never needed this entry —
 # Python binds a submodule on its parent as part of importing it — but
 # `Dimensionals.infinity` after only `import Dimensionals` does.
@@ -109,7 +109,7 @@ def __getattr__(name: str) -> Any:
 def __dir__() -> list[str]:
     """Report the full public surface without importing any of it.
 
-    Without this, `dir(Dimensional)` would list only what has been resolved so
+    Without this, `dir(Dimensionals)` would list only what has been resolved so
     far, making the package look progressively larger as a program runs and
     breaking tab-completion for anything not yet touched.
     """

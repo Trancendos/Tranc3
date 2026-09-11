@@ -114,7 +114,11 @@ skips = [
   #
   #   The replacement said "every urlopen in this estate", which was also
   #   wrong, in the same direction, and four reviewers caught it on PR #1207.
-  #   Measured: `scripts/` holds 19 urlopen call sites, several of which
+  #   Re-measured, because that count was wrong too: `scripts/` holds 16
+  #   urlopen CALL sites across 15 files (`grep -c 'urlopen('` summed over
+  #   `scripts/*.py`), plus one more inside the embedded Python in
+  #   `scripts/stack-up.sh`. The earlier figure of 19 counted import lines as
+  #   call sites. Several of the real ones
   #   (deploy_cloud._http_ok, cloud_smoke_check._request, wait_for_healthy,
   #   health_check, n1_checker) take a URL as a parameter. A justification is
   #   not improved by widening the claim it makes.

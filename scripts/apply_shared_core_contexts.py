@@ -19,7 +19,7 @@ THE MECHANISM: NAMED BUILD CONTEXTS
 
 BuildKit lets a build read from contexts other than its own, addressed by name:
 
-    COPY --from=sharedcore . /app/Dimensional/
+    COPY --from=sharedcore . /app/Dimensionals/
 
 supplied by `additional_contexts:` in Compose, or `--build-context` on a direct
 `docker build`. The worker's own context is untouched, nothing is duplicated in
@@ -78,7 +78,11 @@ COMPOSE = ROOT / "docker-compose.production.yml"
 
 # Context name -> (repo-relative source, destination inside the image)
 CONTEXTS = {
-    "sharedcore": ("./Dimensional", "/app/Dimensional/"),
+    # Source must be the real directory. It stayed "./Dimensional" through the
+    # rename, so patch_compose wrote a build context pointing at a path that no
+    # longer existed -- every one of the 65 sharedcore workers would have failed
+    # to build. Raised by cubic on PR #1207.
+    "sharedcore": ("./Dimensionals", "/app/Dimensionals/"),
     "observability": ("./src/observability", "/app/src/observability/"),
 }
 
@@ -121,7 +125,11 @@ def needed_contexts(worker: str) -> list[str]:
         return []
     text = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in wd.rglob("*.py"))
     needed = []
-    if re.search(r"\b(from|import)\s+Dimensional\b", text) and not (wd / "Dimensionals").is_dir():
+    # `\bDimensional\b` does not match `Dimensionals` -- \b sits between the "l"
+    # and the "s", both word characters, so there is no boundary there. After the
+    # rename every worker imports `Dimensionals`, so this detection matched none
+    # of them and no worker would have been given the sharedcore context at all.
+    if re.search(r"\b(from|import)\s+Dimensionals\b", text) and not (wd / "Dimensionals").is_dir():
         needed.append("sharedcore")
     if "src.observability" in text and not (wd / "src" / "observability").is_dir():
         needed.append("observability")
@@ -131,7 +139,7 @@ def needed_contexts(worker: str) -> list[str]:
 def render_dockerfile_block(names: list[str], user: str) -> str:
     """Render the COPY block for one worker, naming only the contexts it uses.
 
-    A worker that never imports `Dimensional` does not get it copied in: an
+    A worker that never imports `Dimensionals` does not get it copied in: an
     unused context still has to be supplied at build time, so granting one
     creates a build dependency that buys nothing.
     """

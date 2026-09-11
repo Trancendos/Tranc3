@@ -81,13 +81,27 @@ class CallSite:
         )
 
 
+#: bandit's own `exclude_dirs`, applied here so the header's claim that this
+#: collector scans exactly what bandit scans is true rather than nearly true.
+#: Nothing in these directories opens a URL today, so this changes no result --
+#: it stops a future call site there being forced to carry a B310 suppression
+#: bandit would never have raised. cubic raised the overclaim on PR #1207.
+BANDIT_EXCLUDE_DIRS = ("src/nanoservices/genetic_optimizer", "src/evolution")
+
+
 def _python_files() -> list[Path]:
     files: list[Path] = []
     for target in IN_SCOPE:
         if target.is_file():
             files.append(target)
-        else:
-            files.extend(p for p in target.rglob("*.py") if "__pycache__" not in p.parts)
+            continue
+        for path in target.rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            if any(rel.startswith(d + "/") or rel == d for d in BANDIT_EXCLUDE_DIRS):
+                continue
+            files.append(path)
     return files
 
 
@@ -153,8 +167,10 @@ def https_literals_in_scope(path: Path, lineno: int) -> list[str]:
     except (SyntaxError, OSError):  # pragma: no cover
         return []
     found: list[str] = []
-    for scope in _enclosing_scopes(tree, lineno):
-        for node in ast.walk(scope):
+    scopes = _enclosing_scopes(tree, lineno)
+    scope_nodes = set(map(id, scopes))
+    for scope in scopes:
+        for node in _own_body(scope, scope_nodes):
             if isinstance(node, (ast.Assign, ast.AnnAssign)) and _is_https_literal(node.value):
                 found.append(ast.unparse(node.value)[:60])
             elif isinstance(node, ast.Call):
@@ -162,6 +178,30 @@ def https_literals_in_scope(path: Path, lineno: int) -> list[str]:
                     if _is_https_literal(arg):
                         found.append(ast.unparse(arg)[:60])
     return found
+
+
+def _own_body(scope: ast.AST, scope_nodes: set[int]):
+    """Nodes belonging to `scope` itself, not to nested functions or classes.
+
+    `ast.walk` on a Module visits every descendant, so an https:// literal in an
+    unrelated sibling function anywhere in the file satisfied a "hardcoded https"
+    claim for any call site in that file. Since B310 is blanket-skipped, this test
+    is the only thing enforcing the claim, and a false pass there lets an
+    env-var-built URL carry a suppression saying its URL is hardcoded. cubic
+    caught it on PR #1207.
+
+    Descent stops at any nested scope that is not itself on the call site's own
+    scope chain -- so enclosing scopes still contribute (a class attribute is
+    visible to its methods) while siblings do not.
+    """
+    stack = list(ast.iter_child_nodes(scope))
+    while stack:
+        node = stack.pop()
+        yield node
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if id(node) not in scope_nodes:
+                continue
+        stack.extend(ast.iter_child_nodes(node))
 
 
 def test_in_scope_call_sites_are_found():
@@ -282,6 +322,24 @@ class TestTheGuardWouldCatchIt:
         assert https_literals_in_scope(path, 1), "module-level f-string not recognised"
         assert https_literals_in_scope(path, 5), "class attribute not recognised"
         assert https_literals_in_scope(path, 7), "inline literal argument not recognised"
+
+    def test_a_sibling_functions_literal_does_not_count(self, tmp_path):
+        """The false pass cubic found: one function borrowing another's literal."""
+        path = tmp_path / "siblings.py"
+        path.write_text(
+            "import os\n"
+            "def unrelated():\n"
+            '    return open("https://api.example.com/known-good")\n'
+            "def env_built():\n"
+            '    base = os.getenv("X", "http://h")\n'
+            "    return open(base)\n"
+        )
+        # Line 6 is inside env_built(), which builds its URL from the environment.
+        assert https_literals_in_scope(path, 6) == [], (
+            "env_built() can still see unrelated()'s https literal, so it could "
+            "carry a 'hardcoded https' suppression it has not earned"
+        )
+        assert https_literals_in_scope(path, 3), "unrelated() should still see its own"
 
     def test_a_plain_http_literal_is_not_accepted(self, tmp_path):
         path = tmp_path / "plain.py"

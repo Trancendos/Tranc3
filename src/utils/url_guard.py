@@ -30,7 +30,12 @@ ALLOWED_SCHEMES: tuple[str, ...] = ("http", "https")
 
 
 class UnsafeURLScheme(ValueError):
-    """Raised when a URL's scheme is outside the allowed set."""
+    """Raised when a URL's scheme is outside the allowed set.
+
+    Subclasses `ValueError` so a caller that already handles malformed-URL
+    errors handles this too, rather than needing to learn a new exception to
+    stay correct.
+    """
 
 
 def require_http_url(url: str, *, allowed: Iterable[str] = ALLOWED_SCHEMES) -> str:
@@ -51,9 +56,17 @@ def require_http_url(url: str, *, allowed: Iterable[str] = ALLOWED_SCHEMES) -> s
 
 
 def is_http_url(url: str, *, allowed: Iterable[str] = ALLOWED_SCHEMES) -> bool:
-    """Boolean form, for probes whose contract is already 'is this reachable?'."""
+    """Boolean form, for probes whose contract is already 'is this reachable?'.
+
+    Catches `ValueError` as well as `UnsafeURLScheme`, because `urlparse` raises
+    it directly on a malformed bracketed host -- `http://[::1` and friends -- and
+    that happens *before* any scheme check can run. Letting it escape turned a
+    typo in one provider's URL into an exception out of provider discovery,
+    taking down the discovery of every other provider with it. A malformed URL is
+    an unavailable provider, which is exactly what this function is for saying.
+    """
     try:
         require_http_url(url, allowed=allowed)
-    except UnsafeURLScheme:
+    except (UnsafeURLScheme, ValueError):
         return False
     return True

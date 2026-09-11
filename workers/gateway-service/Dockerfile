@@ -12,7 +12,7 @@ COPY --chown=worker:worker workers/gateway-service/config.py workers/gateway-ser
 # Dimensionals.infinity.* - vendored from the repo-root build context
 # (context: . — see docker-compose.production.yml note if/when this service
 # is wired in), not duplicated locally.
-COPY --chown=worker:worker Dimensionals/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 
 RUN mkdir -p data && chown -R worker:worker data
 

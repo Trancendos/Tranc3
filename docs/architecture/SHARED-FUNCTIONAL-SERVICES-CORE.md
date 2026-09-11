@@ -142,7 +142,7 @@ tracing code is real; it is on the wrong side of the build boundary.
 **This is the clearest SFSC promotion candidate on the platform:** `src/observability/`'s
 worker-facing surface is cross-cutting, needed by ~34 services, and currently reaches none
 of them. Moving `worker_setup` (and the tracing/health helpers it pulls) to
-`Dimensionals/observability/` and vendoring or packaging `Dimensional` into worker images
+`Dimensionals/observability/` and vendoring or packaging `Dimensionals` into worker images
 turns platform-wide telemetry from documented to actual.
 
 ### 3.3 The circuit breaker sits in the same trap
@@ -198,7 +198,7 @@ Ranked by (services affected) × (currently broken or duplicated):
    consolidation home is unreachable from workers. §3.3.
 3. **`src/errors/error_catalog.py`** — already vendored by `hive-service` because workers
    need canonical error codes. Vendoring one copy is a workaround; a second worker needing
-   it makes it a Dimensionals.
+   it makes it a Dimensional.
 4. **Internal-secret / service-auth header handling** — every worker re-implements the
    `X-Internal-Secret` check inline.
 

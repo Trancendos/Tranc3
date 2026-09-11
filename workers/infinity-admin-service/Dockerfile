@@ -14,7 +14,7 @@ COPY --chown=worker:worker src/entities/ ./src/entities/
 # service.py/router.py import Dimensionals.dimensionals and Dimensionals.infinity.*
 # - vendored from the repo-root build context (context: . per
 # docker-compose.production.yml), not duplicated locally.
-COPY --chown=worker:worker Dimensionals/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 RUN mkdir -p /app/data \
     && chown -R worker:worker /app/data
 # Security: drop to non-root user

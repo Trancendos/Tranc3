@@ -232,7 +232,11 @@ class TestBackendsAgreeOnTheSameRows:
             (500.0, None),  # window past every row
         ],
     )
-    @pytest.mark.parametrize("agg", ["avg", "sum", "min", "max"])
+    # `count` included deliberately: _polars_aggregate computes it through a
+    # fallthrough branch (`float(len(df))`) that no structural test reaches, so
+    # without it the one aggregation with its own code path was the one nothing
+    # compared. Raised by cubic on PR #1207.
+    @pytest.mark.parametrize("agg", ["avg", "sum", "min", "max", "count"])
     def test_polars_and_sql_return_the_same_number(self, worker, since, until, agg):
         _seed(worker, self.ROWS)
         polars_result = worker._polars_aggregate("cpu", agg, since, until)

@@ -379,13 +379,20 @@ def test_every_placeholder_is_bound_and_every_binding_is_used():
         )
 
 
-def test_a_query_without_placeholders_binds_nothing():
-    """The empty-prefix branch, stated as a property rather than assumed.
+def test_a_query_with_placeholders_binds_something():
+    """Named for what it checks, which is not what it used to be called.
 
-    `list_keys` starts with a plain `SELECT c.id FROM c` and `parameters = None`,
-    and only switches to the `@prefix` form when a prefix was supplied. That is
-    correct, but it is correct *because* the two move together -- so that is what
-    is checked here, rather than the presence of the keyword.
+    It was `test_a_query_without_placeholders_binds_nothing`, and it `continue`d
+    past every placeholder-free query -- so the empty-prefix case it claimed to
+    cover was the one case it never looked at. A guard whose name states the
+    opposite of its body is worse than no guard: someone reading the name stops
+    looking for the check it does not perform. cubic caught it on PR #1207.
+
+    What it does check: any query text carrying an `@placeholder` is in a
+    function that binds parameters. The empty-prefix branch is covered by
+    `test_every_placeholder_is_bound_and_every_binding_is_used`, which compares
+    the two sets in both directions and therefore sees the no-placeholder,
+    no-binding case as the matching pair it is.
     """
     for func in _functions_with_query_items():
         for text in _query_texts(func):

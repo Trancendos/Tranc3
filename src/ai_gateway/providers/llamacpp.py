@@ -15,19 +15,31 @@ import os
 import urllib.request
 from typing import Any, Dict, List, Optional
 
-from src.utils.url_guard import require_http_url
+from src.utils.url_guard import is_http_url
 
 logger = logging.getLogger("tranc3.ai_gateway.providers.llamacpp")
 
-# Operator-supplied, so it selects the scheme -- see the note in vllm.py.
-_BASE = require_http_url(os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091"))
+# Operator-supplied, so it selects the scheme -- see the note in vllm.py for why
+# this is checked per call rather than once at import.
+_BASE = os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091")
 _DEFAULT_MODEL = os.getenv("LLAMACPP_MODEL", "local")
 
 
+def _base() -> Optional[str]:
+    """The configured base URL, or None if its scheme is not http/https."""
+    if not is_http_url(_BASE):
+        logger.warning("llamacpp: refusing non-http(s) LLAMACPP_BASE_URL %r", _BASE)
+        return None
+    return _BASE
+
+
 def is_available() -> bool:
+    base = _base()
+    if base is None:
+        return False
     try:
-        req = urllib.request.Request(f"{_BASE}/health", method="GET")
-        urllib.request.urlopen(req, timeout=2)  # nosec B310 — scheme validated at import
+        req = urllib.request.Request(f"{base}/health", method="GET")
+        urllib.request.urlopen(req, timeout=2)  # nosec B310 — scheme checked by _base()
         return True
     except Exception:
         return False
@@ -40,6 +52,12 @@ def chat(
     max_tokens: int = 2048,
     **kwargs: Any,
 ) -> str:
+    base = _base()
+    if base is None:
+        raise RuntimeError(
+            f"LLAMACPP_BASE_URL has a non-http(s) scheme: {_BASE!r}. "
+            "Raising rather than degrading: chat() has no honest stub answer."
+        )
     payload = json.dumps(
         {
             "model": model or _DEFAULT_MODEL,
@@ -50,12 +68,12 @@ def chat(
         }
     ).encode()
     req = urllib.request.Request(
-        f"{_BASE}/v1/chat/completions",
+        f"{base}/v1/chat/completions",
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — scheme validated at import
+    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — scheme checked by _base()
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"]
 

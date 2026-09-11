@@ -135,9 +135,9 @@ from Dimensionals.three_bridge_coordinator import ThreeBridgeCoordinator
 
 ---
 
-## 5. Module Namespace — Dimensional
+## 5. Module Namespace — Dimensionals
 
-The platform's core shared library is **`Dimensional`** (renamed from `shared_core` in Phase 24).
+The platform's core shared library is **`Dimensionals`** (renamed from `shared_core` in Phase 24).
 All new imports **must** use `Dimensionals.*`.
 
 ```
@@ -160,7 +160,7 @@ Dimensionals/
 
 ### Import pattern — graceful degradation
 
-Always wrap `Dimensional` imports in `try/except ImportError` at module level
+Always wrap `Dimensionals` imports in `try/except ImportError` at module level
 so services start cleanly even when the package isn't installed:
 
 ```python
@@ -349,7 +349,7 @@ import asyncio, logging, time, uuid
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-# 3. Dimensional (graceful-degradation wrapper)
+# 3. Dimensionals (graceful-degradation wrapper)
 try:
     from Dimensionals.gas.pressure import PressureBalancer
     _GAS_AVAILABLE = True

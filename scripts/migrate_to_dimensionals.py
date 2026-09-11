@@ -43,7 +43,19 @@ OLD_DIR = REPO / _OLD_NAME
 NEW_DIR = REPO / _NEW_NAME
 SHARED_CORE = REPO / "shared_core"
 
-SKIP_PARTS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build"}
+SKIP_PARTS = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    # Generated scanner state, rewritten on every run. Substituting inside it
+    # produced an 8,736-line diff of machine output on the first attempt.
+    ".security_learning",
+    ".security_telemetry",
+}
 
 # Git submodules are separate repositories with their own branches, review and
 # release cadence. The first run of this script walked into `compliance/magna-carta`
@@ -99,9 +111,35 @@ SUBSTITUTIONS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bfrom Dimensional(?!s)\b"), "from Dimensionals"),
     (re.compile(r"\bimport Dimensional(?!s)\b"), "import Dimensionals"),
     (re.compile(r"\bDimensional(?!s)\."), "Dimensionals."),
-    (re.compile(r"(?<![\w/-])Dimensional(?!s)/"), "Dimensionals/"),
     (re.compile(r'"Dimensional(?!s)"'), '"Dimensionals"'),
     (re.compile(r"'Dimensional(?!s)'"), "'Dimensionals'"),
+    # ── Build-pipeline path shapes ───────────────────────────────────────────
+    #
+    # The first run used a single path rule, `(?<![\w/-])Dimensional(?!s)/`, and
+    # it missed the two shapes that matter most, for opposite reasons:
+    #
+    #   `./Dimensional`     — no trailing slash, so the rule did not apply
+    #   `/app/Dimensional/` — preceded by `/`, which the lookbehind excluded
+    #
+    # The lookbehind was there to protect `dimensional-nexus-service/`, and it
+    # also blocked every legitimate path segment. The result: 65 compose services
+    # kept `sharedcore: ./Dimensional` as their shared-core build context, and 72
+    # Dockerfiles kept copying it to `/app/Dimensional/` -- a directory that no
+    # longer exists, against code that now imports `Dimensionals`. Every one of
+    # those image builds would have failed. cubic caught it on PR #1207.
+    #
+    # Replaced with explicit, anchored rules per shape. Case matters: the
+    # lowercase `dimensional-nexus-service` and `dimensional_nexus` are untouched
+    # because every pattern requires the capital D.
+    (re.compile(r"(?<=[\s=:])\./Dimensional(?!s)\b"), "./Dimensionals"),
+    (re.compile(r"/app/Dimensional(?!s)\b"), "/app/Dimensionals"),
+    (re.compile(r"(?<![\w-])Dimensional(?!s)/"), "Dimensionals/"),
+    # NOT a bare-word rule. One was tried and reverted: it rewrote prose where
+    # "a Dimensional" is the correct singular concept noun ("what else should
+    # become a Dimensional"), producing "makes it a Dimensionals". cubic caught
+    # both directions of this on PR #1207 -- paths under-renamed, prose
+    # over-renamed. Paths are mechanical and safe to substitute; prose is not,
+    # and is corrected by reading it.
 ]
 
 
@@ -176,7 +214,28 @@ def main(argv: list[str] | None = None) -> int:
         src = old_root.relative_to(REPO).as_posix()
         dst = new_root.relative_to(REPO).as_posix()
         if args.apply:
-            subprocess.run(["git", "mv", src, dst], cwd=REPO, check=True)
+            # A directory git does not track cannot be `git mv`d, and a stray one
+            # must not abort the run: an orphaned `Dimensional/__pycache__` left
+            # by an earlier import did exactly that, raising before a single text
+            # substitution was written, so `--apply` reported nothing and changed
+            # nothing while appearing to have run.
+            tracked = (
+                subprocess.run(
+                    ["git", "ls-files", "--error-unmatch", src],
+                    cwd=REPO,
+                    capture_output=True,
+                ).returncode
+                == 0
+            )
+            if not tracked:
+                print(f"skipping {src}/ — untracked (stray build output?), not moving")
+                continue
+            result = subprocess.run(
+                ["git", "mv", src, dst], cwd=REPO, capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                print(f"could not move {src}/ -> {dst}/: {result.stderr.strip()}")
+                continue
             print(f"moved {src}/ -> {dst}/")
         else:
             print(f"would move {src}/ -> {dst}/")

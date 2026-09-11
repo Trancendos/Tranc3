@@ -546,7 +546,7 @@ def main() -> int:
         # A vendored copy of the shared core is the implementation, not a
         # hand-rolled gate. Scanning it reports `verify_internal_secret` itself
         # as something to migrate to `verify_internal_secret`.
-        if "/Dimensional/" in s or "/shared_core/" in s:
+        if "/Dimensionals/" in s or "/shared_core/" in s:
             continue
         gates, skipped = find_gates(path)
         if gates:

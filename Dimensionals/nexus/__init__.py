@@ -29,7 +29,7 @@ Components:
     NexusSentinelBridge: Bidirectional event bridge to Sentinel Station
 
 IMPORTANT: Nexus ≠ Dimensionals. Nexus is AI/Agent/Bot traffic.
-Dimensional is core/shared services. They are separate concepts.
+Dimensionals is core/shared services. They are separate concepts.
 "DimensionalNexus" is a backward-compatible alias, only valid when
 referring to both systems in conjunction.
 

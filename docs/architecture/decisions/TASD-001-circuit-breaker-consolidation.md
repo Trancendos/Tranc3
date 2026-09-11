@@ -93,7 +93,7 @@ Extract only what is truly shared; leave subsystem companions in place.
 - **Phase 1 (enum only — low-risk but NOT purely mechanical):** create one canonical
   `CircuitState` (a `str, Enum`) in a single module (proposed: `src/resilience/` as the
   canonical home — see §3.1). The other three modules **re-export** it (shim pattern used
-  for `shared_core → Dimensional`). **`CircuitBreakerConfig` is explicitly out of scope for
+  for `shared_core → Dimensionals`). **`CircuitBreakerConfig` is explicitly out of scope for
   Phase 1** — the three config schemas have incompatible fields, units (ms vs s), and base
   types (Pydantic vs dataclass) and require an adapter, deferred to a later phase.
   - **Value-migration decision required:** mesh's `HALF_OPEN="half-open"` differs from the

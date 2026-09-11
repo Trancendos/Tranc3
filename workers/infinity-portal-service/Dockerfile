@@ -9,7 +9,7 @@ COPY --chown=worker:worker workers/infinity-portal-service/ .
 # owasp_hardening, rbac, sentinel_station, worker_integration) and
 # Dimensionals.dimensionals - vendored from the repo-root build context
 # (context: . per docker-compose.production.yml), not duplicated locally.
-COPY --chown=worker:worker Dimensionals/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 
 RUN mkdir -p data && chown -R worker:worker data
 

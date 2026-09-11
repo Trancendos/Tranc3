@@ -8,7 +8,7 @@ COPY --chown=worker:worker workers/sentinel-station-service/worker.py .
 # worker.py imports Dimensionals.dimensionals and Dimensionals.infinity.* -
 # vendored from the repo-root build context (context: . per
 # docker-compose.production.yml), not duplicated locally.
-COPY --chown=worker:worker Dimensionals/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 
 RUN mkdir -p data && chown -R worker:worker data
 

@@ -541,23 +541,32 @@ def discover_available_providers() -> Dict[str, bool]:
     """
     available = {}
 
+    # Each of the three below reads "configured, OR reachable on its default".
+    # The scheme check has to sit OUTSIDE that `or`, not inside the probe: `bool(
+    # os.getenv(...))` short-circuits, so a provider configured as
+    # `LLAMACPP_BASE_URL=file:///etc/passwd` was reported available without the
+    # probe -- and therefore without the guard inside it -- ever running. Being
+    # configured is not evidence of being usable when the configuration names a
+    # protocol this gateway does not speak. Raised by cubic on PR #1207.
+
     # llama.cpp server — self-hosted, check LLAMACPP_BASE_URL or probe default
     llamacpp_url = os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091")
-    available["llamacpp"] = bool(os.getenv("LLAMACPP_BASE_URL")) or _check_http_available(
-        f"{llamacpp_url}/health"
+    available["llamacpp"] = is_http_url(llamacpp_url) and (
+        bool(os.getenv("LLAMACPP_BASE_URL")) or _check_http_available(f"{llamacpp_url}/health")
     )
 
     # vLLM — self-hosted GPU inference, check VLLM_BASE_URL or probe default
     vllm_url = os.getenv("VLLM_BASE_URL", "http://localhost:8090/v1")
-    available["vllm"] = bool(os.getenv("VLLM_BASE_URL")) or _check_http_available(
-        f"{vllm_url}/models"
+    available["vllm"] = is_http_url(vllm_url) and (
+        bool(os.getenv("VLLM_BASE_URL")) or _check_http_available(f"{vllm_url}/models")
     )
 
     # Ollama — check if OLLAMA_HOST is set or default localhost is reachable
     ollama_host = os.getenv("OLLAMA_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
-    available["ollama"] = bool(
-        os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST"),
-    ) or _check_ollama_available(ollama_host)
+    available["ollama"] = is_http_url(ollama_host) and (
+        bool(os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST"))
+        or _check_ollama_available(ollama_host)
+    )
 
     # Groq — 14,400 req/day free, requires GROQ_API_KEY
     available["groq"] = bool(os.getenv("GROQ_API_KEY"))

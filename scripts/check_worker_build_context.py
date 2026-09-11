@@ -35,7 +35,7 @@ So a cross-boundary import is fine when *either*:
   * it is guarded by a `try` whose handlers catch ImportError / Exception, so
     the worker degrades instead of dying; or
   * the package is vendored into the build context (e.g.
-    `workers/hive-service/Dimensional/`), so it genuinely resolves in the image.
+    `workers/hive-service/Dimensionals/`), so it genuinely resolves in the image.
 
 Anything else is an unguarded dependency on code that will not be there.
 
@@ -78,7 +78,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ROOT / "docker-compose.production.yml"
 
 # Packages that live at the repo root and are therefore outside an own-context
-# build. `Dimensional` is the platform's Shared Functional Services Core (SFSC);
+# build. `Dimensionals` is the platform's Shared Functional Services Core (SFSC);
 # `shared_core` is its backward-compatibility shim layer.
 ROOT_PACKAGES = {"src", "Dimensionals", "shared_core"}
 
@@ -169,7 +169,7 @@ def supplied_by_build_context(context: Path, module: str) -> str | None:
     Matching is on the destination path, not the context name, so renaming a
     context cannot silently make this report a module as delivered when it is
     not: `/app/src/observability/` satisfies `src.observability` and anything
-    under it, and `/app/Dimensional/` satisfies `Dimensional`.
+    under it, and `/app/Dimensionals/` satisfies `Dimensionals`.
     """
     dockerfile = context / "Dockerfile"
     if not dockerfile.is_file():
