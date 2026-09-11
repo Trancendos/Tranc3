@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import math
+import operator
 import random
 import uuid
 from dataclasses import dataclass, field
@@ -334,9 +335,9 @@ class HyperdimensionalVectorOps:
             return 0.0
 
         if metric == LatticeTopology.COSINE:
-            dot = sum(a.data[i] * b.data[i] for i in range(len(a.data)))
-            mag_a = math.sqrt(sum(x * x for x in a.data))
-            mag_b = math.sqrt(sum(x * x for x in b.data))
+            dot = sum(map(operator.mul, a.data, b.data))
+            mag_a = math.sqrt(sum(map(operator.mul, a.data, a.data)))
+            mag_b = math.sqrt(sum(map(operator.mul, b.data, b.data)))
             if mag_a == 0 or mag_b == 0:
                 return 0.0
             return dot / (mag_a * mag_b)
