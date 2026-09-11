@@ -210,7 +210,13 @@ jobs:
         # --max-age 3 catches the case no sensor can report: this schedule
         # itself having quietly stopped. Three days, not one, so a single
         # runner outage is not an incident.
-        run: python scripts/vaccinate.py --max-age 3
+        #
+        # `--record` so the uploaded artifact is THIS run's result rather than
+        # whatever was last committed. The job holds no write token by design,
+        # so it cannot commit the refreshed record -- the artifact is where a
+        # reader gets today's answer, and `--max-age` reads the committed one
+        # to say how long it has been since anybody wrote a fresh proof down.
+        run: python scripts/vaccinate.py --record --max-age 30
 
       - name: Upload the immunity report
         if: always()
@@ -242,6 +248,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           VULN_RESULT: ${{ needs.vulnerability.result }}
           OBSO_RESULT: ${{ needs.obsolescence.result }}
+          VACC_RESULT: ${{ needs.vaccination.result }}
         run: |
           set -euo pipefail
 
@@ -254,12 +261,13 @@ jobs:
             2>/dev/null || true
 
           body=$(cat <<EOF
-          A scheduled supply-chain census failed.
+          A scheduled supply-chain job failed.
 
-          | Census | Result |
+          | Job | Result |
           |---|---|
-          | Vulnerability (daily) | \`${VULN_RESULT}\` |
-          | Obsolescence (weekly) | \`${OBSO_RESULT}\` |
+          | Vulnerability census (daily) | \`${VULN_RESULT}\` |
+          | Obsolescence census (weekly) | \`${OBSO_RESULT}\` |
+          | Immunity check (daily) | \`${VACC_RESULT}\` |
 
           Run: ${RUN_URL}
 

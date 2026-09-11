@@ -97,7 +97,16 @@ sensors:
       # code; it cannot prove `--select` still beats `ignore`, which is the one
       # thing that would silently zero this sensor. Same command, same context.
       in_repo: true
-      command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache"]
+      # `--no-respect-gitignore` on the PROBE only. `.gitignore` carries
+      # `immune-probe-*/` so a killed run cannot leave a deliberately tangled
+      # file staged for commit, and that entry is worth keeping. Measured: ruff
+      # still sees the live probe today, because a path passed explicitly on
+      # the command line bypasses exclusion — but the probe's ability to see
+      # must not rest on that subtlety surviving the next ruff release. This
+      # makes the probe independent of it. Deliberately NOT added to the main
+      # scan command, which should respect .gitignore like everything else.
+      # Reported by cubic on PR #1150.
+      command: [ruff, check, ".", "--select", "C901", "--config", "lint.mccabe.max-complexity=20", "--output-format", "json", "--quiet", "--no-cache", "--no-respect-gitignore"]
 
   bandit:
     kind: innate

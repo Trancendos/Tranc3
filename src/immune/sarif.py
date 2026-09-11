@@ -256,6 +256,18 @@ def _cut_at_repo_content(text: str) -> str:
         candidate = "/".join(segments[index:])
         if (_REPO_ROOT / candidate).exists():
             return candidate
+    # The file itself does not exist -- deleted or renamed since the scan, which
+    # is ordinary for a SARIF merged from an earlier run. Fall back to the
+    # candidate whose PARENT DIRECTORY exists, which still anchors the cut in
+    # real repository structure. Going straight to the last match instead
+    # picked the innermost name regardless of whether anything around it was
+    # real, and on a path like /home/src/x/src/gone.py that is the wrong cut
+    # for a reason no reader could see. Reported by cubic on PR #1150.
+    for index in matches:
+        candidate = "/".join(segments[index:])
+        parent = (_REPO_ROOT / candidate).parent
+        if parent != _REPO_ROOT and parent.is_dir():
+            return candidate
     return "/".join(segments[matches[-1] :])
 
 

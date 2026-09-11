@@ -327,8 +327,12 @@ def _collect(sensor: Sensor, proc: subprocess.CompletedProcess[str], cwd: Path) 
 
 PROBE_DIR_PREFIX = "immune-probe-"
 
+#: Written inside every probe directory this code creates. The sweep deletes
+#: only directories carrying it, so a matching NAME alone is never enough.
+PROBE_MARKER = ".immune-probe-owned"
 
-def _sweep_stale_probes(root: Path) -> list[str]:
+
+def _sweep_stale_probes(root: Path, skipped: list[str] | None = None) -> list[str]:
     """Remove probe directories a previous run left inside the scanned tree.
 
     `TemporaryDirectory` cleans up on a normal return AND on an exception, so
@@ -352,18 +356,37 @@ def _sweep_stale_probes(root: Path) -> list[str]:
     Returns what it removed, so a caller can say so rather than tidying up in
     silence -- a leftover means a run was killed, which is worth knowing.
     """
-    removed = []
+    removed: list[str] = []
+    if skipped is None:
+        skipped = []
     try:
         entries = list(root.iterdir())
     except OSError:  # pragma: no cover - unreadable root is the caller's problem
         return removed
     for entry in entries:
-        if entry.is_dir() and entry.name.startswith(PROBE_DIR_PREFIX):
-            try:
-                shutil.rmtree(entry)
-            except OSError:  # pragma: no cover - a racing sweep already won
-                continue
-            removed.append(entry.name)
+        if not entry.is_dir() or not entry.name.startswith(PROBE_DIR_PREFIX):
+            continue
+        # A NAME IS NOT OWNERSHIP. Deleting every directory matching a prefix
+        # makes `rmtree` reachable from a string an outsider can choose: a pull
+        # request adding `immune-probe-anything/` with real content in it would
+        # have that content silently destroyed by the next scan, and destroyed
+        # BEFORE the later sensors ran, so nothing downstream would ever see
+        # what was removed. A scanner must not be a deletion primitive driven
+        # by an untrusted name. Reported by cubic on PR #1150.
+        #
+        # The marker is written by `probe_sensor` immediately after it creates
+        # the directory, so only a directory this code actually made can be
+        # swept. Anything else keeping the prefix is left alone and reported to
+        # the caller, which is the honest outcome: it is not ours to delete,
+        # and someone should know it is there.
+        if not (entry / PROBE_MARKER).is_file():
+            skipped.append(entry.name)
+            continue
+        try:
+            shutil.rmtree(entry)
+        except OSError:  # pragma: no cover - a racing sweep already won
+            continue
+        removed.append(entry.name)
     return removed
 
 
@@ -416,6 +439,11 @@ def probe_sensor(
         parent = str(root_for_probe)
     with tempfile.TemporaryDirectory(prefix=PROBE_DIR_PREFIX, dir=parent) as tmp:
         root = Path(tmp)
+        if parent is not None:
+            # Claim ownership before anything else happens in here, so a run
+            # killed a microsecond later still leaves a directory the next
+            # sweep is allowed to remove.
+            (root / PROBE_MARKER).write_text("immune probe scratch\n", encoding="utf-8")
         target = root / filename
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")

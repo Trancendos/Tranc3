@@ -53,6 +53,7 @@ from src.immune.sarif import (
 )
 from src.immune.sensors import (
     PROBE_DIR_PREFIX,
+    PROBE_MARKER,
     Outcome,
     Sensor,
     SensorResult,
@@ -946,6 +947,10 @@ def test_a_killed_run_cannot_leave_the_probe_behind_to_be_rescanned(tmp_path):
     """
     stale = tmp_path / f"{PROBE_DIR_PREFIX}killed"
     stale.mkdir()
+    # The marker `probe_sensor` writes the instant it creates the directory.
+    # Without it the sweep declines to touch anything — see the ownership test
+    # below, which is why this fixture has to claim ownership explicitly.
+    (stale / PROBE_MARKER).write_text("x")
     (stale / "probe.py").write_text("def f():\n    pass\n")
     keep = tmp_path / "src"
     keep.mkdir()
@@ -1134,3 +1139,88 @@ def test_a_proposal_is_a_diff_and_changes_nothing_on_disk(tmp_path):
     assert not proposal.empty, "ruff had a fix and the antibody should carry it"
     assert "-import os" in proposal.diff
     assert target.read_text() == before, "a proposal must not touch the file"
+
+
+# ── the vaccination/probe machinery's own second round of defects ───────────
+
+
+def test_the_sweep_will_not_delete_a_directory_it_does_not_own(tmp_path):
+    """REGRESSION: a name is not ownership.
+
+    Deleting every directory matching a prefix makes `rmtree` reachable from a
+    string an outsider chooses — a pull request adding `immune-probe-anything/`
+    with real content would have it destroyed by the next scan, and destroyed
+    BEFORE the later sensors ran, so nothing downstream would ever see what
+    went. A scanner must not be a deletion primitive driven by an untrusted
+    name. Reported by cubic on PR #1150.
+    """
+    theirs = tmp_path / f"{PROBE_DIR_PREFIX}from-a-pull-request"
+    theirs.mkdir()
+    (theirs / "real_content.py").write_text("# someone real wrote this\n")
+
+    ours = tmp_path / f"{PROBE_DIR_PREFIX}killed"
+    ours.mkdir()
+    (ours / PROBE_MARKER).write_text("x")
+    (ours / "probe.py").write_text("# deliberately tangled\n")
+
+    skipped: list[str] = []
+    removed = _sweep_stale_probes(tmp_path, skipped)
+
+    assert removed == [ours.name]
+    assert skipped == [theirs.name], "what it declined to touch must be reportable"
+    assert (theirs / "real_content.py").exists(), "untrusted content must survive"
+
+
+def test_staleness_is_measured_on_the_recorded_past_not_on_this_run(tmp_path):
+    """REGRESSION: a check that could not fire, inside the check that watches the watcher.
+
+    The first version measured `--max-age` against the report just produced.
+    Every passing sensor is stamped with today's date moments earlier, so
+    nothing was ever stale and the check was structurally incapable of firing.
+    Measured: a record five weeks old passed `--max-age 3` cleanly.
+
+    Read against the RECORDED past it says something true — "no fresh proof of
+    sight has been written down for N days" — which is the only durable signal
+    a job holding no write token can produce.
+    """
+    old = Immunity(
+        sensor="ruff", probed=True, outcome="ok", required=True, last_proven="2026-01-01"
+    )
+    fresh_report = vaccinate([_seeing()], previous={"seer": old}, today=date(2026, 2, 10))
+
+    # The fresh run says everything is fine...
+    assert fresh_report.sight == 1.0 and not fresh_report.failing()
+    # ...and the recorded past is nonetheless 40 days stale.
+    assert stale_sensors([old], max_age_days=3, today=date(2026, 2, 10)) == [old]
+
+
+@pytest.mark.parametrize("content", ["[1, 2, 3]", '"a string"', "null", "123"])
+def test_a_record_that_is_valid_json_but_the_wrong_shape_is_an_empty_one(tmp_path, content):
+    """The docstring promised a fallback; `raw.get` on a list raises instead.
+
+    A promise kept only for the failure modes someone happened to think of is
+    not a fallback. Reported by cubic on PR #1150.
+    """
+    path = tmp_path / "immunity.json"
+    path.write_text(content)
+    assert load_record(path) == {}
+
+
+def test_a_record_that_is_not_utf8_is_an_empty_one(tmp_path):
+    path = tmp_path / "immunity.json"
+    path.write_bytes(b"\xff\xfe not utf-8 at all")
+    assert load_record(path) == {}
+
+
+def test_a_path_whose_file_is_gone_still_cuts_at_real_structure():
+    """REGRESSION: the last-match fallback ignored whether anything was real.
+
+    When the file itself no longer exists — deleted or renamed since the scan,
+    ordinary for a merged SARIF — the fallback took the innermost matching
+    name regardless of its surroundings. Anchoring on a parent directory that
+    DOES exist keeps the cut tied to real repository structure. Reported by
+    cubic on PR #1150.
+    """
+    assert _relativise("/home/src/checkouts/Tranc3/src/immune/deleted_ages_ago.py") == (
+        "src/immune/deleted_ages_ago.py"
+    )

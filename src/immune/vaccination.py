@@ -169,7 +169,13 @@ def load_record(path: Path = DEFAULT_RECORD) -> dict[str, Immunity]:
     """
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        # Valid JSON, wrong shape -- `[]` or `"x"` or `null`. The docstring
+        # promises an empty record rather than an error, and `raw.get` on a
+        # list raises AttributeError, so the promise was only kept for the
+        # cases someone had thought of. Reported by cubic on PR #1150.
         return {}
     sensors = raw.get("sensors")
     if not isinstance(sensors, dict):

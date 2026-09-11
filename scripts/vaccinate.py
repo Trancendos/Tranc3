@@ -70,16 +70,35 @@ def main() -> int:
 
     failures = report.failing()
 
-    # Staleness is checked against the record we are about to write, not the one
-    # we read, so a run that fixes the staleness is not also punished for it.
+    # Staleness is measured on the PREVIOUS record -- the one on disk -- and
+    # never on the report this run just produced.
+    #
+    # The first version checked the fresh report, which cannot work: every
+    # sensor that passes its probe is stamped with today's date a few lines
+    # earlier, so nothing is ever stale and the check could not fire at all.
+    # A control structurally incapable of reporting is the exact defect this
+    # subsystem exists to find, and it was sitting in the one check whose job
+    # is noticing that the schedule stopped. Measured: a record dated five
+    # weeks back passed `--max-age 3` cleanly. Reported by cubic on PR #1150.
+    #
+    # Read against the committed record it means something real: "no fresh
+    # proof of sight has been recorded for N days". In CI that is the only
+    # durable signal available, because the job holds no write token by design
+    # and cannot refresh the record itself -- so the remedy it points at is a
+    # person or an agent running `--record` and committing the result.
     if args.max_age is not None:
-        stale = stale_sensors([r for r in report.records if r.probed], max_age_days=args.max_age)
+        if not previous:
+            failures.append(
+                f"no immunity record at {args.record_path} — nothing has ever "
+                "recorded that these sensors could see"
+            )
+        stale = stale_sensors([r for r in previous.values() if r.probed], max_age_days=args.max_age)
         for record in stale:
             age = record.days_since_proven()
             failures.append(
-                f"'{record.sensor}' has not proved sight "
-                + ("ever" if age is None else f"for {age} days")
-                + f" (limit {args.max_age})"
+                f"'{record.sensor}' has no recorded proof of sight "
+                + ("at all" if age is None else f"newer than {age} days")
+                + f" (limit {args.max_age}) — rerun with --record and commit the result"
             )
 
     if args.record:
