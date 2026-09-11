@@ -28,3 +28,14 @@ qiskit==2.5.2
 # === Observability ===
 # Fixes: CVE-2025-9799 (SSRF in LangFuse)
 langfuse==4.15.2
+
+# === Tokenisation ===
+# Pinned explicitly, not because of an advisory -- OSV reports zero for both
+# 0.22.2 and 0.23.x -- but because this repo's convention is exact pins and
+# this one was arriving unpinned as a transitive of `transformers`, which is
+# the shape `scripts/pin_worker_requirements.py` exists to remove. 0.23.2 is
+# the newest release satisfying transformers 5.17.0's
+# `tokenizers<0.24.0,>=0.23.1`, so the pin records the resolution rather than
+# constraining it to something different. Raised by Aikido PR #1168, whose
+# "security issue" framing is not supported by any advisory database.
+tokenizers==0.23.2
