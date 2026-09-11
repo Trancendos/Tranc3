@@ -127,3 +127,10 @@ storybook-static
 # and ruff_errors.json were -- committed scan output that reads as source.
 ACTION_AUDIT.md
 action-audit.json
+
+# Probe scratch dirs. `TemporaryDirectory` removes these on any normal exit or
+# exception; one only survives a SIGKILL (a cancelled CI job, a reclaimed
+# runner). `_sweep_stale_probes()` clears them at the start of the next probe,
+# but they are ignored here too so a killed run can never leave a deliberately
+# tangled probe file staged for commit.
+immune-probe-*/

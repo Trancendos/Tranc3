@@ -45,7 +45,15 @@ from src.immune.sarif import (
     merge,
     normalise_level,
 )
-from src.immune.sensors import Outcome, Sensor, parse_output, probe_sensor, run_sensor
+from src.immune.sensors import (
+    PROBE_DIR_PREFIX,
+    Outcome,
+    Sensor,
+    _sweep_stale_probes,
+    parse_output,
+    probe_sensor,
+    run_sensor,
+)
 from src.immune.vaccination import (
     Immunity,
     load_record,
@@ -912,3 +920,67 @@ def test_a_missing_record_is_an_empty_one_not_a_crash(tmp_path):
     controls end up not adopted.
     """
     assert load_record(tmp_path / "nope.json") == {}
+
+
+# ── the probe mechanism's own failure modes ─────────────────────────────────
+
+
+def test_a_killed_run_cannot_leave_the_probe_behind_to_be_rescanned(tmp_path):
+    """REGRESSION: the immune system manufacturing its own antigen.
+
+    The probe file is deliberately tangled — that is what makes it a probe.
+    `TemporaryDirectory` removes it on a normal return and on an exception, so
+    a leftover only happens when the process is killed outright (a cancelled CI
+    job, a reclaimed runner). But an `in_repo` probe puts that directory INSIDE
+    the scanned tree, so a leftover is picked up by the next scan and reported
+    as a genuine complexity finding in a file nobody wrote, at a path that
+    changes every run. Measured before the fix: a repo-wide C901 scan reported
+    the leftover. Reported by cubic on PR #1150.
+    """
+    stale = tmp_path / f"{PROBE_DIR_PREFIX}killed"
+    stale.mkdir()
+    (stale / "probe.py").write_text("def f():\n    pass\n")
+    keep = tmp_path / "src"
+    keep.mkdir()
+
+    removed = _sweep_stale_probes(tmp_path)
+
+    assert removed == [stale.name]
+    assert not stale.exists()
+    assert keep.exists(), "the sweep must take probe dirs and nothing else"
+
+
+def test_the_probe_follows_the_scan_root_not_the_module_location(tmp_path):
+    """REGRESSION: an in_repo probe certifying a different tree than the scan.
+
+    `run_sensor(cwd=...)` scans wherever it is told. A probe hardcoded to this
+    module's own checkout would resolve a DIFFERENT config file than the scan
+    just used, and then certify that scan — the same "the probe proves
+    something other than what the scan does" defect that `in_repo` exists to
+    fix, one level further up. Reported by cubic on PR #1150.
+    """
+    sensor = _seeing(probe={**_seeing().probe, "in_repo": True})
+    saw, _ = probe_sensor(sensor, scan_root=tmp_path)
+
+    assert saw
+    assert not list(tmp_path.iterdir()), "the probe must clean up after itself"
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        # REGRESSION: a generic top-level name in an ANCESTOR directory. Taking
+        # the first match yields "src/checkouts/Tranc3/src/immune/sarif.py" --
+        # wrong, and wrong in a way that still looks relative, so it would sail
+        # into a fingerprint and never match a graded file.
+        ("/home/src/checkouts/Tranc3/src/immune/sarif.py", "src/immune/sarif.py"),
+        # REGRESSION: dot-directories were excluded from the candidate set on
+        # the theory that they would over-match. Backwards: `.github` is among
+        # the LEAST collision-prone names, while the generic entries that were
+        # kept appear in arbitrary paths constantly. Excluding it left workflow
+        # findings absolute, so their fingerprints carried the machine.
+        ("/var/lib/docs/build/Tranc3/.github/workflows/ci.yml", ".github/workflows/ci.yml"),
+    ],
+)
+def test_foreign_paths_cut_at_verified_repository_content(raw, expected):
+    assert _relativise(raw) == expected

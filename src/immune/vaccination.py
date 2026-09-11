@@ -216,6 +216,7 @@ def vaccinate(
     previous: dict[str, Immunity] | None = None,
     today: date | None = None,
     timeout: int = 180,
+    scan_root: Path | None = None,
 ) -> VaccinationReport:
     """Ask every sensor to demonstrate that it can still see."""
     previous = previous or {}
@@ -241,7 +242,7 @@ def vaccinate(
             )
             continue
 
-        saw, detail = probe_sensor(sensor, timeout=timeout)
+        saw, detail = probe_sensor(sensor, timeout=timeout, scan_root=scan_root)
         record = Immunity(
             sensor=sensor.name,
             probed=True,

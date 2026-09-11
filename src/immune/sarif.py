@@ -188,23 +188,75 @@ def _uri_of(result: dict[str, Any]) -> str:
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+# Never a cut point: present in every checkout, tracked in none of them, and
+# `.git/` in particular appears inside completely unrelated paths.
+_UNTRACKED_NOISE = frozenset(
+    {".git", ".ruff_cache", ".mypy_cache", ".pytest_cache", ".venv", "venv", "__pycache__"}
+)
+
+
 def _top_level_entries() -> frozenset[str]:
     """Top-level names in this repository, used to find where content starts.
 
-    Computed once from disk rather than written down, so it cannot drift from
-    the tree it describes. Dot-directories are excluded: `.github` is a real
-    top-level entry, but matching on it would cut an unrelated path at the
-    wrong place far more often than it would help.
+    Computed from disk rather than written down, so it cannot drift from the
+    tree it describes.
+
+    DOT-DIRECTORIES ARE INCLUDED, and the first version's exclusion of them was
+    backwards. The reasoning then was that `.github` would cut unrelated paths
+    at the wrong place; in fact a dot-directory is among the LEAST likely names
+    to collide, while the generic entries that were kept -- `src`, `docs`,
+    `tests`, `config`, `scripts` -- are the ones that appear in arbitrary
+    filesystem paths all the time. Excluding `.github` meant a finding reported
+    by a workflow scanner against an absolute path stayed absolute, so its
+    fingerprint carried the machine it ran on and the file never matched a
+    graded path. Reported by cubic on PR #1150.
+
+    What is excluded instead is untracked machine noise -- caches, virtualenvs,
+    and `.git` itself, which turns up inside unrelated paths constantly.
     """
     try:
         return frozenset(
-            entry.name for entry in _REPO_ROOT.iterdir() if not entry.name.startswith(".")
+            entry.name for entry in _REPO_ROOT.iterdir() if entry.name not in _UNTRACKED_NOISE
         )
     except OSError:  # pragma: no cover - only if the checkout vanishes mid-run
         return frozenset()
 
 
 _TOP_LEVEL = _top_level_entries()
+
+
+def _cut_at_repo_content(text: str) -> str:
+    """Find where this repository's content starts inside a foreign path.
+
+    Several segments can match a top-level name at once:
+
+        /home/src/checkouts/Tranc3/src/immune/sarif.py
+              ^^^                    ^^^
+
+    Taking the FIRST match yields `src/checkouts/Tranc3/src/immune/sarif.py`,
+    which is wrong and, worse, wrong in a way that still looks relative -- so
+    it would sail into a fingerprint and never match a graded file. Reported by
+    cubic on PR #1150.
+
+    So candidates are verified against the tree rather than accepted on the
+    strength of their name: prefer the cut whose remainder actually EXISTS in
+    this repository. That is the same content-over-names principle that made
+    the enclosing fallback stop asking what the checkout is called.
+
+    When nothing verifies -- a file deleted since the scan, a path from a
+    different revision -- fall back to the LAST match rather than the first.
+    The repository's own directory sits closest to the file it contains, so on
+    a nested path the last match is right far more often than the first.
+    """
+    segments = text.lstrip("/").split("/")
+    matches = [i for i, segment in enumerate(segments) if segment in _TOP_LEVEL]
+    if not matches:
+        return text
+    for index in matches:
+        candidate = "/".join(segments[index:])
+        if (_REPO_ROOT / candidate).exists():
+            return candidate
+    return "/".join(segments[matches[-1] :])
 
 
 def _relativise(uri: str, root: Path | None = None) -> str:
@@ -256,11 +308,7 @@ def _relativise(uri: str, root: Path | None = None) -> str:
         # is called, including a fork with a different name and the runner's
         # doubled `/home/runner/work/X/X/` layout.
         if text.startswith("/"):
-            segments = text.lstrip("/").split("/")
-            for index, segment in enumerate(segments):
-                if segment in _TOP_LEVEL:
-                    text = "/".join(segments[index:])
-                    break
+            text = _cut_at_repo_content(text)
     while text.startswith("./"):
         text = text[2:]
     text = text.lstrip("/")

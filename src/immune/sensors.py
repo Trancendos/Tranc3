@@ -325,7 +325,51 @@ def _collect(sensor: Sensor, proc: subprocess.CompletedProcess[str], cwd: Path) 
     return proc.stdout
 
 
-def probe_sensor(sensor: Sensor, *, timeout: int = 120) -> tuple[bool, str]:
+PROBE_DIR_PREFIX = "immune-probe-"
+
+
+def _sweep_stale_probes(root: Path) -> list[str]:
+    """Remove probe directories a previous run left inside the scanned tree.
+
+    `TemporaryDirectory` cleans up on a normal return AND on an exception, so
+    this only matters when the process is killed outright -- a cancelled CI
+    job, a SIGKILL, a runner reclaimed mid-step. Rare, and the consequence is
+    bad enough to be worth the three lines:
+
+    The probe file is DELIBERATELY tangled -- that is what makes it a probe. A
+    leftover one sitting in the repository is scanned by the next run and
+    reported as a genuine C901 finding, so the immune system manufactures its
+    own antigen and then raises an alarm about it. That is autoimmunity in the
+    most literal sense available here, and it would be maddening to diagnose:
+    a real-looking complexity finding in a file nobody wrote, at a path that
+    changes every time. Reported by cubic on PR #1150.
+
+    Excluding the prefix in `pyproject.toml` was the other option and is worse:
+    ruff resolves excludes against the project root, so the same rule that hid
+    a leftover would hide the live probe from its own scan and record every
+    probed sensor as blind.
+
+    Returns what it removed, so a caller can say so rather than tidying up in
+    silence -- a leftover means a run was killed, which is worth knowing.
+    """
+    removed = []
+    try:
+        entries = list(root.iterdir())
+    except OSError:  # pragma: no cover - unreadable root is the caller's problem
+        return removed
+    for entry in entries:
+        if entry.is_dir() and entry.name.startswith(PROBE_DIR_PREFIX):
+            try:
+                shutil.rmtree(entry)
+            except OSError:  # pragma: no cover - a racing sweep already won
+                continue
+            removed.append(entry.name)
+    return removed
+
+
+def probe_sensor(
+    sensor: Sensor, *, timeout: int = 120, scan_root: Path | None = None
+) -> tuple[bool, str]:
     """Plant a known defect and check the sensor actually flags it.
 
     Returns (saw_it, detail). A sensor with no declared probe returns
@@ -359,8 +403,18 @@ def probe_sensor(sensor: Sensor, *, timeout: int = 120) -> tuple[bool, str]:
     # `probe.in_repo: true` puts the probe's temp dir inside the repository, so
     # ruff's config discovery walks up and finds the real `pyproject.toml`.
     # Reported by cubic on PR #1150.
-    parent = str(_REPO_ROOT) if sensor.probe.get("in_repo") else None
-    with tempfile.TemporaryDirectory(prefix="immune-probe-", dir=parent) as tmp:
+    # The scan's root, not this module's. `run_sensor(cwd=...)` scans wherever
+    # it is told, and an `in_repo` probe that always used `_REPO_ROOT` would
+    # certify a DIFFERENT config context than the one the scan ran in -- which
+    # is the same "probe proves something other than what the scan does"
+    # defect `in_repo` was added to fix, one level further up. Reported by
+    # cubic on PR #1150.
+    root_for_probe = (scan_root or _REPO_ROOT).resolve()
+    parent: str | None = None
+    if sensor.probe.get("in_repo"):
+        _sweep_stale_probes(root_for_probe)
+        parent = str(root_for_probe)
+    with tempfile.TemporaryDirectory(prefix=PROBE_DIR_PREFIX, dir=parent) as tmp:
         root = Path(tmp)
         target = root / filename
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -426,7 +480,7 @@ def run_sensor(
         # Only a clean report needs proving. A sensor that found something has
         # already demonstrated it can see, and probing it would spend a
         # subprocess to learn nothing.
-        saw, detail = probe_sensor(sensor)
+        saw, detail = probe_sensor(sensor, scan_root=cwd)
         if not saw:
             return SensorResult(sensor.name, Outcome.BLIND, detail=detail, required=sensor.required)
         return SensorResult(
