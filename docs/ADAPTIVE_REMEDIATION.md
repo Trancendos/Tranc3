@@ -77,7 +77,7 @@ else:
 
 ## Real-World Example: torch Vulnerabilities
 
-**The Situation**: Trivy flags 10 PYSEC advisories in `torch==2.13.0`
+**The Situation**: Trivy flags 10 PYSEC advisories in `torch==2.14.0`
 
 **CVSS**: Critical/High (7.5-9.8)
 

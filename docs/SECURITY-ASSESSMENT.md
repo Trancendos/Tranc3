@@ -22,7 +22,7 @@ This document provides a detailed risk assessment for all known vulnerabilities 
 
 ## Active Vulnerabilities — PyTorch Risk Assessment
 
-All 10 remaining PYSEC advisories affect `torch==2.12.0`. No upstream fix version is available at this time. Below is a per-advisory risk assessment with Tranc3-specific mitigations.
+All 10 remaining PYSEC advisories affect `torch==2.14.0`. No upstream fix version is available at this time. Below is a per-advisory risk assessment with Tranc3-specific mitigations.
 
 ### PYSEC-2025-210 — Profiler DoS
 - **Severity:** Low
@@ -136,7 +136,7 @@ The following controls reduce the effective risk of all torch vulnerabilities:
 - High complexity / disputed (PYSEC-2025-191, PYSEC-2025-191)
 - Already mitigated by `weights_only=True` (deserialization)
 
-**Monitor** for upstream PyTorch releases that address these CVEs and upgrade when available.
+**Monitor** for upstream PyTorch releases that address these CVEs and upgrade when available. The project has upgraded from torch 2.13.0 to 2.14.0 (as of 2026-09-11); vulnerability status against this version requires revalidation.
 
 ---
 

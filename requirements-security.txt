@@ -19,7 +19,7 @@ hashin==1.0.5         # Add package hashes to requirements for integrity
 # semgrep still hard-pins mcp==1.23.3 exactly (verified: still true as of 1.172.0,
 # the latest release) -- see the mcp accepted-risk note below, this bump doesn't
 # touch that one.
-semgrep==1.173.0      # Pattern-based static analysis for security anti-patterns
+semgrep==1.176.1      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
@@ -34,7 +34,7 @@ filelock==3.32.5
 #  AND requires lxml<7 which pins to 6.1.1, fixing PYSEC-2026-87)
 cyclonedx-python-lib==11.12.0
 # lxml: PYSEC-2026-87 (fix: >=6.1.0) — resolved by cyclonedx-python-lib==11.12.0 above
-lxml==6.1.2
+lxml==6.1.3
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks in XML parsing (CWE-611)

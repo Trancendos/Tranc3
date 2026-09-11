@@ -22,14 +22,14 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 ### CVE-2024-48063 — torch (CVSS 9.8)
 - **Package:** torch (PyPI) — BSD-3-Clause
 - **Impact:** Deserialization of untrusted data leading to arbitrary code execution
-- **Remediation:** Upgraded from torch>=2.2.0 to torch==2.12.0
-- **Verification:** torch 2.12.0 includes patches for all known deserialization issues
+- **Remediation:** Upgraded from torch>=2.2.0 to torch==2.14.0
+- **Verification:** torch 2.14.0 includes patches for all known deserialization issues
 
 ### CVE-2024-7042 — langchain (CVSS 9.8)
 - **Package:** langchain (PyPI) — MIT
 - **Impact:** SQL injection in GraphCypherQAChain enabling arbitrary data access
-- **Remediation:** Added langchain==1.3.1 in requirements-ai.txt
-- **Verification:** Version 1.3.1 patches all SQL injection vectors
+- **Remediation:** Added langchain==1.4.0 in requirements-ai.txt
+- **Verification:** Version 1.4.0 patches all SQL injection vectors
 
 ### CVE-2026-1525 — undici (CVSS 9.8)
 - **Package:** undici (npm) — MIT
@@ -40,7 +40,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 ### CVE-2025-32434 — torch (CVSS 9.8 / CVSS4 9.3)
 - **Package:** torch (PyPI) — BSD-3-Clause
 - **Impact:** `torch.load` with `weights_only=True` still leads to remote code execution via unsafe pickle deserialization
-- **Remediation:** Upgraded to torch==2.12.0
+- **Remediation:** Upgraded to torch==2.14.0
 - **Additional:** Added `weights_only=True` enforcement in model loading code with safe_loader wrapper
 
 ---
@@ -49,23 +49,23 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2024-7774 — langchain (CVSS 9.1)
 - **Impact:** SSRF vulnerability via web research tools
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### CVE-2024-11394 — transformers (CVSS 8.8)
 - **Impact:** Unsafe deserialization in model loading
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2024-11393 — transformers (CVSS 8.8)
 - **Impact:** Arbitrary code execution via pickle in model weights
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2024-11392 — transformers (CVSS 8.8)
 - **Impact:** Path traversal in tokenizer loading
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2024-58340 — langchain (CVSS 7.5 / CVSS4 8.7)
 - **Impact:** Deserialization vulnerability in LangChain core
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### CVE-2025-1403 — qiskit (CVSS 8.6)
 - **Impact:** Information disclosure in quantum circuit execution
@@ -73,7 +73,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2024-5998 — langchain (CVSS 7.8 / CVSS4 8.4)
 - **Impact:** XSS in agent output rendering
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### CVE-2026-26007 — cryptography (CVSS 6.5 / CVSS4 8.2)
 - **Impact:** Key exchange vulnerability
@@ -81,15 +81,15 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2026-1839 — transformers (CVSS 7.8)
 - **Impact:** Pickle-based RCE in model loading
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2024-3095 — langchain (CVSS 7.7)
 - **Impact:** Prompt injection enabling data exfiltration
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### CVE-2025-6638 — transformers (CVSS 7.5)
 - **Impact:** Path traversal in cache directory
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2025-69223 — aiohttp (CVSS 7.5)
 - **Impact:** HTTP request smuggling
@@ -105,7 +105,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-2099 — transformers (CVSS 7.5)
 - **Impact:** Model loading remote code execution
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2026-22036 — undici (CVSS 7.5)
 - **Impact:** HTTP header injection
@@ -113,7 +113,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-6921 — transformers (CVSS 7.5)
 - **Impact:** Arbitrary file write via model download
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2026-2229 — undici (CVSS 7.5)
 - **Impact:** CRLF injection in HTTP headers
@@ -121,7 +121,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2024-12720 — transformers (CVSS 7.5)
 - **Impact:** Tokenization buffer overflow
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2026-1526 — undici (CVSS 7.5)
 - **Impact:** HTTP/2 rapid reset attack
@@ -156,11 +156,11 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-1194 — transformers (CVSS 6.5)
 - **Impact:** Denial of service via crafted input
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2026-41481 — langchain (CVSS 6.5)
 - **Impact:** Data exfiltration via callback
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### CVE-2026-39365 — vite (CVSS4 6.3)
 - **Impact:** Development server vulnerability
@@ -172,11 +172,11 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-3730 — torch (CVSS2 1.7 / CVSS3 5.5 / CVSS4 4.8)
 - **Impact:** Heap buffer overflow in tensor operations
-- **Fix:** torch==2.12.0
+- **Fix:** torch==2.14.0
 
 ### CVE-2025-2953 — torch (CVSS2 1.7 / CVSS3 5.5 / CVSS4 4.8)
 - **Impact:** Type confusion in tensor dtype handling
-- **Fix:** torch==2.12.0
+- **Fix:** torch==2.14.0
 
 ### CVE-2026-1527 — undici (CVSS 4.6)
 - **Impact:** Insufficient header validation
@@ -192,11 +192,11 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-3777 — transformers (CVSS 3.5)
 - **Impact:** Minor information leak in error messages
-- **Fix:** transformers==5.8.1
+- **Fix:** transformers==5.16.1
 
 ### CVE-2026-41488 — langchain (CVSS 3.1)
 - **Impact:** Low-impact callback data exposure
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### CVE-2026-34073 — cryptography (CVSS4 1.7)
 - **Impact:** Minor timing side-channel
@@ -208,11 +208,11 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-9799 — langfuse (CVSS2 4.6 / CVSS3 5 / CVSS4 2.3)
 - **Impact:** SSRF in observability callbacks
-- **Fix:** langfuse==4.6.1
+- **Fix:** langfuse==4.15.1
 
 ### CVE-2026-45134 — langchain (No CVSS)
 - **Impact:** Unspecified vulnerability
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.4.0
 
 ### debricked-286515 — esbuild (No CVSS)
 - **Impact:** Supply chain concern
@@ -230,9 +230,9 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 | Package | Previous | Updated | CVEs Resolved |
 |---------|----------|---------|---------------|
-| torch | >=2.2.0 | 2.12.0 | 4 |
-| langchain | (new dep) | 1.3.1 | 8 |
-| transformers | (new dep) | 5.8.1 | 15 |
+| torch | >=2.2.0 | 2.14.0 | 4 |
+| langchain | (new dep) | 1.4.0 | 8 |
+| transformers | (new dep) | 5.16.1 | 15 |
 | qiskit | (new dep) | 2.4.1 | 2 |
 | cryptography | (new dep) | 48.0.0 | 4 |
 | aiohttp | (new dep) | 3.13.5 | 20 |
@@ -240,7 +240,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 | python-dotenv | (new dep) | 1.2.2 | 1 |
 | pytest | (new dep) | 9.0.3 | 1 |
 | langchain-community | (new dep) | 0.4.1 | 1 |
-| langfuse | (new dep) | 4.6.1 | 1 |
+| langfuse | (new dep) | 4.15.1 | 1 |
 
 ### Node.js (npm) Packages
 
