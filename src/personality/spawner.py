@@ -45,48 +45,79 @@ def _contained_in_roots(path: Path) -> bool:
 def _resolve_without_leaving(root: Path, candidate: Path, hop_limit: int = 40) -> Path:
     """Resolve *candidate* under *root*, refusing any symlink that points out.
 
-    SEC-015, second pass. The first version resolved the whole lexically-checked
-    path in one `Path.resolve()` call and claimed "nothing outside a root is ever
-    handed to the filesystem". That claim was too strong, and cubic said so: a
-    symlink planted *inside* an allowed root redirects the resolution outward,
-    and `resolve()` follows it before any check can object. Measured:
+    SEC-015, third pass. The walk restarts whenever it expands a link, and that
+    restart is the whole correctness argument.
 
-        /tmp/sym-xxxx/into-etc -> /etc/shadow
-        lexically contained: True
-        .resolve() returns:  /etc/shadow
+    The second pass expanded a link, checked the expanded *string* for
+    containment, and then carried on with the next component — never walking the
+    target's own components. So an intermediate symlink inside the target escaped
+    unexamined. Reported by cubic, and reproduced before being accepted:
 
-    The containment verdict was still correct — the resolved path fails the
-    second check and the call raises — but the probe had already happened, which
-    is precisely what this function exists to prevent.
+        <root>/mid -> /etc
+        <root>/hop -> <root>/mid/passwd
 
-    `os.readlink` reads a link's target without following it, so the walk below
-    never needs to stat anything it has not already shown to be contained. Each
-    component is `lstat`-ed (which does not follow a final symlink); a link is
-    expanded lexically against its own parent and re-checked before the walk
-    continues. A path that does not exist yet simply has nothing left to follow,
-    which is the ordinary case for a spawn target.
+        _resolve_output_base("<root>/hop")  ->  ACCEPTED
+        that path really is                ->  /etc/passwd
 
-    `hop_limit` bounds symlink chains so a cycle raises instead of hanging.
+    ``<root>/mid/passwd`` is lexically under the root, so the containment check
+    passed on a string whose second component was a door out. Expanding a link
+    now re-seeds the pending component list with the target's parts ahead of
+    whatever is left, so every component of every target is itself walked and
+    checked. ``mid`` is then examined in its own right, readlink returns
+    ``/etc``, and the walk refuses.
+
+    ``os.readlink`` reads a target without following it, and ``os.lstat`` does
+    not follow a final symlink, so nothing outside a root is ever stat-ed. A path
+    that does not exist yet has nothing left to follow, which is the ordinary
+    case for a spawn target. ``hop_limit`` bounds total expansions, so a cycle
+    raises instead of hanging.
+
+    **What this does not do**, stated rather than implied: it resolves by name,
+    so a sufficiently determined local attacker who can already write inside an
+    allowed root could swap a component between this walk and the later
+    ``safe_join``/``mkdir`` — a TOCTOU race cubic also raised. Closing that means
+    holding directory descriptors with ``O_NOFOLLOW`` through every scaffold
+    write, which is a redesign of how this module writes files rather than a
+    change to how it validates. The precondition is write access inside
+    ``Path.cwd()``, ``/tmp`` or ``$HOME`` — an attacker who has that already has
+    better options against this process than racing a scaffold generator.
+    Recorded in SEC-015 as a known limit.
     """
-    current = root
-    for part in candidate.relative_to(root).parts:
-        current = current / part
-        for _ in range(hop_limit):
-            try:
-                info = os.lstat(current)
-            except OSError:
-                break  # does not exist — nothing to follow
-            if not stat.S_ISLNK(info.st_mode):
-                break
-            target = os.readlink(current)
-            current = Path(os.path.normpath(os.path.join(str(current.parent), target)))
-            if not _contained_in_roots(current):
-                raise PathTraversalError(
-                    f"symlink {part!r} points outside every allowed root",
-                )
-        else:
+    resolved = root
+    pending = list(candidate.relative_to(root).parts)
+    hops = 0
+
+    while pending:
+        part = pending.pop(0)
+        nxt = resolved / part
+        try:
+            info = os.lstat(nxt)
+        except OSError:
+            resolved = nxt  # does not exist — nothing to follow
+            continue
+        if not stat.S_ISLNK(info.st_mode):
+            resolved = nxt
+            continue
+
+        hops += 1
+        if hops > hop_limit:
             raise PathTraversalError(f"symlink chain too long at {part!r}")
-    return current
+
+        target = os.readlink(nxt)
+        expanded = Path(os.path.normpath(os.path.join(str(resolved), target)))
+        if not _contained_in_roots(expanded):
+            raise PathTraversalError(
+                f"symlink {part!r} points outside every allowed root",
+            )
+
+        # Restart from the root that contains the target, walking ITS components
+        # too. Checking only the expanded string is what let an intermediate
+        # symlink through.
+        new_root = next(r for r in _ALLOWED_OUTPUT_ROOTS if expanded.is_relative_to(r))
+        resolved = new_root
+        pending = list(expanded.relative_to(new_root).parts) + pending
+
+    return resolved
 
 
 def _resolve_output_base(output_dir: str) -> Path:

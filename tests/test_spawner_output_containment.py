@@ -185,6 +185,33 @@ class TestSymlinkOutOfRootIsReadNotFollowed:
         hop.symlink_to(real)
         assert _resolve_output_base(str(hop)) == real.resolve()
 
+    def test_intermediate_symlink_in_a_target_is_refused(self, allowed_tmpdir: Path) -> None:
+        """cubic, round 8. The second pass accepted this and it reached /etc/passwd.
+
+        Expanding a link and checking only the expanded *string* is not enough:
+        ``<root>/mid/passwd`` is lexically contained while ``mid`` is a door out.
+        The walk now restarts over the target's own components, so ``mid`` is
+        examined in its own right.
+        """
+        (allowed_tmpdir / "mid").symlink_to("/etc")
+        (allowed_tmpdir / "hop").symlink_to(allowed_tmpdir / "mid" / "passwd")
+        with pytest.raises(PathTraversalError):
+            _resolve_output_base(str(allowed_tmpdir / "hop"))
+
+    def test_intermediate_symlink_inside_the_root_still_resolves(
+        self, allowed_tmpdir: Path
+    ) -> None:
+        """The acceptance half: a contained intermediate link must still work.
+
+        A restart that refused every multi-hop path would pass the attack test
+        above while breaking ordinary layouts.
+        """
+        real = allowed_tmpdir / "real"
+        (real / "inner").mkdir(parents=True)
+        (allowed_tmpdir / "mid").symlink_to(real)
+        (allowed_tmpdir / "hop").symlink_to(allowed_tmpdir / "mid" / "inner")
+        assert _resolve_output_base(str(allowed_tmpdir / "hop")) == (real / "inner").resolve()
+
     def test_symlink_cycle_raises_rather_than_hanging(self, allowed_tmpdir: Path) -> None:
         a = allowed_tmpdir / "a"
         b = allowed_tmpdir / "b"

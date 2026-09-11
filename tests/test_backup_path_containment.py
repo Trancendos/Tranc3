@@ -24,6 +24,7 @@ worker.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -213,3 +214,92 @@ class TestLatestBackupDoesNotEscape:
     @pytest.mark.parametrize("worker", ["../..", "/", "../outside"])
     def test_traversal_worker_finds_nothing(self, engine: BackupEngine, worker: str) -> None:
         assert engine._latest_backup(worker) is None
+
+
+class TestCubicRoundSeven:
+    """Three findings on the SEC-017 fix. Two held, one did not.
+
+    Each was measured before being accepted or refused — a review comment is a
+    lead, not a verdict, the same standard applied to the scanner alerts these
+    entries came from.
+    """
+
+    def test_existing_directory_is_refused_as_a_target(
+        self, engine: BackupEngine, worker_db, tmp_path, monkeypatch
+    ) -> None:
+        """HELD, and it was destructive.
+
+        Measured against the pre-fix engine: a directory containing a file was
+        renamed to ``<name>.pre-restore.db``, a database file was moved into its
+        place, and ``restore`` returned **success**. Containment was never the
+        failing half — the directory was inside the permitted root. Being allowed
+        to write somewhere is not the same as that place being a sensible
+        destination.
+        """
+        restore_root = tmp_path / "restores"
+        restore_root.mkdir()
+        monkeypatch.setenv("BACKUP_RESTORE_ROOT", str(restore_root))
+        victim = restore_root / "important-dir"
+        victim.mkdir()
+        (victim / "keepme.txt").write_text("precious")
+
+        engine.backup(worker_db)
+        result = engine.restore(worker_db.worker, target_path=str(victim), dry_run=False)
+
+        assert result.success is False
+        assert victim.is_dir(), "the directory was replaced by a file"
+        assert (victim / "keepme.txt").read_text() == "precious"
+        assert not (restore_root / "important-dir.pre-restore.db").exists()
+
+    def test_dot_is_refused_but_not_for_the_reason_given(
+        self, engine: BackupEngine, worker_db, tmp_path, monkeypatch
+    ) -> None:
+        """DID NOT HOLD — ``.`` was already refused, by a different mechanism.
+
+        ``Path(".").parts`` is ``()``, so the empty-parts guard rejects it before
+        any directory check is reached. Kept as a test because the behaviour is
+        worth pinning either way, and because "already correct, for a reason the
+        reviewer did not have" is a result worth recording rather than quietly
+        folding into the fix.
+        """
+        monkeypatch.setenv("BACKUP_RESTORE_ROOT", str(tmp_path))
+        assert Path(".").parts == ()
+        engine.backup(worker_db)
+        result = engine.restore(worker_db.worker, target_path=".", dry_run=False)
+        assert result.success is False
+        assert "BACKUP_RESTORE_ROOT" in (result.error or "")
+
+    @staticmethod
+    def _relative_root_engine(tmp_path: Path) -> tuple[BackupEngine, str]:
+        """An engine whose ``backup_root`` is relative, without chdir-ing.
+
+        `monkeypatch.chdir` would be the obvious way to get a relative root, and
+        it breaks this repository's conftest, which writes
+        ``logs/test_results.jsonl`` at teardown relative to the working
+        directory. `os.path.relpath` gives a genuinely relative root pointing at
+        a temp directory instead, so the defect reproduces and nothing is written
+        into the checkout.
+        """
+        rel_root = os.path.relpath(tmp_path / "data" / "backups")
+        assert not Path(rel_root).is_absolute()
+        return BackupEngine(backup_root=Path(rel_root), encrypt=False), rel_root
+
+    def test_relative_backup_root_does_not_double_join(self, tmp_path) -> None:
+        """HELD. A relative ``BACKUP_ROOT`` broke every named-backup restore.
+
+        ``backup()`` returns a path that already contains the root, so treating a
+        relative ``backup_path`` as root-relative built
+        ``<root>/<root>/<worker>/...``. The containment verdict was never wrong;
+        the path was.
+        """
+        engine, rel_root = self._relative_root_engine(tmp_path)
+        relative = f"{rel_root}/some-worker/file.gz"
+        resolved = engine._contained_backup_file(relative)
+        expected = (tmp_path / "data" / "backups" / "some-worker" / "file.gz").resolve()
+        assert resolved == expected, resolved
+
+    def test_backup_path_outside_a_relative_root_is_still_refused(self, tmp_path) -> None:
+        """The narrowing must not have widened anything."""
+        engine, _ = self._relative_root_engine(tmp_path)
+        with pytest.raises((PathTraversalError, ValueError)):
+            engine._contained_backup_file("/etc/passwd")

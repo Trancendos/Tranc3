@@ -453,9 +453,23 @@ class BackupEngine:
         A backup is by definition a file this service wrote, so there is no
         legitimate value outside the backup root.
         """
-        candidate = Path(backup_path)
         root = Path(self.backup_root).resolve()
-        parts = candidate.relative_to(root).parts if candidate.is_absolute() else candidate.parts
+        # Resolve a relative `backup_path` against the working directory BEFORE
+        # comparing. Reported by cubic, and measured: with a relative
+        # `BACKUP_ROOT` (`data/backups`), `backup()` hands back a relative path
+        # that already contains the root, so treating it as root-relative built
+        #   /…/data/backups/data/backups/gateway/x.gz
+        # and every restore of an explicitly named backup failed. The containment
+        # verdict was never wrong; the path was.
+        candidate = Path(backup_path)
+        candidate = candidate if candidate.is_absolute() else (Path.cwd() / candidate)
+        candidate = Path(os.path.normpath(str(candidate)))
+        try:
+            parts = candidate.relative_to(root).parts
+        except ValueError:
+            raise PathTraversalError(
+                f"backup_path is outside the backup root: {backup_path!r} is not under {root}"
+            ) from None
         if not parts:
             raise PathTraversalError(f"backup_path names the backup root itself: {backup_path!r}")
         return safe_join(root, *parts)
@@ -495,26 +509,47 @@ class BackupEngine:
 
         candidate = Path(target_path)
         declared = {Path(db.resolved_path) for db in _registry}
+        permitted: Path | None = None
+
         if candidate in declared:
-            return candidate
+            permitted = candidate
+        else:
+            restore_root = os.environ.get("BACKUP_RESTORE_ROOT", "")
+            if restore_root:
+                root = Path(restore_root).resolve()
+                parts = (
+                    candidate.relative_to(root).parts
+                    if candidate.is_absolute() and candidate.is_relative_to(root)
+                    else None
+                )
+                if parts is None and not candidate.is_absolute():
+                    parts = candidate.parts
+                if parts:
+                    permitted = safe_join(root, *parts)
 
-        restore_root = os.environ.get("BACKUP_RESTORE_ROOT", "")
-        if restore_root:
-            root = Path(restore_root).resolve()
-            parts = (
-                candidate.relative_to(root).parts
-                if candidate.is_absolute() and candidate.is_relative_to(root)
-                else None
+        if permitted is None:
+            raise PathTraversalError(
+                f"restore target {target_path!r} is neither a registry database path nor under "
+                f"BACKUP_RESTORE_ROOT (currently "
+                f"{os.environ.get('BACKUP_RESTORE_ROOT', '') or 'unset'})"
             )
-            if parts is None and not candidate.is_absolute():
-                parts = candidate.parts
-            if parts:
-                return safe_join(root, *parts)
 
-        raise PathTraversalError(
-            f"restore target {target_path!r} is neither a registry database path nor under "
-            f"BACKUP_RESTORE_ROOT (currently {restore_root or 'unset'})"
-        )
+        # A restore writes a single database FILE. Reported by cubic, and
+        # measured before being accepted: with an existing directory as the
+        # target, `restore` renamed that directory to `<name>.pre-restore.db` and
+        # moved a database file into its place -- and returned success. A
+        # directory full of files became a database, and the caller was told the
+        # restore worked.
+        #
+        # Containment was never the failing half: the directory was inside the
+        # permitted root. What was missing is that being allowed to write
+        # somewhere is not the same as that place being a sensible destination.
+        if permitted.is_dir():
+            raise PathTraversalError(
+                f"restore target is an existing directory, not a database file: {target_path!r}"
+            )
+
+        return permitted
 
     def list_backups(self, worker: Optional[str] = None) -> List[dict]:
         """Return sorted list of backup metadata dicts (newest first)."""

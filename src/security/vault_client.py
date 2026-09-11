@@ -56,7 +56,11 @@ def _without_userinfo(url: str) -> str:
     host = parts.hostname or ""
     if ":" in host:  # IPv6 literal — urlsplit strips the brackets
         host = f"[{host}]"
-    if parts.port:
+    # `is not None`, not truthiness: port 0 is falsy, and silently dropping it
+    # would redirect the client to the scheme default instead of the port the
+    # operator wrote. Reported by cubic; measured — `urlsplit(...).port` is `0`
+    # there and `bool(0)` is False.
+    if parts.port is not None:
         host = f"{host}:{parts.port}"
     logger.warning(
         "Credentials embedded in the vault URL were discarded; "

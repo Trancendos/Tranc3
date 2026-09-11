@@ -45,6 +45,19 @@ class TestUserinfoIsDiscarded:
     def test_shapes(self, given: str, expected: str) -> None:
         assert _without_userinfo(given) == expected
 
+    def test_explicit_port_zero_is_preserved(self) -> None:
+        """cubic: `if parts.port:` is False for port 0.
+
+        Truthiness silently dropped an explicitly written port and redirected the
+        client to the scheme default. `urlsplit("https://u:p@host:0/").port` is
+        `0`, and `bool(0)` is False.
+        """
+        assert _without_userinfo("https://u:p@host:0/") == "https://host:0/"
+
+    def test_absent_port_stays_absent(self) -> None:
+        """The counterpart, so the fix cannot have become "always append"."""
+        assert _without_userinfo("https://u:p@host/") == "https://host/"
+
     def test_ipv6_brackets_survive(self) -> None:
         """``urlsplit().hostname`` strips them; a bare ``fe80::1`` is not a host."""
         assert "[fe80::1]" in _without_userinfo("https://u:p@[fe80::1]:8038/v1")

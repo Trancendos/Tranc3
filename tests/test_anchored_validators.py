@@ -161,6 +161,69 @@ class TestTheGuard:
         )
         assert guard._anchored_names_ast(ast.parse(source)) == {"_REQ"}
 
+    def test_multiline_is_matched_as_a_symbol_not_a_substring(self):
+        """cubic, round 8. `"MULTILINE" in ast.unparse(flag)` is a substring test.
+
+        Any flag expression that merely contained the word suppressed a real
+        offence. Measured: with a flag named `NOT_MULTILINE` the old test
+        returned True and skipped the validator entirely.
+        """
+        guard = _load_guard()
+        source = 'NOT_MULTILINE = 0\n_S = re.compile(r"^[a-z]+$", NOT_MULTILINE)\nx = _S.match(v)\n'
+        tree = ast.parse(source)
+
+        # The old behaviour, reproduced so the regression is visible.
+        flag = tree.body[1].value.args[1]
+        assert "MULTILINE" in ast.unparse(flag), "the substring test did fire here"
+
+        assert guard._anchored_names_ast(tree) == {"_S"}, "symbol-aware check must still see it"
+        assert not guard._names_multiline(flag)
+
+    def test_real_multiline_is_still_exempt(self):
+        """The counterpart, so the fix is not "never exempt anything"."""
+        guard = _load_guard()
+        for spelling in ("re.MULTILINE", "MULTILINE", "re.MULTILINE | re.VERBOSE"):
+            source = f'_S = re.compile(r"^[a-z]+$", {spelling})\nx = _S.match(v)\n'
+            assert guard._anchored_names_ast(ast.parse(source)) == set(), spelling
+
+    def test_exemption_must_be_a_comment_not_a_string(self):
+        """cubic, round 8. The marker inside a string argument exempted the call.
+
+        Scanning every source line in the call's span treats data as an
+        exemption, so any call could exempt itself by mentioning the marker.
+        Tokenising finds real COMMENT tokens instead.
+        """
+        guard = _load_guard()
+        source = (
+            '_S = re.compile(r"^[a-z]+$")\n'
+            "x = _S.match(\n"
+            '    "# anchored-ok: not really a comment",\n'
+            ")\n"
+        )
+        tree = ast.parse(source)
+        start, end, _ = guard._match_calls_ast(tree, guard._anchored_names_ast(tree))[0]
+
+        # The old behaviour, reproduced.
+        span = source.splitlines()[start - 1 : end]
+        assert any(guard._EXEMPT_COMMENT.search(line) for line in span), "line scan did fire"
+
+        assert not (guard._comment_lines(source) & set(range(start, end + 1)))
+
+    def test_a_genuine_comment_still_exempts(self):
+        """Otherwise the seven documented line parsers would all fail CI."""
+        guard = _load_guard()
+        source = '_S = re.compile(r"^[a-z]+$")\nx = _S.match(v)  # anchored-ok: line parser\n'
+        assert guard._comment_lines(source) == {2}
+
+    def test_an_untokenisable_file_fails_closed(self):
+        """No exemptions rather than blanket exemption.
+
+        A file the tokeniser chokes on must not become a file where every call
+        is exempt — that would turn a parse failure into a silent hole.
+        """
+        guard = _load_guard()
+        assert guard._comment_lines("def broken(:\n    # anchored-ok: x\n") == set()
+
     def test_every_form_the_regex_missed(self):
         """cubic's P2, measured form by form rather than accepted wholesale.
 

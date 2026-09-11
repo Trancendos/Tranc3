@@ -1016,9 +1016,40 @@ docstring is now true. A symlink chain is bounded so a cycle raises instead of
 hanging. Contained links still resolve normally, which is tested, because a
 guard that refused every symlink under the root would break legitimate layouts.
 
-Calibration: 16 tests, 2 of which fail against the one-shot `resolve()` —
+Calibration: 18 tests, 2 of which fail against the one-shot `resolve()` —
 `test_the_target_is_never_stat_ed`, which spies on `os.stat` and asserts no call
 outside the roots, and the symlink-cycle case.
+
+**Third pass — the walk had to restart, and cubic found that too.** The second
+pass expanded a link, checked the expanded *string* for containment, and carried
+on with the next component. It never walked the target's own components, so an
+intermediate symlink inside the target escaped unexamined. Reproduced before
+being accepted:
+
+```
+<root>/mid -> /etc
+<root>/hop -> <root>/mid/passwd
+
+_resolve_output_base("<root>/hop")  ->  ACCEPTED
+that path really is                ->  /etc/passwd
+```
+
+`<root>/mid/passwd` is lexically under the root, so the check passed on a string
+whose second component was a door out. Expanding a link now re-seeds the pending
+component list with the target's parts ahead of whatever remains, so every
+component of every target is walked in its own right: `mid` is examined,
+`readlink` returns `/etc`, and the walk refuses. A contained intermediate link
+still resolves, which is tested — a restart that refused every multi-hop path
+would pass the attack test while breaking ordinary layouts.
+
+**A known limit, stated rather than implied.** This resolves by name, so a local
+attacker who can already write inside an allowed root could swap a component
+between the walk and the later `safe_join`/`mkdir` — a TOCTOU race cubic also
+raised. Closing it means holding directory descriptors with `O_NOFOLLOW` through
+every scaffold write, which is a redesign of how this module *writes* rather than
+how it *validates*. The precondition is write access inside `Path.cwd()`, `/tmp`
+or `$HOME`; an attacker with that already has better options against this process
+than racing a scaffold generator. Not fixed, and not silently left out.
 
 **Next review.** Expect both alerts to persist. `_resolve_output_base` still ends
 in a validated `Path` returned to a caller, and CodeQL does not model a raising
@@ -1136,13 +1167,17 @@ raises, and it does not — the leading separator is dropped and it resolves to
 file server does. Refusal and containment are both acceptable; containment is
 what the requirement names, so that is what it now asserts.
 
-**Calibration.** 21 tests in `tests/test_gateway_dashboard_containment.py`.
-Against the restored vulnerable route, **17 fail**, including all three
-percent-encoded route-level probes. The four that pass in both are the plain
-filename, nested filename and containment cases — they pin behaviour the
-vulnerable code also had, which is what they are for. The route-level probe with
-plain `../` passes against both, for the same reason it returned 404 in the PoC
-table; keeping it in the suite records that asymmetry rather than hiding it.
+**Calibration.** 25 tests in `tests/test_gateway_service.py`, classes
+`TestDashboard*`. Against the restored vulnerable route, **15 fail**. The 10 that
+pass in both are the plain filename, nested filename and containment cases —
+they pin behaviour the vulnerable code also had, which is what they are for —
+plus the route-level probes, which the middleware refuses either way.
+
+These counts were wrong in this entry until cubic caught it: the paragraph still
+said "21 tests in `tests/test_gateway_dashboard_containment.py`", a file this
+same entry records having deleted two paragraphs further down. One half of the
+entry was corrected and the other left standing, so it cited a file that does not
+exist. Re-measured against the suite the tests actually live in.
 
 **Where the test lives — and the second correction.** These tests now sit
 inside `tests/test_gateway_service.py`. They first went into a file of their
@@ -1325,6 +1360,25 @@ still needs no env var, and a backup inside the root still restores. An
 over-tight name check would be a self-inflicted outage dressed as a security fix,
 so that half is tested as deliberately as the refusals.
 
+**Three more from cubic, two of which held.**
+
+* **An existing directory was a permitted restore target, and that was
+  destructive.** Measured against the pre-fix engine: a directory containing a
+  file was renamed to `<name>.pre-restore.db`, a database file was moved into its
+  place, and `restore` returned **success**. Containment was never the failing
+  half — the directory was inside the permitted root. Being *allowed* to write
+  somewhere is not the same as that place being a sensible destination, and the
+  policy only encoded the first. Now refused.
+* **A relative `BACKUP_ROOT` broke every named-backup restore.** `backup()`
+  returns a path that already contains the root, so treating a relative
+  `backup_path` as root-relative built `<root>/<root>/<worker>/…`. The
+  containment verdict was never wrong; the path was. Relative paths now resolve
+  against the working directory before the comparison.
+* **`.` as a target did not hold.** It was already refused, by a mechanism the
+  reviewer did not have: `Path(".").parts` is `()`, so the empty-parts guard
+  rejects it first. Kept as a test, because "already correct, for a different
+  reason" is a result worth recording rather than quietly folding into the fix.
+
 **Next review.** The reported alert should clear: `safe_join` is a declared
 barrier in the model pack. The unreported write has no alert to clear, so the
 tests are its only evidence — which is the durable argument for the guard living
@@ -1399,10 +1453,16 @@ dangerous. The warning names the variable and never the value, and it does not
 fire when there is nothing to strip, because a guard that warned on every
 start-up would be trained away.
 
-**Calibration.** 16 tests in `tests/test_vault_client_log_hygiene.py`; 2 fail
+**Calibration.** 18 tests in `tests/test_vault_client_log_hygiene.py`; 3 fail
 against the pre-fix constructor. Five URL shapes are covered including an IPv6
 literal, where `urlsplit().hostname` strips the brackets and a bare `fe80::1` is
 not a host.
+
+cubic caught one more: `if parts.port:` is falsy for port `0`, so an explicitly
+written port was silently dropped and the client redirected to the scheme
+default. `urlsplit("https://u:p@host:0/").port` is `0`, and `bool(0)` is False.
+Now `is not None`, with a test for the absent-port case too, so the fix cannot
+have become "always append".
 
 **Next review.** All four alerts are expected to **persist**: the code still
 logs variables named `secret_name` and `secret_id`, which is what the rule

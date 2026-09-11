@@ -58,9 +58,11 @@ from __future__ import annotations
 
 import argparse
 import ast
+import io
 import re
 import subprocess
 import sys
+import tokenize
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -118,6 +120,41 @@ def _tracked_python(root: Path = ROOT) -> list[str]:
     return sorted({ln.strip() for ln in proc.stdout.splitlines() if ln.strip()})
 
 
+def _names_multiline(flag: ast.AST) -> bool:
+    """True when *flag* references `re.MULTILINE` (or a bare `MULTILINE`).
+
+    Walks for the symbol rather than searching the unparsed source, so a name
+    that merely contains the word does not count as enabling the flag.
+    """
+    for node in ast.walk(flag):
+        if isinstance(node, ast.Name) and node.id == "MULTILINE":
+            return True
+        if isinstance(node, ast.Attribute) and node.attr == "MULTILINE":
+            return True
+    return False
+
+
+def _comment_lines(source: str) -> set[int]:
+    """Line numbers carrying a real `# anchored-ok:` COMMENT token.
+
+    Tokenising rather than scanning lines: `# anchored-ok:` inside a string
+    argument is data, and treating data as an exemption would let any call
+    exempt itself by mentioning the marker. Reported by cubic.
+
+    A file that will not tokenise returns no exemptions, which fails closed —
+    the offence is reported rather than waved through.
+    """
+    exempt: set[int] = set()
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for token in tokens:
+            if token.type == tokenize.COMMENT and _EXEMPT_COMMENT.search(token.string):
+                exempt.add(token.start[0])
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return set()
+    return exempt
+
+
 def _anchored_names_ast(tree: ast.AST) -> set[str]:
     """Names bound to a non-MULTILINE `^...$` compile, from the AST.
 
@@ -147,8 +184,12 @@ def _anchored_names_ast(tree: ast.AST) -> set[str]:
             continue
         # `re.MULTILINE` is the line-parser case: `$` before a newline is the
         # whole point there, and `.match()` is correct.
+        # Look for the MULTILINE *symbol*, not the text. `"MULTILINE" in
+        # ast.unparse(flag)` is a substring test, so any flag expression that
+        # merely contained the word — a variable named `NOT_MULTILINE`, a string
+        # argument — silently suppressed a real offence. Reported by cubic.
         flags = value.args[1:] + [kw.value for kw in value.keywords]
-        if any("MULTILINE" in ast.unparse(f) for f in flags):
+        if any(_names_multiline(flag) for flag in flags):
             continue
         for target in targets:
             if isinstance(target, ast.Name):
@@ -222,11 +263,13 @@ def scan(root: Path = ROOT) -> tuple[list[Offence], int, list[str]]:
             continue
 
         lines = source.splitlines()
+        exempt_lines = _comment_lines(source)
         for start, end, name in calls:
             # An exemption anywhere in the call's own line range counts, so a
-            # multiline call can carry the comment on whichever line reads best.
-            span = lines[start - 1 : end]
-            if any(_EXEMPT_COMMENT.search(ln) for ln in span):
+            # multiline call can carry the comment on whichever line reads best —
+            # but it must be a real comment token, not the marker appearing
+            # inside a string the call happens to pass.
+            if exempt_lines & set(range(start, end + 1)):
                 continue
             text = lines[start - 1].strip()[:110] if start <= len(lines) else ""
             offences.append(Offence(rel, start, name, text))
