@@ -1,0 +1,58 @@
+{
+  "commit": "9598c94b3982111b28922cfa7fbd42633590d9c1",
+  "coverage": 0.4286,
+  "note": "What each sensor last PROVED about its own sight, and when. Written by `python scripts/vaccinate.py --record`. `outcome` is the probe verdict, not a scan result: `ok` means the sensor flagged a defect deliberately planted for it. `last_proven` is the date it last managed that, and it is NOT updated when a sensor fails -- so a blind sensor's age is readable. `probed: false` is a coverage gap, not a failure: the sensor has never been asked to demonstrate anything. Driving that count to zero is the point of the exercise; see docs/governance/IMMUNE-SYSTEM.md.",
+  "recorded_at": "2026-09-11T01:40:21+00:00",
+  "sensors": {
+    "bandit": {
+      "detail": "probe flagged 2 finding(s)",
+      "last_proven": "2026-09-11",
+      "outcome": "ok",
+      "probed": true,
+      "required": true
+    },
+    "complexity": {
+      "detail": "probe flagged 1 finding(s)",
+      "last_proven": "2026-09-11",
+      "outcome": "ok",
+      "probed": true,
+      "required": false
+    },
+    "gitleaks": {
+      "detail": "no probe declared \u2014 this sensor has never demonstrated sight",
+      "last_proven": "",
+      "outcome": "unprobed",
+      "probed": false,
+      "required": false
+    },
+    "pip-audit": {
+      "detail": "no probe declared \u2014 this sensor has never demonstrated sight",
+      "last_proven": "",
+      "outcome": "unprobed",
+      "probed": false,
+      "required": false
+    },
+    "ruff": {
+      "detail": "probe flagged 1 finding(s)",
+      "last_proven": "2026-09-11",
+      "outcome": "ok",
+      "probed": true,
+      "required": true
+    },
+    "semgrep": {
+      "detail": "no probe declared \u2014 this sensor has never demonstrated sight",
+      "last_proven": "",
+      "outcome": "unprobed",
+      "probed": false,
+      "required": false
+    },
+    "trivy-fs": {
+      "detail": "no probe declared \u2014 this sensor has never demonstrated sight",
+      "last_proven": "",
+      "outcome": "unprobed",
+      "probed": false,
+      "required": false
+    }
+  },
+  "sight": 1.0
+}

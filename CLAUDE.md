@@ -274,7 +274,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 | **Event Bus** | `src/event_bus/` | infinity-adminOS @trancendos/event-bus | Pattern-based routing, subscriptions, SQLite persistence |
 | **AI Gateway** | `src/ai_gateway/` | infinity-adminOS @trancendos/ai-gateway | Priority failover (Ollama→OpenRouter→Offline), token budgets |
 | **Zero Trust IAM** | `src/auth/zero_trust.py` | infinity-adminOS @trancendos/iam | Device posture, MFA, geographic policies, risk scoring |
-| **Immune System** | `src/immune/` | built here, 2026-09-10 | Sensors that report whether they could SEE, SARIF normalisation, adjudication memory with expiry, and a grade that caps itself when a required sensor was blind — see `docs/governance/IMMUNE-SYSTEM.md` |
+| **Immune System** | `src/immune/` | built here, 2026-09-10 | Sensors that report whether they could SEE, SARIF normalisation, adjudication memory with expiry, and a grade that caps itself when a required sensor was blind. **Vaccination** (`src/immune/vaccination.py`, `scripts/vaccinate.py`) runs the probes daily from `supply-chain-watch.yml` rather than only on pushes, because a sensor goes blind when the toolchain changes, not when someone commits — it tracks *sight* (required sensors proving they can see), *coverage* (how much of the system has ever been asked), and the age of any blindness. See `docs/governance/IMMUNE-SYSTEM.md` |
 
 ### Named subsystems (in this repo)
 

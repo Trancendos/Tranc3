@@ -458,6 +458,95 @@ Not built, and named here so the gap is a decision rather than an omission:
   The probe mechanism is exactly this, per-sensor and on demand; making it a
   scheduled estate-wide measurement is a small step from here.
 
+## Vaccination: proving sight on a clock
+
+Probes run on every pull request. That answers a narrower question than it
+looks like it does — it says *this sensor could see at the moment somebody
+pushed*. It cannot say when a sensor **stopped** being able to see, because
+going blind is not an event in the repository:
+
+- a scanner release changes a rule's default, or drops it;
+- a pinned tool falls out of the runner image;
+- a config edit widens an `ignore` until `--select` no longer wins;
+- a wrapper's output format shifts and the parser silently yields nothing.
+
+None of those produce a commit. A repository with no pushes for three weeks is
+carrying a three-week-old claim about its own immunity, and nothing anywhere
+says so.
+
+`.github/workflows/supply-chain-watch.yml` already makes exactly this argument
+for dependency abandonment and CVE disclosure — *events in the world, not
+events in the repository* — so vaccination is a **job in that same daily
+schedule**, not a new workflow. The standing policy is to avoid adding GitHub
+Actions; this adds none.
+
+```bash
+python scripts/vaccinate.py               # probe everything, fail on blindness
+python scripts/vaccinate.py --record      # ...and write the result as the new record
+python scripts/vaccinate.py --max-age 3   # also fail if the record has gone stale
+```
+
+### The three numbers, and why they are three
+
+| Number | Question it answers |
+|---|---|
+| **sight** | Did every *required* sensor prove it can see, today? |
+| **coverage** | How much of the immune system has *ever* been asked to prove anything? |
+| **days since proven** | How long has a blind sensor been blind? |
+
+They are separate on purpose.
+
+**Sight counts required sensors only.** Otherwise adding optional sensors
+dilutes a real blindness: nine healthy optional sensors would make one blind
+required sensor read as 90% healthy. A test asserts exactly that case.
+
+**Coverage is the uncomfortable one, and it is meant to be.** At the time of
+writing: **sight 100%, coverage 43%.** Four of seven sensors — `pip-audit`,
+`semgrep`, `gitleaks`, `trivy-fs` — have never been asked to demonstrate
+anything. That is not immunity the estate has; it is coverage it does not have
+yet, and the number is printed on every run so it stays visible instead of
+becoming background. Driving it to zero is the work.
+
+**A failure never stamps today's date.** Only a pass moves `last_proven`, so
+the gap between it and today *is* the age of the fault. If a failed probe
+recorded the attempt, a sensor blind for a month would report as freshly
+checked — the report would confirm that the run happened, which is not the
+question anyone is asking.
+
+### Three states, not two
+
+`unprobed` and `blind` must never collapse into one number. *"We checked and it
+broke"* is an incident; *"we have never checked"* is work not yet done. Merging
+them makes the headline comfortable and useless. `absent` is a third: a tool
+that is not installed is honestly different from one installed and unable to
+see, which is why probes do not gate pull requests — a runner missing `bandit`
+would redden a change that touched nothing, and *gates must measure change, not
+state*.
+
+### What fails the run
+
+1. A **required** sensor cannot flag its own planted defect.
+2. Any sensor — **optional included** — that proved sight before and cannot
+   now. Its importance is not what makes this a failure; the fact that
+   something changed underneath it is.
+3. `--max-age` exceeded: no sensor reports badly, but the record is stale.
+   This is the only check that can catch **the schedule itself having stopped**
+   — the control that watches the watcher, which is the failure the whole
+   module was built around.
+
+Calibrated the same way as everything else here: breaking the required `ruff`
+probe drops sight to 50% and exits 1 naming the sensor; breaking the
+*optional* `complexity` probe exits 1 as a regression, which is the case that
+would otherwise degrade in silence.
+
+### What is still missing
+
+**Antibodies** — auto-fix pull requests scoped to one defect class, proposed
+and never merged, with security-critical paths always requiring human review.
+Deliberately after vaccination, not before: an antibody acting on a blind
+sensor's silence makes confident wrong changes, and that is autoimmunity, which
+is the failure mode with real teeth.
+
 ## Running it
 
 ```bash
@@ -471,6 +560,7 @@ python scripts/immune_scan.py --write-baseline     # redefine "self", deliberate
 python scripts/check_nosec_specificity.py          # suppressions name what they silence
 python scripts/check_precommit_documented.py       # the docs match the gate
 python scripts/triage_change.py                    # who owns this change
+python scripts/vaccinate.py                        # can the sensors still see?
 ```
 
 `--write-baseline` refuses to run when a required sensor came back blind or

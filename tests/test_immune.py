@@ -46,6 +46,13 @@ from src.immune.sarif import (
     normalise_level,
 )
 from src.immune.sensors import Outcome, Sensor, parse_output, probe_sensor, run_sensor
+from src.immune.vaccination import (
+    Immunity,
+    load_record,
+    stale_sensors,
+    vaccinate,
+    write_record,
+)
 
 # ── circulation: SARIF normalisation ─────────────────────────────────
 
@@ -759,3 +766,149 @@ def test_every_required_sensor_declares_a_probe_or_says_why_not():
         pytest.fail(f"{sensor.name} is required but declares no probe")
     # Optional sensors without probes must at least be explained in the file.
     assert "No probe:" in raw or "probe:" in raw
+
+
+# ── vaccination: proving sight on a clock, not on a push ────────────────────
+
+
+def _seeing(**overrides):
+    """A synthetic sensor whose probe genuinely passes, using python3 only.
+
+    The scan and the probe both emit one ruff-shaped F841. No real scanner is
+    installed in the Pytest job -- a lesson this suite learned the hard way
+    when its first version shelled out to `ruff` and reddened CI -- so
+    everything here is synthetic and deterministic.
+    """
+    finding = (
+        '[{"code":"F841","message":"m","filename":"probe.py","location":{"row":2,"column":5}}]'
+    )
+    base = dict(
+        name="seer",
+        kind="innate",
+        senses="a planted defect",
+        command=["python3", "-c", f"print({finding!r})"],
+        fmt="ruff-json",
+        binary="python3",
+        required=True,
+        probe={
+            "file": "probe.py",
+            "content": "def f():\n    x = 1\n    return 2\n",
+            "expect_rule": "F841",
+            "command": ["python3", "-c", f"print({finding!r})"],
+        },
+    )
+    base.update(overrides)
+    return Sensor(**base)
+
+
+def test_vaccination_records_sight_separately_from_cleanliness():
+    """The whole point: a scan says what is wrong, this says whether we can tell."""
+    report = vaccinate([_seeing()], today=date(2026, 1, 10))
+    assert report.sight == 1.0
+    assert report.records[0].proven
+    assert report.records[0].last_proven == "2026-01-10"
+    assert not report.failing()
+
+
+def test_a_blind_sensor_does_not_advance_its_last_proven_date():
+    """REGRESSION: the age of the blindness has to stay readable.
+
+    If a failed probe stamped today's date, a sensor blind for a month would
+    report as freshly checked -- the report would say the run happened, which
+    is not the question anyone is asking. Only a PASS moves the date, so the
+    gap between `last_proven` and today IS the age of the fault.
+    """
+    was = {
+        "seer": Immunity(
+            sensor="seer", probed=True, outcome="ok", required=True, last_proven="2026-01-01"
+        )
+    }
+    blind = _seeing(probe={**_seeing().probe, "expect_rule": "ZZ999"})
+    report = vaccinate([blind], previous=was, today=date(2026, 1, 31))
+
+    record = report.records[0]
+    assert not record.proven
+    assert record.last_proven == "2026-01-01", "a failure must not stamp today"
+    assert record.days_since_proven(date(2026, 1, 31)) == 30
+    assert report.sight == 0.0
+
+
+def test_a_sensor_that_used_to_see_and_now_cannot_is_a_regression_even_if_optional():
+    """An OPTIONAL sensor going blind still fails the run.
+
+    Its blindness alone cannot move the required-sight SLO, so without this it
+    would degrade in silence. What makes it a failure is not its importance but
+    the fact that something changed underneath it: it demonstrated sight once,
+    and the same probe no longer passes.
+    """
+    was = {
+        "seer": Immunity(
+            sensor="seer", probed=True, outcome="ok", required=False, last_proven="2026-01-01"
+        )
+    }
+    blind = _seeing(required=False, probe={**_seeing().probe, "expect_rule": "ZZ999"})
+    report = vaccinate([blind], previous=was, today=date(2026, 1, 2))
+
+    assert report.regressions == ["seer"]
+    assert any("proved sight before" in reason for reason in report.failing())
+
+
+def test_never_probed_is_a_coverage_gap_not_a_failure():
+    """`unprobed` and `blind` must not collapse into one number.
+
+    "We checked and it broke" and "we have never checked" need different
+    answers: the first is an incident, the second is work not yet done.
+    Collapsing them would make the headline comfortable and useless.
+    """
+    report = vaccinate([_seeing(name="never", probe={}, required=False)])
+    record = report.records[0]
+
+    assert not record.probed and record.outcome == "unprobed"
+    assert not report.failing(), "a gap the estate has written down is not a failure"
+    assert report.coverage == 0.0
+    assert record.days_since_proven() is None
+
+
+def test_sight_counts_required_sensors_only_so_optional_ones_cannot_dilute_it():
+    """Adding optional sensors must not make a real blindness look smaller."""
+    blind_required = _seeing(
+        name="req", required=True, probe={**_seeing().probe, "expect_rule": "ZZ999"}
+    )
+    report = vaccinate(
+        [blind_required] + [_seeing(name=f"opt{i}", required=False) for i in range(9)]
+    )
+    assert report.sight == 0.0, "nine healthy optional sensors cannot offset one blind required"
+    assert report.coverage == 1.0
+
+
+def test_stale_record_is_caught_even_when_nothing_is_blind():
+    """The control that watches the watcher.
+
+    A sensor can be `ok` and its record still be a month old, because the
+    schedule that runs the probe stopped. That is the failure this module was
+    built around, so it has to be detectable without any sensor reporting badly.
+    """
+    fresh = Immunity(sensor="a", probed=True, outcome="ok", last_proven="2026-01-30")
+    old = Immunity(sensor="b", probed=True, outcome="ok", last_proven="2026-01-01")
+    stale = stale_sensors([fresh, old], max_age_days=7, today=date(2026, 1, 31))
+    assert [r.sensor for r in stale] == ["b"]
+
+
+def test_the_record_round_trips_through_disk(tmp_path):
+    report = vaccinate([_seeing(), _seeing(name="quiet", probe={})], today=date(2026, 2, 2))
+    path = tmp_path / "immunity.json"
+    write_record(report, path=path, commit="deadbeef")
+
+    back = load_record(path)
+    assert back["seer"].proven and back["seer"].last_proven == "2026-02-02"
+    assert not back["quiet"].probed
+    assert back["seer"].required is True
+
+
+def test_a_missing_record_is_an_empty_one_not_a_crash(tmp_path):
+    """First run of a new estate has nothing to compare against.
+
+    Crashing there would make the control impossible to adopt, which is how
+    controls end up not adopted.
+    """
+    assert load_record(tmp_path / "nope.json") == {}
