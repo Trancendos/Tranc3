@@ -100,8 +100,23 @@ skips = [
   #   ML algorithm weights, genetic optimizer crossover/mutation, circuit-breaker
   #   probabilistic gating, simulation noise. None used for key/token generation.
   "B311",
-  # B310: urllib URL opening — all URLs are internal service-mesh endpoints resolved
-  #   from validated config; no user-supplied URL input reaches urllib.urlopen.
+  # B310: urllib URL opening.
+  #
+  #   The justification here read "all URLs are internal service-mesh endpoints
+  #   resolved from validated config" until 2026-09-11. That was false for at
+  #   least one call site, and CodeFactor was the only thing saying so:
+  #   `scripts/check_trivyignore_governance.py` queries the PUBLIC OSV API at
+  #   `https://api.osv.dev/`, which is neither internal nor service-mesh. The
+  #   code there is safe — a constant prefix, `SAFE_ID.fullmatch` on the only
+  #   variable segment, and a re-check that the assembled URL still starts with
+  #   the prefix — but a suppression that is right by accident is a suppression
+  #   nobody can check.
+  #
+  #   The accurate statement: every urlopen in this estate targets either an
+  #   internal service-mesh endpoint from validated config, or a hardcoded
+  #   public HTTPS API prefix with the variable part constrained by a fullmatch
+  #   allowlist. Neither shape lets a caller choose the scheme. A new call site
+  #   that is neither is not covered by this skip and needs its own reason.
   "B310",
   # B108: probable insecure temp file usage — all workers run in isolated Docker
   #   containers with no shared /tmp between services; attack surface is contained.
