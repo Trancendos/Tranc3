@@ -423,9 +423,8 @@ Three `critical` alerts (9.8 `py/command-line-injection` in
 `workers/notifications/worker.py` and `workers/vault-service/worker.py`) and
 thirteen further `high` alerts are present in the same SARIF, outside the files
 this pull request touched. They were named here so that the next reader starts
-from a list rather than from a count. Two of the three are now adjudicated
-below, as **SEC-010** and **SEC-011**; the 9.8 `py/command-line-injection` in
-`workers/tateking/worker.py` and the thirteen `high` remain open.
+from a list rather than from a count. **All three are now adjudicated below**,
+as **SEC-010**, **SEC-011** and **SEC-012**. The thirteen `high` remain open.
 
 
 ---
@@ -509,8 +508,8 @@ nine failed**; all nine pass against the fixed one, alongside the file's other
 request leaving the process, and no OpenBao is needed to reach that refusal.
 
 **Next review.** Closes when a CodeQL run reports zero `py/partial-ssrf`
-alerts in this file. The second `py/partial-ssrf` is **SEC-011** below; the 9.8
-`py/command-line-injection` in `workers/tateking/worker.py` is still open.
+alerts in this file. The second `py/partial-ssrf` is **SEC-011** below and the
+9.8 `py/command-line-injection` is **SEC-012**.
 
 
 ---
@@ -595,8 +594,101 @@ guard the fix left alone, not a regression test for the fix. Saying which is
 which is the difference between a calibrated suite and a hopeful one.
 
 **Next review.** Closes when a CodeQL run reports zero `py/partial-ssrf`
-alerts in this file. The 9.8 `py/command-line-injection` in
-`workers/tateking/worker.py` is the last of the three criticals still open.
+alerts in this file. The last of the three criticals is **SEC-012** below.
+
+
+---
+
+### SEC-012 — the input file was the injection (`py/command-line-injection`, 9.8)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | `py/command-line-injection` (CodeQL, security-severity 9.8) |
+| **Scanner** | CodeQL Advanced (`.github/workflows/codeql.yml`, language `python`) |
+| **Location** | `workers/tateking/worker.py:433` — `run_ffmpeg_job` |
+| **Recorded** | 2026-09-11 |
+
+Last of the three, and the **highest-scored finding in the estate's SARIF**.
+
+**Why `shell=False` was not the answer.** The call is
+`subprocess.run(cmd, ..., shell=False)` with `cmd` built as a list, and the
+params that look dangerous are already sanitised: `_safe_ts` pins timestamps to
+`^[\d:.]+$`, `_safe_int` clamps CRF and dimensions. Someone had thought about
+shell metacharacters and about the numeric params, and had got both right.
+
+There is no shell to inject into. What is injected is an **argument**, and the
+argument is the input file.
+
+**The path.** `ClipIn.file_path` is a free-form `Optional[str]` on a JSON body:
+
+```
+POST /clips  {"title": "x", "file_path": "/etc/passwd"}   ->  201 Created
+POST /jobs   {"clip_id": <that>, "operation": "extract_audio"}
+POST /jobs/<id>/run                                       ->  ffmpeg -i /etc/passwd
+```
+
+That 201 is measured, not inferred — it is the first assertion in
+`tests/test_tateking_media_containment.py::TestClipBoundary`, and it is what
+the unfixed worker answers.
+
+The value went to SQLite unexamined and came back out as `ffmpeg -i
+<input_path>`. The only check between the two was:
+
+```python
+if not input_path or not Path(input_path).exists():
+```
+
+**`exists()` is a check that the attacker's chosen file is *there*.** It is the
+opposite of a containment check, and it reads exactly like one. Any file on the
+host ffmpeg can decode could be transcoded into the served media directory and
+fetched; any it cannot gets up to 1000 bytes of ffmpeg's stderr returned in the
+500 body.
+
+**Remediation.** `_contained_media()` resolves the value under `MEDIA_DIR` via
+`safe_join` from the shared core — the **same helper SEC-009 used for
+storage-service**, deliberately, because a second copy of a path validator is a
+second thing to keep right. `workers/tateking/Dockerfile` already mounts the
+shared core at `/app/Dimensional/` through the SFSC named build context, so
+nothing new had to be vendored.
+
+Applied in two places, the pattern SEC-010 also used:
+
+1. `POST /clips` — a 400 the caller can read, so they learn why now rather than
+   when a job they queued fails later.
+2. `run_ffmpeg_job` — re-derived from the row rather than trusted. **The
+   database is not a trust boundary**: rows predate the boundary check, and a
+   future writer to `clips` would not inherit it.
+
+Two accepted shapes, and both are deliberate. An absolute path *already under*
+the media root is accepted and rewritten as relative before the join, because
+that is a shape existing rows legitimately have — refusing it would have made
+the guard a breaking change dressed as a security fix. And `file_path` stays
+optional, because a clip may be URL-only.
+
+One property comes free: a resolved path is always absolute, so no value
+reaching argv can begin with `-` and be read by ffmpeg as an option.
+
+**Calibration.** 16 tests in `tests/test_tateking_media_containment.py`, and
+the two halves calibrate differently, which the file says out loud:
+
+- The 12 unit tests fail against the unfixed worker because `_contained_media`
+  does not exist there. True, and a **weak** proof — recorded as weak.
+- The 4 boundary tests go through the HTTP API. Two fail non-trivially: the
+  unfixed worker answers **201** to `/etc/passwd` and to
+  `../../../../etc/passwd`. Two pass against both worker versions on purpose —
+  a clip inside the root, and a clip with no `file_path` — because containment
+  is not a ban on clips, and a guard that broke either would have passed every
+  attack test while breaking the service.
+
+The symlink case is covered by `safe_join` resolving before comparing, and is
+tested anyway: *"we use safe_join"* is a claim, and the test is the measurement
+behind it.
+
+**Next review.** Closes when a CodeQL run reports zero
+`py/command-line-injection` alerts in this file. With this entry all three
+`critical` alerts from SEC-009's SARIF are adjudicated; the thirteen `high`
+are not.
 
 
 ---

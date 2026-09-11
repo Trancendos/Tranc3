@@ -23,6 +23,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from Dimensional.path_validation import PathTraversalError, safe_join
 from Dimensional.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8066")
@@ -31,6 +32,61 @@ DB_PATH = Path(__file__).parent / "data" / "tateking.db"
 MEDIA_DIR = Path(__file__).parent / "data" / "media"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _contained_media(raw: str) -> Path:
+    r"""Resolve a clip's `file_path` to somewhere inside this worker's media root.
+
+    SEC-012. `py/command-line-injection`, CodeQL security-severity 9.8 -- the
+    highest score in the estate's SARIF -- at the `subprocess.run(cmd)` in
+    `run_ffmpeg_job`. `shell=False` and a list argv, so there is no shell to
+    inject into; what is injected is an *argument*, and it is the input file:
+
+        POST /clips  {"title": "x", "file_path": "/etc/passwd"}
+        POST /jobs   {"clip_id": <that>, "operation": "extract_audio"}
+        POST /jobs/<id>/run
+
+    `ClipIn.file_path` is a free-form `Optional[str]` on a JSON body. It went to
+    SQLite unexamined and came back out as `ffmpeg -i <input_path>`. The only
+    check between the two was `Path(input_path).exists()`, which is a check that
+    the attacker's chosen file is *there* -- the opposite of a containment
+    check. Any file on the host that ffmpeg can decode could be transcoded into
+    the served media directory and fetched; any it cannot gets up to 1000 bytes
+    of ffmpeg's stderr returned in the 500 body.
+
+    Containment is the fix, not a denylist of bad paths, and `safe_join` from
+    the shared core is the same helper SEC-009 used for storage-service --
+    deliberately, because a second copy of a path validator is a second thing to
+    keep right. It rejects `..`, NUL, and absolute components, then confirms the
+    resolved path is under the base, which also resolves symlinks planted inside
+    the root.
+
+    Absolute paths that are ALREADY under the media root are accepted and
+    rewritten as relative before the join, because that is a shape existing rows
+    legitimately have -- refusing it would have made the guard a breaking change
+    dressed as a security fix. Everything else is refused.
+
+    A resolved path is also always absolute, which closes the other half of an
+    argument-injection worry for free: no value reaching argv can begin with `-`
+    and be read by ffmpeg as an option.
+    """
+    if not raw or not raw.strip():
+        raise ValueError("empty clip file_path")
+    root = MEDIA_DIR.resolve()
+    candidate = Path(raw)
+    if candidate.is_absolute():
+        try:
+            parts = candidate.resolve().relative_to(root).parts
+        except ValueError:
+            raise PathTraversalError(
+                f"clip file_path is outside the media root: {raw!r} is not under {root}"
+            ) from None
+    else:
+        parts = candidate.parts
+    if not parts:
+        raise PathTraversalError(f"clip file_path names the media root itself: {raw!r}")
+    return safe_join(root, *parts)
+
 
 _internal_secret_raw = os.getenv("INTERNAL_SECRET")
 if (
@@ -249,6 +305,17 @@ async def list_projects(
 @_router.post("/clips", status_code=201)
 async def add_clip(body: ClipIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
+    # SEC-012. Refuse at the boundary, loudly, so the caller learns why rather
+    # than discovering it when a job they queued fails. `run_ffmpeg_job` checks
+    # again with the same function: this is the message, that is the guarantee.
+    if body.file_path:
+        try:
+            _contained_media(body.file_path)
+        except (PathTraversalError, ValueError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"file_path must name a file inside the media root: {exc}",
+            ) from None
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
@@ -338,7 +405,26 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
 
     op = job["operation"]
     params = json.loads(job["params"])
-    input_path = clip["file_path"] if clip["file_path"] else None
+    # Re-derived here and not trusted from the row. The boundary check on
+    # `POST /clips` is the loud refusal; this is the structural one, because the
+    # database is not a trust boundary -- rows predate the boundary check, and a
+    # future writer to `clips` would not inherit it.
+    raw_path = clip["file_path"] if clip["file_path"] else None
+    input_path = None
+    if raw_path:
+        try:
+            input_path = str(_contained_media(raw_path))
+        except (PathTraversalError, ValueError) as exc:
+            logger.warning("tateking refused a clip path outside the media root: %s", exc)
+            with get_conn() as conn:
+                conn.execute(
+                    "UPDATE jobs SET status='failed', error=? WHERE id=?",
+                    ("Input file outside media root", job_id),
+                )
+                conn.commit()
+            raise HTTPException(
+                status_code=400, detail="Clip file_path is outside the media root"
+            ) from None
 
     if not input_path or not Path(input_path).exists():
         with get_conn() as conn:

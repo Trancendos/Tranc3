@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `b306c931`. Regenerate with
+Generated from repo state at `551970bf`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -281,9 +281,10 @@ that none of them import.
   - `workers/taimra/worker.py:24 Dimensional.service_auth_fastapi`
 
 ### `tateking`
-- **imports_resolve** — 2 unguarded, 0 guarded, 0 vendored
+- **imports_resolve** — 3 unguarded, 0 guarded, 0 vendored
   - `workers/tateking/main.py:33 Dimensional.service_auth_fastapi`
-  - `workers/tateking/worker.py:26 Dimensional.service_auth_fastapi`
+  - `workers/tateking/worker.py:26 Dimensional.path_validation`
+  - `workers/tateking/worker.py:27 Dimensional.service_auth_fastapi`
 
 ### `the-academy`
 - **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored

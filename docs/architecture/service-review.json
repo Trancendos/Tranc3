@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "b306c931",
+  "commit": "551970bf",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-11T02:33:05.162727+00:00",
+  "generated_at": "2026-09-11T02:37:01.912848+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -3383,10 +3383,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "2 unguarded, 0 guarded, 0 vendored",
+          "detail": "3 unguarded, 0 guarded, 0 vendored",
           "offenders": [
             "workers/tateking/main.py:33 Dimensional.service_auth_fastapi",
-            "workers/tateking/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/tateking/worker.py:26 Dimensional.path_validation",
+            "workers/tateking/worker.py:27 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
