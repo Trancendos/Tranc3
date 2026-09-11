@@ -117,50 +117,51 @@ release ships.
 
 ---
 
-### SEC-005 — mcp session-hijacking / host-validation advisories, unreachable behind semgrep's exact pin
+### SEC-005 — mcp session-hijacking / host-validation advisories (RESOLVED)
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** |
+| **Disposition** | **RESOLVED** |
 | **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950) |
 | **Scanner** | pip-audit |
-| **Component** | `mcp==1.23.3` — transitive via `semgrep`, `requirements-security.txt` |
-| **Blocked-by** | `semgrep` exact-pins `mcp==1.23.3` through 1.172.0 — patched mcp releases exist and cannot be installed |
+| **Component** | `mcp==1.29.0` — transitive via `semgrep`, `requirements-oss.txt` |
 | **Recorded** | 2026-08-21 |
+| **Resolved** | 2026-09-11 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
-| **Next review** | 2026-11-21 |
-| **Re-evaluate** | On every `semgrep` bump — see the check below |
 
-Patched releases exist (1.27.2 and 1.28.1) and **cannot be reached**: every semgrep
-release through 1.172.0 exact-pins `mcp==1.23.3`, not a range, so overriding it fails
-pip resolution rather than producing a patched install. The census therefore classifies
-these three as `blocked` rather than `fixable` — a fix exists, but not for us.
+**Historical context.** This entry previously recorded an accepted finding: semgrep
+hard-pinned `mcp==1.23.3`, forcing `mcp>=1.28.1` resolved to 2.0.0 and broke semgrep
+itself, so the three advisories — session hijacking and missing Host/Origin validation
+in mcp's SSE, WebSocket and experimental-tasks server transports — were accepted and
+pip-audit was expected to keep reporting them.
 
-The **Blocked-by** row above is what produces that classification, and it is the only
-thing that can. `scripts/vulnerability_census.py` reads blocked ids from entries
-carrying that row alone, never from register membership: an entry dispositioned
-`SUPPRESS` for want of any patch (SEC-004) must start failing the gate the moment
-upstream ships one, and would silently stop doing so if being *documented* were enough
-to earn `blocked`. All three ids are written in full for the same reason — the
-census's id pattern matches `CVE-YYYY-NNNN`, so a shorthand like "52869 / 52870"
-would register only the first.
+The justification: `semgrep` is invoked here purely as a CLI SAST scanner from
+pre-commit and CI; it never starts an mcp server, so none of those code paths execute,
+making the advisories unexploitable as used. Patched releases existed but could not be
+reached: every semgrep release through 1.172.0 exact-pinned `mcp==1.23.3`, so
+overriding it failed pip resolution rather than producing a patched install.
 
-Not exploitable as used. All three are bugs in mcp's *server* transports — session
-hijacking and missing Host/Origin validation in the SSE, WebSocket and
-experimental-tasks paths. `semgrep` is invoked here purely as a CLI SAST scanner from
-pre-commit and CI; it never starts an mcp server, so none of those code paths execute.
+The entry explicitly stated *"Revisit when semgrep relaxes its pin; until then
+pip-audit will keep reporting it, which is the correct behaviour for an accepted
+finding."* That was the documented trigger for re-evaluating this entry.
 
-**This entry exists because the analysis was in the wrong place.** The same reasoning
-already sat in a comment block at the foot of `requirements-security.txt`, where it was
-correct, current and invisible: `scripts/vulnerability_census.py` reads dispositions
-from this register and from `SECURITY.md`, and nowhere else. A risk documented somewhere
-the control cannot read is, to that control, undocumented — which is how three
-knowingly-carried findings would have reported as open. The requirements comment stays
-as installation guidance; this register entry is what makes the disposition count.
+**Resolution.** semgrep did not relax the pin — it moved it, which is better, and
+nothing here noticed. Re-measured 2026-09-11:
 
-**Re-check on every semgrep bump:** `pip download --no-deps semgrep==<version>` and grep
-its `METADATA` for `Requires-Dist: mcp`. If the pin has moved to a range, or to 1.28.1 or
-above, drop this entry and take the fix.
+```
+semgrep 1.173.0 / 1.175.0 / 1.177.0 -> Requires-Dist: mcp==1.29.0
+mcp 1.23.3 -> 6 OSV advisories
+mcp 1.29.0 -> 0 OSV advisories
+```
+
+`semgrep>=1.60` in `requirements-oss.txt` is a floating lower bound, so a fresh
+resolve has been taking the current release — and therefore `mcp` 1.29.0 — for some
+time. The finding closed itself with no override required. That is precisely why it
+went unnoticed: nothing here had to change for the note to stop being true, so nothing
+here reported that it had.
+
+The advisories no longer apply. pip-audit no longer reports them against `mcp` 1.29.0,
+and the local suppression is removed.
 
 ---
 
