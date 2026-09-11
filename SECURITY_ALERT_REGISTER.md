@@ -772,8 +772,25 @@ calibrated — and shipping an uncalibrated control that tells a scanner to stop
 looking at something is the exact move this branch has refused everywhere else.
 It is named here as the next step rather than attempted blind.
 
-**Next review.** Closes when a CodeQL run reports zero `critical` alerts on this
-branch, read from the retained SARIF rather than from a summary line.
+**VERIFIED, 2026-09-11.** Read from the retained SARIF for `bc074c33`
+(run 34584659158), not from a summary line:
+
+```
+CRITICAL: 0        (3 at the start of this work, 2 at 9990dd07)
+HIGH:    13        (14 at 9990dd07)
+```
+
+Both fixes cleared their alerts, **including the one recorded above as
+unverified**: `_SAFE_BUILT_PATH.fullmatch` did clear vault-service's
+`py/partial-ssrf`. That is worth stating plainly because the entry hedged it,
+and the hedge was the right call at the time — the outcome does not
+retrospectively justify claiming it early. The `high` that this work itself
+introduced (`tateking:79`) is also gone.
+
+The CodeQL model pack for `_vault_path` and `safe_join` is no longer needed for
+these two. It remains the durable answer for SEC-014's pair, which persist.
+
+**Next review.** Reopens if any `critical` returns.
 
 
 ---
@@ -870,9 +887,13 @@ admit, legitimate collection names still working — because a guard that broke
 those would pass every attack test while breaking the feature — and the
 guard's blindness case.
 
-**Next review.** The two `py/sql-injection` alerts will persist: they are the
-same unmodelled-sanitiser shape as SEC-013, and the note there about a CodeQL
-model pack applies equally. Closes with SEC-013's.
+**Next review.** The two `py/sql-injection` alerts were predicted to persist,
+and **measured at `bc074c33`, they did** — still reported at `adapter.py:436`
+and `:446`. The prediction holding is the useful part: it confirms the shape is
+an unmodelled sanitiser rather than an unfixed defect, which is what
+distinguishes this entry from a vulnerability. A CodeQL model pack declaring
+`safe_join` and the identifier allowlists as sanitisers is the durable answer,
+and needs a machine that can run CodeQL to calibrate it.
 
 
 ---
