@@ -423,8 +423,11 @@ Three `critical` alerts (9.8 `py/command-line-injection` in
 `workers/notifications/worker.py` and `workers/vault-service/worker.py`) and
 thirteen further `high` alerts are present in the same SARIF, outside the files
 this pull request touched. They were named here so that the next reader starts
-from a list rather than from a count. **All three are now adjudicated below**,
-as **SEC-010**, **SEC-011** and **SEC-012**. The thirteen `high` remain open.
+from a list rather than from a count. All three are adjudicated below, as
+**SEC-010**, **SEC-011** and **SEC-012** — but see **SEC-013**, which records
+that adjudicating a finding and clearing its alert turned out to be two
+different things, and that this register said the first while meaning the
+second. The `high` alerts remain open.
 
 
 ---
@@ -689,6 +692,88 @@ behind it.
 `py/command-line-injection` alerts in this file. With this entry all three
 `critical` alerts from SEC-009's SARIF are adjudicated; the thirteen `high`
 are not.
+
+
+---
+
+### SEC-013 — a fixed vulnerability and a cleared alert are not the same fact
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FP (scanner limitation)**, plus one real correction |
+| **ID** | `py/partial-ssrf` 9.1 and `py/command-line-injection` 9.8, both persisting after their fixes |
+| **Scanner** | CodeQL Advanced |
+| **Recorded** | 2026-09-11 |
+
+**The correction first.** After SEC-010, SEC-011 and SEC-012 landed, this
+register and a pull-request comment both said the three critical alerts were
+adjudicated. Measured against the retained SARIF for `9990dd07` — the run taken
+*after* all three fixes — CodeQL still reported **2 critical**:
+
+| Alert | Location at `9990dd07` |
+|---|---|
+| `py/command-line-injection` 9.8 | `workers/tateking/worker.py:519` |
+| `py/partial-ssrf` 9.1 | `workers/vault-service/worker.py:221` |
+
+One of the three had genuinely cleared: SEC-011's webhook alert is gone, which
+is what took the count from 3 to 2. The other two had not, and nothing in this
+repository had checked. The claim was made from the fixes and the tests, not
+from the scanner — which is the estate's own defect class, committed by the
+work that exists to name it. **A fix is evidence about the code. Only a scan is
+evidence about the alert.**
+
+**The two remaining alerts are different from each other, and the flows say so.**
+Reading `codeFlows` out of the SARIF rather than trusting the line number:
+
+*tateking* — the reported flow is **not** the one SEC-012 fixed:
+
+```
+worker.py:396  job_id          <- the source
+worker.py:438  output_path     <- MEDIA_DIR / f"job_{job_id}_output"
+worker.py:462  cmd
+worker.py:519  subprocess.run(cmd)
+```
+
+`input_path` does not appear. SEC-012's flow cleared; this is the **output**
+path, and its source is `job_id`, declared `job_id: int` on the route. FastAPI
+answers 422 to anything that is not an integer, so no separator and no leading
+`-` can reach it. CodeQL does not model that coercion. Fixed by making the
+invariant explicit and local — `f"job_{int(job_id)}_output"` — which costs one
+call, states the constraint where it matters instead of five frames up in a
+decorator, and is a conversion the scanner can see. A guard only the framework
+knows about is one the next reader has to take on trust.
+
+*vault-service* — the reported flow runs straight **through** the fix:
+
+```
+worker.py:574  body            <- POST /secrets
+worker.py:582  f"tranc3/{body.key}"
+worker.py:206  path
+worker.py:154  path            <- _vault_path()
+worker.py:195  "/".join(quote(seg) for seg in segments)
+worker.py:215  safe_path
+worker.py:219  url
+```
+
+CodeQL traced every segment check and the percent-encoding and kept the taint,
+because a helper that *raises* on bad input is not something it models as a
+sanitiser. There is no defect here to fix: nine calibrated assertions cover it
+and the boundary answers 422. **The vulnerability is fixed; the alert is not
+cleared.** A post-condition (`_SAFE_BUILT_PATH.fullmatch`) now asserts the whole
+constructed path rather than only its parts — worth having on its own terms,
+since "each part is safe" and "the parts were combined" is not the same claim as
+"the result is safe" — but whether it clears the alert is **unverified until CI
+runs**, and is written here as unverified rather than asserted.
+
+**What was deliberately not done.** A CodeQL model pack declaring `_vault_path`
+and `safe_join` as sanitisers is the durable answer, and it is not in this
+change. CodeQL cannot be run on this machine, so the pack could not be
+calibrated — and shipping an uncalibrated control that tells a scanner to stop
+looking at something is the exact move this branch has refused everywhere else.
+It is named here as the next step rather than attempted blind.
+
+**Next review.** Closes when a CodeQL run reports zero `critical` alerts on this
+branch, read from the retained SARIF rather than from a summary line.
 
 
 ---

@@ -66,6 +66,11 @@ STORAGE_ROOT = os.environ.get("VAULT_STORAGE_ROOT", "data/vault_secrets")
 # for. `/` is not here because it separates segments rather than living inside
 # one -- namespaced keys still work, they are just checked segment by segment.
 _SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+# The same alphabet as a segment, plus `%` (segments are percent-encoded before
+# they are joined) and `/` as the separator. Anchored with `fullmatch`, so it
+# describes the entire constructed path rather than finding a safe piece of one.
+_SAFE_BUILT_PATH = re.compile(r"[A-Za-z0-9][A-Za-z0-9._%-]*(?:/[A-Za-z0-9][A-Za-z0-9._%-]*)*")
 AUDIT_LOG_PATH = os.environ.get("VAULT_AUDIT_LOG", "data/vault_audit.jsonl")
 DEFAULT_TTL = int(os.environ.get("VAULT_DEFAULT_TTL", "3600"))
 # Master key seed for AES-256-GCM derivation — must be set via env var in production
@@ -192,7 +197,31 @@ def _vault_path(path: str) -> str:
             raise UnsafeVaultPath(f"traversal segment {segment!r} in {path!r}")
         if not _SAFE_SEGMENT.match(segment):
             raise UnsafeVaultPath(f"unsafe characters in path segment {segment!r}")
-    return "/".join(urllib.parse.quote(seg, safe="") for seg in segments)
+    built = "/".join(urllib.parse.quote(seg, safe="") for seg in segments)
+    # A final assertion on the WHOLE constructed path, not just its parts.
+    #
+    # Redundant by construction today — every segment was checked above and
+    # then percent-encoded, so `built` cannot contain anything this refuses.
+    # Kept for two reasons, one of them about this codebase and one about the
+    # scanner reading it.
+    #
+    # About the code: the per-segment loop and the join are separated by an
+    # encoding step, and "each part is safe" plus "the parts are combined" is
+    # not the same claim as "the result is safe". Stating the post-condition
+    # where it is produced means a future edit to either half has to keep it
+    # true rather than merely look like it does.
+    #
+    # About the scanner: CodeQL still reports `py/partial-ssrf` 9.1 here after
+    # SEC-010. Its flow runs `body.key` -> f-string -> `path` -> `_vault_path()`
+    # -> `safe_path` -> `url`, tracing straight THROUGH the validation, because
+    # a helper that raises is not something it models as a sanitiser. The
+    # vulnerability is fixed — nine calibrated assertions say so, and the
+    # boundary answers 422 — but the ALERT is not cleared, and those are
+    # different facts. Recorded as such in SECURITY_ALERT_REGISTER.md rather
+    # than claimed as a clearance.
+    if not _SAFE_BUILT_PATH.fullmatch(built):
+        raise UnsafeVaultPath(f"constructed vault path is not a plain path: {built!r}")
+    return built
 
 
 class OpenBaoClient:

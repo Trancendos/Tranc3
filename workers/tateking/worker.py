@@ -459,7 +459,20 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
             conn.commit()
         raise HTTPException(status_code=400, detail="Clip file_path not found on disk")
 
-    output_path = str(MEDIA_DIR / f"job_{job_id}_output")
+    # `int(job_id)` where `job_id: int` already is one. Not superstition: this
+    # is the OTHER flow in this function, and the one still reported as
+    # `py/command-line-injection` 9.8 after SEC-012 cleared the input-path flow
+    # it targeted. CodeQL traces `job_id` -> `output_path` -> `cmd` ->
+    # `subprocess.run` and does not model FastAPI's coercion of a declared `int`
+    # path parameter, so it sees a request value reaching argv.
+    #
+    # Not exploitable — FastAPI answers 422 to anything that is not an integer,
+    # so no separator, no leading `-`, nothing. But an explicit `int()` costs
+    # one call, states the invariant at the point it matters instead of five
+    # frames up in a decorator, and is a conversion the scanner can see. A
+    # guard only the framework knows about is one the next reader has to take
+    # on trust.
+    output_path = str(MEDIA_DIR / f"job_{int(job_id)}_output")
     start = time.time()
     cmd = None
 
