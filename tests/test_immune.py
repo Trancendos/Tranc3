@@ -1250,7 +1250,14 @@ class TestGateSurfaceCoversCI:
         found: set[str] = set()
         for workflow in (self._ROOT / ".github" / "workflows").glob("*.yml"):
             text = workflow.read_text(encoding="utf-8", errors="ignore")
-            found.update(re.findall(r"scripts/[a-zA-Z_0-9]+\.py", text))
+            # The leading `[\w./-]*` is load-bearing. Without it the pattern
+            # captured a SUBSTRING, so `.forgejo/scripts/cf_deploy_plan.py` was
+            # trimmed to `scripts/cf_deploy_plan.py`, matched the `scripts/*.py`
+            # glob, and was reported covered — while the real three-segment path
+            # matched nothing and sat unprotected. The assertion passed and the
+            # script was exposed, which is precisely the false confidence these
+            # tests exist to prevent. Reported by cubic on PR #1150.
+            found.update(re.findall(r"[\w./-]*scripts/[a-zA-Z_0-9]+\.py", text))
         return found
 
     def test_every_script_ci_runs_is_on_the_gate_surface(self):

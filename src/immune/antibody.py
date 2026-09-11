@@ -129,7 +129,18 @@ class AntibodyRun:
             # proposals reads the same whether the estate was clean or the
             # scanner never answered.
             "could_not_run": [
-                {"rule": p.rule, "failure": p.failure} for p in self.proposals if p.failed
+                # `paths` and `findings` too: without them the record says a
+                # fixer broke but not what it was about to work on, so nobody
+                # can tell whether one file or the ceiling's worth was blocked.
+                # Reported by cubic on PR #1150.
+                {
+                    "rule": p.rule,
+                    "failure": p.failure,
+                    "paths": p.paths,
+                    "findings": p.findings,
+                }
+                for p in self.proposals
+                if p.failed
             ],
         }
 

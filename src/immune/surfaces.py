@@ -50,6 +50,15 @@ SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
             # asserts every workflow-invoked script is covered, so the claim is
             # checked rather than asserted.
             "scripts/*.py",
+            # `.forgejo/scripts/cf_deploy_plan.py` is a real deploy entrypoint,
+            # invoked by `.github/workflows/deploy-cloudflare.yml:94`, and it
+            # lives outside `scripts/`. Found by cubic on PR #1150 through the
+            # TEST rather than the code: the coverage assertion's regex captured
+            # a substring, trimmed the path to `scripts/cf_deploy_plan.py`, and
+            # reported it covered — the exact false confidence the test exists
+            # to prevent. Both are fixed; this is the half that protects the
+            # script.
+            ".forgejo/scripts/*.py",
             ".github/workflows/production-gate.yml",
             ".github/workflows/ci.yml",
         ),
@@ -188,16 +197,46 @@ def _segmented_match(path: str, pattern: str) -> bool:
     `**` cases are still handled by the caller above, which is where they were
     already understood.
     """
-    if "**" in pattern:
-        # Left to the caller's two explicit `**` branches; matching those here
-        # as ordinary segments would re-introduce the crossing this exists to
-        # prevent.
-        return fnmatch.fnmatch(path, pattern)
     path_parts = path.split("/")
     pattern_parts = pattern.split("/")
+
+    # `**` is matched as a WHOLE SEGMENT standing for any run of segments,
+    # including none. The previous version handed any pattern containing `**`
+    # straight to `fnmatch`, which re-introduced the separator crossing this
+    # function exists to prevent — for precisely the patterns that needed it
+    # most, since `**/requirements*.txt` and `**/Dockerfile*` are the ones that
+    # span directories. So `src/requirements-thing/x.py` could be classified
+    # under a `requirements` surface it has nothing to do with. Reported by
+    # cubic on PR #1150.
+    if "**" in pattern_parts:
+        return _match_with_double_star(path_parts, pattern_parts)
     if len(path_parts) != len(pattern_parts):
         return False
     return all(fnmatch.fnmatch(p, g) for p, g in zip(path_parts, pattern_parts, strict=True))
+
+
+def _match_with_double_star(path_parts: list[str], pattern_parts: list[str]) -> bool:
+    """Segment-wise match where `**` absorbs zero or more whole segments.
+
+    Recursive rather than clever: at each `**` try consuming nothing, then one
+    segment, then two, and so on. The pattern lists here are a handful of
+    segments long, so the branching cost is irrelevant and the readability is
+    worth more than an optimised automaton nobody will re-derive.
+    """
+    if not pattern_parts:
+        return not path_parts
+    head, *rest = pattern_parts
+    if head == "**":
+        # `**` may absorb any number of leading path segments, including none.
+        for taken in range(len(path_parts) + 1):
+            if _match_with_double_star(path_parts[taken:], rest):
+                return True
+        return False
+    if not path_parts:
+        return False
+    if not fnmatch.fnmatch(path_parts[0], head):
+        return False
+    return _match_with_double_star(path_parts[1:], rest)
 
 
 def surfaces_for(paths: list[str]) -> list[tuple[str, str, list[str]]]:

@@ -26,7 +26,9 @@ class TestTheTrapItself:
 
     def test_match_admits_a_trailing_newline(self):
         pattern = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
-        assert pattern.match("vec_abc\n"), "if this ever fails, the guard is obsolete"
+        assert pattern.match(  # anchored-ok: demonstrating the trap is the test
+            "vec_abc\n"
+        ), "if this ever fails, the guard is obsolete"
 
     def test_fullmatch_does_not(self):
         pattern = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
@@ -61,7 +63,7 @@ class TestTheValidatorsThatMotivatedIt:
     def test_but_it_admitted_a_trailing_newline(self):
         """And why it was still wrong. `.match` accepts what `.fullmatch` refuses."""
         table = self._derive("abc\n")
-        assert self._PATTERN.match(table), "the defect, as it was"
+        assert self._PATTERN.match(table), "the defect, as it was"  # anchored-ok: shows the defect
         assert self._PATTERN.fullmatch(table) is None, "the fix"
 
     def test_legitimate_collection_names_still_work(self):

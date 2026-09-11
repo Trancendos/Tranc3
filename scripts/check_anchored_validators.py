@@ -98,7 +98,15 @@ class Offence:
 
 def _tracked_python(root: Path = ROOT) -> list[str]:
     proc = subprocess.run(  # noqa: S603,S607 - fixed argv, no shell
-        ["git", "ls-files", "*.py"],
+        # `--cached --others --exclude-standard`: tracked files AND untracked
+        # ones that are not gitignored. `git ls-files` alone lists only
+        # tracked files, so a file added but not yet committed was
+        # invisible to this guard -- a green local run and a red CI run
+        # for exactly the files someone just wrote, which is the worst
+        # possible place for a guard to be blind. Measured: this guard
+        # passed locally on its own new test file and failed in CI the
+        # moment that file was committed.
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.py"],
         cwd=str(root),
         capture_output=True,
         text=True,

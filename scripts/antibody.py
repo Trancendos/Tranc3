@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.immune.antibody import (  # noqa: E402
     DEFAULT_MAX_FILES,
     AntibodyRun,
+    Refusal,
     propose_ruff_fix,
     render,
     screen,
@@ -142,6 +143,25 @@ def main() -> int:
                 "as 'outside the change', which reads exactly like a clean run.\n"
                 "Fetch the base ref, or pass --all to widen scope on purpose.",
                 file=sys.stderr,
+            )
+            # AUDITED BEFORE RETURNING. Without this the trail shows nothing at
+            # all for the run, so "git could not tell us the scope" and "the
+            # antibody never ran" leave identical records — the same
+            # indistinguishable-states defect the refusal itself is about,
+            # reproduced one level up in the audit. Reported by cubic on
+            # PR #1150.
+            write_audit(
+                AntibodyRun(
+                    refusals=[
+                        Refusal(
+                            "scope unavailable",
+                            str(exc),
+                            [],
+                        )
+                    ],
+                    considered=0,
+                ),
+                args.audit,
             )
             return 2
 
