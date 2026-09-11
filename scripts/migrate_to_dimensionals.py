@@ -70,6 +70,7 @@ def _submodule_paths() -> set[str]:
                 paths.add(value.strip())
     return paths
 
+
 TEXT_SUFFIXES = {
     ".py",
     ".pyi",
@@ -113,9 +114,7 @@ def _candidate_files() -> list[Path]:
         rel = path.relative_to(REPO).as_posix()
         if any(part in SKIP_PARTS for part in path.relative_to(REPO).parts):
             continue
-        if SKIP_SUBMODULES and any(
-            rel == sub or rel.startswith(sub + "/") for sub in submodules
-        ):
+        if SKIP_SUBMODULES and any(rel == sub or rel.startswith(sub + "/") for sub in submodules):
             continue
         if path.resolve() == Path(__file__).resolve():
             continue  # a rewriter that edits itself mid-run corrupts its own constants
