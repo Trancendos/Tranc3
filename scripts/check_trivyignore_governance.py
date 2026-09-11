@@ -238,7 +238,7 @@ def upstream_fixed(entry: str, timeout: int = 15) -> tuple[bool, str]:
     # satisfies that prefix and would walk the path. Anything but the strict
     # form is refused, and the built URL is re-checked against the API prefix
     # so no entry can redirect the request somewhere else entirely.
-    if not SAFE_ID.match(entry):
+    if not SAFE_ID.fullmatch(entry):
         return False, "id is not in a form safe to query"
     url = OSV_API + entry
     if not url.startswith(OSV_API):  # pragma: no cover - defensive

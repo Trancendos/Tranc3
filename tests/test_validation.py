@@ -396,7 +396,7 @@ class TestErrorCodeValidation:
         from src.errors.error_catalog import ErrorCode
 
         pattern = re.compile(r"^TRANC3-[A-Z]+-\d{3}$")
-        bad = [e.value for e in ErrorCode if not pattern.match(e.value)]
+        bad = [e.value for e in ErrorCode if not pattern.fullmatch(e.value)]
         _log.info("val.error_codes format_bad=%d", len(bad))
         assert not bad, f"Bad format: {bad}"
 

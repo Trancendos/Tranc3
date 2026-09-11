@@ -241,17 +241,17 @@ def parse(raw: str) -> Reference:
     """
     text = raw.strip()
 
-    match = _PLATFORM.match(text)
+    match = _PLATFORM.fullmatch(text)
     if match:
         kind = Kind.KB if match.group(1).upper() == "KB" else Kind.WIKI
         return Reference(text, kind, Scope.PLATFORM, _number(text, match.group(2)))
 
-    match = _PERSONAL.match(text)
+    match = _PERSONAL.fullmatch(text)
     if match:
         kind = Kind.KB if match.group(1).upper() == "KB" else Kind.WIKI
         return Reference(text, kind, Scope.PERSONAL, _number(text, match.group(2)))
 
-    match = _LOCATION.match(text)
+    match = _LOCATION.fullmatch(text)
     if match:
         code, kind_text, number = match.groups()
         resolved = _by_code().get(code.capitalize())

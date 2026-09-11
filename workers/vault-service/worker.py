@@ -195,7 +195,7 @@ def _vault_path(path: str) -> str:
             raise UnsafeVaultPath(f"empty path segment in {path!r}")
         if segment in (".", ".."):
             raise UnsafeVaultPath(f"traversal segment {segment!r} in {path!r}")
-        if not _SAFE_SEGMENT.match(segment):
+        if not _SAFE_SEGMENT.fullmatch(segment):
             raise UnsafeVaultPath(f"unsafe characters in path segment {segment!r}")
     built = "/".join(urllib.parse.quote(seg, safe="") for seg in segments)
     # A final assertion on the WHOLE constructed path, not just its parts.

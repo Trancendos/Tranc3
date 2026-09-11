@@ -103,7 +103,7 @@ def parse_uses(value: str) -> dict | None:
     if "@" not in value:
         return None
     ref, _, sha = value.rpartition("@")
-    if not SHA_RE.match(sha):
+    if not SHA_RE.fullmatch(sha):
         return None
     if ref.startswith("https://"):
         host = ref.split("/", 3)[2]
@@ -137,7 +137,7 @@ def _scan_workflow_file(path: Path, rel: str, token, repo_cache) -> tuple[list, 
         return findings, external
 
     for idx, line in enumerate(lines, start=1):
-        m = USES_RE.match(line)
+        m = USES_RE.match(line)  # anchored-ok: line parser, not a validator
         if not m:
             continue
         parsed = parse_uses(m.group(1))

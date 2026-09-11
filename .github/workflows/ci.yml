@@ -375,6 +375,16 @@ jobs:
       - name: Bandit suppressions name what they silence
         run: python scripts/check_nosec_specificity.py
 
+      # An anchored `^...$` validator called with `.match()` accepts a trailing
+      # newline, because `$` matches before one. Found while adjudicating the
+      # two `py/sql-injection` 8.8 alerts: the SQL table-name allowlist was
+      # genuine and held against every injection shape, and still admitted one
+      # character its own class forbids. Seven such validators existed, none
+      # exploitable, all one character from correct, with nothing that would
+      # have noticed if one became exploitable.
+      - name: Anchored validators enforce what they state
+        run: python scripts/check_anchored_validators.py
+
       # CLAUDE.md told everyone the repo formats with black. It formats with
       # ruff-format, at line-length 100 against black's default 88, so anyone
       # following the documentation had every file reformatted back on the next

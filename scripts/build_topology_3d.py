@@ -48,7 +48,7 @@ def compose_services() -> dict[str, dict]:
     services: dict[str, dict] = {}
     current: str | None = None
     for line in COMPOSE.read_text(encoding="utf-8").splitlines():
-        match = _SERVICE.match(line)
+        match = _SERVICE.match(line)  # anchored-ok: line parser, not a validator
         if match:
             current = match.group(1)
             services[current] = {"port": None, "prefix": "", "image": ""}

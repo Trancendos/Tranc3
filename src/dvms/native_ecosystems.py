@@ -127,7 +127,7 @@ def parse_go_mod(text: str) -> List[Tuple[str, str]]:
     for raw in text.splitlines():
         line = raw.split("//", 1)[0] if not raw.strip().startswith("//") else ""
         stripped = line.strip()
-        if _GO_BLOCK_OPEN.match(line):
+        if _GO_BLOCK_OPEN.match(line):  # anchored-ok: line parser, not a validator
             in_block = True
             continue
         if in_block and stripped == ")":
@@ -266,7 +266,7 @@ def hydrate(identifier: str, opener=None, deadline: Optional[float] = None) -> O
     whether a patch shipped and asserting that none did are different claims,
     and only the second one lets a real remediation get filed as accepted risk.
     """
-    if not _SAFE_ID.match(identifier):
+    if not _SAFE_ID.fullmatch(identifier):
         return None
     url = OSV_VULN_URL + identifier
     if not url.startswith(OSV_VULN_URL):  # pragma: no cover - defensive

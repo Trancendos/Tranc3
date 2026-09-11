@@ -561,7 +561,7 @@ def _resolve_header_references(headers: dict) -> dict:
     """
     resolved = {}
     for name, value in headers.items():
-        match = _HEADER_REFERENCE.match(value) if isinstance(value, str) else None
+        match = _HEADER_REFERENCE.fullmatch(value) if isinstance(value, str) else None
         if not match:
             resolved[name] = value
             continue

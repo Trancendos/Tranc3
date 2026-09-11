@@ -306,7 +306,7 @@ def _checkbox_items(rel: str, text: str, locations: dict[str, str]) -> list[dict
         return []
     found: list[dict] = []
     for number, line in enumerate(text.splitlines(), 1):
-        match = _UNCHECKED.match(line)
+        match = _UNCHECKED.match(line)  # anchored-ok: line parser, not a validator
         if not match:
             continue
         action = _unwrap(match.group(1))

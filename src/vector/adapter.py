@@ -414,7 +414,7 @@ class _PgvectorBackend:
         from sqlalchemy import create_engine  # type: ignore
 
         raw_table = f"vec_{collection.replace('-', '_').lower()}"
-        if not self._SAFE_IDENT.match(raw_table):
+        if not self._SAFE_IDENT.fullmatch(raw_table):
             raise ValueError(f"Unsafe pgvector table name derived from collection '{collection}'")
         self._table = raw_table
         self._dim = dim

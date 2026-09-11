@@ -412,7 +412,7 @@ def check_contract_document(baseline: dict[str, str]) -> list[str]:
                 )
             stated[rule_id] = verdict
             continue
-        count = _DOC_COUNT_ROW.match(line.strip())
+        count = _DOC_COUNT_ROW.match(line.strip())  # anchored-ok: line parser
         if count:
             verdict, value = count.group("verdict"), int(count.group("count"))
             if verdict in counts:

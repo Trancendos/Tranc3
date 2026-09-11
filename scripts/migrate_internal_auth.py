@@ -120,9 +120,9 @@ def _is_secret(node: ast.expr) -> bool:
     "cannot read this" path rather than being rewritten on a guess.
     """
     if isinstance(node, ast.Name):
-        return bool(SECRET_NAME.match(node.id))
+        return bool(SECRET_NAME.fullmatch(node.id))
     if isinstance(node, ast.Attribute):
-        return bool(SECRET_NAME.match(node.attr))
+        return bool(SECRET_NAME.fullmatch(node.attr))
     return False
 
 

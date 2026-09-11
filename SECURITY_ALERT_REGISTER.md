@@ -778,6 +778,105 @@ branch, read from the retained SARIF rather than from a summary line.
 
 ---
 
+### SEC-014 — the SQL allowlist held, and still enforced less than it said (`py/sql-injection`, 8.8)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FP** for the alert; **FIX** for the defect it led to |
+| **ID** | `py/sql-injection` (CodeQL, security-severity 8.8) ×2 |
+| **Scanner** | CodeQL Advanced |
+| **Location** | `src/vector/adapter.py:436`, `:446` — `_PgvectorBackend._bootstrap` |
+| **Recorded** | 2026-09-11 |
+
+First of the `high` band, and the highest of them.
+
+**The alert is a false positive, and the flow says why.** Read from the SARIF
+rather than the line number, the taint runs from a request body to a *table
+name*:
+
+```
+src/routers/search_api.py:259   req            <- POST /ingest
+src/routers/search_api.py:267   req.collection
+src/search/hybrid.py:79         vector_collection
+src/vector/adapter.py:413       collection
+src/vector/adapter.py:416       raw_table      <- f"vec_{collection...}"
+src/vector/adapter.py:430       self._table
+src/vector/adapter.py:436       f-string in CREATE TABLE
+```
+
+A table name cannot be a bound parameter, so this has to be an identifier
+allowlist — and there already is one, with `# noqa: S608 — identifier
+validated` beside it. Measured against every injection shape:
+
+| `collection` | derived table | accepted? |
+|---|---|---|
+| `x'; DROP TABLE t; --` | `vec_x'; drop table t; __` | no |
+| `x"y` / `x;y` / `x(y)` / `a b` | — | no |
+| `abc\nDROP TABLE t` | — | no |
+| `docs`, `my-docs`, `Notes` | `vec_docs`, `vec_my_docs`, `vec_notes` | yes |
+
+The allowlist holds. CodeQL does not model a raising validator as a sanitiser —
+the same limitation SEC-013 records for `_vault_path`.
+
+**But the validator was wrong anyway, and that is the finding.**
+
+```python
+_SAFE_IDENT = __import__("re").compile(r"^[a-z][a-z0-9_]{0,62}$")
+...
+if not self._SAFE_IDENT.match(raw_table):
+```
+
+`$` matches at the end of the string **or immediately before a trailing
+newline**, so:
+
+```
+re.compile(r"^[a-z][a-z0-9_]{0,62}$").match("vec_abc\n")      ->  MATCHES
+re.compile(r"^[a-z][a-z0-9_]{0,62}$").fullmatch("vec_abc\n")  ->  None
+```
+
+A validator whose whole job is "only these characters" admitted one its
+character class forbids.
+
+**Seven of them, and none exploitable.** A sweep found the same combination in
+`src/vector/adapter.py`, `src/database/encrypted_sqlite.py` (also a SQL table
+name), `workers/vault-service/worker.py` (added by SEC-010 the day before),
+`workers/tateking/main.py`, `workers/tateking/worker.py` (ffmpeg argv),
+`src/dvms/native_ecosystems.py` and `scripts/check_trivyignore_governance.py`.
+Checked individually: a newline is SQL whitespace, is percent-encoded before it
+reaches a URL, and is an ordinary character inside a list argv with no shell. So
+this is **not seven vulnerabilities** — it is seven controls whose stated
+contract is not the one they enforce, each one character from correct, with
+nothing anywhere that would notice if one of them became exploitable. All seven
+now use `fullmatch`.
+
+**The guard, and the calibration that failed first.**
+`scripts/check_anchored_validators.py` fails CI on an anchored `^...$` pattern
+used with `.match(`, exempting `re.MULTILINE` compiles and anything carrying an
+explicit `# anchored-ok: <reason>`. It found sixteen more call sites: seven
+genuine line parsers, now exempted with a written reason, and nine further
+validators, now `fullmatch`.
+
+Its first version **could not see the validator it was written for.** It matched
+the literal `re.compile(`, and `adapter.py` writes `__import__("re").compile(`.
+Planting `.match()` back left the guard green — caught only because planting the
+defect is mandatory here, not optional. Now calibrated against three of the
+seven: each plant fails the guard and names the file, and the restored tree is
+clean. That failure is kept as a test.
+
+**Calibration.** 13 tests in `tests/test_anchored_validators.py`: the language
+behaviour itself (so the guard becomes obsolete loudly if Python ever changes),
+the allowlist holding against six injection shapes, the newline it used to
+admit, legitimate collection names still working — because a guard that broke
+those would pass every attack test while breaking the feature — and the
+guard's blindness case.
+
+**Next review.** The two `py/sql-injection` alerts will persist: they are the
+same unmodelled-sanitiser shape as SEC-013, and the note there about a CodeQL
+model pack applies equally. Closes with SEC-013's.
+
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for

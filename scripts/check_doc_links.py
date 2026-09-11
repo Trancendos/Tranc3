@@ -102,7 +102,7 @@ def prose(text: str) -> str:
     kept: list[str] = []
     fence: str | None = None
     for line in text.splitlines():
-        match = _FENCE.match(line)
+        match = _FENCE.match(line)  # anchored-ok: line parser, not a validator
         marker = match.group(1) if match else ""
         trailing = match.group(2) if match else ""
         if fence is None:

@@ -484,7 +484,7 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
 
     def _safe_ts(val: str, default: str) -> str:
         v = str(val)
-        return v if _TS_RE.match(v) else default
+        return v if _TS_RE.fullmatch(v) else default
 
     def _safe_int(val, default: int, lo: int, hi: int) -> int:
         try:

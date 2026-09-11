@@ -339,7 +339,7 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     job_id = str(uuid.uuid4())
     # Strict allowlist: alphanumeric, underscores, hyphens, dots — must end in .mp4.
     raw_name = req.output_name or f"{job_id}.mp4"
-    if not _SAFE_OUTPUT_NAME.match(raw_name):
+    if not _SAFE_OUTPUT_NAME.fullmatch(raw_name):
         raise HTTPException(status_code=400, detail="output_name must match [A-Za-z0-9_.-]+.mp4")
     output_name = raw_name
     output_path = _output_dir() / output_name

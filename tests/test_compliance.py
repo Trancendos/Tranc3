@@ -29,7 +29,7 @@ class TestErrorCatalogCompliance:
 
         violations = []
         for code in ErrorCode:
-            if not _CODE_PATTERN.match(code.value):
+            if not _CODE_PATTERN.fullmatch(code.value):
                 violations.append(code.value)
         _log.info("compliance.error_codes format violations=%d", len(violations))
         assert not violations, f"Bad format: {violations}"
