@@ -160,10 +160,16 @@ sensors:
     # blank: nobody re-reads a gap that already has an answer beside it.
     #
     # `_pypi_advisory_reading()` now exists alongside `_npm_registry_reading()`
-    # and brackets the pip sweep the same way — jinja2==2.11.2 audited in a
-    # tmpdir before and after, every pip surface marked unscannable if the
-    # advisory family does not come back. THAT is this sensor's equivalent
-    # guarantee, and it is checkable.
+    # and brackets the pip sweep — jinja2==2.11.2 audited in a tmpdir before
+    # and after, every pip surface marked unscannable if the advisory family
+    # does not come back. THAT is this sensor's equivalent guarantee, and it
+    # is checkable.
+    #
+    # Not "the same way" as npm any more: literally the same code. Both sweeps
+    # run through `_bracketed_sweep()`, because two hand-written copies of one
+    # guard is how the Forgejo production gate came to be missing a step its
+    # GitHub twin kept. The pip copy was the second chance to get that shape
+    # right; a third ecosystem would have been a third chance.
 
   semgrep:
     kind: innate
