@@ -775,3 +775,199 @@ class TestAccessAudit:
         # Without auth headers, OWASP CSRF check is skipped,
         # auth middleware returns 401 for enforced paths
         assert res.status_code in (401, 403)
+
+
+# ---------------------------------------------------------------------------
+# Dashboard static-file containment — SEC-016
+# ---------------------------------------------------------------------------
+#
+# These live here, in the module that owns `_load_gateway_worker()`, rather than
+# in a file of their own. A separate file meant a SECOND loading path for one
+# worker, and that broke six tests above.
+#
+# The mechanism is worth recording, because this loader's docstring already
+# anticipates the shape and stops one module short of it. The loader evicts
+# `config`, `database` and `service` before `exec_module`, so gateway-service's
+# own copies are re-executed — but it does not evict `router`. A separate test
+# module that imported `router` at collection time (which pytest does for every
+# test file, before any test runs) left `sys.modules["router"]` holding a router
+# bound to the PRE-eviction `database`. `worker.py`'s `from router import router`
+# then picked up that stale router, so `init_db()` created the tables in the
+# fresh `database`'s file while `insert_event` wrote to the old one:
+# "no such table: events", in six tests that had never been touched.
+#
+# One loader, not two — the same reason SEC-016's fix reuses `safe_join` instead
+# of writing a second path validator.
+
+
+def _dashboard_helpers():
+    """The route's containment helper and its root, via the single loader."""
+    _load_gateway_worker()
+    router_module = sys.modules["router"]
+    return router_module._contained_dashboard_file, router_module
+
+
+class TestDashboardTraversalRefused:
+    """Every one of these returned file contents before SEC-016.
+
+    `GET /dashboard/{path:path}` joined the remainder of the URL onto
+    `DASHBOARD_DIR` with no containment check. `Path.__truediv__` does not
+    normalise `..`, and `exists() and is_file()` checks that the attacker's
+    chosen file is *there* — the opposite of a containment check.
+    """
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "../../../../etc/passwd",
+            "../.git/config",
+            "..",
+            "a/../../../../etc/passwd",
+            "./../../etc/hostname",
+            "foo/../../bar",
+        ],
+    )
+    def test_dotdot_is_refused(self, path):
+        from Dimensional.path_validation import PathTraversalError
+
+        contained, _ = _dashboard_helpers()
+        with pytest.raises((PathTraversalError, ValueError)):
+            contained(path)
+
+    @pytest.mark.parametrize("path", ["/etc/passwd", "//etc/passwd", "/"])
+    def test_absolute_path_is_contained_not_honoured(self, path):
+        """This test first asserted a refusal, and failed — correctly.
+
+        The leading separator is dropped and the remainder is treated as
+        relative to the dashboard root, which is what every static-file server
+        does, so `/etc/passwd` resolves to `DASHBOARD_DIR/etc/passwd`: refused by
+        being somewhere harmless rather than by raising. Containment is what the
+        requirement names, so containment is what is asserted.
+
+        `//etc/passwd` is the case that caught a hole in the fix itself. POSIX
+        gives `//` its own meaning, so `PurePosixPath("//etc/passwd").parts[0]`
+        is `"//"`, not `"/"`, and a parts filter listing `"/"` let it through
+        with a root component still attached.
+        """
+        contained, router_module = _dashboard_helpers()
+        root = Path(router_module.DASHBOARD_DIR).resolve()
+        assert contained(path).is_relative_to(root)
+
+    def test_nul_byte_is_refused(self):
+        from Dimensional.path_validation import PathTraversalError
+
+        contained, _ = _dashboard_helpers()
+        with pytest.raises((PathTraversalError, ValueError)):
+            contained("index\x00.html")
+
+
+class TestDashboardServesWhatItShould:
+    def test_plain_filename(self):
+        contained, router_module = _dashboard_helpers()
+        assert contained("app.js") == (router_module.DASHBOARD_DIR / "app.js").resolve()
+
+    def test_nested_filename(self):
+        contained, router_module = _dashboard_helpers()
+        expected = (router_module.DASHBOARD_DIR / "assets" / "css" / "main.css").resolve()
+        assert contained("assets/css/main.css") == expected
+
+    @pytest.mark.parametrize("path", ["", ".", "./"])
+    def test_empty_path_falls_back_to_index(self, path):
+        """`GET /dashboard/` leaves the converter with an empty string.
+
+        Without this the route 404s on its own landing URL — the shape of
+        regression that gets a security fix reverted.
+        """
+        contained, router_module = _dashboard_helpers()
+        assert contained(path) == (router_module.DASHBOARD_DIR / "index.html").resolve()
+
+    def test_every_accepted_result_is_inside_the_root(self):
+        contained, router_module = _dashboard_helpers()
+        root = Path(router_module.DASHBOARD_DIR).resolve()
+        for path in ["a", "a/b", "a/b/c.txt", "", "index.html", "./x"]:
+            assert contained(path).is_relative_to(root), path
+
+
+class TestDashboardSymlinkOutOfRoot:
+    def test_symlink_inside_root_pointing_out_is_refused(self, tmp_path):
+        """What the lexical component check alone cannot give.
+
+        `safe_join` resolves the joined path and re-checks containment, which is
+        what catches this. Uses a temporary root so the test never writes into
+        the checkout.
+        """
+        from Dimensional.path_validation import PathTraversalError
+
+        _, router_module = _dashboard_helpers()
+        root = tmp_path / "dashboard"
+        root.mkdir()
+        (root / "escape").symlink_to("/etc", target_is_directory=True)
+
+        original = router_module.DASHBOARD_DIR
+        try:
+            router_module.DASHBOARD_DIR = root
+            with pytest.raises((PathTraversalError, ValueError)):
+                router_module._contained_dashboard_file("escape/passwd")
+        finally:
+            router_module.DASHBOARD_DIR = original
+
+
+class TestDashboardRouteLevel:
+    """End to end through the assembled app — and a correction.
+
+    SEC-016 was first reported as an unauthenticated arbitrary file read, on the
+    strength of a proof of concept that returned `/etc/passwd`. That PoC ran
+    against a standalone FastAPI app replicating only this handler. Measured
+    against the app as assembled — with the route reverted to its pre-fix form —
+    every traversal spelling is refused before it reaches the handler:
+
+        ..%2f..%2f..%2f..%2fetc%2fpasswd        -> 400   nothing leaked
+        %2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd  -> 400   nothing leaked
+        ..%2f.git%2fconfig                      -> 400   nothing leaked
+        ../../../../etc/passwd                  -> 404   nothing leaked
+
+    and ten further evasions (overlong UTF-8 `%c0%af`, `%u2216`, `....//`,
+    backslash, fully-encoded, `..;/`, a NUL byte) were refused too. The OWASP
+    hardening middleware stands in front of this route.
+
+    So the handler was genuinely unguarded and the deployed app was not
+    exploitable through it. The fix stays — a route must not depend on a
+    middleware it does not declare, and middleware order, configuration and
+    spelling coverage are all things that change without this route's author
+    noticing — but it is defence in depth, not a closed hole. Claiming otherwise
+    was measuring one thing and reporting another, which is the same mistake
+    SEC-013 records.
+
+    These assertions accept any refusal rather than pinning 404, because which
+    layer refuses is not this route's contract. What is asserted is that nothing
+    leaks.
+    """
+
+    PROBES = [
+        "..%2f..%2f..%2f..%2fetc%2fpasswd",
+        "%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd",
+        "..%2f.git%2fconfig",
+        "../../../../etc/passwd",
+        "..%c0%af..%c0%afetc%c0%afpasswd",
+        "....//....//etc/passwd",
+        "..;/..;/etc/passwd",
+    ]
+
+    @pytest.mark.parametrize("probe", PROBES)
+    def test_traversal_probes_are_refused_and_leak_nothing(self, client, probe):
+        response = client.get(f"/dashboard/{probe}")
+        assert response.status_code in (400, 401, 403, 404), response.text
+        assert "root:x:0:0" not in response.text
+        assert "[core]" not in response.text
+
+    def test_the_route_itself_still_refuses_without_the_middleware(self):
+        """The property the fix actually adds, isolated from the middleware.
+
+        This is the assertion that would have caught the overclaim: it tests the
+        handler's own containment, which is the only thing this fix changed.
+        """
+        from Dimensional.path_validation import PathTraversalError
+
+        contained, _ = _dashboard_helpers()
+        with pytest.raises((PathTraversalError, ValueError)):
+            contained("../../../../etc/passwd")

@@ -989,8 +989,39 @@ calling `require_permission()`, and this one does not. `ZeroTrustASGIMiddleware`
 spawner at all comes down to that middleware's default policy. **That has not been
 measured**, and it is a separate question from this alert.
 
+**Second pass, after cubic's P1 — the docstring said more than the code did.**
+The first fix resolved the lexically-checked path in a single `Path.resolve()`
+and claimed *"nothing outside a root is ever handed to the filesystem"*. Too
+strong, and cubic said so. A symlink planted **inside** an allowed root
+redirects the resolution outward, and `resolve()` follows it before any check
+can object:
+
+```
+/tmp/sym-xxxx/into-etc -> /etc/shadow
+lexically contained : True
+.resolve() returns  : /etc/shadow
+```
+
+The containment verdict was still correct — the second check rejects it — but
+the probe had already happened, which is the whole thing this function exists to
+prevent. A claim that enforces less than it states is SEC-014's title, committed
+here by the entry that documents it.
+
+`os.readlink` reads a link's target *without* following it, so this was fixable
+rather than only documentable. `_resolve_without_leaving` now walks the
+components one at a time, `lstat`-ing each (which does not follow a final
+symlink), expanding any link lexically against its own parent, and refusing the
+first that leaves the roots — so nothing outside a root is stat-ed, and the
+docstring is now true. A symlink chain is bounded so a cycle raises instead of
+hanging. Contained links still resolve normally, which is tested, because a
+guard that refused every symlink under the root would break legitimate layouts.
+
+Calibration: 16 tests, 2 of which fail against the one-shot `resolve()` —
+`test_the_target_is_never_stat_ed`, which spies on `os.stat` and asserts no call
+outside the roots, and the symlink-cycle case.
+
 **Next review.** Expect both alerts to persist. `_resolve_output_base` still ends
-in a resolved `Path` returned to a caller, and CodeQL does not model a raising
+in a validated `Path` returned to a caller, and CodeQL does not model a raising
 validator as a sanitiser — the limitation SEC-013 and SEC-014 both record. The
 useful test is whether the *flow* changes: the sink at the old `:68` should
 disappear with the dead branch, and the remaining one should point at the
@@ -1000,17 +1031,29 @@ alert-cleared remain different facts, and only a scan settles the second.
 
 ---
 
-### SEC-016 — the one that was real (`py/path-injection`, 7.5)
+### SEC-016 — the handler was unguarded; the app was not exploitable (`py/path-injection`, 7.5)
 
 | Field | Value |
 |---|---|
-| **Disposition** | **FIX** — exploitable, confirmed by proof of concept |
+| **Disposition** | **FIX** — defence in depth. **Severity corrected downward 2026-09-11**, see below |
 | **ID** | `py/path-injection` (CodeQL, security-severity 7.5) ×3 |
 | **Scanner** | CodeQL Advanced |
 | **Location** | `workers/gateway-service/router.py:743` ×2, `:744` — `serve_dashboard` |
 | **Recorded** | 2026-09-11 |
 
-**Unauthenticated arbitrary file read.** Three alerts on one line:
+> **CORRECTION, same day.** This entry first read *"unauthenticated arbitrary
+> file read"*, and that was published in a pull-request comment. It was wrong.
+> The proof of concept below ran against a **standalone FastAPI app replicating
+> only this handler**, not against the gateway service as assembled. Measured
+> against the real app with the route reverted to its pre-fix form, every
+> traversal spelling is refused before it reaches the handler and **nothing
+> leaks** — the OWASP hardening middleware stands in front of this route. The
+> handler was genuinely unguarded; the deployed app was not exploitable through
+> it. The fix stays, as defence in depth. Measuring one thing and reporting
+> another is the mistake SEC-013 exists to record, and this is the same mistake
+> in the other direction — overstating rather than understating.
+
+**An unguarded handler.** Three alerts on one line:
 
 ```python
 @router.get("/dashboard/{path:path}")
@@ -1032,7 +1075,8 @@ at `:743`/`:744`. That shortness is worth noting — the two entries above it
 needed the `codeFlows` read carefully to establish they were false positives;
 this one needed the line read carefully to establish it was not.
 
-**Proof of concept**, measured against the real handler shape:
+**What the handler does, in isolation.** Against a bare FastAPI app carrying
+only this route:
 
 | request | result |
 |---|---|
@@ -1041,15 +1085,33 @@ this one needed the line read carefully to establish it was not.
 | `GET /dashboard/%2e%2e/%2e%2e/etc/passwd` | **200** |
 | `GET /dashboard/..%2f.git%2fconfig` | **200**, `[core]… [remote "origin"]…` |
 
-**The first row is why this survived.** Every normal HTTP client — browsers,
-`httpx`, `requests` — collapses `..` before the request leaves, so the obvious
-probe comes back 404 and the route reads as safe. Percent-encoded separators
-survive that normalisation and Starlette decodes them *after* routing, so the
-traversal arrives intact. A reviewer testing by hand with curl or a browser
-would have been told the route was fine.
+**The first row is why this survived review.** Every normal HTTP client —
+browsers, `httpx`, `requests` — collapses `..` before the request leaves, so the
+obvious probe comes back 404 and the route reads as safe. Percent-encoded
+separators survive that normalisation and Starlette decodes them *after*
+routing, so the traversal arrives intact.
 
-`.git/config` is the sharper of the two reads: in a deployed container it
-returns the remote URL, which is where an embedded token would be.
+**What the assembled app does, which is the part that was not measured before
+publishing.** Same reverted route, but reached through `mod.app` with its
+middleware stack:
+
+| request | result | leaked |
+|---|---|---|
+| `..%2f..%2f..%2f..%2fetc%2fpasswd` | 400 `{"detail":"Invalid input"}` | no |
+| `%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd` | 400 | no |
+| `..%2f.git%2fconfig` | 400 | no |
+| `../../../../etc/passwd` | 404 | no |
+
+Ten further evasions aimed at the middleware rather than the handler — overlong
+UTF-8 `%c0%af`, `%u2216`, `....//`, backslash separators, fully-encoded,
+double-encoded, `..;/`, and a NUL byte — were all refused (400, 401 or 404),
+none leaking. The middleware held against every spelling tried.
+
+So the honest verdict is: **the route had no containment check of its own, and
+the app in front of it refused every probe.** The fix is still right — a route
+must not depend on a middleware it does not declare, and middleware order,
+configuration and spelling coverage all change without this route's author
+noticing — but it closes a gap in depth, not an open hole.
 
 **The fix is containment via `safe_join`** — the same helper SEC-009 and SEC-012
 use, deliberately, because a second copy of a path validator is a second thing
@@ -1082,14 +1144,37 @@ vulnerable code also had, which is what they are for. The route-level probe with
 plain `../` passes against both, for the same reason it returned 404 in the PoC
 table; keeping it in the suite records that asymmetry rather than hiding it.
 
-**Where the test lives, and why that is itself a finding.**
-`workers/gateway-service/tests/` already exists, with a `conftest.py`, a
-`TestClient` and two test modules. **No workflow runs it.** `ci.yml`'s Pytest job
-runs `pytest tests/ -q`, `pyproject.toml` sets `testpaths = ["tests"]`, and
-nothing under `.github/workflows/` names a worker suite. A regression test for an
-exploitable traversal placed there would never have gated anything, so this one
-lives in `tests/` and puts the worker directory on `sys.path` itself, at module
-scope, so a broken import is a red test rather than a silent skip.
+**Where the test lives — and the second correction.** These tests now sit
+inside `tests/test_gateway_service.py`. They first went into a file of their
+own, which put the worker directory on `sys.path` and imported `router` at
+module scope, and **that broke six tests in the existing suite** with
+`sqlite3.OperationalError: no such table: events`.
+
+The mechanism is worth recording because the existing loader's docstring
+anticipates the shape and stops one module short of it. `_load_gateway_worker()`
+evicts `config`, `database` and `service` from `sys.modules` before
+`exec_module`, so gateway-service's own copies are re-executed — but it does not
+evict `router`. pytest imports every test module during collection, before any
+test runs, so a second module importing `router` there left
+`sys.modules["router"]` holding a router bound to the *pre-eviction* `database`.
+`worker.py`'s `from router import router` then picked up that stale router:
+`init_db()` created its tables in the fresh `database`'s file while
+`insert_event` wrote to the old one.
+
+Two loaders for one worker, which is the same mistake as a second copy of a path
+validator — the thing this very fix avoided by reusing `safe_join`. One loader
+now, and the containment tests live with it.
+
+**This was reported as "no regressions" before it was true.** The full-suite run
+that claim rested on never reached `tests/test_gateway_service.py` — the string
+does not appear in its output — and a partial result was read as a clean one.
+The same error as the severity overclaim above, and the same as SEC-013's.
+
+The finding that sent the test to `tests/` in the first place still stands:
+`workers/gateway-service/tests/` exists, with a `conftest.py`, a `TestClient` and
+two modules, and **no workflow runs it**. `ci.yml`'s Pytest job runs
+`pytest tests/ -q`, `pyproject.toml` sets `testpaths = ["tests"]`, and nothing
+under `.github/workflows/` names a worker suite.
 
 That is the estate's recurring shape once more — a control that exists, runs when
 invoked, and is never invoked. It is not fixed here: how many of the ~70 worker

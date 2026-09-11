@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import shutil
+import stat
 import textwrap
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,58 @@ _ALLOWED_OUTPUT_ROOTS = [
 _GEN_SCAFFOLD_BIND_HOST = "0.0.0.0"  # nosec B104
 
 
+def _contained_in_roots(path: Path) -> bool:
+    """Lexical containment against the allowed roots. No filesystem access."""
+    return any(path.is_relative_to(root) for root in _ALLOWED_OUTPUT_ROOTS)
+
+
+def _resolve_without_leaving(root: Path, candidate: Path, hop_limit: int = 40) -> Path:
+    """Resolve *candidate* under *root*, refusing any symlink that points out.
+
+    SEC-015, second pass. The first version resolved the whole lexically-checked
+    path in one `Path.resolve()` call and claimed "nothing outside a root is ever
+    handed to the filesystem". That claim was too strong, and cubic said so: a
+    symlink planted *inside* an allowed root redirects the resolution outward,
+    and `resolve()` follows it before any check can object. Measured:
+
+        /tmp/sym-xxxx/into-etc -> /etc/shadow
+        lexically contained: True
+        .resolve() returns:  /etc/shadow
+
+    The containment verdict was still correct — the resolved path fails the
+    second check and the call raises — but the probe had already happened, which
+    is precisely what this function exists to prevent.
+
+    `os.readlink` reads a link's target without following it, so the walk below
+    never needs to stat anything it has not already shown to be contained. Each
+    component is `lstat`-ed (which does not follow a final symlink); a link is
+    expanded lexically against its own parent and re-checked before the walk
+    continues. A path that does not exist yet simply has nothing left to follow,
+    which is the ordinary case for a spawn target.
+
+    `hop_limit` bounds symlink chains so a cycle raises instead of hanging.
+    """
+    current = root
+    for part in candidate.relative_to(root).parts:
+        current = current / part
+        for _ in range(hop_limit):
+            try:
+                info = os.lstat(current)
+            except OSError:
+                break  # does not exist — nothing to follow
+            if not stat.S_ISLNK(info.st_mode):
+                break
+            target = os.readlink(current)
+            current = Path(os.path.normpath(os.path.join(str(current.parent), target)))
+            if not _contained_in_roots(current):
+                raise PathTraversalError(
+                    f"symlink {part!r} points outside every allowed root",
+                )
+        else:
+            raise PathTraversalError(f"symlink chain too long at {part!r}")
+    return current
+
+
 def _resolve_output_base(output_dir: str) -> Path:
     """Resolve and validate the output directory against allowed roots.
 
@@ -43,17 +96,22 @@ def _resolve_output_base(output_dir: str) -> Path:
 
     1. **Lexical.** ``output_dir`` is joined onto the cwd and normalised with
        ``os.path.normpath`` — pure string work, no syscall — and checked against
-       the allowed roots. Nothing outside a root is ever handed to the
-       filesystem, so this function is not an existence oracle for paths the
-       caller was never allowed to name.
-    2. **Resolved.** Only once step 1 passes is the path resolved, following
-       symlinks, and checked again. A symlink *inside* an allowed root pointing
-       out of it fails here; the lexical check alone cannot see that.
+       the allowed roots. Nothing outside a root is handed to the filesystem, so
+       this function is not an existence oracle for paths the caller was never
+       allowed to name.
+    2. **Symlink-aware, without following anything out.**
+       :func:`_resolve_without_leaving` walks the remaining components, reading
+       each link's target with ``os.readlink`` rather than following it, and
+       refuses the first one that leaves the roots. A symlink *inside* an allowed
+       root pointing out of it is caught — the case the lexical check cannot see,
+       and the case that made the original one-shot ``resolve()`` probe outside
+       the roots before rejecting.
 
     Previously the order was inverted: ``Path(output_dir).resolve()`` ran on raw
     input before any check, and a second branch called ``parent.exists()`` on it
     too. Those two filesystem touches are what CodeQL flagged as py/path-injection
-    at what were then lines 54 and 68 — not the write, which ``safe_join`` already guarded.
+    at what were then lines 54 and 68 — not the write, which ``safe_join``
+    already guarded.
 
     The second branch was also dead. It returned ``candidate`` when
     ``candidate.parent`` was under a root, but ``candidate`` is resolved, so it
@@ -73,27 +131,27 @@ def _resolve_output_base(output_dir: str) -> Path:
         output_dir: User-supplied output directory string.
 
     Returns:
-        Resolved, validated base Path for output.
+        Validated base Path for output, with contained symlinks expanded.
 
     Raises:
-        PathTraversalError: If the path escapes all allowed roots, either
-            lexically or after symlinks are followed.
+        PathTraversalError: If the path escapes all allowed roots, lexically or
+            through a symlink.
     """
-
-    def _contained(path: Path) -> bool:
-        return any(path.is_relative_to(root) for root in _ALLOWED_OUTPUT_ROOTS)
-
     # Step 1 — lexical. No filesystem access on attacker-controlled input.
     lexical = Path(os.path.normpath(os.path.join(os.getcwd(), output_dir)))
-    if not _contained(lexical):
+    if not _contained_in_roots(lexical):
         raise PathTraversalError(
             f"Output directory {output_dir!r} is not under any allowed root. "
             f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
         )
 
-    # Step 2 — resolved. Catches a symlink inside a root that points out of it.
-    candidate = lexical.resolve()
-    if not _contained(candidate):
+    # Step 2 — walk it without following any link out of the roots.
+    containing_root = next(r for r in _ALLOWED_OUTPUT_ROOTS if lexical.is_relative_to(r))
+    candidate = _resolve_without_leaving(containing_root, lexical)
+
+    # Post-condition. The walk should make this unreachable; it is here because
+    # "each step was checked" and "the result is contained" are different claims.
+    if not _contained_in_roots(candidate):
         raise PathTraversalError(
             f"Output directory {output_dir!r} resolves outside every allowed root. "
             f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",

@@ -90,22 +90,6 @@ class TestRefuses:
         with pytest.raises(PathTraversalError):
             _resolve_output_base("/etc")
 
-    def test_symlink_inside_root_pointing_out(self, allowed_tmpdir: Path) -> None:
-        """The property the previous implementation did not hold.
-
-        ``resolve()``-then-check accepted this: the escape only shows up after
-        the symlink is followed, and the old code checked the resolved path
-        against the roots — but it resolved *before* deciding whether the name
-        was one it was willing to touch at all, and the resolved target here is
-        outside every root, so the old code did reject it. What it could not do
-        is reject it without first following the link. This test pins the
-        refusal; ``test_no_filesystem_touch_for_rejected_path`` pins the rest.
-        """
-        link = allowed_tmpdir / "escape"
-        link.symlink_to("/etc", target_is_directory=True)
-        with pytest.raises(PathTraversalError):
-            _resolve_output_base(str(link))
-
 
 class TestNotAnOracle:
     """A rejected path must never reach the filesystem."""
@@ -138,19 +122,76 @@ class TestNotAnOracle:
 
         assert touched == [], f"validator probed the filesystem for a rejected path: {touched}"
 
-    def test_accepted_path_does_resolve(self, monkeypatch, allowed_tmpdir: Path) -> None:
-        """The counterpart: an accepted path IS resolved, so the guard above is
-        measuring an absence that only holds for rejections."""
-        touched: list[str] = []
-        real_resolve = pathlib.Path.resolve
+    def test_accepted_path_is_walked(self, monkeypatch, allowed_tmpdir: Path) -> None:
+        """The counterpart: an accepted path IS inspected.
 
-        def spy_resolve(self, *a, **kw):
-            touched.append(str(self))
-            return real_resolve(self, *a, **kw)
+        Without this, the absence asserted above would hold just as well for a
+        validator that had been disabled entirely. The walk uses ``os.lstat``
+        rather than ``resolve()`` so that a symlink's target is read, not
+        followed — see ``_resolve_without_leaving``.
+        """
+        seen: list[str] = []
+        real_lstat = os.lstat
 
-        monkeypatch.setattr(pathlib.Path, "resolve", spy_resolve)
+        def spy_lstat(path, *a, **kw):
+            seen.append(str(path))
+            return real_lstat(path, *a, **kw)
+
+        monkeypatch.setattr(os, "lstat", spy_lstat)
         _resolve_output_base(str(allowed_tmpdir / "ok"))
-        assert touched, "accepted path was never resolved — symlink check cannot have run"
+        assert seen, "accepted path was never inspected — the symlink walk cannot have run"
+
+
+class TestSymlinkOutOfRootIsReadNotFollowed:
+    """cubic's P1 on this file, and it was right.
+
+    The first version of the fix resolved the lexically-checked path in one
+    ``Path.resolve()`` call. A symlink planted inside an allowed root redirects
+    that resolution outward, so the probe happened before the containment
+    verdict could object — while the docstring claimed nothing outside a root
+    was ever handed to the filesystem.
+    """
+
+    def test_symlink_out_of_root_is_refused(self, allowed_tmpdir: Path) -> None:
+        link = allowed_tmpdir / "into-etc"
+        link.symlink_to("/etc/shadow")
+        with pytest.raises(PathTraversalError):
+            _resolve_output_base(str(link))
+
+    def test_the_target_is_never_stat_ed(self, monkeypatch, allowed_tmpdir: Path) -> None:
+        """``readlink`` reads the target; nothing follows it."""
+        link = allowed_tmpdir / "into-etc"
+        link.symlink_to("/etc/shadow")
+
+        stat_calls: list[str] = []
+        real_stat = os.stat
+
+        def spy_stat(path, *a, **kw):
+            stat_calls.append(str(path))
+            return real_stat(path, *a, **kw)
+
+        monkeypatch.setattr(os, "stat", spy_stat)
+        with pytest.raises(PathTraversalError):
+            _resolve_output_base(str(link))
+
+        outside = [c for c in stat_calls if not _under_allowed_root(Path(c))]
+        assert outside == [], f"followed a symlink out of the roots: {outside}"
+
+    def test_symlink_chain_inside_the_root_still_works(self, allowed_tmpdir: Path) -> None:
+        """Contained links are legitimate and must keep resolving."""
+        real = allowed_tmpdir / "real"
+        real.mkdir()
+        hop = allowed_tmpdir / "hop"
+        hop.symlink_to(real)
+        assert _resolve_output_base(str(hop)) == real.resolve()
+
+    def test_symlink_cycle_raises_rather_than_hanging(self, allowed_tmpdir: Path) -> None:
+        a = allowed_tmpdir / "a"
+        b = allowed_tmpdir / "b"
+        a.symlink_to(b)
+        b.symlink_to(a)
+        with pytest.raises(PathTraversalError):
+            _resolve_output_base(str(a))
 
 
 class TestAllowedRootsAreAbsolute:

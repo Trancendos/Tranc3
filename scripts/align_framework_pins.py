@@ -172,7 +172,7 @@ def align_text(text: str, path: Path) -> tuple[str, list[Change], list[str]]:
         stripped = line.lstrip()
         if not stripped or stripped.startswith("#"):
             continue
-        match = _REQ_LINE.match(line.rstrip("\r\n"))
+        match = _REQ_LINE.fullmatch(line.rstrip("\r\n"))
         if not match:
             continue
         key = _canonical_key(match.group("name"))

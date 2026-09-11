@@ -11,6 +11,7 @@ holds against every injection shape — and the validator was still wrong.
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 import sys
@@ -19,6 +20,24 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_guard():
+    """Load `scripts/check_anchored_validators.py` as a module.
+
+    One copy, not two: cubic pointed out this boilerplate was duplicated
+    verbatim across two tests, and the file has since grown four more that need
+    it.
+    """
+    from importlib.util import module_from_spec, spec_from_file_location
+
+    spec = spec_from_file_location(
+        "anchored_guard_under_test", _ROOT / "scripts" / "check_anchored_validators.py"
+    )
+    guard = module_from_spec(spec)
+    sys.modules[spec.name] = guard
+    spec.loader.exec_module(guard)
+    return guard
 
 
 class TestTheTrapItself:
@@ -101,31 +120,82 @@ class TestTheGuard:
         green. A guard blind to its own motivating case is the defect this
         estate keeps finding, and it had one run of existing before doing it too.
         """
-        from importlib.util import module_from_spec, spec_from_file_location
-
-        spec = spec_from_file_location(
-            "anchored_guard_under_test", _ROOT / "scripts" / "check_anchored_validators.py"
-        )
-        guard = module_from_spec(spec)
-        sys.modules[spec.name] = guard
-        spec.loader.exec_module(guard)
-
+        guard = _load_guard()
         source = '_SAFE_IDENT = __import__("re").compile(r"^[a-z][a-z0-9_]{0,62}$")\n'
-        found = [m.group("name") for m in guard._COMPILE.finditer(source)]
-        assert found == ["_SAFE_IDENT"], f"guard cannot see its own motivating case: {found}"
+        assert guard._anchored_names_ast(ast.parse(source)) == {"_SAFE_IDENT"}, (
+            "guard cannot see its own motivating case"
+        )
 
     def test_multiline_patterns_are_exempt(self):
         """A line parser's `$`-before-newline is the point, not a defect."""
-        from importlib.util import module_from_spec, spec_from_file_location
-
-        spec = spec_from_file_location(
-            "anchored_guard_multiline", _ROOT / "scripts" / "check_anchored_validators.py"
-        )
-        guard = module_from_spec(spec)
-        sys.modules[spec.name] = guard
-        spec.loader.exec_module(guard)
-
+        guard = _load_guard()
         parser = '_HEADING = re.compile(r"^##\\s+.+$", re.MULTILINE)\n'
-        assert [m.group("name") for m in guard._COMPILE.finditer(parser)] == ["_HEADING"]
-        # ...but the scan skips it, because the flag is in the trailing group.
-        assert "MULTILINE" in next(guard._COMPILE.finditer(parser)).group("rest")
+        assert guard._anchored_names_ast(ast.parse(parser)) == set()
+
+    def test_annotated_assignment_is_seen(self):
+        """cubic's P2, first half — and it was right.
+
+        The source regex required `NAME = ...compile(`, so a perfectly ordinary
+        annotated binding slipped past it and any `.match()` on that name went
+        unreported.
+        """
+        guard = _load_guard()
+        source = '_SAFE: re.Pattern[str] = re.compile(r"^[a-z]+$")\n'
+        assert guard._anchored_names_ast(ast.parse(source)) == {"_SAFE"}
+
+    def test_multiline_compile_is_seen(self):
+        """The form that was actually hiding in this repository.
+
+        `scripts/align_framework_pins.py` compiles a verbose pattern across
+        several lines. The regex could not see it, so its `.match()` call went
+        unreported until the AST rewrite — at which point the guard named it on
+        its first run.
+        """
+        guard = _load_guard()
+        source = (
+            "_REQ = re.compile(\n"
+            '    r"""^(?P<name>[a-z]+)\n'
+            '        (?P<rest>.*)$""",\n'
+            "    re.X,\n"
+            ")\n"
+        )
+        assert guard._anchored_names_ast(ast.parse(source)) == {"_REQ"}
+
+    def test_every_form_the_regex_missed(self):
+        """cubic's P2, measured form by form rather than accepted wholesale.
+
+        Four spellings, checked against both implementations. The regex saw one
+        of them; the claim that it missed "multiline `.match()` calls" is right
+        for the attribute-split spelling and wrong for the args-split one, and
+        the form actually hiding in this repository was neither — it was a
+        multiline `re.compile(`, in `scripts/align_framework_pins.py`, which the
+        AST rewrite named on its first run.
+
+            form                     regex sees call    AST sees call
+            call args on next line   yes                yes
+            attribute split          no                 yes
+            multiline compile        no                 yes
+            annotated assignment     no                 yes
+        """
+        guard = _load_guard()
+        forms = {
+            "call args on next line": '_S = re.compile(r"^[a-z]+$")\nx = _S.match(\n    v,\n)\n',
+            "attribute split": '_S = re.compile(r"^[a-z]+$")\nx = (\n    _S\n    .match(v)\n)\n',
+            "multiline compile": (
+                '_S = re.compile(\n    r"""^(?P<a>[a-z]+)$""",\n    re.X,\n)\nx = _S.match(v)\n'
+            ),
+            "annotated assignment": '_S: re.Pattern = re.compile(r"^[a-z]+$")\nx = _S.match(v)\n',
+        }
+        regex_blind = []
+        for label, source in forms.items():
+            tree = ast.parse(source)
+            names = guard._anchored_names_ast(tree)
+            assert guard._match_calls_ast(tree, names), f"AST missed: {label}"
+            if not guard._scan_with_regex(source)[1]:
+                regex_blind.append(label)
+
+        assert sorted(regex_blind) == [
+            "annotated assignment",
+            "attribute split",
+            "multiline compile",
+        ], regex_blind
