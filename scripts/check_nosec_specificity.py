@@ -94,12 +94,33 @@ class Suppression:
     rules: list[str]
     reason: str
 
+    #: A comma with no space after it, between two rule ids. bandit 1.9.4
+    #: parses `B603,B607` as a SINGLE id of that literal text, which matches
+    #: no rule at all -- so the suppression silences only the first id and the
+    #: second is quietly ignored. Measured directly against bandit 1.9.4:
+    #:
+    #:      # nosec B603,B607   ->  B603 still reported
+    #:      # nosec B603, B607  ->  clean
+    #:
+    #: The line looks like it names two rules. It names one. That is the same
+    #: shape as the bare-`# nosec` defect this file was written for -- a
+    #: suppression whose scope does not match what it says -- except it fails
+    #: in the other direction, leaving a finding visible while the author
+    #: believes it handled. Either way the comment is not true.
+    _SPACELESS_IDS = re.compile(r"B\d+,B\d+")
+
     def blocking_problems(self) -> list[str]:
         """Defects that must never land. Currently zero in this repository."""
         if not self.rules:
             return [
                 "bare `# nosec` — silences every bandit rule on this line, "
                 "including the vulnerability nobody has introduced yet"
+            ]
+        if self._SPACELESS_IDS.search(self.text):
+            return [
+                "rule ids run together without a space — bandit 1.9.4 reads "
+                "`B603,B607` as one unknown id and honours only the first, so "
+                "this line claims more than it silences. Write `B603, B607`."
             ]
         return []
 

@@ -47,7 +47,6 @@ free, works on forks, and cannot be blocked by a permissions model.
 from __future__ import annotations
 
 import argparse
-import fnmatch
 import json
 import os
 import subprocess
@@ -61,89 +60,14 @@ import yaml  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 LABELER = ROOT / ".github/labeler.yml"
 
-# Risk surfaces. Each entry is (label, globs, why a reviewer should be told).
-# The reasons are the point: a surface with no reason is a category somebody
-# invented, and it will be ignored within a month.
-SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
-    (
-        "touches-the-gate",
-        (
-            "scripts/check_*.py",
-            "scripts/immune_scan.py",
-            "scripts/vulnerability_census.py",
-            ".github/workflows/production-gate.yml",
-            ".github/workflows/ci.yml",
-        ),
-        "changes a control that decides whether other changes may merge — "
-        "a defect here is invisible until something it should have caught gets through",
-    ),
-    (
-        "touches-suppression",
-        (
-            "config/immune/adjudications.yaml",
-            ".trivyignore",
-            ".secrets.baseline",
-            ".typos.toml",
-            "config/immune/*ceiling*",
-            ".security_learning/*",
-        ),
-        "widens or narrows what the estate has decided not to look at",
-    ),
-    (
-        "touches-auth",
-        (
-            "src/auth/**",
-            "workers/infinity-auth/**",
-            "src/townhall/route_auth.py",
-            "Dimensional/service_auth*.py",
-        ),
-        "changes who may do what; the blast radius is every route behind it",
-    ),
-    (
-        "touches-secrets",
-        (
-            "src/security/vault_client.py",
-            "workers/infinity-void/**",
-            "cloudflare/infinity-void/**",
-            "workers/vault-service/**",
-        ),
-        "The Void — the estate's secret custody",
-    ),
-    # `**/` on every filename pattern, deliberately. A bare `requirements*.txt`
-    # or `docker-compose*.yml` is anchored at the repository root, so a change
-    # to `workers/vault-service/requirements-worker.txt` -- which is most of
-    # this estate's dependency surface, 90-odd workers deep -- raised no
-    # surface at all. The two registers disagreed in a way nobody would notice:
-    # `.github/labeler.yml` already uses `**/requirements*.txt`, so the LABEL
-    # said "dependencies" while the triage summary, whose whole job is telling
-    # a reviewer what to look at first, stayed silent. Reported by cubic on
-    # PR #1150; the fix is to make this file match the register it claims to
-    # read from.
-    (
-        "touches-routing",
-        ("**/docker-compose*.yml", "**/Dockerfile", "api.py"),
-        "changes where traffic goes or which port a service answers on; "
-        "the class of defect that leaves a deployed Location unreachable",
-    ),
-    (
-        "touches-pins",
-        (
-            ".gitmodules",
-            "**/requirements*.txt",
-            "**/package-lock.json",
-            "**/pnpm-lock.yaml",
-            "**/Cargo.lock",
-            "**/go.sum",
-            "**/poetry.lock",
-        ),
-        "moves the dependency surface the census and the merge gate measure",
-    ),
-    (
-        "touches-entity-register",
-        ("src/entities/platform.py", "PLATFORM_ENTITIES.md", "CLAUDE.md", "config/estate/*.yaml"),
-        "changes the canonical description of the platform that other tooling derives from",
-    ),
-)
+# The risk surfaces live in src/immune/surfaces.py, not here.
+#
+# `src/immune/antibody.py` needs the same list to decide what an automated fix
+# may never touch, and two copies would drift in the dangerous direction: a
+# surface added for a reviewer's benefit but not the antibody's means automated
+# edits walk into a path the estate had already written down as needing human
+# eyes. One definition, two readers.
+from src.immune.surfaces import SURFACES, matches as _matches  # noqa: E402, I001
 
 
 def _run(args: list[str]) -> str:
@@ -163,18 +87,6 @@ def changed_files(base: str) -> list[str]:
     if not out.strip():
         out = _run(["git", "diff", "--name-only", base])
     return sorted({line.strip() for line in out.splitlines() if line.strip()})
-
-
-def _matches(path: str, pattern: str) -> bool:
-    """Glob match with `**` meaning "at any depth", as labeler treats it."""
-    if fnmatch.fnmatch(path, pattern):
-        return True
-    if "**/" in pattern and fnmatch.fnmatch(path, pattern.replace("**/", "", 1)):
-        return True
-    # `dir/**` should match `dir/file` as well as `dir/a/b`.
-    if pattern.endswith("/**") and path.startswith(pattern[:-3] + "/"):
-        return True
-    return False
 
 
 def path_labels(files: list[str]) -> dict[str, list[str]]:

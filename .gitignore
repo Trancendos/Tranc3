@@ -134,3 +134,8 @@ action-audit.json
 # but they are ignored here too so a killed run can never leave a deliberately
 # tangled probe file staged for commit.
 immune-probe-*/
+
+# Antibody audit trail — one line per run, written wherever the tool is invoked.
+# Machine-local by nature (it records what a particular run refused on a
+# particular tree), so it is not carried in git; CI uploads it as an artifact.
+logs/antibody.jsonl

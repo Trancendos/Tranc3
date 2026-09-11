@@ -539,13 +539,82 @@ probe drops sight to 50% and exits 1 naming the sensor; breaking the
 *optional* `complexity` probe exits 1 as a regression, which is the case that
 would otherwise degrade in silence.
 
+## Antibodies: automated fixes that refuse more often than they act
+
+```bash
+python scripts/antibody.py                 # against the current change
+python scripts/antibody.py --all           # whole tree (widens scope deliberately)
+python scripts/antibody.py --max-files 3   # tighten the ceiling
+```
+
+It prints a diff and the reasoning. It writes nothing, commits nothing, pushes
+nothing, merges nothing.
+
+### Why this came last
+
+An antibody acts on what a sensor reports. An antibody reading a **blind**
+sensor acts on *silence* — and silence from a sensor that cannot see is
+indistinguishable from silence from a healthy estate. It would make confident,
+well-formed, wrong changes, and make them fastest exactly when the immune
+system was least able to notice.
+
+That is autoimmunity, and this codebase watched it happen twice in miniature
+while being built. A probe left behind by a killed run was rescanned and
+reported as a genuine complexity finding — the system manufacturing its own
+antigen. And the obvious fix for *that* (excluding the probe prefix in
+`pyproject.toml`) would have hidden the live probe from its own scan and
+recorded every probed sensor as blind — the cure causing the disease.
+
+Both were the machinery attacking itself, at a scale where the only cost was
+confusion. An antibody is the same failure with write access.
+
+### The four refusals
+
+| Refusal | Why it is absolute |
+|---|---|
+| **Sensor not `ok`** | The entire justification for acting automatically is that the finding is trustworthy. A finding from an instrument that could not see is not. Refuse — not "warn and continue". |
+| **Security-critical surface** | A wrong automated edit to a gate, an auth path, secret custody, or a suppression list does not merely introduce a bug — it removes the thing that would have caught the bug. |
+| **Outside the change** | A fix in a file the change did not touch is unrelated work arriving in someone else's review. |
+| **Scope ceiling** | An antibody that can touch the whole tree in one pass is not a fix, it is a rewrite, and nobody reviews a rewrite properly. |
+
+A fifth constraint is structural rather than a check: **only findings whose fix
+the tool itself supplies.** This does not invent repairs. `ruff` knows which of
+its own rules are safely fixable and what the replacement is, and that judgement
+stays with the tool that made the finding — `--unsafe-fixes` is deliberately
+never passed.
+
+### Two properties worth stating plainly
+
+**"Proposes, never merges" is a property, not an intention.** The implementation
+calls `ruff check --diff`, not `--fix`. The repair is *described*, never
+applied, so the antibody is incapable of changing the working tree even by
+accident. A test asserts the file on disk is byte-identical after a proposal.
+
+**Refusals are recorded as carefully as actions.** They are the interesting
+half: a run that refused everything and a run that found nothing look identical
+unless the record distinguishes them, and an automated actor whose refusals are
+invisible cannot be audited. `logs/antibody.jsonl` gets one line per run,
+listing what was proposed *and* what was declined, with the reason quoted in the
+same words a reviewer would have used — because the surface list is shared with
+`scripts/triage_change.py` rather than copied. One definition, two readers:
+a surface added for a reviewer's benefit but not the antibody's is exactly the
+drift that would matter.
+
+### Calibrated, like everything else
+
+Blind sensor → refuses. Absent sensor → refuses. Each of the four security
+surfaces → refuses that file and keeps the safe one. File outside the change →
+refuses. Fifteen files against a ceiling of three → keeps three and *names the
+twelve it dropped*, because a silent truncation is worse than no ceiling at all.
+And the positive case: a real fixable finding produces a real diff, with the
+file on disk unchanged.
+
 ### What is still missing
 
-**Antibodies** — auto-fix pull requests scoped to one defect class, proposed
-and never merged, with security-critical paths always requiring human review.
-Deliberately after vaccination, not before: an antibody acting on a blind
-sensor's silence makes confident wrong changes, and that is autoimmunity, which
-is the failure mode with real teeth.
+Nothing in the loop itself. The remaining work is **coverage**: four of seven
+sensors have no probe, so the estate's demonstrated immunity covers 43% of its
+own instruments. Antibodies are deliberately wired to only one sensor
+(`ruff`) for the same reason — the narrowest real thing first.
 
 ## Running it
 
@@ -561,6 +630,7 @@ python scripts/check_nosec_specificity.py          # suppressions name what they
 python scripts/check_precommit_documented.py       # the docs match the gate
 python scripts/triage_change.py                    # who owns this change
 python scripts/vaccinate.py                        # can the sensors still see?
+python scripts/antibody.py                         # propose a fix; never apply one
 ```
 
 `--write-baseline` refuses to run when a required sensor came back blind or

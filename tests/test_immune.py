@@ -20,6 +20,12 @@ from pathlib import Path
 
 import pytest
 
+from src.immune.antibody import (
+    AntibodyRun,
+    propose_ruff_fix,
+    screen,
+    write_audit,
+)
 from src.immune.grade import (
     DebtItem,
     blast_radius,
@@ -49,6 +55,7 @@ from src.immune.sensors import (
     PROBE_DIR_PREFIX,
     Outcome,
     Sensor,
+    SensorResult,
     _sweep_stale_probes,
     parse_output,
     probe_sensor,
@@ -984,3 +991,146 @@ def test_the_probe_follows_the_scan_root_not_the_module_location(tmp_path):
 )
 def test_foreign_paths_cut_at_verified_repository_content(raw, expected):
     assert _relativise(raw) == expected
+
+
+# ── antibodies: what an automated fix is NOT allowed to do ──────────────────
+
+
+def _finding(path: str, rule: str = "F401") -> Finding:
+    return Finding(
+        tool="ruff",
+        rule_id=rule,
+        level="warning",
+        message="m",
+        path=path,
+        start_line=1,
+        sensor="ruff",
+    )
+
+
+_SEEING = [SensorResult("ruff", Outcome.OK, required=True)]
+
+
+def test_an_antibody_refuses_to_act_on_a_blind_sensors_silence():
+    """THE reason vaccination was built before antibodies.
+
+    A blind sensor's silence is indistinguishable from a healthy estate's
+    silence. An antibody reading it would make confident, well-formed, wrong
+    changes — and make them fastest exactly when the immune system was least
+    able to notice. Refuse, never "warn and continue": the entire justification
+    for acting automatically is that the finding is trustworthy.
+    """
+    blind = [SensorResult("ruff", Outcome.BLIND, detail="reported clean, failed its probe")]
+    kept, refusals = screen(
+        [_finding("src/library/a.py")],
+        sensor_results=blind,
+        sensor="ruff",
+        touched=["src/library/a.py"],
+    )
+    assert kept == []
+    assert any("not trustworthy" in r.reason for r in refusals)
+
+
+def test_a_sensor_absent_from_the_run_is_also_a_refusal():
+    """Absent and clean are not the same, here least of all."""
+    kept, refusals = screen(
+        [_finding("src/library/a.py")], sensor_results=[], sensor="ruff", touched=None
+    )
+    assert kept == []
+    assert "absent" in refusals[0].reason
+
+
+@pytest.mark.parametrize(
+    "path,surface",
+    [
+        ("src/auth/jwt_rotator.py", "touches-auth"),
+        ("scripts/check_anything.py", "touches-the-gate"),
+        ("src/security/vault_client.py", "touches-secrets"),
+        (".trivyignore", "touches-suppression"),
+    ],
+)
+def test_an_antibody_never_edits_a_security_critical_surface(path, surface):
+    """A wrong automated edit here does not introduce a bug.
+
+    It removes the thing that would have caught the bug. That asymmetry is why
+    these four surfaces are absolute rather than weighted, and why the list is
+    shared with `scripts/triage_change.py` instead of copied — a surface added
+    for a reviewer's benefit but not the antibody's is the drift that matters.
+    """
+    safe = "src/library/knowledge_base.py"
+    kept, refusals = screen(
+        [_finding(path), _finding(safe)],
+        sensor_results=_SEEING,
+        sensor="ruff",
+        touched=[path, safe],
+    )
+    assert [f.path for f in kept] == [safe]
+    assert any(surface in r.reason for r in refusals)
+
+
+def test_an_antibody_stays_inside_the_change():
+    """A fix in an untouched file is unrelated work in someone else's review."""
+    kept, _ = screen(
+        [_finding("src/library/a.py"), _finding("src/elsewhere/b.py")],
+        sensor_results=_SEEING,
+        sensor="ruff",
+        touched=["src/library/a.py"],
+    )
+    assert [f.path for f in kept] == ["src/library/a.py"]
+
+
+def test_the_scope_ceiling_holds_and_names_what_it_dropped():
+    """A proposal nobody reads carefully is not a fix."""
+    many = [_finding(f"src/library/f{i}.py") for i in range(15)]
+    kept, refusals = screen(
+        many,
+        sensor_results=_SEEING,
+        sensor="ruff",
+        touched=[f.path for f in many],
+        max_files=3,
+    )
+    assert len({f.path for f in kept}) == 3
+    dropped = next(r for r in refusals if r.reason == "scope limit")
+    assert len(dropped.paths) == 12, "a silent truncation is worse than no ceiling"
+
+
+def test_refusals_are_recorded_as_carefully_as_actions(tmp_path):
+    """An automated actor whose refusals are invisible cannot be audited.
+
+    The refusals are the interesting half: they are where the design's limits
+    are actually exercised, and a run that refused everything looks identical
+    to a run that found nothing unless the record distinguishes them.
+    """
+    kept, refusals = screen(
+        [_finding("src/auth/x.py")],
+        sensor_results=_SEEING,
+        sensor="ruff",
+        touched=["src/auth/x.py"],
+    )
+    run = AntibodyRun(refusals=refusals, considered=1)
+    audit = tmp_path / "antibody.jsonl"
+    write_audit(run, audit)
+
+    entry = json.loads(audit.read_text().strip())
+    assert entry["considered"] == 1
+    assert entry["proposed"] == []
+    assert entry["refused"] and "touches-auth" in entry["refused"][0]["reason"]
+
+
+@pytest.mark.skipif(shutil.which("ruff") is None, reason="ruff not installed")
+def test_a_proposal_is_a_diff_and_changes_nothing_on_disk(tmp_path):
+    """ "Proposes, never merges" has to be a property, not an intention.
+
+    `ruff check --diff` rather than `--fix`: the repair is described, never
+    applied, so the antibody is incapable of changing the working tree even by
+    accident. That is a stronger guarantee than meaning not to.
+    """
+    target = tmp_path / "fixable.py"
+    before = "import os\nimport json\n\n\ndef f():\n    return 1\n"
+    target.write_text(before)
+
+    proposal = propose_ruff_fix(["fixable.py"], repo_root=tmp_path)
+
+    assert not proposal.empty, "ruff had a fix and the antibody should carry it"
+    assert "-import os" in proposal.diff
+    assert target.read_text() == before, "a proposal must not touch the file"
