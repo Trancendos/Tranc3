@@ -34,7 +34,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 ### 2.2 Technology Stack
 
 **Core**: Python 3.11, FastAPI, Pydantic V2, asyncio
-**AI/ML**: PyTorch 2.12.0, Transformers, LangChain, Qiskit
+**AI/ML**: PyTorch 2.14.0, Transformers, LangChain, Qiskit
 **Infrastructure**: Docker, Docker Compose, K3s, Oracle Cloud OCI, MicroCeph
 **Frontend**: Vanilla HTML/CSS/JS dashboard + React/TSX web app
 **Nanoservices**: Rust (Cargo.toml-based adaptive storage/HSM)
@@ -242,7 +242,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 
 ### 5.3 Dependency Vulnerability Posture
 
-- PyTorch 2.12.0: 10 PYSEC advisories (all local-attack-vector or high-complexity, mitigated)
+- PyTorch 2.14.0: 10 PYSEC advisories (all local-attack-vector or high-complexity, mitigated)
 - All other core dependencies are current and CVE-remediated
 - CI/CD includes Trivy container scanning, Bandit linting, Semgrep pattern analysis, Safety/pip-audit dependency scanning
 - `.trivyignore` and `tool.safety.ignore` entries document accepted risks with justification
