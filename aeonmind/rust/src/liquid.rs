@@ -13,7 +13,7 @@ Part of the Tranc3 Infinity Ecosystem.
 
 use ndarray::{Array1, Array2};
 use ndarray_rand::RandomExt;
-use rand::distributions::Uniform;
+use rand::distr::Uniform;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -89,11 +89,11 @@ impl LiquidReservoir {
 
         // Initialize sparse recurrent weights
         let mut weights = Array2::<f64>::zeros((n, n));
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for i in 0..n {
             for j in 0..n {
-                if rng.gen::<f64>() < config.sparsity {
-                    weights[[i, j]] = rng.gen_range(-1.0..1.0);
+                if rng.random::<f64>() < config.sparsity {
+                    weights[[i, j]] = rng.random_range(-1.0..1.0);
                 }
             }
         }
@@ -107,11 +107,18 @@ impl LiquidReservoir {
         let current_spectral_radius = config.spectral_radius;
 
         // Random input weights
-        let input_weights =
-            Array2::random((n, m), Uniform::new(-1.0, 1.0)).mapv(|v| v * config.input_scaling);
+        let input_weights = Array2::random(
+            (n, m),
+            Uniform::new(-1.0, 1.0).expect("bounds -1.0..1.0 are finite and ordered"),
+        )
+        .mapv(|v| v * config.input_scaling);
 
         // Bias
-        let bias = Array1::random(n, Uniform::new(-1.0, 1.0)).mapv(|v| v * config.bias_scaling);
+        let bias = Array1::random(
+            n,
+            Uniform::new(-1.0, 1.0).expect("bounds -1.0..1.0 are finite and ordered"),
+        )
+        .mapv(|v| v * config.bias_scaling);
 
         Self {
             config,
@@ -151,10 +158,10 @@ impl LiquidReservoir {
 
     /// Warmup with random inputs.
     pub fn warmup(&mut self, n_steps: usize) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for _ in 0..n_steps {
             let input: Vec<f64> = (0..self.config.input_size)
-                .map(|_| rng.gen_range(-1.0..1.0))
+                .map(|_| rng.random_range(-1.0..1.0))
                 .collect();
             self.step(&input);
         }
