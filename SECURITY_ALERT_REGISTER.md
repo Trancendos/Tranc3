@@ -117,50 +117,25 @@ release ships.
 
 ---
 
-### SEC-005 — mcp session-hijacking / host-validation advisories, unreachable behind semgrep's exact pin
+### SEC-005 — mcp session-hijacking / host-validation advisories, unreachable behind semgrep's exact pin — **RETIRED 2026-09-11**
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** |
+| **Disposition** | **ACCEPT** — **RETIRED** (upstream fix landed) |
 | **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950) |
 | **Scanner** | pip-audit |
 | **Component** | `mcp==1.23.3` — transitive via `semgrep`, `requirements-security.txt` |
-| **Blocked-by** | `semgrep` exact-pins `mcp==1.23.3` through 1.172.0 — patched mcp releases exist and cannot be installed |
 | **Recorded** | 2026-08-21 |
+| **Retired** | 2026-09-11 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
-| **Next review** | 2026-11-21 |
-| **Re-evaluate** | On every `semgrep` bump — see the check below |
 
-Patched releases exist (1.27.2 and 1.28.1) and **cannot be reached**: every semgrep
-release through 1.172.0 exact-pins `mcp==1.23.3`, not a range, so overriding it fails
-pip resolution rather than producing a patched install. The census therefore classifies
-these three as `blocked` rather than `fixable` — a fix exists, but not for us.
+**This entry is retired.** The three CVEs it accepted are fixed upstream and are no longer present in what is installed.
 
-The **Blocked-by** row above is what produces that classification, and it is the only
-thing that can. `scripts/vulnerability_census.py` reads blocked ids from entries
-carrying that row alone, never from register membership: an entry dispositioned
-`SUPPRESS` for want of any patch (SEC-004) must start failing the gate the moment
-upstream ships one, and would silently stop doing so if being *documented* were enough
-to earn `blocked`. All three ids are written in full for the same reason — the
-census's id pattern matches `CVE-YYYY-NNNN`, so a shorthand like "52869 / 52870"
-would register only the first.
+**Why this risk was accepted.** Every semgrep release through 1.172.0 exact-pinned `mcp==1.23.3`, not a range, so overriding it failed pip resolution rather than producing a patched install. The census classified these three as `blocked` rather than `fixable` — a fix existed, but was unreachable. All three are bugs in mcp's *server* transports — session hijacking and missing Host/Origin validation in the SSE, WebSocket and experimental-tasks paths. `semgrep` is invoked here purely as a CLI SAST scanner from pre-commit and CI; it never starts an mcp server, so none of those code paths execute.
 
-Not exploitable as used. All three are bugs in mcp's *server* transports — session
-hijacking and missing Host/Origin validation in the SSE, WebSocket and
-experimental-tasks paths. `semgrep` is invoked here purely as a CLI SAST scanner from
-pre-commit and CI; it never starts an mcp server, so none of those code paths execute.
+**Why it is retired now.** Semgrep upgraded from 1.173.0 to 1.177.0, and semgrep 1.173.0 / 1.175.0 / 1.177.0 all declare `Requires-Dist: mcp==1.29.0`. The estate stopped installing the vulnerable version, and mcp 1.29.0 has zero advisories (re-measured 2026-09-11 against the OSV API). Nothing was suppressed to close this — the pin moved and the advisory count went to zero.
 
-**This entry exists because the analysis was in the wrong place.** The same reasoning
-already sat in a comment block at the foot of `requirements-security.txt`, where it was
-correct, current and invisible: `scripts/vulnerability_census.py` reads dispositions
-from this register and from `SECURITY.md`, and nowhere else. A risk documented somewhere
-the control cannot read is, to that control, undocumented — which is how three
-knowingly-carried findings would have reported as open. The requirements comment stays
-as installation guidance; this register entry is what makes the disposition count.
-
-**Re-check on every semgrep bump:** `pip download --no-deps semgrep==<version>` and grep
-its `METADATA` for `Requires-Dist: mcp`. If the pin has moved to a range, or to 1.28.1 or
-above, drop this entry and take the fix.
+**The process failure.** This entry named its own re-check condition: *"Re-check on every semgrep bump."* The bump to semgrep 1.173.0 landed without that re-check, so the entry went on describing a dependency the estate had already stopped installing. A stale accepted risk reads exactly like a live one, which is why this is retired in place with its measurement rather than deleted. An accepted-risk entry that names its own re-check condition is only as good as someone performing it.
 
 ---
 
