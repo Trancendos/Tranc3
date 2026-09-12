@@ -41,6 +41,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from src.cmdb.containers import CUSTODIAN  # noqa: E402
+from src.cmdb.containers import CannotEnumerateContainers  # noqa: E402
 from src.cmdb.containers import discover as discover_containers  # noqa: E402
 from src.cmdb.datastores import discover as discover_datastores  # noqa: E402
 
@@ -49,6 +50,11 @@ OUTPUT = REPO / "docs" / "architecture" / "ci-register.json"
 
 def build_register() -> dict:
     datastores = discover_datastores()
+    # Not wrapped in a try/except that degrades to an empty list. With PyYAML
+    # absent this function used to write a register saying "containers with no
+    # SBOM: 0" and exit 0 -- a report of perfect coverage produced by a run that
+    # enumerated nothing. Letting the exception out is what makes "could not
+    # measure" distinguishable from "measured, and it is fine".
     containers = discover_containers()
 
     # Test-fixture databases are excluded from the register and counted, not
@@ -80,7 +86,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--gaps", action="store_true")
     args = parser.parse_args(argv)
 
-    register = build_register()
+    try:
+        register = build_register()
+    except CannotEnumerateContainers as exc:
+        print(f"cannot build the CI register: {exc}", file=sys.stderr)
+        print(
+            "Refusing to write a register that would report zero containers, "
+            "which is indistinguishable from an estate with none.",
+            file=sys.stderr,
+        )
+        return 1
 
     if args.gaps:
         counts = register["counts"]

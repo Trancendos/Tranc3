@@ -17,6 +17,7 @@ control reports success for work it did not do.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,7 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+import src.cmdb.containers as containers_module  # noqa: E402
 from src.cmdb.containers import CUSTODIAN, Container  # noqa: E402
 from src.cmdb.containers import discover as discover_containers  # noqa: E402
 from src.cmdb.datastores import Datastore  # noqa: E402
@@ -170,6 +172,64 @@ def test_generated_output_is_current(script):
     )
     assert result.returncode == 0, (
         f"{script} reports stale output.\n{result.stdout}\n{result.stderr}"
+    )
+
+
+# ── A sensor that cannot see must not report what a clean estate reports ─────
+
+
+def test_an_unreadable_inventory_raises_rather_than_reporting_zero():
+    """The defect IMMUNE-SYSTEM.md names, found in this repository's own CMDB.
+
+    `discover()` returned an empty list when PyYAML was missing or the compose
+    file was absent. `build_ci_register.py` then exited 0 and printed
+    "containers with no SBOM: 0" -- a report of perfect coverage produced by a
+    run that had enumerated nothing at all. An empty list now means "the compose
+    file was read and declares no services", which is a measurement; anything
+    that prevents a measurement raises.
+    """
+    from src.cmdb.containers import CannotEnumerateContainers
+
+    assert issubclass(CannotEnumerateContainers, Exception)
+
+    original = containers_module.COMPOSE
+    try:
+        containers_module.COMPOSE = REPO / "does-not-exist-compose.yml"
+        with pytest.raises(CannotEnumerateContainers):
+            containers_module.discover()
+    finally:
+        containers_module.COMPOSE = original
+
+
+@pytest.mark.parametrize(
+    "script", ["scripts/build_ci_register.py", "scripts/build_container_sboms.py"]
+)
+def test_the_generators_refuse_to_run_blind(script, tmp_path):
+    """Both must exit non-zero when the inventory cannot be read.
+
+    Exercised by making `import yaml` fail, which is how this was found: the
+    scripts ran in an environment without PyYAML and reported a clean estate.
+    """
+    stub = tmp_path / "yamlblock"
+    stub.mkdir()
+    (stub / "yaml.py").write_text("raise ImportError('simulated: PyYAML missing')\n")
+
+    result = subprocess.run(
+        [sys.executable, script, "--check"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(stub)},
+    )
+    assert result.returncode != 0, (
+        f"{script} exited 0 with no readable container inventory. A generator that "
+        "reports success on an estate it could not enumerate is worse than one "
+        "that crashes."
+    )
+    combined = result.stdout + result.stderr
+    assert "PyYAML" in combined, (
+        f"{script} failed without naming the cause. The earlier message blamed the "
+        "compose file for every failure, so a missing PyYAML read as a missing file."
     )
 
 

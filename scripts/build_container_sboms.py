@@ -43,7 +43,11 @@ REPO = Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from src.cmdb.containers import SBOM_DIR, discover  # noqa: E402
+from src.cmdb.containers import (  # noqa: E402
+    SBOM_DIR,
+    CannotEnumerateContainers,
+    discover,
+)
 
 CYCLONEDX_VERSION = "1.6"
 
@@ -179,9 +183,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    containers = discover()
+    try:
+        containers = discover()
+    except CannotEnumerateContainers as exc:
+        # Say which of the two it is. The old message named the compose file for
+        # every cause, so a missing PyYAML read as a missing compose file.
+        print(f"cannot enumerate containers: {exc}", file=sys.stderr)
+        return 1
     if not containers:
-        print("no containers found — is docker-compose.production.yml present?", file=sys.stderr)
+        print(
+            "docker-compose.production.yml declares no services. That is a "
+            "measurement, not a failure to measure — but it is surprising for "
+            "this estate, so check the file before trusting it.",
+            file=sys.stderr,
+        )
         return 1
 
     if args.report:

@@ -193,14 +193,37 @@ def _as_list(value) -> List[str]:
     return [str(value)]
 
 
+class CannotEnumerateContainers(RuntimeError):
+    """Raised when the container inventory could not be read at all.
+
+    Distinct from "there are no containers", and that distinction is the whole
+    point. `discover()` used to return an empty list when PyYAML was missing or
+    the compose file was absent, so `build_ci_register.py` exited 0 and reported
+    "containers with no SBOM: 0" -- which reads as complete coverage of an estate
+    it had not looked at. This repository's own IMMUNE-SYSTEM.md names that
+    failure exactly: a sensor that cannot see reports what a clean estate
+    reports. Found while checking a cubic finding on PR #1207.
+    """
+
+
 def discover() -> List[Container]:
-    """Every compose service, as a container record."""
+    """Every compose service, as a container record.
+
+    Raises `CannotEnumerateContainers` when the inventory cannot be read. An
+    empty list means the compose file was read and declares no services, which
+    is a measurement; an exception means no measurement was taken.
+    """
     try:
         import yaml
-    except ImportError:  # pragma: no cover - yaml is a hard dependency here
-        return []
+    except ImportError as exc:
+        raise CannotEnumerateContainers(
+            "PyYAML is not installed, so docker-compose.production.yml cannot be "
+            "parsed and no container inventory can be taken."
+        ) from exc
     if not COMPOSE.is_file():
-        return []
+        raise CannotEnumerateContainers(
+            f"{COMPOSE} is missing, so no container inventory can be taken."
+        )
 
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8")) or {}
     services = document.get("services") or {}
