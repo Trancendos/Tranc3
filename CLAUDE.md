@@ -87,6 +87,19 @@ mounted in `api.py`).
   `tranc3-*` service names stay only where they genuinely serve the Tier-3 engine
   (Tranc3Engine, tranc3-backend, tranc3-ai); new platform-level names use
   "trancendos-*". See `config/estate/naming_conventions.md` §0.
+- **"Dimensional" and "Dimensionals" both exist and mean different things.**
+  Set by the owner 2026-09-12: **Dimensional = one shared service**, **Dimensionals =
+  multiple shared services**. It is an ordinary English plural carrying real
+  information, so neither form is deprecated and "Dimensional" must **not** be swept.
+  The package directory is `Dimensionals/` (it holds many) and import paths follow it
+  (`from Dimensionals.middleware import ...`); a sentence about one of them takes the
+  singular ("each module runs under **a Dimensional**"). The taxonomy encodes this
+  correctly — node kind `dimensional`, branch label `Dimensionals (Shared-Core)` — which
+  is why `docs/architecture/TAXONOMY.md` reads "Dimensional | 32". `Dimensional Nexus` /
+  `dimensional-nexus-service` is unrelated: there it is the English adjective. The
+  2026-09-11 rename flattened this across 8,319 references; `tests/test_dimensionals_naming.py`
+  now fails on a singular article in front of the plural. See
+  `config/estate/naming_conventions.md` §0a.
 - **Norman Hawkins holds two different tiers and they are not interchangeable.** He is
   **The Observatory's Lead AI (Tier 3)** and separately **The Spark's Prime (Tier 2)**.
   The Spark's own Lead AI is **Imfy** (`AID-SPK-01`) — `PLATFORM_ENTITIES.md` PID-SPK and
