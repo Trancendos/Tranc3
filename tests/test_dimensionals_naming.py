@@ -24,9 +24,26 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 
-#: A singular determiner immediately in front of the plural noun. "a
-#: Dimensionals" is wrong under any reading, so this needs no exceptions.
-SINGULAR_BEFORE_PLURAL = re.compile(r"\b(?:a|an|each|every|one|another|single)\s+Dimensionals\b")
+#: Words that, sitting between the determiner and the noun, make the plural
+#: legitimate: "one **of the** Dimensionals" is correct English and must stay
+#: green. Without this the guard would flag every sentence that counts them.
+_PLURAL_IS_LEGITIMATE = r"(?:of|the|these|those|all|many|several|both|its|their|our)"
+
+#: A singular determiner in front of the plural noun, tolerating up to two
+#: intervening adjectives.
+#:
+#: The first version required the determiner to sit *immediately* before the
+#: noun, and cubic then found three sites it could not see -- "a **parent**
+#: Dimensionals" and "a **specific** Dimensionals" twice -- in the very file
+#: whose other singular this guard had just fixed. One adjective defeated it.
+#: A guard that only catches the simplest spelling of a defect reports a clean
+#: estate while the defect is still there, which is the failure
+#: docs/governance/IMMUNE-SYSTEM.md names.
+SINGULAR_BEFORE_PLURAL = re.compile(
+    r"\b(?:a|an|each|every|one|another|single)\s+"
+    r"(?:(?!" + _PLURAL_IS_LEGITIMATE + r"\b)[A-Za-z,-]+\s+){0,2}"
+    r"Dimensionals\b"
+)
 
 #: Files that quote the error on purpose: the migration script's comments and
 #: the convention's own documentation both need to show the wrong form.
@@ -117,3 +134,42 @@ def test_the_legacy_fallback_is_not_the_canonical_path() -> None:
         "the pre-rename directory was the singular form -- one shared-core tree"
     )
     assert DIMENSIONALS_DIR.name == "Dimensionals"
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "operates under the governance of a parent Dimensionals.",
+        "Get all Underverse modules belonging to a specific Dimensionals.",
+        "one shared Dimensionals",
+        "a lightweight, domain-specific Dimensionals",
+    ],
+)
+def test_an_adjective_does_not_hide_the_error(line: str) -> None:
+    """cubic found three of these in a file this guard had already passed.
+
+    The original pattern required the determiner to sit immediately before the
+    noun, so "a **parent** Dimensionals" slipped through. The first two cases
+    here are verbatim from `Dimensionals/dimensionals/underverse.py` before the
+    fix.
+    """
+    assert SINGULAR_BEFORE_PLURAL.search(line)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "one of the Dimensionals",
+        "each of the Dimensionals",
+        "every one of their Dimensionals",
+        "all the Dimensionals are registered as CIs",
+    ],
+)
+def test_counting_them_is_legitimate_and_stays_green(line: str) -> None:
+    """The cost of widening the pattern.
+
+    "one of the Dimensionals" is correct English about several shared services.
+    A guard that flagged it would be wrong on the sentences most likely to be
+    written about a collection, and would be switched off.
+    """
+    assert not SINGULAR_BEFORE_PLURAL.search(line)

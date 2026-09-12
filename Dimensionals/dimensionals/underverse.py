@@ -10,7 +10,7 @@ The Underverse is the innermost layer of the service architecture:
     Dimensional's (Shared-Core) --> Service Bus --> Underverse --> Per-App Nanoservices
 
 Each Underverse module is a lightweight, domain-specific nanoservice that
-operates under the governance of a parent Dimensionals. Underverse modules
+operates under the governance of a parent Dimensional. Underverse modules
 inherit the pillar and tier associations of their parent dimensional, but
 can also define their own capability scope.
 
@@ -257,7 +257,7 @@ class UnderverseRegistry:
     # ── Discovery ─────────────────────────────────────────────────────────
 
     def get_by_dimensional(self, parent_dimensional: str) -> List[UnderverseModule]:
-        """Get all Underverse modules belonging to a specific Dimensionals.
+        """Get all Underverse modules belonging to a specific Dimensional.
 
         Args:
             parent_dimensional: The parent Dimensional's service ID
@@ -416,7 +416,7 @@ class UnderverseRegistry:
         return [m.to_dict() for m in self._modules.values()]
 
     def get_dimensional_summary(self, parent_dimensional: str) -> Dict[str, Any]:
-        """Get a summary of Underverse modules organized under a specific Dimensionals.
+        """Get a summary of Underverse modules organized under a specific Dimensional.
 
         Args:
             parent_dimensional: The parent Dimensional's service ID
