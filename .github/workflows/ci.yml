@@ -232,8 +232,11 @@ jobs:
       # A compose image with no @sha256 digest means the container register
       # records a name that can point at different bytes tomorrow, which is the
       # one thing a container inventory exists to prevent. Ratchets against
-      # config/estate/compose_digest_baseline.json: the 11 known pins are debt to
-      # burn down, a new one fails here.
+      # config/estate/compose_digest_baseline.json: the 14 known pins are debt to
+      # burn down, a new one fails here. Covers every compose manifest in the
+      # repository, not only the nine at the root -- the first version of this
+      # step globbed the root and passed ten files under deploy/ and docker/
+      # without ever reading them.
       - name: Compose images are digest-pinned
         run: python scripts/check_compose_image_digests.py
 
