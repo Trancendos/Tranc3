@@ -20,7 +20,13 @@ REPO = Path(__file__).resolve().parents[2]
 PROFILES_DIR = REPO / "src" / "personality" / "profiles"
 NANOSERVICES_DIR = REPO / "src" / "nanoservices"
 DIMENSIONALS_DIR = REPO / "Dimensionals"
-LEGACY_DIMENSIONAL_DIR = REPO / "Dimensionals"
+#: The pre-rename directory. Singular on purpose: under the owner's
+#: convention "Dimensional" is ONE shared service and "Dimensionals" is the
+#: collection, so the old single-directory name was the singular form.
+#: scripts/migrate_to_dimensionals.py rewrote this constant to "Dimensionals"
+#: along with everything else, which left the fallback pointing at the same
+#: path as DIMENSIONALS_DIR -- a fallback that cannot fall back.
+LEGACY_DIMENSIONAL_DIR = REPO / "Dimensional"
 LEGACY_SHARED_CORE_DIR = REPO / "shared_core"
 SHARDS_WORKER = REPO / "workers" / "infinity-shards-service" / "worker.py"
 

@@ -16,14 +16,14 @@ can also define their own capability scope.
 
 Architecture:
     Infinity Ecosystem
-    └── Dimensional's (Shared-Core Services)
+    └── Dimensionals (Shared-Core Services)
         └── Underverse (Per-App Nanoservices)
             └── Module (Individual nanoservice instance)
 
 Naming Convention:
     "Underverse" = the collection of per-app nanoservice registries
     in the Trancendos Universe. Each Underverse module is a
-    domain-specific microservice operating under a Dimensionals.
+    domain-specific microservice operating under a Dimensional.
 
 OWASP Alignment:
     A01 (Broken Access Control): Tier-aware module access
