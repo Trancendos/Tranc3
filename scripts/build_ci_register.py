@@ -40,9 +40,9 @@ REPO = Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from src.cmdb.containers import (
-    CUSTODIAN,  # noqa: E402
-    CannotEnumerateContainers,  # noqa: E402
+from src.cmdb.containers import (  # noqa: E402
+    CUSTODIAN,
+    CannotEnumerateContainers,
 )
 from src.cmdb.containers import discover as discover_containers  # noqa: E402
 from src.cmdb.datastores import discover as discover_datastores  # noqa: E402
