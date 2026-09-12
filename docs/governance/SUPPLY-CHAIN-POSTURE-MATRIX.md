@@ -212,6 +212,14 @@ Steps 1–2 are a day or two, not half a day, and step 3 should be a separate de
 evidence from step 2 rather than committed to up front. **Not started** — the staging is the
 recommendation, not a completed plan.
 
+> **Governance exception for centrally managed framework pins.** Five packages (FastAPI, Starlette,
+> Pydantic, Uvicorn, Redis) are governed by `scripts/align_framework_pins.py` and excluded from both
+> Dependabot and Renovate automatic updates. These pins are defined in a `CANONICAL` source and updated
+> through a single reviewed pass to avoid 63 duplicate PRs and rate-limit issues (`CLAUDE.md` §3).
+> The production gate (`.forgejo/workflows/production-gate.yml`) includes a governance check
+> (`scripts/check_canonical_pin_governance.py`) that verifies these packages are not proposed by
+> bots. To bump one of these: edit `CANONICAL` in the script and run it with `--write`.
+
 **3. Per-release SBOM retention.** SBOMs are generated today (syft, dual-format, in
 `security-scan.yml`) but retained as CI artefacts on a rolling window. MC-042 is partial for this
 reason. The CRA expects the SBOM for a *released version* to remain current and available across the

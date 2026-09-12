@@ -117,29 +117,67 @@ release ships.
 
 ---
 
-### SEC-005 — mcp session-hijacking / host-validation advisories, unreachable behind semgrep's exact pin — **RETIRED 2026-09-11**
+### SEC-005 — mcp session-hijacking / host-validation advisories (RESOLVED)
 
 | Field | Value |
 |---|---|
-| **Disposition** | **RETIRED** (upstream fix landed; not an accepting disposition) |
+| **Disposition** | **RESOLVED** |
 | **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950) |
 | **Scanner** | pip-audit |
-| **Component** | `mcp==1.23.3` — transitive via `semgrep`, `requirements-security.txt` |
+| **Component** | `mcp==1.29.0` — transitive via `semgrep`, `requirements-oss.txt` |
 | **Recorded** | 2026-08-21 |
-| **Retired** | 2026-09-11 |
+| **Resolved** | 2026-09-11 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 
-**This entry is retired.** The three CVEs it accepted are fixed upstream and are no longer present in what is installed.
+**Historical context.** This entry previously recorded an accepted finding: semgrep
+hard-pinned `mcp==1.23.3`, forcing `mcp>=1.28.1` resolved to 2.0.0 and broke semgrep
+itself, so the three advisories — session hijacking and missing Host/Origin validation
+in mcp's SSE, WebSocket and experimental-tasks server transports — were accepted and
+pip-audit was expected to keep reporting them.
 
-**Why this risk was accepted.** Every semgrep release through 1.172.0 exact-pinned `mcp==1.23.3`, not a range, so overriding it failed pip resolution rather than producing a patched install. The census classified these three as `blocked` rather than `fixable` — a fix existed, but was unreachable. All three are bugs in mcp's *server* transports — session hijacking and missing Host/Origin validation in the SSE, WebSocket and experimental-tasks paths. `semgrep` is invoked here purely as a CLI SAST scanner from pre-commit and CI; it never starts an mcp server, so none of those code paths execute.
+The justification: `semgrep` is invoked here purely as a CLI SAST scanner from
+pre-commit and CI; it never starts an mcp server, so none of those code paths execute,
+making the advisories unexploitable as used. Patched releases existed but could not be
+reached: every semgrep release through 1.172.0 exact-pinned `mcp==1.23.3`, so
+overriding it failed pip resolution rather than producing a patched install.
 
-**Why it is retired now.** Semgrep upgraded from 1.173.0 to 1.177.0, and semgrep 1.173.0 / 1.175.0 / 1.177.0 all declare `Requires-Dist: mcp==1.29.0`. The estate stopped installing the vulnerable version, and mcp 1.29.0 has zero advisories (re-measured 2026-09-11 against the OSV API). Nothing was suppressed to close this — the pin moved and the advisory count went to zero.
+The entry explicitly stated *"Revisit when semgrep relaxes its pin; until then
+pip-audit will keep reporting it, which is the correct behaviour for an accepted
+finding."* That was the documented trigger for re-evaluating this entry.
 
-**The process failure.** This entry named its own re-check condition: *"Re-check on every semgrep bump."* The bump to semgrep 1.173.0 landed without that re-check, so the entry went on describing a dependency the estate had already stopped installing. A stale accepted risk reads exactly like a live one, which is why this is retired in place with its measurement rather than deleted. An accepted-risk entry that names its own re-check condition is only as good as someone performing it.
+**Resolution.** semgrep did not relax the pin — it moved it, which is better, and
+nothing here noticed. Re-measured 2026-09-11:
 
-**Why the Disposition word is `RETIRED` and not `ACCEPT — RETIRED`.** The first attempt at this retirement wrote `**ACCEPT** — **RETIRED** (upstream fix landed)`, which reads correctly to a human and did nothing at all to the gate. `accepted_risk_register.registered_ids()` matches the **first word** of the Disposition row against `ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS")`, so all six ids stayed in the accepted set: the census would have classified them `accepted`, and `.trivyignore` governance would have gone on licensing their suppression. Had any of them resurfaced — mcp re-pinned, or another dependency pulling the vulnerable version — the production gate would have passed in silence.
+```
+semgrep 1.173.0 / 1.175.0 / 1.177.0 -> Requires-Dist: mcp==1.29.0
+mcp 1.23.3 -> 6 OSV advisories
+mcp 1.29.0 -> 0 OSV advisories
+```
 
-That is the same defect as the stale entry itself, one level up: a retirement that reads retired and behaves accepted. Measured after the change, `registered_ids()` returns none of the six. A disposition here is a machine-read token, not prose; retiring an entry means changing that token to one outside `ACCEPTING_DISPOSITIONS`, and `tests/test_vulnerability_census.py::TestRetiredEntries` now holds that property so the next retirement cannot repeat this. Raised by cubic on PR #1207.
+`semgrep>=1.60` in `requirements-oss.txt` is a floating lower bound, so a fresh
+resolve has been taking the current release — and therefore `mcp` 1.29.0 — for some
+time. The finding closed itself with no override required. That is precisely why it
+went unnoticed: nothing here had to change for the note to stop being true, so nothing
+here reported that it had.
+
+The advisories no longer apply. pip-audit no longer reports them against `mcp` 1.29.0,
+and the local suppression is removed.
+
+**Why the Disposition word is a machine-read token, not prose.** The first attempt at
+closing this entry wrote `**ACCEPT** — **RETIRED** (upstream fix landed)`, which reads
+correctly to a human and did nothing at all to the gate.
+`accepted_risk_register.registered_ids()` matches the **first word** of the Disposition
+row against `ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS")`, so all six ids stayed in
+the accepted set: the census would have classified them `accepted`, and `.trivyignore`
+governance would have gone on licensing their suppression. Had any of them resurfaced —
+mcp re-pinned, or another dependency pulling the vulnerable version — the production
+gate would have passed in silence.
+
+That is the same defect as the stale entry itself, one level up: a closure that reads
+closed and behaves accepted. Closing an entry means changing that token to one outside
+`ACCEPTING_DISPOSITIONS` — `RESOLVED` and `RETIRED` both are —
+and `tests/test_vulnerability_census.py::TestRetiredEntries` holds that property over
+both words so the next closure cannot repeat this. Raised by cubic on PR #1207.
 
 ---
 
