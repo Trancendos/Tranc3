@@ -5,9 +5,9 @@
 
 ## Executive Summary
 
-This report documents the remediation of **66 CVE vulnerabilities** identified across the Tranc3 ecosystem, spanning Python (PyPI) and Node.js (npm) dependencies. The vulnerabilities ranged from Critical (CVSS 9.8) to Low severity. All have been addressed through dependency upgrades, security hardening, and automated vulnerability management implementation.
+This report documents the remediation of **67 CVE vulnerabilities** identified across the Tranc3 ecosystem, spanning Python (PyPI) and Node.js (npm) dependencies. The vulnerabilities ranged from Critical (CVSS 9.8) to Low severity. All have been addressed through dependency upgrades, security hardening, and automated vulnerability management implementation.
 
-**Status: ALL 66 CVEs REMEDIATED**
+**Status: ALL 67 CVEs REMEDIATED**
 
 ---
 
@@ -43,6 +43,13 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 - **Impact:** `torch.load` with `weights_only=True` still leads to remote code execution via unsafe pickle deserialization
 - **Remediation:** Upgraded to torch==2.12.0
 - **Additional:** Added `weights_only=True` enforcement in model loading code with safe_loader wrapper
+
+### GHSA-2xp9-vwfh-vxw4 — next (Critical)
+- **Package:** next (npm) — MIT
+- **Impact:** Remote code execution vulnerability in image optimization affecting AVIF file processing. A vulnerability in the underlying `libheif` library used by `sharp` which Next.js uses for image optimization can lead to remote code execution when AVIF files are optimized.
+- **Remediation:** Upgraded from next 15.5.23 to next 15.5.25
+- **Date Remediated:** 2026-09-11
+- **Additional:** AVIF file optimization is disabled until the fix has propagated
 
 ---
 
@@ -247,6 +254,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 | Package | Previous | Updated | CVEs Resolved |
 |---------|----------|---------|---------------|
+| next | 15.5.23 | 15.5.25 | 1 |
 | undici | 8.10.0 | 8.10.2 | 5 |
 | vite | (new dep) | 7.1.3 | 1 |
 | ws | (new dep) | 8.18.3 | 1 |
@@ -320,7 +328,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ## 8. Verification Checklist
 
-- [x] All 66 CVEs addressed through dependency upgrades
+- [x] All 67 CVEs addressed through dependency upgrades
 - [x] No `>=` or `~=` version specifiers in requirements.txt
 - [x] Docker containers run as non-root user
 - [x] Security scanning workflows created
