@@ -226,10 +226,28 @@ jobs:
   # wording below is part of why it went unexamined while it failed on every
   # push to main from 2026-08-25 onward. Left named as-is only because the job
   # name is a required status check; the description is now accurate.
+  #
+  # It runs on pull requests too, and did not until 2026-09-13. The job-level
+  # `if` that used to sit here made it main-only, which had two consequences.
+  #
+  # The visible one: `trivy-fs-enforce` is a code-scanning category present on
+  # `refs/heads/main` and absent from every PR ref, so GitHub's generated
+  # "Trivy" check reported "1 configuration not found" and concluded FAILURE on
+  # 100% of pull requests -- forever, and regardless of the code. A check that
+  # is red on a clean branch and red on a filthy one carries no information, and
+  # the only thing it can teach a reader is to stop looking at a red Trivy.
+  #
+  # The one that matters more: this is the strict pass. `limit-severities-for-
+  # sarif` makes its exit code answer to HIGH,CRITICAL, and it was only ever run
+  # AFTER the merge it exists to gate. A pull request could introduce a critical
+  # finding and hear nothing about it until the push to main.
+  #
+  # Enforcement itself has not moved. The scan runs everywhere and reports; only
+  # a push to main takes exit-code 1, so a PR sees the finding without being
+  # blocked by the estate's pre-existing ones.
   trivy-enforce:
     name: Trivy Enforce on main (opt-in)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [prepare-cache]
     steps:
       - name: Checkout repository
@@ -245,7 +263,8 @@ jobs:
           format: ${{ env.TRIVY_OUTPUT_FORMAT }}
           output: "trivy-fs-enforce.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
-          exit-code: "1"
+          # Blocking on main, reporting everywhere else -- see the job comment.
+          exit-code: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && '1' || '0' }}
           # Required for the severity filter above to govern the exit code.
           # With format=sarif and this left at its `false` default, the action
           # logs "Building SARIF report with all severities" and overrides
