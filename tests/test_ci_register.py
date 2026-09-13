@@ -442,3 +442,105 @@ class TestTheDockerfileResolution:
                 f"{ci['ci_id']} is a Rust container but its SBOM lists non-cargo "
                 f"components: {[p for p in purls if not p.startswith('pkg:cargo/')][:5]}"
             )
+
+
+class TestTheRegisterDoesNotDependOnWalkOrder:
+    """The register must describe the estate, not the filesystem it was built on.
+
+    `build_ci_register.py --check` went STALE in CI four times while exiting 0 on
+    every local checkout. The unified diff `--check` grew in the last commit
+    finally named it, and it was not a forgotten regeneration -- it was two
+    generator defects that make the output depend on `Path.rglob` order, which
+    differs between filesystems:
+
+      * `discover()` sorted on `(engine, name)`, which is not unique. Two modules
+        called `pool.py` and two called `sentinel_station.py` each produce a store
+        named `redis@pool` / `redis@sentinel_station`, so two pairs of CIs tied
+        and Python's stable sort settled them by discovery order. Two
+        Configuration Items swapping identity between two runs is a CMDB
+        describing the machine rather than the estate.
+      * a store reached by several path literals (`/data/hive.db` in one worker,
+        `hive.db` in another) took its `locator` from whichever file the walk hit
+        first, via `setdefault`. Eleven of the 144 datastore CIs are in that
+        state.
+
+    Both are the engagement's recurring shape once more: the control ran, exited,
+    and reported -- and what it reported was decided by something other than what
+    it was measuring.
+    """
+
+    def _reversed_walk(self, monkeypatch):
+        from src.cmdb import datastores
+
+        original = list(datastores._candidate_files())
+        monkeypatch.setattr(datastores, "_candidate_files", lambda: reversed(original))
+
+    def test_every_datastore_ci_id_is_unique(self):
+        """The sort key must identify a CI, not merely group it."""
+        from src.cmdb.datastores import discover
+
+        ids = [store.ci_id for store in discover()]
+        duplicated = sorted({i for i in ids if ids.count(i) > 1})
+        assert not duplicated, f"datastore CI ids collide: {duplicated}"
+
+    def test_the_register_is_byte_identical_under_a_reversed_walk(self, monkeypatch):
+        """The property that would have caught this without a CI runner."""
+        from src.cmdb.datastores import discover
+
+        forward = [store.as_ci() for store in discover()]
+        self._reversed_walk(monkeypatch)
+        backward = [store.as_ci() for store in discover()]
+
+        assert json.dumps(forward, indent=2) == json.dumps(backward, indent=2), (
+            "the datastore register changes when the directory walk changes "
+            "order — the generator is reporting the filesystem, not the estate"
+        )
+
+    def test_the_locator_is_the_most_specific_literal_whatever_the_order(self):
+        """`/data/hive.db` says where the store lives; `hive.db` does not."""
+        from src.cmdb.datastores import Datastore
+
+        forward = Datastore(name="hive.db", engine="sqlite", locator="")
+        for literal in ("data/hive.db", "hive.db"):
+            forward.record_locator(literal)
+        backward = Datastore(name="hive.db", engine="sqlite", locator="")
+        for literal in ("hive.db", "data/hive.db"):
+            backward.record_locator(literal)
+
+        assert forward.locator == backward.locator == "data/hive.db"
+
+    def test_a_store_two_locations_open_names_both(self):
+        """`studio.db` is opened by Sashas Photo Studio and by The Studio.
+
+        Jurisdiction was "first claimant wins", and the first claimant was
+        whichever file the walk reached first -- so this store's owning Location
+        changed between runs. For an estate planning per-Location databases, two
+        Locations sharing one SQLite file is the finding; silently awarding it to
+        one of them is the register answering a question it had not resolved.
+        """
+        from src.cmdb.datastores import discover
+
+        shared = [store for store in discover() if len(store.locations) > 1]
+        assert shared, "expected at least one store claimed by two Locations"
+        for store in shared:
+            assert store.location == sorted(store.locations)[0]
+            assert "jurisdictions" in store.as_ci()
+
+    def test_this_repository_actually_contains_a_merged_store(self):
+        """Otherwise the two properties above pass by having nothing to check.
+
+        A guard whose subject does not occur reports exactly what a clean estate
+        reports. This one asserts its own subject exists: at least one datastore
+        really is reached by more than one path literal, and the register
+        discloses both rather than resolving the ambiguity away in silence.
+        """
+        from src.cmdb.datastores import discover
+
+        merged = [store for store in discover() if len(store.locators) > 1]
+        assert merged, "expected at least one store reached by two path literals"
+
+        register = json.loads((REPO / "docs/architecture/ci-register.json").read_text())
+        disclosed = [
+            ci for ci in register["configuration_items"] if len(ci.get("locators") or []) > 1
+        ]
+        assert disclosed, "merged stores are not disclosing their alternate locators"

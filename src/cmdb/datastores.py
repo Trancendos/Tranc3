@@ -55,11 +55,14 @@ class Datastore:
     name: str
     engine: str
     #: Repo-relative path for a file-backed store; an env-var name or URL scheme
-    #: for a networked one.
+    #: for a networked one. When several literals name the same store, this is
+    #: the most specific of them -- see `record_locator`.
     locator: str
     #: Files observed opening it.
     evidence: List[str] = field(default_factory=list)
-    #: Owning Location, where the evidence path maps to one.
+    #: Owning Location, where the evidence path maps to one. When more than one
+    #: Location opens the store, this is the first alphabetically and every
+    #: claimant is recorded -- see `record_location`.
     location: str = ""
     #: True when the store lives in a file inside a container's writable layer or
     #: a mounted volume, which is what makes its backup story a real question.
@@ -78,6 +81,45 @@ class Datastore:
     #: misses them: it reports full coverage of an estate it has under-counted.
     qualifier: str = ""
 
+    #: Every path literal observed opening this store. Stores are identified by
+    #: basename, so `/data/hive.db` and `hive.db` merge onto one CI -- which is
+    #: what makes the fleet countable, and is also the merge most likely to be
+    #: wrong. Recording both is what lets a reader check it; reporting whichever
+    #: one the directory walk reached first is what this field replaced.
+    locators: set[str] = field(default_factory=set)
+
+    #: Every Location observed opening this store. One store claimed by two
+    #: Locations is a real finding for a platform planning per-Location
+    #: databases, not a tie to be broken quietly.
+    locations: set[str] = field(default_factory=set)
+
+    def record_location(self, name: str) -> None:
+        """Note a Location that opens this store, keeping `location` stable.
+
+        The previous rule was "first claimant wins" (`if not store.location`),
+        and the first claimant was whichever file `Path.rglob` reached first --
+        so `studio.db`, which both Sashas Photo Studio and The Studio open,
+        changed jurisdiction between two runs of the same generator.
+        """
+        if not name:
+            return
+        self.locations.add(name)
+        self.location = sorted(self.locations)[0]
+
+    def record_locator(self, literal: str) -> None:
+        """Note a literal this store was reached by, keeping `locator` stable.
+
+        The chosen locator is the most specific literal -- longest, then
+        lexicographic -- because `/data/ai_governance.db` says where the store
+        lives and `ai_governance.db` says only what it is called. Both halves of
+        that rule matter: without it the winner was decided by `Path.rglob`
+        order, so the same tree produced different registers on different
+        filesystems and `--check` reported STALE at a reader who had changed
+        nothing.
+        """
+        self.locators.add(literal)
+        self.locator = max(sorted(self.locators), key=len)
+
     @property
     def ci_id(self) -> str:
         """Stable CI identifier: CI-DS-<engine>-<name>[-<qualifier>]."""
@@ -92,7 +134,7 @@ class Datastore:
         parallel one; `jurisdiction` is the owning Location, which is the field
         that makes "who is accountable for this store" answerable at all.
         """
-        return {
+        record: Dict[str, object] = {
             "ci_id": self.ci_id,
             "ci_class": "Datastore",
             "name": self.name,
@@ -104,6 +146,13 @@ class Datastore:
             "evidence": sorted(self.evidence),
             "evidence_count": len(self.evidence),
         }
+        if len(self.locations) > 1:
+            record["jurisdictions"] = sorted(self.locations)
+        if len(self.locators) > 1:
+            # Only when there is something to disclose, so the common row keeps
+            # its shape and a merged store is visible at a glance.
+            record["locators"] = sorted(self.locators)
+        return record
 
 
 def _candidate_files() -> Iterable[Path]:
@@ -158,9 +207,9 @@ def discover() -> List[Datastore]:
                     key,
                     Datastore(name=name, engine=engine, locator=literal, file_backed=True),
                 )
+                store.record_locator(literal)
+                store.record_location(location)
                 store.evidence.append(rel)
-                if not store.location and location:
-                    store.location = location
         elif engine in NETWORKED:
             # A networked store with no file literal — named by its engine and the
             # module that reaches it, because the connection string is an env var
@@ -173,11 +222,11 @@ def discover() -> List[Datastore]:
                     engine=engine,
                     locator=f"env://{engine.upper()}_URL",
                     file_backed=False,
-                    location=location,
                     # The module path, so two `pool.py` files are two CIs.
                     qualifier=rel.replace("/", "-").removesuffix(".py"),
                 ),
             )
+            store.record_location(location)
             store.evidence.append(rel)
 
     for store in stores.values():
@@ -185,7 +234,14 @@ def discover() -> List[Datastore]:
             e.startswith("tests/") or "/tests/" in e or e.startswith("test_")
             for e in store.evidence
         )
-    return sorted(stores.values(), key=lambda s: (s.engine, s.name))
+    # Sorted by CI id, which is the identity the register keys on. The previous
+    # key was (engine, name), which is NOT unique: `redis@pool` and
+    # `redis@sentinel_station` each name two distinct modules, so two pairs of
+    # CIs tied and Python's stable sort settled them by `rglob` order. The
+    # register is the CMDB -- two Configuration Items swapping places between two
+    # runs of the same generator is the register describing the filesystem it was
+    # built on rather than the estate it claims to describe.
+    return sorted(stores.values(), key=lambda s: s.ci_id)
 
 
 def production_stores() -> List[Datastore]:
