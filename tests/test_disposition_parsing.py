@@ -34,6 +34,7 @@ if str(REPO) not in sys.path:
 sys.path.insert(0, str(REPO / "scripts"))
 
 import check_disposition_premises as guard  # noqa: E402
+
 from src.security import accepted_risk_register  # noqa: E402
 
 
