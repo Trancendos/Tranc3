@@ -597,9 +597,9 @@
     {
       "type": "library",
       "name": "ruff",
-      "bom-ref": "pkg:pypi/ruff@0.15.8",
-      "purl": "pkg:pypi/ruff@0.15.8",
-      "version": "0.15.8"
+      "bom-ref": "pkg:pypi/ruff@0.16.6",
+      "purl": "pkg:pypi/ruff@0.16.6",
+      "version": "0.16.6"
     },
     {
       "type": "library",
@@ -610,24 +610,17 @@
     },
     {
       "type": "library",
-      "name": "pytest",
-      "bom-ref": "pkg:pypi/pytest@9.0.3",
-      "purl": "pkg:pypi/pytest@9.0.3",
-      "version": "9.0.3"
-    },
-    {
-      "type": "library",
       "name": "sqlfluff",
-      "bom-ref": "pkg:pypi/sqlfluff@4.2.0",
-      "purl": "pkg:pypi/sqlfluff@4.2.0",
-      "version": "4.2.0"
+      "bom-ref": "pkg:pypi/sqlfluff@4.3.0",
+      "purl": "pkg:pypi/sqlfluff@4.3.0",
+      "version": "4.3.0"
     },
     {
       "type": "library",
       "name": "yamllint",
-      "bom-ref": "pkg:pypi/yamllint@1.37.1",
-      "purl": "pkg:pypi/yamllint@1.37.1",
-      "version": "1.37.1"
+      "bom-ref": "pkg:pypi/yamllint@1.38.0",
+      "purl": "pkg:pypi/yamllint@1.38.0",
+      "version": "1.38.0"
     }
   ]
 }

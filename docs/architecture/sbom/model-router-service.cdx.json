@@ -593,6 +593,13 @@
       "bom-ref": "pkg:pypi/msgpack@1.2.2",
       "purl": "pkg:pypi/msgpack@1.2.2",
       "version": "1.2.2"
+    },
+    {
+      "type": "library",
+      "name": "sse-starlette",
+      "bom-ref": "pkg:pypi/sse-starlette@3.4.11",
+      "purl": "pkg:pypi/sse-starlette@3.4.11",
+      "version": "3.4.11"
     }
   ]
 }

@@ -240,6 +240,16 @@ def main(argv: list[str] | None = None) -> int:
         help="file holding a JSON list of PR numbers, or of objects with a 'number' key",
     )
     parser.add_argument("--base", default="origin/main")
+    parser.add_argument(
+        "--repo",
+        type=Path,
+        default=REPO_ROOT,
+        help=(
+            "repository to triage (default: this one). The estate has four -- "
+            "Tranc3, CranBania, Magna-Carta, InfinityStyles -- and the questions "
+            "this tool asks are the same in all of them."
+        ),
+    )
     parser.add_argument("--json", action="store_true", help="emit JSON instead of a report")
     args = parser.parse_args(argv)
 
@@ -249,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
         numbers += [p["number"] if isinstance(p, dict) else int(p) for p in payload]
 
     try:
-        verdicts = survey(sorted(set(numbers)), base=args.base)
+        verdicts = survey(sorted(set(numbers)), base=args.base, root=args.repo)
     except GitUnavailable as exc:
         print(f"cannot triage pull requests: {exc}", file=sys.stderr)
         return 1

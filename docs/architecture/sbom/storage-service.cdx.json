@@ -597,16 +597,16 @@
     {
       "type": "library",
       "name": "boto3",
-      "bom-ref": "pkg:pypi/boto3@1.43.84",
-      "purl": "pkg:pypi/boto3@1.43.84",
-      "version": "1.43.84"
+      "bom-ref": "pkg:pypi/boto3@1.43.89",
+      "purl": "pkg:pypi/boto3@1.43.89",
+      "version": "1.43.89"
     },
     {
       "type": "library",
       "name": "botocore",
-      "bom-ref": "pkg:pypi/botocore@1.43.84",
-      "purl": "pkg:pypi/botocore@1.43.84",
-      "version": "1.43.84"
+      "bom-ref": "pkg:pypi/botocore@1.43.89",
+      "purl": "pkg:pypi/botocore@1.43.89",
+      "version": "1.43.89"
     },
     {
       "type": "library",

@@ -1,13 +1,13 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:ad31ee697c2f1573e19bc3b98a2497bb",
+  "serialNumber": "urn:uuid:9b099723f624633567e2cb7510ebdf67",
   "version": 1,
   "metadata": {
     "component": {
       "type": "container",
-      "name": "topology-service",
-      "bom-ref": "CI-CT-topology-service",
+      "name": "nexus-ws-rs",
+      "bom-ref": "CI-CT-nexus-ws-rs",
       "version": "built-from-source"
     },
     "properties": [
@@ -25,7 +25,7 @@
       },
       {
         "name": "trancendos:jurisdiction",
-        "value": "_unrouted_"
+        "value": "The Nexus"
       },
       {
         "name": "trancendos:custodian",
@@ -33,7 +33,7 @@
       },
       {
         "name": "trancendos:ci-id",
-        "value": "CI-CT-topology-service"
+        "value": "CI-CT-nexus-ws-rs"
       },
       {
         "name": "trancendos:base-image",
@@ -54,10 +54,6 @@
       {
         "name": "trancendos:manifest",
         "value": "requirements.txt"
-      },
-      {
-        "name": "trancendos:manifest",
-        "value": "workers/topology-service/requirements-worker.txt"
       }
     ]
   },
@@ -593,13 +589,6 @@
       "bom-ref": "pkg:pypi/msgpack@1.2.2",
       "purl": "pkg:pypi/msgpack@1.2.2",
       "version": "1.2.2"
-    },
-    {
-      "type": "library",
-      "name": "sse-starlette",
-      "bom-ref": "pkg:pypi/sse-starlette@3.4.11",
-      "purl": "pkg:pypi/sse-starlette@3.4.11",
-      "version": "3.4.11"
     }
   ]
 }
