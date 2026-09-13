@@ -58,6 +58,18 @@ jobs:
           # that check silently verified nothing. The script also deepens `main`
           # itself (so it works on Forgejo and locally); this makes it certain here.
           fetch-depth: 0
+          # The registers this job validates cover the whole estate, and two
+          # Locations are submodules -- The Town Hall (workers/cranbania) and
+          # Magna Carta (compliance/magna-carta). Without them the tree IS a
+          # smaller estate: build_ci_register.py regenerated one line shorter,
+          # dropping workers/cranbania/package.json from the CranBania container
+          # CI's evidence list, so --check reported STALE here while passing on
+          # every machine that had the submodules checked out. Reproduced on a
+          # pristine clone with and without `submodule update --init`.
+          # src/cmdb/containers.py now refuses to enumerate from a partial
+          # checkout rather than quietly measuring one; this is the checkout
+          # that makes the measurement whole.
+          submodules: recursive
 
       - name: Set up Python 3.11
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7

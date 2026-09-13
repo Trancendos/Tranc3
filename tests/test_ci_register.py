@@ -261,3 +261,98 @@ class TestTheGuardsWouldCatchIt:
         document = {"bomFormat": "CycloneDX", "metadata": {"properties": []}}
         names = {p["name"] for p in document["metadata"]["properties"]}
         assert "trancendos:sbom-scope" not in names, "the scope check would not have fired"
+
+
+class TestThePartialCheckout:
+    """A register generated from a partial tree describes a smaller estate.
+
+    `ci.yml`'s topology job checked out with `fetch-depth: 0` and no submodules,
+    so `workers/cranbania` and `compliance/magna-carta` were empty directories.
+    Every scan that walks the tree simply found nothing there, and
+    `build_ci_register.py` regenerated one line shorter -- dropping
+    `workers/cranbania/package.json` from the CranBania container CI's evidence.
+    `--check` therefore reported STALE in that job and passed on every machine
+    that had the submodules, which is indistinguishable from a developer having
+    forgotten to regenerate.
+
+    One line of difference, and the shape is what matters: the register is the
+    estate's CMDB and `workers/cranbania` is The Town Hall.
+    """
+
+    def test_the_generator_refuses_a_checkout_missing_a_declared_submodule(self, tmp_path):
+        """Refusing beats measuring a smaller estate and reporting it as the estate."""
+        import src.cmdb.containers as containers
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n'
+            "\tpath = workers/cranbania\n"
+            "\turl = https://github.com/Trancendos/CranBania\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "workers" / "cranbania").mkdir(parents=True)  # present, empty
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            assert containers._absent_submodules() == ["workers/cranbania"]
+        finally:
+            containers.REPO = original
+
+    def test_a_populated_submodule_is_not_reported_absent(self, tmp_path):
+        """The other half: a checked-out submodule must not trip the guard."""
+        import src.cmdb.containers as containers
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tpath = workers/cranbania\n',
+            encoding="utf-8",
+        )
+        sub = tmp_path / "workers" / "cranbania"
+        sub.mkdir(parents=True)
+        (sub / "package.json").write_text("{}", encoding="utf-8")
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            assert containers._absent_submodules() == []
+        finally:
+            containers.REPO = original
+
+    def test_this_repository_has_its_submodules(self):
+        """The guard is worth nothing if it never has anything to check."""
+        import src.cmdb.containers as containers
+
+        assert (containers.REPO / ".gitmodules").is_file(), "no submodules declared"
+        assert containers._absent_submodules() == []
+
+    def test_every_job_running_a_generator_checks_out_submodules(self):
+        """The workflow half of the contract, asserted rather than remembered.
+
+        A generator that reads submodule content must not run in a job that
+        does not check submodules out. Stating it here is what stops the next
+        job being added without them.
+        """
+        import yaml
+
+        workflow = yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text())
+        generators = ("build_ci_register.py", "build_container_sboms.py")
+
+        offenders = []
+        for name, job in workflow["jobs"].items():
+            steps = job.get("steps", [])
+            runs_generator = any(
+                any(g in str(step.get("run", "")) for g in generators) for step in steps
+            )
+            if not runs_generator:
+                continue
+            checkout = next(
+                (s for s in steps if "actions/checkout" in str(s.get("uses", ""))), None
+            )
+            with_ = (checkout or {}).get("with") or {}
+            if with_.get("submodules") != "recursive":
+                offenders.append(f"{name} (submodules={with_.get('submodules')!r})")
+
+        assert not offenders, (
+            "these ci.yml jobs run a register generator without checking out "
+            "submodules, so they measure a smaller estate than the one the "
+            "committed register describes: " + ", ".join(offenders)
+        )

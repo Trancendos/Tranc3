@@ -206,6 +206,40 @@ class CannotEnumerateContainers(RuntimeError):
     """
 
 
+def _absent_submodules() -> List[str]:
+    """Submodule paths that `.gitmodules` declares but the tree does not hold.
+
+    A submodule that was never `git submodule update --init` is an empty
+    directory, not an error, and every scan that walks the tree simply finds
+    nothing there. That is how `docs/architecture/ci-register.json` came to be
+    STALE in CI while current on every developer's machine: `ci.yml`'s topology
+    job checks out with `fetch-depth: 0` and no submodules, so the CranBania
+    container CI lost `workers/cranbania/package.json` from its evidence list
+    and the register regenerated one line shorter.
+
+    One line, and the shape of it is what matters: the register is the estate's
+    CMDB, `workers/cranbania` is The Town Hall, and a register that quietly
+    describes a smaller estate when run from a partial checkout is reporting a
+    measurement it did not take.
+    """
+    modules = REPO / ".gitmodules"
+    if not modules.is_file():
+        return []
+    absent: List[str] = []
+    for line in modules.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("path"):
+            continue
+        _, _, raw = stripped.partition("=")
+        path = raw.strip()
+        if not path:
+            continue
+        target = REPO / path
+        if not target.is_dir() or not any(target.iterdir()):
+            absent.append(path)
+    return absent
+
+
 def discover() -> List[Container]:
     """Every compose service, as a container record.
 
@@ -223,6 +257,16 @@ def discover() -> List[Container]:
     if not COMPOSE.is_file():
         raise CannotEnumerateContainers(
             f"{COMPOSE} is missing, so no container inventory can be taken."
+        )
+
+    absent = _absent_submodules()
+    if absent:
+        raise CannotEnumerateContainers(
+            "these submodules are declared in .gitmodules but not checked out: "
+            + ", ".join(absent)
+            + ". Their contents feed the register's evidence, so enumerating "
+            "without them produces a different, smaller register and reports it "
+            "as authoritative. Run: git submodule update --init --recursive"
         )
 
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8")) or {}
