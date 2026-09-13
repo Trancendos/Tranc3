@@ -69,26 +69,26 @@ def _load_notifications():
 
 
 def _stub_dimensional():
-    """Inject stub modules for Dimensional.* so the notifications worker can import."""
-    dim = types.ModuleType("Dimensional")
-    sys.modules.setdefault("Dimensional", dim)
+    """Inject stub modules for Dimensionals.* so the notifications worker can import."""
+    dim = types.ModuleType("Dimensionals")
+    sys.modules.setdefault("Dimensionals", dim)
 
-    err = types.ModuleType("Dimensional.error_handlers")
+    err = types.ModuleType("Dimensionals.error_handlers")
     err.safe_error_detail = lambda exc, *a, **kw: str(exc)
-    sys.modules.setdefault("Dimensional.error_handlers", err)
+    sys.modules.setdefault("Dimensionals.error_handlers", err)
 
-    san = types.ModuleType("Dimensional.sanitize")
+    san = types.ModuleType("Dimensionals.sanitize")
     san.sanitize_for_log = lambda x, **kw: x
-    sys.modules.setdefault("Dimensional.sanitize", san)
+    sys.modules.setdefault("Dimensionals.sanitize", san)
 
-    url_val = types.ModuleType("Dimensional.url_validation")
+    url_val = types.ModuleType("Dimensionals.url_validation")
 
     class SSRFError(Exception):
         pass
 
     url_val.SSRFError = SSRFError
     url_val.validate_webhook_url = lambda url: url  # passthrough in tests
-    sys.modules.setdefault("Dimensional.url_validation", url_val)
+    sys.modules.setdefault("Dimensionals.url_validation", url_val)
 
 
 def _load_audit_service():

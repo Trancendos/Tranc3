@@ -58,6 +58,18 @@ jobs:
           # that check silently verified nothing. The script also deepens `main`
           # itself (so it works on Forgejo and locally); this makes it certain here.
           fetch-depth: 0
+          # The registers this job validates cover the whole estate, and two
+          # Locations are submodules -- The Town Hall (workers/cranbania) and
+          # Magna Carta (compliance/magna-carta). Without them the tree IS a
+          # smaller estate: build_ci_register.py regenerated one line shorter,
+          # dropping workers/cranbania/package.json from the CranBania container
+          # CI's evidence list, so --check reported STALE here while passing on
+          # every machine that had the submodules checked out. Reproduced on a
+          # pristine clone with and without `submodule update --init`.
+          # src/cmdb/containers.py now refuses to enumerate from a partial
+          # checkout rather than quietly measuring one; this is the checkout
+          # that makes the measurement whole.
+          submodules: recursive
 
       - name: Set up Python 3.11
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
@@ -162,6 +174,11 @@ jobs:
       - name: Trivy suppression governance
         run: python scripts/check_trivyignore_governance.py
 
+      # A code-scanning category that only main can produce makes GitHub's
+      # generated check red on every PR, for a reason no diff can fix.
+      - name: SARIF categories reach pull requests
+        run: python scripts/check_sarif_categories_reach_prs.py
+
       # CodeQL raised twelve py/unreachable-statement alerts in
       # src/agents/goal_manager.py and the SARIF filter's --strict-surprises is
       # the only reason anybody looked. A sweep found fifteen more in six other
@@ -229,6 +246,17 @@ jobs:
       - name: Documents are reachable
         run: python scripts/check_doc_reachability.py
 
+      # A compose image with no @sha256 digest means the container register
+      # records a name that can point at different bytes tomorrow, which is the
+      # one thing a container inventory exists to prevent. Ratchets against
+      # config/estate/compose_digest_baseline.json: the 14 known pins are debt to
+      # burn down, a new one fails here. Covers every compose manifest in the
+      # repository, not only the nine at the root -- the first version of this
+      # step globbed the root and passed ten files under deploy/ and docker/
+      # without ever reading them.
+      - name: Compose images are digest-pinned
+        run: python scripts/check_compose_image_digests.py
+
       # The 43 solution packs are regenerated from the entity register, the
       # compose file and the tree, so they answer questions about readiness and
       # code paths with facts rather than recollection. They went stale the day
@@ -260,6 +288,40 @@ jobs:
       # what" that happens to be wrong.
       - name: Topology map data is current
         run: python scripts/build_topology_3d.py --check
+
+      # The taxonomy (Locations / AIs / Dimensionals) is the owner's structure,
+      # and the tree published under docs/architecture/ is derived from
+      # PLATFORM_ENTITIES, the personality profiles, the shard catalogue and the
+      # Dimensionals package -- never typed. This check is what stops it becoming
+      # another hand-maintained register describing a platform that has moved on:
+      # add a Location, rename an AI, or add a nano-service, and a stale tree
+      # fails here instead of quietly describing last month's estate.
+      - name: Taxonomy tree is current
+        run: python scripts/build_taxonomy_tree.py --check
+
+      # The CMDB's datastore and container Configuration Items are derived by
+      # walking the repository, not typed into a register. That is the only way
+      # they stay true: adding a `sqlite3.connect(...)` or a compose service is a
+      # routine change nobody would think to mirror into a CMDB, and those are
+      # exactly the changes that must not go missing from one. A stale register
+      # fails here rather than quietly describing an estate that has moved on.
+      - name: CI register is current
+        run: python scripts/build_ci_register.py --check
+
+      # Container SBOMs are source-scope and say so in every document. This check
+      # is what keeps that true as containers are added: a new service with no
+      # SBOM, or an SBOM that no longer matches its manifests, fails here.
+      - name: Container SBOMs are current
+        run: python scripts/build_container_sboms.py --check
+
+      # The domain model generates the database schema, the row-level security
+      # policies and the route table from one description, so the three cannot
+      # drift from each other the way three hand-maintained artifacts do. The
+      # conformance report in the same run records where the estate does not yet
+      # meet the model -- and reports a property it could not evaluate as
+      # unchecked rather than as passing.
+      - name: Domain model, DDL and conformance report are current
+        run: python scripts/build_domain_model.py --check
 
       # The estate records outstanding work in 44 separate registers, each
       # correct about its own domain and blind to the rest — so nobody can

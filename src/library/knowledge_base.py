@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.nanoservices.daas_stream.daas_stream import DataClassification, Jurisdiction
 
 logger = logging.getLogger(__name__)

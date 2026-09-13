@@ -36,23 +36,23 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from Dimensional.gas.kinetic import KineticEnergyTracker
-    from Dimensional.gas.pressure import PressureBalancer
+    from Dimensionals.gas.kinetic import KineticEnergyTracker
+    from Dimensionals.gas.pressure import PressureBalancer
 
     _GAS_AVAILABLE = True
 except ImportError:
     _GAS_AVAILABLE = False
 
 try:
-    from Dimensional.liquid.ltc_router import LiquidRouter
+    from Dimensionals.liquid.ltc_router import LiquidRouter
 
     _LIQUID_AVAILABLE = True
 except ImportError:
     _LIQUID_AVAILABLE = False
 
 try:
-    from Dimensional.genetics.fitness import LatencyThroughputFitness
-    from Dimensional.genetics.optimizer import GeneticOptimizer
+    from Dimensionals.genetics.fitness import LatencyThroughputFitness
+    from Dimensionals.genetics.optimizer import GeneticOptimizer
 
     _GENETIC_AVAILABLE = True
 except ImportError:

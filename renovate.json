@@ -106,7 +106,7 @@
         "minor"
       ],
       "enabled": false,
-      "description": "Block ML library upgrades \u2014 require manual compatibility testing. minimumReleaseAge is null, not absent. Two separate things want it written down: semgrep's registry rule renovate-missing-minimum-release-age, pulled by the pre-commit hook's --config auto rather than any rule in this repo, blocks a packageRules entry that states no release-age posture (observed: removing these keys failed the hook); and scripts/check_canonical_pin_governance.py::_bad_release_ages rejects any value that is neither a duration string nor null — it does not require the key to be present. null is the schema-valid way to say 'no cooldown'; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04.",
+      "description": "Block ML library upgrades \u2014 require manual compatibility testing. minimumReleaseAge is null, not absent. Two separate things want it written down: semgrep's registry rule renovate-missing-minimum-release-age, pulled by the pre-commit hook's --config auto rather than any rule in this repo, blocks a packageRules entry that states no release-age posture (observed: removing these keys failed the hook); and scripts/check_canonical_pin_governance.py::_bad_release_ages rejects any value that is neither a duration string nor null \u2014 it does not require the key to be present. null is the schema-valid way to say 'no cooldown'; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04.",
       "matchPackageNames": [
         "/^torch$/",
         "/^transformers$/",
@@ -122,7 +122,7 @@
         "major"
       ],
       "enabled": false,
-      "description": "Block database major version upgrades \u2014 require migration planning. minimumReleaseAge is null, not absent. Two separate things want it written down: semgrep's registry rule renovate-missing-minimum-release-age, pulled by the pre-commit hook's --config auto rather than any rule in this repo, blocks a packageRules entry that states no release-age posture (observed: removing these keys failed the hook); and scripts/check_canonical_pin_governance.py::_bad_release_ages rejects any value that is neither a duration string nor null — it does not require the key to be present. null is the schema-valid way to say 'no cooldown'; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04.",
+      "description": "Block database major version upgrades \u2014 require migration planning. minimumReleaseAge is null, not absent. Two separate things want it written down: semgrep's registry rule renovate-missing-minimum-release-age, pulled by the pre-commit hook's --config auto rather than any rule in this repo, blocks a packageRules entry that states no release-age posture (observed: removing these keys failed the hook); and scripts/check_canonical_pin_governance.py::_bad_release_ages rejects any value that is neither a duration string nor null \u2014 it does not require the key to be present. null is the schema-valid way to say 'no cooldown'; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04.",
       "matchPackageNames": [
         "/^postgres$/",
         "/^clickhouse$/"
@@ -199,6 +199,22 @@
       "enabled": false,
       "matchDatasources": [
         "pypi"
+      ],
+      "minimumReleaseAge": null
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false,
+      "description": "Block React-ecosystem major upgrades -- they are peer-coupled to the React version web/ actually runs, and a bot cannot see that. #1119 merged react-router v8 into a React 18.3.1 app; v8 peers on react >=19.2.7, so `npm ci` could not resolve and Frontend Build & Deploy went red on main, which is a deploy that stops rather than a test that fails. Same shape as the ndarray 0.17 bump that took Rust CI red on main from 2026-09-01: the breaking half merges and the companion half does not exist. Raising these means migrating React first, which is a decision, not an update. minimumReleaseAge is null, not absent -- see the two rules above for why.",
+      "matchPackageNames": [
+        "/^react$/",
+        "/^react-dom$/",
+        "/^react-router$/",
+        "/^react-router-dom$/",
+        "/^@types/react$/",
+        "/^@types/react-dom$/"
       ],
       "minimumReleaseAge": null
     }

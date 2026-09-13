@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.adaptive_pulse"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.adaptive_pulse"""
 
-from Dimensional.architecture.adaptive_pulse import *  # noqa: F401, F403
+from Dimensionals.architecture.adaptive_pulse import *  # noqa: F401, F403

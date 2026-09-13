@@ -16,25 +16,54 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from src.utils.url_guard import is_http_url
+
 logger = logging.getLogger("tranc3.ai_gateway.providers.vllm")
 
+# VLLM_BASE_URL is operator-supplied, so it selects the scheme and therefore which
+# urllib handler runs.
+#
+# An earlier revision validated it once at import and annotated the three urlopen
+# calls "scheme validated at import". That was false twice over: nothing in the
+# repository imports this module, so the check never executed -- and had it
+# executed, a malformed value would have raised during import of an *optional*
+# zero-cost provider, taking down startup for a component whose every other path
+# degrades quietly. cubic caught both on PR #1207.
+#
+# The check now runs where the URL is used. `_base()` returns None for anything
+# that is not http/https, and each caller degrades the way it already degrades
+# when the service is simply down.
 _VLLM_BASE = os.getenv("VLLM_BASE_URL", "http://localhost:8090/v1")
 _DEFAULT_MODEL = os.getenv("VLLM_DEFAULT_MODEL", "meta-llama/Llama-3.2-3B-Instruct")
 
 
+def _base() -> Optional[str]:
+    """The configured base URL, or None if its scheme is not http/https."""
+    if not is_http_url(_VLLM_BASE):
+        logger.warning("vllm: refusing non-http(s) VLLM_BASE_URL %r", _VLLM_BASE)
+        return None
+    return _VLLM_BASE
+
+
 def is_available() -> bool:
+    base = _base()
+    if base is None:
+        return False
     try:
-        req = urllib.request.Request(f"{_VLLM_BASE}/models", method="GET")
-        urllib.request.urlopen(req, timeout=2)  # nosec B310 — configured host
+        req = urllib.request.Request(f"{base}/models", method="GET")
+        urllib.request.urlopen(req, timeout=2)  # nosec B310 — scheme checked by _base()
         return True
     except Exception:
         return False
 
 
 def list_models() -> List[str]:
+    base = _base()
+    if base is None:
+        return [_DEFAULT_MODEL]
     try:
-        req = urllib.request.Request(f"{_VLLM_BASE}/models", method="GET")
-        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
+        req = urllib.request.Request(f"{base}/models", method="GET")
+        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310 — scheme checked by _base()
             data = json.loads(resp.read())
             return [m["id"] for m in data.get("data", [])]
     except Exception:
@@ -48,6 +77,13 @@ def chat(
     max_tokens: int = 2048,
     **kwargs: Any,
 ) -> str:
+    base = _base()
+    if base is None:
+        raise RuntimeError(
+            f"VLLM_BASE_URL has a non-http(s) scheme: {_VLLM_BASE!r}. "
+            "Raising here rather than returning a stub, because chat() has no "
+            "degraded answer that is not a lie about the model's output."
+        )
     model = model or _DEFAULT_MODEL
     payload = json.dumps(
         {
@@ -58,12 +94,12 @@ def chat(
         }
     ).encode()
     req = urllib.request.Request(
-        f"{_VLLM_BASE}/chat/completions",
+        f"{base}/chat/completions",
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310
+    with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — scheme checked by _base()
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"]
 

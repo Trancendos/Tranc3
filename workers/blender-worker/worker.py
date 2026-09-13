@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8050")
 WORKER_NAME = "blender-worker"
@@ -63,7 +63,7 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # Delegated to Dimensionals.service_auth, which this worker now reaches
     # through the `sharedcore` named build context. It compares with
     # compare_digest and refuses when the secret is unset.
     guard_internal_secret(

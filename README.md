@@ -152,7 +152,7 @@ tranc3/
 │   ├── api-gateway/              API gateway + rate limiting
 │   ├── the-grid/                 Digital Grid compute mesh
 │   └── ...                       26 additional workers
-├── Dimensional/                  Shared utilities (bus, models, security)
+├── Dimensionals/                  Shared utilities (bus, models, security)
 ├── web/                          React + Vite frontend
 ├── cloudflare/                   Cloudflare Workers (legacy fallback)
 ├── tests/                        Test suite (966 tests)
@@ -209,9 +209,9 @@ Ruff, Black, isort, Bandit, Semgrep, Gitleaks, detect-secrets, Safety, and Typos
 
 ## Security
 
-- **Path traversal prevention** via `Dimensional/path_validation.py`
-- **Log injection prevention** via `Dimensional/sanitize.py`
-- **Safe error handling** via `Dimensional/error_handlers.py`
+- **Path traversal prevention** via `Dimensionals/path_validation.py`
+- **Log injection prevention** via `Dimensionals/sanitize.py`
+- **Safe error handling** via `Dimensionals/error_handlers.py`
 - **AES-256-GCM encryption** in Infinity Void with PBKDF2 key derivation
 - **Zero-trust authentication** with JWT + MFA
 - **80 justified nosec comments** (bandit suppressions with documented rationale)

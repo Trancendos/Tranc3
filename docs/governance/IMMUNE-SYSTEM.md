@@ -277,8 +277,8 @@ And the ranking immediately said something a raw count cannot:
 
 ```
 10944.0  A  api.py   (weight 3 x 151 changes x 23 importers)
-  825.0  B  Dimensional/hive/hive_core.py   (weight 3 x 24 changes x 10 importers)
-  780.0  B  Dimensional/nexus/nexus_core.py  (weight 3 x 25 changes x 9 importers)
+  825.0  B  Dimensionals/hive/hive_core.py   (weight 3 x 24 changes x 10 importers)
+  780.0  B  Dimensionals/nexus/nexus_core.py  (weight 3 x 25 changes x 9 importers)
 ```
 
 `api.py`'s `lifespan` scores 53 against a threshold of 20, has changed 151 times

@@ -35,7 +35,7 @@ they lead with.
 | "29 Python/FastAPI workers" | Doc 1 §1 | **92** directories under `workers/` | understated ~3× |
 | "45+ MCP tools" | Doc 1 §1 | not counted here; `src/mcp/` holds five tool modules | unverified |
 | "0 npm vulnerabilities" (listed as a **strength**) | Doc 1 §2 | **9 fixable npm findings** in today's census | **wrong — and see below** |
-| `Dimensional/` vs `shared_core/` `sentinel_station.py` | Doc 1 §2, §3 | both exist and **differ** — 797 vs 817 lines, 48 changed lines | real; the prescription is not |
+| `Dimensionals/` vs `shared_core/` `sentinel_station.py` | Doc 1 §2, §3 | both exist and **differ** — 797 vs 817 lines, 48 changed lines | real; the prescription is not |
 | scale of that duplication | Doc 1 §3 | **75 files** exist in both trees and **not one pair is identical**; the report flagged one | badly understated |
 | `tranc3-ts/src/core/definitions.ts` | Doc 1 §2 | exists | correct |
 | `tranc3-api` / `tranc3-web` / `nsa-broker` / `shi-gateway` unresolvable | Doc 1 §3 | all four appear in `src/nanoservices/igi_gitops/flux/overlays/*` | correct that they exist |
@@ -166,7 +166,7 @@ Sequencing that follows the measurements instead:
 | 2 | Arbitrate the bot fleet — one dependency automation, the rest disabled | 72 machine PRs, duplicate proposals, three competing workflow PRs |
 | 3 | Consolidate the two Renovate configs | a live config and a dead one |
 | 4 | Cut a release | latest is `v0.4.0`, 2026-05-23 |
-| 5 | Measure the `Dimensional/` ↔ `shared_core/` divergence properly | 75 shared paths, **zero identical pairs**; "delete the shadow" would lose behaviour 75 times |
+| 5 | Measure the `Dimensionals/` ↔ `shared_core/` divergence properly | 75 shared paths, **zero identical pairs**; "delete the shadow" would lose behaviour 75 times |
 | 6 | Fold the three TODO files into the Action Backlog | the one planning-artefact finding that was simply correct |
 
 

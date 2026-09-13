@@ -2,7 +2,7 @@
 Trancendos vault-service — Self-Hosted Worker
 ==============================================
 Secure secret management with memory-mapped injection, zeroization,
-and audit integration. Wraps Dimensional.architecture.vault and
+and audit integration. Wraps Dimensionals.architecture.vault and
 vault_security into a FastAPI microservice.
 
 Features:
@@ -47,7 +47,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration

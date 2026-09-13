@@ -2,7 +2,7 @@
 Global Tier-1 orchestrator display names from Infinity-Admin overrides.
 
 Stored in entity_overrides with location_pid=__ORCHESTRATOR__ so renames
-do not require editing Dimensional/infinity/nomenclature.py.
+do not require editing Dimensionals/infinity/nomenclature.py.
 """
 
 from __future__ import annotations

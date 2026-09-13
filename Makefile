@@ -244,8 +244,15 @@ security-scan:
 pr-audit:
 	python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
 
+# semgrep is pinned to the same version as requirements-security.txt and
+# .forgejo/workflows/security-scan.yml. 1.172.0 is the last release that requires
+# `mcp==1.23.3` (CVE-2026-52869/52870/59950); 1.173.0+ requires `mcp==1.29.0`,
+# which is what SEC-005's retirement is based on. A bump here that is not matched
+# in the other two files puts the vulnerable mcp back into one environment only,
+# which is exactly how the last drift went unnoticed. `pytest
+# tests/test_semgrep_pin_alignment.py` fails when these three disagree.
 security-install:
-	$(PIP) install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.172.0 pre-commit==3.7.1 --quiet
+	$(PIP) install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.177.0 pre-commit==3.7.1 --quiet
 
 pre-commit-install:
 	pre-commit install

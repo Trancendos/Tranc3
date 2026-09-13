@@ -82,7 +82,7 @@ starlette==1.6.0
 httpx==0.28.1
 pydantic==2.13.5
 pydantic-settings==2.15.0
-sse-starlette==3.4.8
+sse-starlette==3.4.11
 uvicorn==0.52.4
 structlog==26.1.0
 python-jose[cryptography]==3.5.0

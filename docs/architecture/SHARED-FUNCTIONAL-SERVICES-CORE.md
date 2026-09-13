@@ -1,4 +1,4 @@
-# Shared Functional Services Core (SFSC) — the `Dimensional` package
+# Shared Functional Services Core (SFSC) — the `Dimensionals` package
 
 **Status:** Findings + remediation, 2026-08-17
 **Scope:** what the shared core is, what actually reaches the services that need it,
@@ -15,7 +15,7 @@ Until now the SFSC had no owner, and every defect found in it during this review
 is the kind an owner would have caught: 447 lines of point-of-authorship
 security scanning wired to nothing; three duplicate `CircuitState` enums inside
 the core while an ADR consolidated the other four; eight files the
-`shared_core` → `Dimensional` rename left as stale copies; telemetry dead in 34
+`shared_core` → `Dimensionals` rename left as stale copies; telemetry dead in 34
 services. All 43 Locations have a Lead AI who would have noticed. This did not.
 
 The Queen holds it on the registry's own evidence, not on the strength of the
@@ -55,7 +55,7 @@ code that many Locations need and none of them should own. It is **not** a tier 
 not a Location. Locations are *who does the work*; Dimensionals are *what every worker
 needs regardless of the work*.
 
-The package is `Dimensional/` at the repo root — 101 Python modules across 17 subpackages:
+The package is `Dimensionals/` at the repo root — 101 Python modules across 17 subpackages:
 
 | Subpackage | Role |
 |---|---|
@@ -69,20 +69,20 @@ The package is `Dimensional/` at the repo root — 101 Python modules across 17 
 | `dimensionals` | the registry of Dimensionals themselves (`registry.py`, `service_bus.py`, `underverse.py`) |
 | `cellular`, `gas`, `genetics`, `liquid`, `quantum`, `reservoir`, `swarm`, `pillars` | modelling primitives |
 
-314 files across the repo import from `Dimensional.*`. Heaviest: `infinity` (161),
+314 files across the repo import from `Dimensionals.*`. Heaviest: `infinity` (161),
 `sanitize` (128), `architecture` (73), `security_automation` (61), `path_validation` (56).
 
 ## 2. `shared_core/` is the old name — and the rename is incomplete
 
-`shared_core/__init__.py` states: *"All functionality has moved to Dimensional. This module
+`shared_core/__init__.py` states: *"All functionality has moved to Dimensionals. This module
 re-exports everything so existing imports continue to work unchanged."*
 
 67 of its 77 files are honest one-line shims. **Eight are not**, and six of those are stale
-full copies of modules `Dimensional` has since moved on from:
+full copies of modules `Dimensionals` has since moved on from:
 
 | File | State |
 |---|---|
-| `architecture/audit_ledger.py` | diverged — `Dimensional` gained persistent HMAC signing keys; this copy still uses ephemeral keys |
+| `architecture/audit_ledger.py` | diverged — `Dimensionals` gained persistent HMAC signing keys; this copy still uses ephemeral keys |
 | `architecture/storage_factory.py` | diverged (629 vs 643 lines) |
 | `infinity/sentinel_station.py` | diverged (797 vs 817) |
 | `security_automation/adaptive_scanner.py` | diverged (579 vs 601) |
@@ -93,15 +93,15 @@ full copies of modules `Dimensional` has since moved on from:
 
 All eight date from the same rename commit: the migration converted most files to shims and
 left these behind. **Nothing imports any of the eight** (verified by reference count), and
-`shared_core/security_automation/__init__.py` is itself a shim to a `Dimensional` package
+`shared_core/security_automation/__init__.py` is itself a shim to a `Dimensionals` package
 that does not export the two orphans — so they are unreachable even by package import.
 
 The live surface is small: only 8 files outside `shared_core/` import it at all, and they
 pull `sanitize`, `infinity.nomenclature`, and `infinity.worker_integration` — all genuine
-shims that resolve to `Dimensional`.
+shims that resolve to `Dimensionals`.
 
 **Decision needed:** convert the six diverged copies to shims (they are dead, so this is
-safe), and either move the two orphans into `Dimensional.security_automation` and export
+safe), and either move the two orphans into `Dimensionals.security_automation` and export
 them, or delete them. Leaving them is the worst option — a future caller reaching for
 `shared_core.architecture.audit_ledger` gets the weaker signing behaviour, silently, from a
 module whose own package docstring promises it is a re-export.
@@ -109,7 +109,7 @@ module whose own package docstring promises it is a re-export.
 ## 3. The reachability problem — the real finding
 
 **74 of the 174 compose services build from their own directory** (`context: ./workers/<x>`).
-Nothing at the repo root is in those images: not `src/`, not `Dimensional/`, not
+Nothing at the repo root is in those images: not `src/`, not `Dimensionals/`, not
 `shared_core/`. A worker that does `from src.… import …` resolves fine locally (repo root is
 on `sys.path`) and raises ImportError in the container.
 
@@ -142,7 +142,7 @@ tracing code is real; it is on the wrong side of the build boundary.
 **This is the clearest SFSC promotion candidate on the platform:** `src/observability/`'s
 worker-facing surface is cross-cutting, needed by ~34 services, and currently reaches none
 of them. Moving `worker_setup` (and the tracing/health helpers it pulls) to
-`Dimensional/observability/` and vendoring or packaging `Dimensional` into worker images
+`Dimensionals/observability/` and vendoring or packaging `Dimensionals` into worker images
 turns platform-wide telemetry from documented to actual.
 
 ### 3.3 The circuit breaker sits in the same trap
@@ -154,7 +154,7 @@ showed up immediately: `workers/chaos-party/observatory_bridge.py` needed a brea
 not import `src.mesh.circuit_breaker`, and duplicated one locally — a **fifth**
 implementation, created *after* the consolidation that was meant to stop exactly that.
 
-`Dimensional/` is the boundary-correct home for `circuit_state.py` and `circuit_core.py`.
+`Dimensionals/` is the boundary-correct home for `circuit_state.py` and `circuit_core.py`.
 Recommend amending TASD-001 §3.1 accordingly before Phase 3 migrates consumers onto a home
 that a third of the estate cannot import.
 
@@ -163,12 +163,12 @@ that a third of the estate cannot import.
 `scripts/check_worker_build_context.py` (wired into `.github/workflows/ci.yml` as the
 Service Topology job, alongside `check_service_urls.py`) fails the build on:
 
-- an unguarded import of `src` / `Dimensional` / `shared_core` from an own-context worker;
+- an unguarded import of `src` / `Dimensionals` / `shared_core` from an own-context worker;
 - a vendored file that has drifted from its canonical source (the Dockerfiles promise
   "keep in sync"; nothing was checking).
 
 A vendored `__init__.py` that has been deliberately emptied passes — a worker vendoring only
-`Dimensional.hive` cannot execute the real package `__init__`.
+`Dimensionals.hive` cannot execute the real package `__init__`.
 
 Current state: 42 cross-boundary imports and 10 vendored files across 74 services,
 0 errors.

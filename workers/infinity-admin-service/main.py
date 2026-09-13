@@ -20,17 +20,17 @@ from router import init_router_deps, router
 from service import seed_default_config
 
 from config import JWT_SECRET, PORT, _cors_origins, logger
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
-from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import ECOSYSTEM_NAME, UNIVERSE_NAME, SentinelChannel
-from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
-from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensionals.infinity.nomenclature import ECOSYSTEM_NAME, UNIVERSE_NAME, SentinelChannel
+from Dimensionals.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensionals.infinity.rbac import RBACEngine
+from Dimensionals.infinity.sentinel_station import SentinelEvent, get_sentinel_station
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Security Engines & Singletons

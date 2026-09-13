@@ -1,7 +1,7 @@
 """
 Tests for src/nexus/hub.py — NexusHub (the in-process pub/sub actually wired
 into api.py via src/nexus/routes.py, distinct from the workers/infinity-ws
-WebSocket worker and from Dimensional/nexus/nexus_core.py's Nexus).
+WebSocket worker and from Dimensionals/nexus/nexus_core.py's Nexus).
 
 Covers the existing pub/sub + direct-send behavior, and the WS-hub fan-out
 this session adds: NexusHub.publish() best-effort forwards each event to

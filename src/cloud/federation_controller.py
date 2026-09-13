@@ -8,7 +8,7 @@ from typing import Dict
 
 import aiohttp
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

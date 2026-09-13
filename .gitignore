@@ -107,10 +107,24 @@ node_modules/
 aeonmind/python/.venv/
 aeonmind/python/*.egg-info/
 
-# Nexus test artifacts
-bridge-*
-nexus-*
-# exclude the Rust Nexus service from the above pattern
+# Nexus test artifacts. ANCHORED with a leading slash, and that is the whole
+# point: unanchored, `nexus-*` matches at every depth, and it silently swallowed
+# `docs/architecture/sbom/nexus-ws-rs.cdx.json`. The generator wrote the SBOM,
+# the CI register read it off disk and recorded sbom_present: true, and `git add`
+# refused it without a word -- so the register was current on a developer's
+# machine and STALE in CI, on a checkout that had never had the file.
+#
+# The `!workers/nexus-ws-rs/` negation below used to be how this was handled: a
+# second path hit the same pattern and nobody noticed, because a .gitignore rule
+# reports nothing when it excludes something you wanted. Anchoring fixes the
+# class; the negation is kept only because removing it changes nothing and
+# leaving it documents that this has now bitten twice.
+#
+# Measured before anchoring: these two patterns matched exactly three paths in
+# the tree -- `bridge-pause-test` and `bridge-test` at the root, which are the
+# test artifacts they were written for, and the SBOM, which was not.
+/bridge-*
+/nexus-*
 !workers/nexus-ws-rs/
 
 # Runtime data directories (backups and test workspaces)

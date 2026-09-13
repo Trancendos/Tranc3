@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from src.utils.url_guard import require_http_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -210,7 +212,11 @@ class SHIRoadmapAdvisor:
     """Uses SHI (Self-Hosted Inference) for AI-driven roadmap insights."""
 
     def __init__(self, shi_url: str = "http://localhost:7781"):
-        self.shi_url = shi_url
+        # shi_url reaches urlopen below and is caller/env supplied, so it selects the
+        # scheme. Validated here rather than at the two call sites, both of which sit
+        # inside `except Exception` blocks that would have turned a file:// read into
+        # an indistinguishable "SHI unavailable".
+        self.shi_url = require_http_url(shi_url)
         self._available: Optional[bool] = None
 
     def is_available(self) -> bool:
@@ -219,7 +225,7 @@ class SHIRoadmapAdvisor:
                 import urllib.request
 
                 req = urllib.request.Request(f"{self.shi_url}/health", method="GET")
-                with urllib.request.urlopen(req, timeout=3) as resp:  # nosec B310 — SHI URL from env config
+                with urllib.request.urlopen(req, timeout=3) as resp:  # nosec B310 — scheme validated in __init__
                     self._available = resp.status == 200
             except Exception:
                 self._available = False
@@ -239,7 +245,7 @@ class SHIRoadmapAdvisor:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 — SHI URL from env config
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 — scheme validated in __init__
                 result = json.loads(resp.read().decode())
                 text = result.get("choices", [{}])[0].get("text", "")
                 return self._parse_subtasks(text, task)

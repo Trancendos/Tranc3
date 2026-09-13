@@ -62,7 +62,7 @@ All public-facing services, internal APIs, and infrastructure components. The pl
 
 **Implementation Evidence:**
 - `src/validation/loop_validator.py` — Loop and cascade failure validation
-- `Dimensional/sanitize.py` — Input sanitisation across all modules
+- `Dimensionals/sanitize.py` — Input sanitisation across all modules
 - `tests/test_penetration.py` — OWASP A03 injection tests
 - `tests/test_validation.py` — Schema enforcement tests
 

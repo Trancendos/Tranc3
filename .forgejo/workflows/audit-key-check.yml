@@ -21,7 +21,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "Dimensional/architecture/audit_ledger.py"
+      - "Dimensionals/architecture/audit_ledger.py"
       - "src/audit/**"
       - ".forgejo/workflows/audit-key-check.yml"
   workflow_dispatch:
@@ -71,7 +71,7 @@ jobs:
           import os, sys, tempfile, pathlib
 
           sys.path.insert(0, ".")
-          from Dimensional.architecture.audit_ledger import AuditLedger
+          from Dimensionals.architecture.audit_ledger import AuditLedger
 
           with tempfile.TemporaryDirectory() as tmpdir:
               ledger = AuditLedger(storage_dir=tmpdir)

@@ -828,7 +828,7 @@ class TestDashboardTraversalRefused:
         ],
     )
     def test_dotdot_is_refused(self, path):
-        from Dimensional.path_validation import PathTraversalError
+        from Dimensionals.path_validation import PathTraversalError
 
         contained, _ = _dashboard_helpers()
         with pytest.raises((PathTraversalError, ValueError)):
@@ -854,7 +854,7 @@ class TestDashboardTraversalRefused:
         assert contained(path).is_relative_to(root)
 
     def test_nul_byte_is_refused(self):
-        from Dimensional.path_validation import PathTraversalError
+        from Dimensionals.path_validation import PathTraversalError
 
         contained, _ = _dashboard_helpers()
         with pytest.raises((PathTraversalError, ValueError)):
@@ -896,7 +896,7 @@ class TestDashboardSymlinkOutOfRoot:
         what catches this. Uses a temporary root so the test never writes into
         the checkout.
         """
-        from Dimensional.path_validation import PathTraversalError
+        from Dimensionals.path_validation import PathTraversalError
 
         _, router_module = _dashboard_helpers()
         root = tmp_path / "dashboard"
@@ -966,7 +966,7 @@ class TestDashboardRouteLevel:
         This is the assertion that would have caught the overclaim: it tests the
         handler's own containment, which is the only thing this fix changed.
         """
-        from Dimensional.path_validation import PathTraversalError
+        from Dimensionals.path_validation import PathTraversalError
 
         contained, _ = _dashboard_helpers()
         with pytest.raises((PathTraversalError, ValueError)):

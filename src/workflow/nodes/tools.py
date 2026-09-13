@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Any, Callable, Dict
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensionals.error_handlers import safe_error_detail
 
 from .base import BaseNode, NodeResult
 

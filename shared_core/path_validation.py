@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.path_validation"""
+"""Backward-compatibility shim — canonical: Dimensionals.path_validation"""
 
-from Dimensional.path_validation import *  # noqa: F401, F403
+from Dimensionals.path_validation import *  # noqa: F401, F403

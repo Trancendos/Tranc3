@@ -100,8 +100,66 @@ skips = [
   #   ML algorithm weights, genetic optimizer crossover/mutation, circuit-breaker
   #   probabilistic gating, simulation noise. None used for key/token generation.
   "B311",
-  # B310: urllib URL opening — all URLs are internal service-mesh endpoints resolved
-  #   from validated config; no user-supplied URL input reaches urllib.urlopen.
+  # B310: urllib URL opening.
+  #
+  #   The justification here read "all URLs are internal service-mesh endpoints
+  #   resolved from validated config" until 2026-09-11. That was false for at
+  #   least one call site, and CodeFactor was the only thing saying so:
+  #   `scripts/check_trivyignore_governance.py` queries the PUBLIC OSV API at
+  #   `https://api.osv.dev/`, which is neither internal nor service-mesh. The
+  #   code there is safe — a constant prefix, `SAFE_ID.fullmatch` on the only
+  #   variable segment, and a re-check that the assembled URL still starts with
+  #   the prefix — but a suppression that is right by accident is a suppression
+  #   nobody can check.
+  #
+  #   The replacement said "every urlopen in this estate", which was also
+  #   wrong, in the same direction, and four reviewers caught it on PR #1207.
+  #   Re-measured, because that count was wrong too: `scripts/` holds 16
+  #   urlopen CALL sites across 15 files (`grep -c 'urlopen('` summed over
+  #   `scripts/*.py`), plus one more inside the embedded Python in
+  #   `scripts/stack-up.sh`. The earlier figure of 19 counted import lines as
+  #   call sites. Several of the real ones
+  #   (deploy_cloud._http_ok, cloud_smoke_check._request, wait_for_healthy,
+  #   health_check, n1_checker) take a URL as a parameter. A justification is
+  #   not improved by widening the claim it makes.
+  #
+  #   The scoped rewrite that followed said no in-scope call site lets a caller
+  #   choose the scheme. cubic checked, and that was wrong too: `vllm.py`,
+  #   `llamacpp.py`, `zero_cost_config.py`'s two probes and `roadmap_generator.py`
+  #   all built their URL from an env var with no scheme check, and `urlopen`'s
+  #   default opener carries a FileHandler -- so `file:///etc/passwd` was a
+  #   successful request returning file contents. `wazuh_connector.py` was a sixth,
+  #   found while fixing those. All six now validate through the shared
+  #   `src/utils/url_guard.py`. The five call sites that already had the check
+  #   (`layer_rotator`, `meilisearch_client`, `web_scraper`, `misp_connector`,
+  #   `security_checks`) keep their inline versions -- they were correct, and
+  #   `meilisearch_client`'s additionally reconstructs the URL to break CodeQL's
+  #   taint chain, which the shared helper deliberately does not do. So this is one
+  #   definition for new code, not a completed consolidation of the old.
+  #
+  #   Three wrong justifications in a row is not a wording problem. A claim written
+  #   in a comment has nothing checking it, so it decays while the code moves. The
+  #   claim therefore now lives in `tests/test_url_scheme_guard.py`, which enforces
+  #   what this paragraph would otherwise only assert:
+  #
+  #     * every urlopen in bandit's scanned scope (`src`, `api.py`) carries an
+  #       explicit B310 suppression -- the blanket skip hides them either way, and
+  #       the marker is what makes them findable;
+  #     * every suppression states a reason;
+  #     * every reason is one of exactly two shapes, verified against the code --
+  #       "scheme validated" requires a real scheme check or a `url_guard` import
+  #       in that file, and "hardcoded https" requires a literal https:// value
+  #       visible from that call's own scope chain.
+  #
+  #   A new in-scope call site that is neither shape fails that test. Read it
+  #   rather than this comment if the two ever disagree.
+  #
+  #   Call sites OUTSIDE that scope are not covered by this skip because bandit
+  #   never reaches them: `scripts/` is in `exclude_dirs`, so B310 does not run
+  #   there at all, skip or no skip. Several of those files carry their own
+  #   `# nosec B310` / `# noqa: S310` with a local reason, which is the right
+  #   shape; the rest are unscanned. That coverage gap is real and is tracked
+  #   separately -- it is not something this skip grants or withholds.
   "B310",
   # B108: probable insecure temp file usage — all workers run in isolated Docker
   #   containers with no shared /tmp between services; attack surface is contained.

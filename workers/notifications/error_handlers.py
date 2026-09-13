@@ -1,6 +1,6 @@
 # workers/notifications/error_handlers.py
-# Vendored copy of Dimensional/error_handlers.py — see sanitize.py in this same
-# directory for why. Keep in sync with Dimensional/error_handlers.py.
+# Vendored copy of Dimensionals/error_handlers.py — see sanitize.py in this same
+# directory for why. Keep in sync with Dimensionals/error_handlers.py.
 #
 # Safe exception formatting for HTTP responses.
 #
@@ -9,7 +9,7 @@
 # are never included in API responses sent to clients.
 #
 # Usage:
-#   from Dimensional.error_handlers import safe_error_detail, SafeHTTPException
+#   from Dimensionals.error_handlers import safe_error_detail, SafeHTTPException
 #
 #   # In route handlers:
 #   except Exception:
@@ -118,7 +118,7 @@ class SafeHTTPException(HTTPException):
     exception handlers (returns proper JSON response with status code).
 
     Usage with FastAPI:
-        from Dimensional.error_handlers import SafeHTTPException
+        from Dimensionals.error_handlers import SafeHTTPException
 
         try:
             ...

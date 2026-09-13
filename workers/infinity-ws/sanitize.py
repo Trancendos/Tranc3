@@ -1,5 +1,5 @@
 # workers/infinity-ws/sanitize.py
-# Vendored copy of Dimensional/sanitize.py's sanitize_for_log().
+# Vendored copy of Dimensionals/sanitize.py's sanitize_for_log().
 #
 # worker.py imported this unconditionally from the repo-root `Dimensional`
 # package, but this worker's Docker build context is `./workers/infinity-ws`
@@ -8,7 +8,7 @@
 # every container start (same bug already found and fixed in
 # workers/infinity-ai). Vendoring the one function actually used keeps this
 # worker self-contained within its own build context. Keep in sync with
-# Dimensional/sanitize.py if that module's sanitize_for_log() changes.
+# Dimensionals/sanitize.py if that module's sanitize_for_log() changes.
 
 from __future__ import annotations
 

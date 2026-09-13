@@ -29,13 +29,13 @@ from config import CORS_ORIGINS, JWT_SECRET, logger
 from database import init_db
 
 # Dimensional middleware
-from Dimensional.infinity.auth_gateway import DEFAULT_ENFORCED_PATHS, AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import SentinelChannel
-from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.sentinel_station import SentinelEvent, SharedSSEGenerator
+from Dimensionals.infinity.auth_gateway import DEFAULT_ENFORCED_PATHS, AuthGatewayMiddleware
+from Dimensionals.infinity.nomenclature import SentinelChannel
+from Dimensionals.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensionals.infinity.sentinel_station import SentinelEvent, SharedSSEGenerator
 
 # Phase 22.6: Smart Adaptive Intelligence
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Phase 22.6: Smart Adaptive worker kit (module-level singleton)

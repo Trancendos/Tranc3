@@ -21,7 +21,7 @@ import os
 import random
 from pathlib import Path
 
-from Dimensional.path_validation import validate_path
+from Dimensionals.path_validation import validate_path
 
 
 def write_jsonl(records, path):

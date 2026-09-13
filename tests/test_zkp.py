@@ -19,7 +19,7 @@ import time
 
 import pytest
 
-from Dimensional.infinity.zkp import (
+from Dimensionals.infinity.zkp import (
     _G,
     _P,
     _Q,

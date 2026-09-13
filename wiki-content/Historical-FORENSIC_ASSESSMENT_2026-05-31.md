@@ -76,7 +76,7 @@ Multiple `cursor/production-readiness-*` and `cursor/api-startup-readiness-*` br
 | Repo | Utilization |
 |---|---|
 | `Trancendos/Tranc3` | Primary monorepo — current work |
-| `Trancendos/shared-core` | Align with `Dimensional/` + `shared_core/` re-exports |
+| `Trancendos/shared-core` | Align with `Dimensionals/` + `shared_core/` re-exports |
 | `Trancendos/trancendos-ecosystem` | Financial/Alervato — integrate via Arcadian Exchange workers |
 | `Trancendos/the-hive`, `the-nexus`, `the-observatory` | Focused services — map to workers 8022, 8004, 8007 |
 | `Trancendos/the-workshop` | Forgejo CI — already canonical per CLAUDE.md |

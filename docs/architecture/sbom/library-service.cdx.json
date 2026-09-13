@@ -1,0 +1,99 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:086dfc3bc4396e48ad461628af813afd",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "library-service",
+      "bom-ref": "CI-CT-library-service",
+      "version": "built-from-source"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "built"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "The Library"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-library-service"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
+      },
+      {
+        "name": "trancendos:manifest",
+        "value": "workers/library-service/requirements-worker.txt"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "fastapi",
+      "bom-ref": "pkg:pypi/fastapi@0.141.1",
+      "purl": "pkg:pypi/fastapi@0.141.1",
+      "version": "0.141.1"
+    },
+    {
+      "type": "library",
+      "name": "uvicorn",
+      "bom-ref": "pkg:pypi/uvicorn@0.52.4",
+      "purl": "pkg:pypi/uvicorn@0.52.4",
+      "version": "0.52.4"
+    },
+    {
+      "type": "library",
+      "name": "httpx",
+      "bom-ref": "pkg:pypi/httpx@0.28.1",
+      "purl": "pkg:pypi/httpx@0.28.1",
+      "version": "0.28.1"
+    },
+    {
+      "type": "library",
+      "name": "pydantic",
+      "bom-ref": "pkg:pypi/pydantic@2.13.5",
+      "purl": "pkg:pypi/pydantic@2.13.5",
+      "version": "2.13.5"
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-sdk",
+      "bom-ref": "pkg:pypi/opentelemetry-sdk@1.44.0",
+      "purl": "pkg:pypi/opentelemetry-sdk@1.44.0",
+      "version": "1.44.0"
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-instrumentation-fastapi",
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
+      "version": "0.65b0"
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-exporter-otlp-proto-grpc",
+      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.44.0",
+      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.44.0",
+      "version": "1.44.0"
+    }
+  ]
+}

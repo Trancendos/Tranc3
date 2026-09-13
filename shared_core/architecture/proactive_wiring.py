@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.proactive_wiring"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.proactive_wiring"""
 
-from Dimensional.architecture.proactive_wiring import *  # noqa: F401, F403
+from Dimensionals.architecture.proactive_wiring import *  # noqa: F401, F403

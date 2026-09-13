@@ -87,7 +87,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
     && python3 -m pip install --no-cache-dir \
         pip-audit==2.9.0 \
         bandit==1.8.3 \
-        semgrep==1.100.0 \
+        semgrep==1.177.0 \
         ruff==0.15.8 \
         mypy==1.10.0
 

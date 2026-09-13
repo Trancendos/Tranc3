@@ -5,6 +5,41 @@ Applies to: all services, workers, containers, modules, and CF Workers in this r
 
 ---
 
+## 0a. Dimensional vs Dimensionals (the singular/plural rule)
+
+Set by the owner, 2026-09-12. Both spellings are correct; they mean different things,
+and the difference is countable:
+
+| Form | Means |
+|---|---|
+| **Dimensional** | **one** shared service |
+| **Dimensionals** | **multiple** shared services |
+
+It is an ordinary English plural doing real work: the form tells a reader whether the
+sentence is about a single shared service or the collection of them. Neither spelling
+is deprecated, and "Dimensional" is **not** a legacy name to be swept.
+
+Consequences:
+
+- The package directory is **`Dimensionals/`** — it holds many shared services. Import
+  paths (`from Dimensionals.middleware import ...`) follow the directory and are plural.
+- A sentence about one of them takes the singular: "each Underverse module is a
+  microservice operating under **a Dimensional**". "a Dimensionals" is a grammatical
+  error, not a spelling variant.
+- The taxonomy already encodes this correctly and should stay that way: the node *kind*
+  is `dimensional` (one service) and the branch label is `Dimensionals (Shared-Core)`
+  (the collection), so `docs/architecture/TAXONOMY.md` reads "Dimensional | 32" — 32
+  individual shared services.
+- `Dimensional Nexus` / `dimensional-nexus-service` is unrelated: there "dimensional" is
+  the English adjective ("multi-dimensional data routing"), not this term. Leave it.
+
+This rule exists because the 2026-09-11 rename swept `Dimensional` → `Dimensionals`
+across 8,319 references, which was right for paths and wrong for prose. Two sites were
+flattened and have been restored; `tests/test_dimensionals_naming.py` now fails on a
+singular article in front of the plural, so the next sweep cannot repeat it.
+
+---
+
 ## 0. Platform vs model-base naming (the "Trancendos ≠ Tranc3" rule)
 
 The **platform** is **Trancendos** — the GitHub org, the domain (`trancendos.com`), and the

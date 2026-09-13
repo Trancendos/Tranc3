@@ -15,10 +15,10 @@ events flow correctly between the three bridge systems.
 
 import asyncio
 
-from Dimensional.hive.hive_core import (
+from Dimensionals.hive.hive_core import (
     Hive,
 )
-from Dimensional.infinity.bridge.bridge_core import (
+from Dimensionals.infinity.bridge.bridge_core import (
     BridgeEvent,
     BridgePathManager,
     ContextType,
@@ -31,8 +31,8 @@ from Dimensional.infinity.bridge.bridge_core import (
     get_infinity_bridge,
     get_sentinel_bridge,
 )
-from Dimensional.infinity.nomenclature import SentinelChannel, TransferSystem
-from Dimensional.nexus.nexus_core import (
+from Dimensionals.infinity.nomenclature import SentinelChannel, TransferSystem
+from Dimensionals.nexus.nexus_core import (
     Nexus,
 )
 
@@ -487,7 +487,7 @@ class TestThreeBridgeNomenclature:
 
     def test_transfer_systems_dict(self):
         """TRANSFER_SYSTEMS dict has entries for all three."""
-        from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+        from Dimensionals.infinity.nomenclature import TRANSFER_SYSTEMS
 
         assert TransferSystem.NEXUS in TRANSFER_SYSTEMS
         assert TransferSystem.HIVE in TRANSFER_SYSTEMS
@@ -495,7 +495,7 @@ class TestThreeBridgeNomenclature:
 
     def test_nexus_transfer_description(self):
         """Nexus is described as handling AI/Agent/Bot traffic."""
-        from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+        from Dimensionals.infinity.nomenclature import TRANSFER_SYSTEMS
 
         nexus_info = TRANSFER_SYSTEMS[TransferSystem.NEXUS]
         assert (
@@ -504,14 +504,14 @@ class TestThreeBridgeNomenclature:
 
     def test_hive_transfer_description(self):
         """HIVE is described as handling data traffic."""
-        from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+        from Dimensionals.infinity.nomenclature import TRANSFER_SYSTEMS
 
         hive_info = TRANSFER_SYSTEMS[TransferSystem.HIVE]
         assert "Data" in hive_info["transfers"] or "data" in hive_info["description"].lower()
 
     def test_bridge_transfer_description(self):
         """Bridge (InfinityBridge) is described as handling user traffic."""
-        from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+        from Dimensionals.infinity.nomenclature import TRANSFER_SYSTEMS
 
         bridge_info = TRANSFER_SYSTEMS[TransferSystem.BRIDGE]
         assert "User" in bridge_info["transfers"] or "user" in bridge_info["description"].lower()
@@ -529,7 +529,7 @@ class TestInfinityBridgeSingleton:
     def test_get_infinity_bridge_returns_same_instance(self):
         """get_infinity_bridge() returns the same instance."""
         # Reset singleton for testing
-        import Dimensional.infinity.bridge.bridge_core as bc
+        import Dimensionals.infinity.bridge.bridge_core as bc
 
         bc._bridge_instance = None
         b1 = get_infinity_bridge()
@@ -539,7 +539,7 @@ class TestInfinityBridgeSingleton:
 
     def test_get_sentinel_bridge_returns_same_instance(self):
         """get_sentinel_bridge() returns the same instance."""
-        import Dimensional.infinity.bridge.bridge_core as bc
+        import Dimensionals.infinity.bridge.bridge_core as bc
 
         bc._sentinel_bridge_instance = None
         sb1 = get_sentinel_bridge()

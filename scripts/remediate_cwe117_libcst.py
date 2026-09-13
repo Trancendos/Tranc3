@@ -13,7 +13,7 @@ REPO = Path(__file__).resolve().parents[1]
 FLAGGED_FILES = """
 workers/blender-worker/worker.py
 src/workflow/routes.py
-Dimensional/error_handlers.py
+Dimensionals/error_handlers.py
 shared_core/error_handlers.py
 archive/api_enhanced.py
 src/mcp/server.py
@@ -39,10 +39,10 @@ src/workflow/executor.py
 src/resonate/empathy.py
 src/taimra/digital_twin.py
 workers/ffmpeg-worker/worker.py
-Dimensional/infinity/sentinel_station.py
-Dimensional/security_automation/defense_engine.py
-Dimensional/infinity/abac.py
-Dimensional/hive/hive_core.py
+Dimensionals/infinity/sentinel_station.py
+Dimensionals/security_automation/defense_engine.py
+Dimensionals/infinity/abac.py
+Dimensionals/hive/hive_core.py
 src/compliance/magna_carta.py
 src/security/ip_protection.py
 src/citadel/routes.py
@@ -60,7 +60,7 @@ src/personality/spawner.py
 """.strip().splitlines()
 
 LOGGER_LEVELS = {"debug", "info", "warning", "error", "exception", "critical", "log"}
-IMPORT_DIMENSIONAL = "from Dimensional.sanitize import sanitize_for_log\n"
+IMPORT_DIMENSIONAL = "from Dimensionals.sanitize import sanitize_for_log\n"
 IMPORT_SHARED = "from shared_core.sanitize import sanitize_for_log\n"
 
 

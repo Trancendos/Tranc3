@@ -1,4 +1,4 @@
-"""Containment of the fd-based readers in Dimensional/path_validation.py.
+"""Containment of the fd-based readers in Dimensionals/path_validation.py.
 
 `validate_path()` resolves a path and checks it is inside a base directory. The
 readers then had to *open* it, and did so by pathname -- which re-resolves the
@@ -22,8 +22,8 @@ import os
 
 import pytest
 
-import Dimensional.path_validation as path_validation
-from Dimensional.path_validation import (
+import Dimensionals.path_validation as path_validation
+from Dimensionals.path_validation import (
     _SUPPORTS_DIR_FD,
     PathTraversalError,
     _open_contained,
@@ -157,7 +157,7 @@ class TestOpenContained:
         the final-component guarantee and drops the intermediate one -- the
         exact hole this function exists to close.
         """
-        import Dimensional.path_validation as pv
+        import Dimensionals.path_validation as pv
 
         base, _ = tree
         monkeypatch.setattr(pv, "_SUPPORTS_DIR_FD", False)

@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.sentinel"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.sentinel"""
 
-from Dimensional.architecture.sentinel import *  # noqa: F401, F403
+from Dimensionals.architecture.sentinel import *  # noqa: F401, F403

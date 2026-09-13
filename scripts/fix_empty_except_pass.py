@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Replace empty ``except: pass`` handlers with debug logging for CodeQL compliance.
 
-Targets shared_core/, Dimensional/, and archive/ trees. Idempotent: skips handlers
+Targets shared_core/, Dimensionals/, and archive/ trees. Idempotent: skips handlers
 that already contain logging or non-pass statements.
 """
 
@@ -148,7 +148,7 @@ def fix_file(path: Path, *, dry_run: bool = False) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("roots", nargs="*", default=["shared_core", "Dimensional", "archive"])
+    parser.add_argument("roots", nargs="*", default=["shared_core", "Dimensionals", "archive"])
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 

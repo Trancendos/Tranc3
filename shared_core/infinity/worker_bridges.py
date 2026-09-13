@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.worker_bridges"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.worker_bridges"""
 
-from Dimensional.infinity.worker_bridges import *  # noqa: F401, F403
+from Dimensionals.infinity.worker_bridges import *  # noqa: F401, F403
