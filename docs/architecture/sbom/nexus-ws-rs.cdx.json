@@ -37,558 +37,963 @@
       },
       {
         "name": "trancendos:base-image",
-        "value": "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
+        "value": "rust:1.79-slim@sha256:073c8e7ae12d2637d1d541cb0f3f9d92bfa22c97e2e45db87a9fc6a90c9a7f22"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171"
       },
       {
         "name": "trancendos:manifest",
-        "value": "requirements-ai.txt"
-      },
-      {
-        "name": "trancendos:manifest",
-        "value": "requirements-security.txt"
-      },
-      {
-        "name": "trancendos:manifest",
-        "value": "requirements-test.txt"
-      },
-      {
-        "name": "trancendos:manifest",
-        "value": "requirements.txt"
+        "value": "workers/nexus-ws-rs/Cargo.lock"
       }
     ]
   },
   "components": [
     {
       "type": "library",
-      "name": "langchain",
-      "bom-ref": "pkg:pypi/langchain@1.4.0",
-      "purl": "pkg:pypi/langchain@1.4.0",
-      "version": "1.4.0"
+      "name": "aho-corasick",
+      "bom-ref": "pkg:cargo/aho-corasick@1.1.5",
+      "purl": "pkg:cargo/aho-corasick@1.1.5",
+      "version": "1.1.5"
     },
     {
       "type": "library",
-      "name": "langchain-community",
-      "bom-ref": "pkg:pypi/langchain-community@0.4.2",
-      "purl": "pkg:pypi/langchain-community@0.4.2",
-      "version": "0.4.2"
+      "name": "atomic-waker",
+      "bom-ref": "pkg:cargo/atomic-waker@1.1.2",
+      "purl": "pkg:cargo/atomic-waker@1.1.2",
+      "version": "1.1.2"
     },
     {
       "type": "library",
-      "name": "transformers",
-      "bom-ref": "pkg:pypi/transformers@5.17.0",
-      "purl": "pkg:pypi/transformers@5.17.0",
-      "version": "5.17.0"
+      "name": "autocfg",
+      "bom-ref": "pkg:cargo/autocfg@1.5.1",
+      "purl": "pkg:cargo/autocfg@1.5.1",
+      "version": "1.5.1"
     },
     {
       "type": "library",
-      "name": "qiskit",
-      "bom-ref": "pkg:pypi/qiskit@2.5.2",
-      "purl": "pkg:pypi/qiskit@2.5.2",
-      "version": "2.5.2"
+      "name": "axum",
+      "bom-ref": "pkg:cargo/axum@0.8.9",
+      "purl": "pkg:cargo/axum@0.8.9",
+      "version": "0.8.9"
     },
     {
       "type": "library",
-      "name": "langfuse",
-      "bom-ref": "pkg:pypi/langfuse@4.15.2",
-      "purl": "pkg:pypi/langfuse@4.15.2",
-      "version": "4.15.2"
+      "name": "axum-core",
+      "bom-ref": "pkg:cargo/axum-core@0.5.6",
+      "purl": "pkg:cargo/axum-core@0.5.6",
+      "version": "0.5.6"
     },
     {
       "type": "library",
-      "name": "tokenizers",
-      "bom-ref": "pkg:pypi/tokenizers@0.23.2",
-      "purl": "pkg:pypi/tokenizers@0.23.2",
-      "version": "0.23.2"
+      "name": "base64",
+      "bom-ref": "pkg:cargo/base64@0.22.1",
+      "purl": "pkg:cargo/base64@0.22.1",
+      "version": "0.22.1"
     },
     {
       "type": "library",
-      "name": "safety",
-      "bom-ref": "pkg:pypi/safety@3.8.1",
-      "purl": "pkg:pypi/safety@3.8.1",
-      "version": "3.8.1"
+      "name": "bitflags",
+      "bom-ref": "pkg:cargo/bitflags@2.13.1",
+      "purl": "pkg:cargo/bitflags@2.13.1",
+      "version": "2.13.1"
     },
     {
       "type": "library",
-      "name": "pip-audit",
-      "bom-ref": "pkg:pypi/pip-audit@2.10.1",
-      "purl": "pkg:pypi/pip-audit@2.10.1",
-      "version": "2.10.1"
+      "name": "block-buffer",
+      "bom-ref": "pkg:cargo/block-buffer@0.10.4",
+      "purl": "pkg:cargo/block-buffer@0.10.4",
+      "version": "0.10.4"
     },
     {
       "type": "library",
-      "name": "bandit",
-      "bom-ref": "pkg:pypi/bandit@1.9.4",
-      "purl": "pkg:pypi/bandit@1.9.4",
-      "version": "1.9.4"
+      "name": "bumpalo",
+      "bom-ref": "pkg:cargo/bumpalo@3.20.3",
+      "purl": "pkg:cargo/bumpalo@3.20.3",
+      "version": "3.20.3"
     },
     {
       "type": "library",
-      "name": "pip-tools",
-      "bom-ref": "pkg:pypi/pip-tools@7.6.1",
-      "purl": "pkg:pypi/pip-tools@7.6.1",
-      "version": "7.6.1"
+      "name": "bytes",
+      "bom-ref": "pkg:cargo/bytes@1.12.1",
+      "purl": "pkg:cargo/bytes@1.12.1",
+      "version": "1.12.1"
     },
     {
       "type": "library",
-      "name": "hashin",
-      "bom-ref": "pkg:pypi/hashin@1.0.5",
-      "purl": "pkg:pypi/hashin@1.0.5",
-      "version": "1.0.5"
+      "name": "cfg-if",
+      "bom-ref": "pkg:cargo/cfg-if@1.0.4",
+      "purl": "pkg:cargo/cfg-if@1.0.4",
+      "version": "1.0.4"
     },
     {
       "type": "library",
-      "name": "semgrep",
-      "bom-ref": "pkg:pypi/semgrep@1.177.0",
-      "purl": "pkg:pypi/semgrep@1.177.0",
-      "version": "1.177.0"
+      "name": "cpufeatures",
+      "bom-ref": "pkg:cargo/cpufeatures@0.2.17",
+      "purl": "pkg:cargo/cpufeatures@0.2.17",
+      "version": "0.2.17"
     },
     {
       "type": "library",
-      "name": "cyclonedx-bom",
-      "bom-ref": "pkg:pypi/cyclonedx-bom@7.3.1",
-      "purl": "pkg:pypi/cyclonedx-bom@7.3.1",
-      "version": "7.3.1"
+      "name": "crossbeam-utils",
+      "bom-ref": "pkg:cargo/crossbeam-utils@0.8.22",
+      "purl": "pkg:cargo/crossbeam-utils@0.8.22",
+      "version": "0.8.22"
     },
     {
       "type": "library",
-      "name": "filelock",
-      "bom-ref": "pkg:pypi/filelock@3.32.5",
-      "purl": "pkg:pypi/filelock@3.32.5",
-      "version": "3.32.5"
+      "name": "crypto-common",
+      "bom-ref": "pkg:cargo/crypto-common@0.1.7",
+      "purl": "pkg:cargo/crypto-common@0.1.7",
+      "version": "0.1.7"
     },
     {
       "type": "library",
-      "name": "cyclonedx-python-lib",
-      "bom-ref": "pkg:pypi/cyclonedx-python-lib@11.12.0",
-      "purl": "pkg:pypi/cyclonedx-python-lib@11.12.0",
-      "version": "11.12.0"
+      "name": "dashmap",
+      "bom-ref": "pkg:cargo/dashmap@6.2.1",
+      "purl": "pkg:cargo/dashmap@6.2.1",
+      "version": "6.2.1"
     },
     {
       "type": "library",
-      "name": "lxml",
-      "bom-ref": "pkg:pypi/lxml@6.1.2",
-      "purl": "pkg:pypi/lxml@6.1.2",
-      "version": "6.1.2"
+      "name": "data-encoding",
+      "bom-ref": "pkg:cargo/data-encoding@2.11.1",
+      "purl": "pkg:cargo/data-encoding@2.11.1",
+      "version": "2.11.1"
     },
     {
       "type": "library",
-      "name": "defusedxml",
-      "bom-ref": "pkg:pypi/defusedxml@0.7.1",
-      "purl": "pkg:pypi/defusedxml@0.7.1",
-      "version": "0.7.1"
+      "name": "deranged",
+      "bom-ref": "pkg:cargo/deranged@0.5.8",
+      "purl": "pkg:cargo/deranged@0.5.8",
+      "version": "0.5.8"
     },
     {
       "type": "library",
-      "name": "pytest",
-      "bom-ref": "pkg:pypi/pytest@9.1.1",
-      "purl": "pkg:pypi/pytest@9.1.1",
-      "version": "9.1.1"
+      "name": "digest",
+      "bom-ref": "pkg:cargo/digest@0.10.7",
+      "purl": "pkg:cargo/digest@0.10.7",
+      "version": "0.10.7"
     },
     {
       "type": "library",
-      "name": "pytest-asyncio",
-      "bom-ref": "pkg:pypi/pytest-asyncio@1.4.0",
-      "purl": "pkg:pypi/pytest-asyncio@1.4.0",
-      "version": "1.4.0"
+      "name": "errno",
+      "bom-ref": "pkg:cargo/errno@0.3.14",
+      "purl": "pkg:cargo/errno@0.3.14",
+      "version": "0.3.14"
     },
     {
       "type": "library",
-      "name": "pytest-cov",
-      "bom-ref": "pkg:pypi/pytest-cov@7.1.0",
-      "purl": "pkg:pypi/pytest-cov@7.1.0",
-      "version": "7.1.0"
+      "name": "form_urlencoded",
+      "bom-ref": "pkg:cargo/form_urlencoded@1.2.2",
+      "purl": "pkg:cargo/form_urlencoded@1.2.2",
+      "version": "1.2.2"
     },
     {
       "type": "library",
-      "name": "pyotp",
-      "bom-ref": "pkg:pypi/pyotp@2.10.0",
-      "purl": "pkg:pypi/pyotp@2.10.0",
-      "version": "2.10.0"
+      "name": "futures",
+      "bom-ref": "pkg:cargo/futures@0.3.34",
+      "purl": "pkg:cargo/futures@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "torch",
-      "bom-ref": "pkg:pypi/torch@2.13.0",
-      "purl": "pkg:pypi/torch@2.13.0",
-      "version": "2.13.0"
+      "name": "futures-channel",
+      "bom-ref": "pkg:cargo/futures-channel@0.3.34",
+      "purl": "pkg:cargo/futures-channel@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "sentencepiece",
-      "bom-ref": "pkg:pypi/sentencepiece@0.2.2",
-      "purl": "pkg:pypi/sentencepiece@0.2.2",
-      "version": "0.2.2"
+      "name": "futures-core",
+      "bom-ref": "pkg:cargo/futures-core@0.3.34",
+      "purl": "pkg:cargo/futures-core@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "datasets",
-      "bom-ref": "pkg:pypi/datasets@5.0.1",
-      "purl": "pkg:pypi/datasets@5.0.1",
-      "version": "5.0.1"
+      "name": "futures-executor",
+      "bom-ref": "pkg:cargo/futures-executor@0.3.34",
+      "purl": "pkg:cargo/futures-executor@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "numpy",
-      "bom-ref": "pkg:pypi/numpy@2.4.6",
-      "purl": "pkg:pypi/numpy@2.4.6",
-      "version": "2.4.6"
+      "name": "futures-io",
+      "bom-ref": "pkg:cargo/futures-io@0.3.34",
+      "purl": "pkg:cargo/futures-io@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "scipy",
-      "bom-ref": "pkg:pypi/scipy@1.17.1",
-      "purl": "pkg:pypi/scipy@1.17.1",
-      "version": "1.17.1"
+      "name": "futures-macro",
+      "bom-ref": "pkg:cargo/futures-macro@0.3.34",
+      "purl": "pkg:cargo/futures-macro@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "openpyxl",
-      "bom-ref": "pkg:pypi/openpyxl@3.1.5",
-      "purl": "pkg:pypi/openpyxl@3.1.5",
-      "version": "3.1.5"
+      "name": "futures-sink",
+      "bom-ref": "pkg:cargo/futures-sink@0.3.34",
+      "purl": "pkg:cargo/futures-sink@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "tqdm",
-      "bom-ref": "pkg:pypi/tqdm@4.70.0",
-      "purl": "pkg:pypi/tqdm@4.70.0",
-      "version": "4.70.0"
+      "name": "futures-task",
+      "bom-ref": "pkg:cargo/futures-task@0.3.34",
+      "purl": "pkg:cargo/futures-task@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "cryptography",
-      "bom-ref": "pkg:pypi/cryptography@50.0.1",
-      "purl": "pkg:pypi/cryptography@50.0.1",
-      "version": "50.0.1"
+      "name": "futures-util",
+      "bom-ref": "pkg:cargo/futures-util@0.3.34",
+      "purl": "pkg:cargo/futures-util@0.3.34",
+      "version": "0.3.34"
     },
     {
       "type": "library",
-      "name": "aiohttp",
-      "bom-ref": "pkg:pypi/aiohttp@3.14.3",
-      "purl": "pkg:pypi/aiohttp@3.14.3",
-      "version": "3.14.3"
+      "name": "generic-array",
+      "bom-ref": "pkg:cargo/generic-array@0.14.7",
+      "purl": "pkg:cargo/generic-array@0.14.7",
+      "version": "0.14.7"
     },
     {
       "type": "library",
-      "name": "python-multipart",
-      "bom-ref": "pkg:pypi/python-multipart@0.0.32",
-      "purl": "pkg:pypi/python-multipart@0.0.32",
-      "version": "0.0.32"
+      "name": "getrandom",
+      "bom-ref": "pkg:cargo/getrandom@0.2.17",
+      "purl": "pkg:cargo/getrandom@0.2.17",
+      "version": "0.2.17"
     },
     {
       "type": "library",
-      "name": "python-dotenv",
-      "bom-ref": "pkg:pypi/python-dotenv@1.2.3",
-      "purl": "pkg:pypi/python-dotenv@1.2.3",
+      "name": "getrandom",
+      "bom-ref": "pkg:cargo/getrandom@0.3.4",
+      "purl": "pkg:cargo/getrandom@0.3.4",
+      "version": "0.3.4"
+    },
+    {
+      "type": "library",
+      "name": "getrandom",
+      "bom-ref": "pkg:cargo/getrandom@0.4.3",
+      "purl": "pkg:cargo/getrandom@0.4.3",
+      "version": "0.4.3"
+    },
+    {
+      "type": "library",
+      "name": "hashbrown",
+      "bom-ref": "pkg:cargo/hashbrown@0.14.5",
+      "purl": "pkg:cargo/hashbrown@0.14.5",
+      "version": "0.14.5"
+    },
+    {
+      "type": "library",
+      "name": "http",
+      "bom-ref": "pkg:cargo/http@1.5.0",
+      "purl": "pkg:cargo/http@1.5.0",
+      "version": "1.5.0"
+    },
+    {
+      "type": "library",
+      "name": "http-body",
+      "bom-ref": "pkg:cargo/http-body@1.1.0",
+      "purl": "pkg:cargo/http-body@1.1.0",
+      "version": "1.1.0"
+    },
+    {
+      "type": "library",
+      "name": "http-body-util",
+      "bom-ref": "pkg:cargo/http-body-util@0.1.5",
+      "purl": "pkg:cargo/http-body-util@0.1.5",
+      "version": "0.1.5"
+    },
+    {
+      "type": "library",
+      "name": "httparse",
+      "bom-ref": "pkg:cargo/httparse@1.10.1",
+      "purl": "pkg:cargo/httparse@1.10.1",
+      "version": "1.10.1"
+    },
+    {
+      "type": "library",
+      "name": "httpdate",
+      "bom-ref": "pkg:cargo/httpdate@1.0.3",
+      "purl": "pkg:cargo/httpdate@1.0.3",
+      "version": "1.0.3"
+    },
+    {
+      "type": "library",
+      "name": "hyper",
+      "bom-ref": "pkg:cargo/hyper@1.11.1",
+      "purl": "pkg:cargo/hyper@1.11.1",
+      "version": "1.11.1"
+    },
+    {
+      "type": "library",
+      "name": "hyper-util",
+      "bom-ref": "pkg:cargo/hyper-util@0.1.20",
+      "purl": "pkg:cargo/hyper-util@0.1.20",
+      "version": "0.1.20"
+    },
+    {
+      "type": "library",
+      "name": "itoa",
+      "bom-ref": "pkg:cargo/itoa@1.0.18",
+      "purl": "pkg:cargo/itoa@1.0.18",
+      "version": "1.0.18"
+    },
+    {
+      "type": "library",
+      "name": "js-sys",
+      "bom-ref": "pkg:cargo/js-sys@0.3.104",
+      "purl": "pkg:cargo/js-sys@0.3.104",
+      "version": "0.3.104"
+    },
+    {
+      "type": "library",
+      "name": "jsonwebtoken",
+      "bom-ref": "pkg:cargo/jsonwebtoken@11.0.0",
+      "purl": "pkg:cargo/jsonwebtoken@11.0.0",
+      "version": "11.0.0"
+    },
+    {
+      "type": "library",
+      "name": "lazy_static",
+      "bom-ref": "pkg:cargo/lazy_static@1.5.0",
+      "purl": "pkg:cargo/lazy_static@1.5.0",
+      "version": "1.5.0"
+    },
+    {
+      "type": "library",
+      "name": "libc",
+      "bom-ref": "pkg:cargo/libc@0.2.189",
+      "purl": "pkg:cargo/libc@0.2.189",
+      "version": "0.2.189"
+    },
+    {
+      "type": "library",
+      "name": "lock_api",
+      "bom-ref": "pkg:cargo/lock_api@0.4.14",
+      "purl": "pkg:cargo/lock_api@0.4.14",
+      "version": "0.4.14"
+    },
+    {
+      "type": "library",
+      "name": "log",
+      "bom-ref": "pkg:cargo/log@0.4.34",
+      "purl": "pkg:cargo/log@0.4.34",
+      "version": "0.4.34"
+    },
+    {
+      "type": "library",
+      "name": "matchers",
+      "bom-ref": "pkg:cargo/matchers@0.2.0",
+      "purl": "pkg:cargo/matchers@0.2.0",
+      "version": "0.2.0"
+    },
+    {
+      "type": "library",
+      "name": "matchit",
+      "bom-ref": "pkg:cargo/matchit@0.8.4",
+      "purl": "pkg:cargo/matchit@0.8.4",
+      "version": "0.8.4"
+    },
+    {
+      "type": "library",
+      "name": "memchr",
+      "bom-ref": "pkg:cargo/memchr@2.8.3",
+      "purl": "pkg:cargo/memchr@2.8.3",
+      "version": "2.8.3"
+    },
+    {
+      "type": "library",
+      "name": "mime",
+      "bom-ref": "pkg:cargo/mime@0.3.17",
+      "purl": "pkg:cargo/mime@0.3.17",
+      "version": "0.3.17"
+    },
+    {
+      "type": "library",
+      "name": "mio",
+      "bom-ref": "pkg:cargo/mio@1.2.3",
+      "purl": "pkg:cargo/mio@1.2.3",
       "version": "1.2.3"
     },
     {
       "type": "library",
-      "name": "bcrypt",
-      "bom-ref": "pkg:pypi/bcrypt@5.0.0",
-      "purl": "pkg:pypi/bcrypt@5.0.0",
-      "version": "5.0.0"
+      "name": "nexus-ws",
+      "bom-ref": "pkg:cargo/nexus-ws@0.1.0",
+      "purl": "pkg:cargo/nexus-ws@0.1.0",
+      "version": "0.1.0"
     },
     {
       "type": "library",
-      "name": "sqlalchemy",
-      "bom-ref": "pkg:pypi/sqlalchemy@2.0.52",
-      "purl": "pkg:pypi/sqlalchemy@2.0.52",
-      "version": "2.0.52"
+      "name": "nu-ansi-term",
+      "bom-ref": "pkg:cargo/nu-ansi-term@0.50.3",
+      "purl": "pkg:cargo/nu-ansi-term@0.50.3",
+      "version": "0.50.3"
     },
     {
       "type": "library",
-      "name": "alembic",
-      "bom-ref": "pkg:pypi/alembic@1.19.1",
-      "purl": "pkg:pypi/alembic@1.19.1",
-      "version": "1.19.1"
+      "name": "num-bigint",
+      "bom-ref": "pkg:cargo/num-bigint@0.4.8",
+      "purl": "pkg:cargo/num-bigint@0.4.8",
+      "version": "0.4.8"
     },
     {
       "type": "library",
-      "name": "psycopg2-binary",
-      "bom-ref": "pkg:pypi/psycopg2-binary@2.9.12",
-      "purl": "pkg:pypi/psycopg2-binary@2.9.12",
-      "version": "2.9.12"
+      "name": "num-conv",
+      "bom-ref": "pkg:cargo/num-conv@0.2.2",
+      "purl": "pkg:cargo/num-conv@0.2.2",
+      "version": "0.2.2"
     },
     {
       "type": "library",
-      "name": "fastapi",
-      "bom-ref": "pkg:pypi/fastapi@0.141.1",
-      "purl": "pkg:pypi/fastapi@0.141.1",
-      "version": "0.141.1"
+      "name": "num-integer",
+      "bom-ref": "pkg:cargo/num-integer@0.1.47",
+      "purl": "pkg:cargo/num-integer@0.1.47",
+      "version": "0.1.47"
     },
     {
       "type": "library",
-      "name": "starlette",
-      "bom-ref": "pkg:pypi/starlette@1.6.0",
-      "purl": "pkg:pypi/starlette@1.6.0",
-      "version": "1.6.0"
+      "name": "num-traits",
+      "bom-ref": "pkg:cargo/num-traits@0.2.19",
+      "purl": "pkg:cargo/num-traits@0.2.19",
+      "version": "0.2.19"
     },
     {
       "type": "library",
-      "name": "httpx",
-      "bom-ref": "pkg:pypi/httpx@0.28.1",
-      "purl": "pkg:pypi/httpx@0.28.1",
-      "version": "0.28.1"
+      "name": "once_cell",
+      "bom-ref": "pkg:cargo/once_cell@1.21.4",
+      "purl": "pkg:cargo/once_cell@1.21.4",
+      "version": "1.21.4"
     },
     {
       "type": "library",
-      "name": "pydantic",
-      "bom-ref": "pkg:pypi/pydantic@2.13.5",
-      "purl": "pkg:pypi/pydantic@2.13.5",
-      "version": "2.13.5"
+      "name": "parking_lot",
+      "bom-ref": "pkg:cargo/parking_lot@0.12.5",
+      "purl": "pkg:cargo/parking_lot@0.12.5",
+      "version": "0.12.5"
     },
     {
       "type": "library",
-      "name": "pydantic-settings",
-      "bom-ref": "pkg:pypi/pydantic-settings@2.15.0",
-      "purl": "pkg:pypi/pydantic-settings@2.15.0",
-      "version": "2.15.0"
+      "name": "parking_lot_core",
+      "bom-ref": "pkg:cargo/parking_lot_core@0.9.12",
+      "purl": "pkg:cargo/parking_lot_core@0.9.12",
+      "version": "0.9.12"
     },
     {
       "type": "library",
-      "name": "sse-starlette",
-      "bom-ref": "pkg:pypi/sse-starlette@3.4.8",
-      "purl": "pkg:pypi/sse-starlette@3.4.8",
-      "version": "3.4.8"
+      "name": "pem",
+      "bom-ref": "pkg:cargo/pem@3.0.6",
+      "purl": "pkg:cargo/pem@3.0.6",
+      "version": "3.0.6"
     },
     {
       "type": "library",
-      "name": "uvicorn",
-      "bom-ref": "pkg:pypi/uvicorn@0.52.4",
-      "purl": "pkg:pypi/uvicorn@0.52.4",
-      "version": "0.52.4"
+      "name": "percent-encoding",
+      "bom-ref": "pkg:cargo/percent-encoding@2.3.2",
+      "purl": "pkg:cargo/percent-encoding@2.3.2",
+      "version": "2.3.2"
     },
     {
       "type": "library",
-      "name": "structlog",
-      "bom-ref": "pkg:pypi/structlog@26.1.0",
-      "purl": "pkg:pypi/structlog@26.1.0",
-      "version": "26.1.0"
+      "name": "pin-project-lite",
+      "bom-ref": "pkg:cargo/pin-project-lite@0.2.17",
+      "purl": "pkg:cargo/pin-project-lite@0.2.17",
+      "version": "0.2.17"
     },
     {
       "type": "library",
-      "name": "python-jose",
-      "bom-ref": "pkg:pypi/python-jose@3.5.0",
-      "purl": "pkg:pypi/python-jose@3.5.0",
-      "version": "3.5.0"
+      "name": "powerfmt",
+      "bom-ref": "pkg:cargo/powerfmt@0.2.0",
+      "purl": "pkg:cargo/powerfmt@0.2.0",
+      "version": "0.2.0"
     },
     {
       "type": "library",
-      "name": "ecdsa",
-      "bom-ref": "pkg:pypi/ecdsa@0.19.2",
-      "purl": "pkg:pypi/ecdsa@0.19.2",
-      "version": "0.19.2"
+      "name": "ppv-lite86",
+      "bom-ref": "pkg:cargo/ppv-lite86@0.2.21",
+      "purl": "pkg:cargo/ppv-lite86@0.2.21",
+      "version": "0.2.21"
     },
     {
       "type": "library",
-      "name": "email-validator",
-      "bom-ref": "pkg:pypi/email-validator@2.3.0",
-      "purl": "pkg:pypi/email-validator@2.3.0",
-      "version": "2.3.0"
+      "name": "proc-macro2",
+      "bom-ref": "pkg:cargo/proc-macro2@1.0.107",
+      "purl": "pkg:cargo/proc-macro2@1.0.107",
+      "version": "1.0.107"
     },
     {
       "type": "library",
-      "name": "pyasn1",
-      "bom-ref": "pkg:pypi/pyasn1@0.6.4",
-      "purl": "pkg:pypi/pyasn1@0.6.4",
-      "version": "0.6.4"
+      "name": "quote",
+      "bom-ref": "pkg:cargo/quote@1.0.47",
+      "purl": "pkg:cargo/quote@1.0.47",
+      "version": "1.0.47"
     },
     {
       "type": "library",
-      "name": "PyJWT",
-      "bom-ref": "pkg:pypi/PyJWT@2.13.0",
-      "purl": "pkg:pypi/PyJWT@2.13.0",
-      "version": "2.13.0"
+      "name": "r-efi",
+      "bom-ref": "pkg:cargo/r-efi@5.3.0",
+      "purl": "pkg:cargo/r-efi@5.3.0",
+      "version": "5.3.0"
     },
     {
       "type": "library",
-      "name": "idna",
-      "bom-ref": "pkg:pypi/idna@3.19",
-      "purl": "pkg:pypi/idna@3.19",
-      "version": "3.19"
-    },
-    {
-      "type": "library",
-      "name": "urllib3",
-      "bom-ref": "pkg:pypi/urllib3@2.7.0",
-      "purl": "pkg:pypi/urllib3@2.7.0",
-      "version": "2.7.0"
-    },
-    {
-      "type": "library",
-      "name": "networkx",
-      "bom-ref": "pkg:pypi/networkx@3.6.1",
-      "purl": "pkg:pypi/networkx@3.6.1",
-      "version": "3.6.1"
-    },
-    {
-      "type": "library",
-      "name": "ncps",
-      "bom-ref": "pkg:pypi/ncps@1.0.1",
-      "purl": "pkg:pypi/ncps@1.0.1",
-      "version": "1.0.1"
-    },
-    {
-      "type": "library",
-      "name": "deap",
-      "bom-ref": "pkg:pypi/deap@1.4.4",
-      "purl": "pkg:pypi/deap@1.4.4",
-      "version": "1.4.4"
-    },
-    {
-      "type": "library",
-      "name": "pygad",
-      "bom-ref": "pkg:pypi/pygad@3.7.0",
-      "purl": "pkg:pypi/pygad@3.7.0",
-      "version": "3.7.0"
-    },
-    {
-      "type": "library",
-      "name": "pyswarms",
-      "bom-ref": "pkg:pypi/pyswarms@1.3.0",
-      "purl": "pkg:pypi/pyswarms@1.3.0",
-      "version": "1.3.0"
-    },
-    {
-      "type": "library",
-      "name": "prometheus-client",
-      "bom-ref": "pkg:pypi/prometheus-client@0.26.0",
-      "purl": "pkg:pypi/prometheus-client@0.26.0",
-      "version": "0.26.0"
-    },
-    {
-      "type": "library",
-      "name": "prometheus-fastapi-instrumentator",
-      "bom-ref": "pkg:pypi/prometheus-fastapi-instrumentator@8.1.0",
-      "purl": "pkg:pypi/prometheus-fastapi-instrumentator@8.1.0",
-      "version": "8.1.0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-api",
-      "bom-ref": "pkg:pypi/opentelemetry-api@1.44.0",
-      "purl": "pkg:pypi/opentelemetry-api@1.44.0",
-      "version": "1.44.0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-sdk",
-      "bom-ref": "pkg:pypi/opentelemetry-sdk@1.44.0",
-      "purl": "pkg:pypi/opentelemetry-sdk@1.44.0",
-      "version": "1.44.0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-exporter-otlp-proto-grpc",
-      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.44.0",
-      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.44.0",
-      "version": "1.44.0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-exporter-otlp-proto-http",
-      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-http@1.44.0",
-      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-http@1.44.0",
-      "version": "1.44.0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-instrumentation-fastapi",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
-      "version": "0.65b0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-instrumentation-httpx",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-httpx@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-httpx@0.65b0",
-      "version": "0.65b0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-instrumentation-sqlalchemy",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-sqlalchemy@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-sqlalchemy@0.65b0",
-      "version": "0.65b0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-instrumentation-redis",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-redis@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-redis@0.65b0",
-      "version": "0.65b0"
-    },
-    {
-      "type": "library",
-      "name": "opentelemetry-instrumentation-aiohttp-client",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-aiohttp-client@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-aiohttp-client@0.65b0",
-      "version": "0.65b0"
-    },
-    {
-      "type": "library",
-      "name": "cachetools",
-      "bom-ref": "pkg:pypi/cachetools@7.1.8",
-      "purl": "pkg:pypi/cachetools@7.1.8",
-      "version": "7.1.8"
-    },
-    {
-      "type": "library",
-      "name": "nats-py",
-      "bom-ref": "pkg:pypi/nats-py@2.15.0",
-      "purl": "pkg:pypi/nats-py@2.15.0",
-      "version": "2.15.0"
-    },
-    {
-      "type": "library",
-      "name": "jsonschema",
-      "bom-ref": "pkg:pypi/jsonschema@4.26.0",
-      "purl": "pkg:pypi/jsonschema@4.26.0",
-      "version": "4.26.0"
-    },
-    {
-      "type": "library",
-      "name": "redis",
-      "bom-ref": "pkg:pypi/redis@8.1.0",
-      "purl": "pkg:pypi/redis@8.1.0",
-      "version": "8.1.0"
-    },
-    {
-      "type": "library",
-      "name": "pyyaml",
-      "bom-ref": "pkg:pypi/pyyaml@6.0.3",
-      "purl": "pkg:pypi/pyyaml@6.0.3",
-      "version": "6.0.3"
-    },
-    {
-      "type": "library",
-      "name": "apscheduler",
-      "bom-ref": "pkg:pypi/apscheduler@3.11.3",
-      "purl": "pkg:pypi/apscheduler@3.11.3",
-      "version": "3.11.3"
-    },
-    {
-      "type": "library",
-      "name": "watchdog",
-      "bom-ref": "pkg:pypi/watchdog@6.0.0",
-      "purl": "pkg:pypi/watchdog@6.0.0",
+      "name": "r-efi",
+      "bom-ref": "pkg:cargo/r-efi@6.0.0",
+      "purl": "pkg:cargo/r-efi@6.0.0",
       "version": "6.0.0"
     },
     {
       "type": "library",
-      "name": "qiskit-aer",
-      "bom-ref": "pkg:pypi/qiskit-aer@0.17.2",
-      "purl": "pkg:pypi/qiskit-aer@0.17.2",
-      "version": "0.17.2"
+      "name": "rand",
+      "bom-ref": "pkg:cargo/rand@0.9.5",
+      "purl": "pkg:cargo/rand@0.9.5",
+      "version": "0.9.5"
     },
     {
       "type": "library",
-      "name": "msgpack",
-      "bom-ref": "pkg:pypi/msgpack@1.2.2",
-      "purl": "pkg:pypi/msgpack@1.2.2",
-      "version": "1.2.2"
+      "name": "rand_chacha",
+      "bom-ref": "pkg:cargo/rand_chacha@0.9.0",
+      "purl": "pkg:cargo/rand_chacha@0.9.0",
+      "version": "0.9.0"
+    },
+    {
+      "type": "library",
+      "name": "rand_core",
+      "bom-ref": "pkg:cargo/rand_core@0.6.4",
+      "purl": "pkg:cargo/rand_core@0.6.4",
+      "version": "0.6.4"
+    },
+    {
+      "type": "library",
+      "name": "rand_core",
+      "bom-ref": "pkg:cargo/rand_core@0.9.5",
+      "purl": "pkg:cargo/rand_core@0.9.5",
+      "version": "0.9.5"
+    },
+    {
+      "type": "library",
+      "name": "redox_syscall",
+      "bom-ref": "pkg:cargo/redox_syscall@0.5.18",
+      "purl": "pkg:cargo/redox_syscall@0.5.18",
+      "version": "0.5.18"
+    },
+    {
+      "type": "library",
+      "name": "regex-automata",
+      "bom-ref": "pkg:cargo/regex-automata@0.4.18",
+      "purl": "pkg:cargo/regex-automata@0.4.18",
+      "version": "0.4.18"
+    },
+    {
+      "type": "library",
+      "name": "regex-syntax",
+      "bom-ref": "pkg:cargo/regex-syntax@0.8.11",
+      "purl": "pkg:cargo/regex-syntax@0.8.11",
+      "version": "0.8.11"
+    },
+    {
+      "type": "library",
+      "name": "rustversion",
+      "bom-ref": "pkg:cargo/rustversion@1.0.23",
+      "purl": "pkg:cargo/rustversion@1.0.23",
+      "version": "1.0.23"
+    },
+    {
+      "type": "library",
+      "name": "ryu",
+      "bom-ref": "pkg:cargo/ryu@1.0.23",
+      "purl": "pkg:cargo/ryu@1.0.23",
+      "version": "1.0.23"
+    },
+    {
+      "type": "library",
+      "name": "scopeguard",
+      "bom-ref": "pkg:cargo/scopeguard@1.2.0",
+      "purl": "pkg:cargo/scopeguard@1.2.0",
+      "version": "1.2.0"
+    },
+    {
+      "type": "library",
+      "name": "serde",
+      "bom-ref": "pkg:cargo/serde@1.0.229",
+      "purl": "pkg:cargo/serde@1.0.229",
+      "version": "1.0.229"
+    },
+    {
+      "type": "library",
+      "name": "serde_core",
+      "bom-ref": "pkg:cargo/serde_core@1.0.229",
+      "purl": "pkg:cargo/serde_core@1.0.229",
+      "version": "1.0.229"
+    },
+    {
+      "type": "library",
+      "name": "serde_derive",
+      "bom-ref": "pkg:cargo/serde_derive@1.0.229",
+      "purl": "pkg:cargo/serde_derive@1.0.229",
+      "version": "1.0.229"
+    },
+    {
+      "type": "library",
+      "name": "serde_json",
+      "bom-ref": "pkg:cargo/serde_json@1.0.151",
+      "purl": "pkg:cargo/serde_json@1.0.151",
+      "version": "1.0.151"
+    },
+    {
+      "type": "library",
+      "name": "serde_path_to_error",
+      "bom-ref": "pkg:cargo/serde_path_to_error@0.1.20",
+      "purl": "pkg:cargo/serde_path_to_error@0.1.20",
+      "version": "0.1.20"
+    },
+    {
+      "type": "library",
+      "name": "serde_urlencoded",
+      "bom-ref": "pkg:cargo/serde_urlencoded@0.7.1",
+      "purl": "pkg:cargo/serde_urlencoded@0.7.1",
+      "version": "0.7.1"
+    },
+    {
+      "type": "library",
+      "name": "sha1",
+      "bom-ref": "pkg:cargo/sha1@0.10.7",
+      "purl": "pkg:cargo/sha1@0.10.7",
+      "version": "0.10.7"
+    },
+    {
+      "type": "library",
+      "name": "sharded-slab",
+      "bom-ref": "pkg:cargo/sharded-slab@0.1.7",
+      "purl": "pkg:cargo/sharded-slab@0.1.7",
+      "version": "0.1.7"
+    },
+    {
+      "type": "library",
+      "name": "signal-hook-registry",
+      "bom-ref": "pkg:cargo/signal-hook-registry@1.4.8",
+      "purl": "pkg:cargo/signal-hook-registry@1.4.8",
+      "version": "1.4.8"
+    },
+    {
+      "type": "library",
+      "name": "signature",
+      "bom-ref": "pkg:cargo/signature@2.2.0",
+      "purl": "pkg:cargo/signature@2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "type": "library",
+      "name": "simple_asn1",
+      "bom-ref": "pkg:cargo/simple_asn1@0.6.4",
+      "purl": "pkg:cargo/simple_asn1@0.6.4",
+      "version": "0.6.4"
+    },
+    {
+      "type": "library",
+      "name": "slab",
+      "bom-ref": "pkg:cargo/slab@0.4.12",
+      "purl": "pkg:cargo/slab@0.4.12",
+      "version": "0.4.12"
+    },
+    {
+      "type": "library",
+      "name": "smallvec",
+      "bom-ref": "pkg:cargo/smallvec@1.16.0",
+      "purl": "pkg:cargo/smallvec@1.16.0",
+      "version": "1.16.0"
+    },
+    {
+      "type": "library",
+      "name": "socket2",
+      "bom-ref": "pkg:cargo/socket2@0.6.5",
+      "purl": "pkg:cargo/socket2@0.6.5",
+      "version": "0.6.5"
+    },
+    {
+      "type": "library",
+      "name": "syn",
+      "bom-ref": "pkg:cargo/syn@2.0.119",
+      "purl": "pkg:cargo/syn@2.0.119",
+      "version": "2.0.119"
+    },
+    {
+      "type": "library",
+      "name": "syn",
+      "bom-ref": "pkg:cargo/syn@3.0.4",
+      "purl": "pkg:cargo/syn@3.0.4",
+      "version": "3.0.4"
+    },
+    {
+      "type": "library",
+      "name": "sync_wrapper",
+      "bom-ref": "pkg:cargo/sync_wrapper@1.0.2",
+      "purl": "pkg:cargo/sync_wrapper@1.0.2",
+      "version": "1.0.2"
+    },
+    {
+      "type": "library",
+      "name": "thiserror",
+      "bom-ref": "pkg:cargo/thiserror@2.0.20",
+      "purl": "pkg:cargo/thiserror@2.0.20",
+      "version": "2.0.20"
+    },
+    {
+      "type": "library",
+      "name": "thiserror-impl",
+      "bom-ref": "pkg:cargo/thiserror-impl@2.0.20",
+      "purl": "pkg:cargo/thiserror-impl@2.0.20",
+      "version": "2.0.20"
+    },
+    {
+      "type": "library",
+      "name": "thread_local",
+      "bom-ref": "pkg:cargo/thread_local@1.1.10",
+      "purl": "pkg:cargo/thread_local@1.1.10",
+      "version": "1.1.10"
+    },
+    {
+      "type": "library",
+      "name": "time",
+      "bom-ref": "pkg:cargo/time@0.3.55",
+      "purl": "pkg:cargo/time@0.3.55",
+      "version": "0.3.55"
+    },
+    {
+      "type": "library",
+      "name": "time-core",
+      "bom-ref": "pkg:cargo/time-core@0.1.9",
+      "purl": "pkg:cargo/time-core@0.1.9",
+      "version": "0.1.9"
+    },
+    {
+      "type": "library",
+      "name": "time-macros",
+      "bom-ref": "pkg:cargo/time-macros@0.2.32",
+      "purl": "pkg:cargo/time-macros@0.2.32",
+      "version": "0.2.32"
+    },
+    {
+      "type": "library",
+      "name": "tokio",
+      "bom-ref": "pkg:cargo/tokio@1.53.1",
+      "purl": "pkg:cargo/tokio@1.53.1",
+      "version": "1.53.1"
+    },
+    {
+      "type": "library",
+      "name": "tokio-macros",
+      "bom-ref": "pkg:cargo/tokio-macros@2.7.2",
+      "purl": "pkg:cargo/tokio-macros@2.7.2",
+      "version": "2.7.2"
+    },
+    {
+      "type": "library",
+      "name": "tokio-tungstenite",
+      "bom-ref": "pkg:cargo/tokio-tungstenite@0.29.0",
+      "purl": "pkg:cargo/tokio-tungstenite@0.29.0",
+      "version": "0.29.0"
+    },
+    {
+      "type": "library",
+      "name": "tower",
+      "bom-ref": "pkg:cargo/tower@0.5.3",
+      "purl": "pkg:cargo/tower@0.5.3",
+      "version": "0.5.3"
+    },
+    {
+      "type": "library",
+      "name": "tower-layer",
+      "bom-ref": "pkg:cargo/tower-layer@0.3.3",
+      "purl": "pkg:cargo/tower-layer@0.3.3",
+      "version": "0.3.3"
+    },
+    {
+      "type": "library",
+      "name": "tower-service",
+      "bom-ref": "pkg:cargo/tower-service@0.3.3",
+      "purl": "pkg:cargo/tower-service@0.3.3",
+      "version": "0.3.3"
+    },
+    {
+      "type": "library",
+      "name": "tracing",
+      "bom-ref": "pkg:cargo/tracing@0.1.44",
+      "purl": "pkg:cargo/tracing@0.1.44",
+      "version": "0.1.44"
+    },
+    {
+      "type": "library",
+      "name": "tracing-attributes",
+      "bom-ref": "pkg:cargo/tracing-attributes@0.1.31",
+      "purl": "pkg:cargo/tracing-attributes@0.1.31",
+      "version": "0.1.31"
+    },
+    {
+      "type": "library",
+      "name": "tracing-core",
+      "bom-ref": "pkg:cargo/tracing-core@0.1.36",
+      "purl": "pkg:cargo/tracing-core@0.1.36",
+      "version": "0.1.36"
+    },
+    {
+      "type": "library",
+      "name": "tracing-log",
+      "bom-ref": "pkg:cargo/tracing-log@0.2.0",
+      "purl": "pkg:cargo/tracing-log@0.2.0",
+      "version": "0.2.0"
+    },
+    {
+      "type": "library",
+      "name": "tracing-subscriber",
+      "bom-ref": "pkg:cargo/tracing-subscriber@0.3.23",
+      "purl": "pkg:cargo/tracing-subscriber@0.3.23",
+      "version": "0.3.23"
+    },
+    {
+      "type": "library",
+      "name": "tungstenite",
+      "bom-ref": "pkg:cargo/tungstenite@0.29.0",
+      "purl": "pkg:cargo/tungstenite@0.29.0",
+      "version": "0.29.0"
+    },
+    {
+      "type": "library",
+      "name": "typenum",
+      "bom-ref": "pkg:cargo/typenum@1.20.1",
+      "purl": "pkg:cargo/typenum@1.20.1",
+      "version": "1.20.1"
+    },
+    {
+      "type": "library",
+      "name": "unicode-ident",
+      "bom-ref": "pkg:cargo/unicode-ident@1.0.24",
+      "purl": "pkg:cargo/unicode-ident@1.0.24",
+      "version": "1.0.24"
+    },
+    {
+      "type": "library",
+      "name": "uuid",
+      "bom-ref": "pkg:cargo/uuid@1.26.0",
+      "purl": "pkg:cargo/uuid@1.26.0",
+      "version": "1.26.0"
+    },
+    {
+      "type": "library",
+      "name": "valuable",
+      "bom-ref": "pkg:cargo/valuable@0.1.1",
+      "purl": "pkg:cargo/valuable@0.1.1",
+      "version": "0.1.1"
+    },
+    {
+      "type": "library",
+      "name": "version_check",
+      "bom-ref": "pkg:cargo/version_check@0.9.5",
+      "purl": "pkg:cargo/version_check@0.9.5",
+      "version": "0.9.5"
+    },
+    {
+      "type": "library",
+      "name": "wasi",
+      "bom-ref": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1",
+      "purl": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1",
+      "version": "0.11.1+wasi-snapshot-preview1"
+    },
+    {
+      "type": "library",
+      "name": "wasip2",
+      "bom-ref": "pkg:cargo/wasip2@1.0.4+wasi-0.2.12",
+      "purl": "pkg:cargo/wasip2@1.0.4+wasi-0.2.12",
+      "version": "1.0.4+wasi-0.2.12"
+    },
+    {
+      "type": "library",
+      "name": "wasm-bindgen",
+      "bom-ref": "pkg:cargo/wasm-bindgen@0.2.127",
+      "purl": "pkg:cargo/wasm-bindgen@0.2.127",
+      "version": "0.2.127"
+    },
+    {
+      "type": "library",
+      "name": "wasm-bindgen-macro",
+      "bom-ref": "pkg:cargo/wasm-bindgen-macro@0.2.127",
+      "purl": "pkg:cargo/wasm-bindgen-macro@0.2.127",
+      "version": "0.2.127"
+    },
+    {
+      "type": "library",
+      "name": "wasm-bindgen-macro-support",
+      "bom-ref": "pkg:cargo/wasm-bindgen-macro-support@0.2.127",
+      "purl": "pkg:cargo/wasm-bindgen-macro-support@0.2.127",
+      "version": "0.2.127"
+    },
+    {
+      "type": "library",
+      "name": "wasm-bindgen-shared",
+      "bom-ref": "pkg:cargo/wasm-bindgen-shared@0.2.127",
+      "purl": "pkg:cargo/wasm-bindgen-shared@0.2.127",
+      "version": "0.2.127"
+    },
+    {
+      "type": "library",
+      "name": "windows-link",
+      "bom-ref": "pkg:cargo/windows-link@0.2.1",
+      "purl": "pkg:cargo/windows-link@0.2.1",
+      "version": "0.2.1"
+    },
+    {
+      "type": "library",
+      "name": "windows-sys",
+      "bom-ref": "pkg:cargo/windows-sys@0.61.2",
+      "purl": "pkg:cargo/windows-sys@0.61.2",
+      "version": "0.61.2"
+    },
+    {
+      "type": "library",
+      "name": "wit-bindgen",
+      "bom-ref": "pkg:cargo/wit-bindgen@0.57.1",
+      "purl": "pkg:cargo/wit-bindgen@0.57.1",
+      "version": "0.57.1"
+    },
+    {
+      "type": "library",
+      "name": "zerocopy",
+      "bom-ref": "pkg:cargo/zerocopy@0.8.56",
+      "purl": "pkg:cargo/zerocopy@0.8.56",
+      "version": "0.8.56"
+    },
+    {
+      "type": "library",
+      "name": "zerocopy-derive",
+      "bom-ref": "pkg:cargo/zerocopy-derive@0.8.56",
+      "purl": "pkg:cargo/zerocopy-derive@0.8.56",
+      "version": "0.8.56"
+    },
+    {
+      "type": "library",
+      "name": "zeroize",
+      "bom-ref": "pkg:cargo/zeroize@1.9.0",
+      "purl": "pkg:cargo/zeroize@1.9.0",
+      "version": "1.9.0"
+    },
+    {
+      "type": "library",
+      "name": "zeroize_derive",
+      "bom-ref": "pkg:cargo/zeroize_derive@1.5.0",
+      "purl": "pkg:cargo/zeroize_derive@1.5.0",
+      "version": "1.5.0"
+    },
+    {
+      "type": "library",
+      "name": "zmij",
+      "bom-ref": "pkg:cargo/zmij@1.0.23",
+      "purl": "pkg:cargo/zmij@1.0.23",
+      "version": "1.0.23"
     }
   ]
 }

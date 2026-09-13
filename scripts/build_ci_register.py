@@ -32,6 +32,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import sys
 from pathlib import Path
@@ -116,8 +117,31 @@ def main(argv: list[str] | None = None) -> int:
     payload = json.dumps(register, indent=2, ensure_ascii=False) + "\n"
 
     if args.check:
-        if not OUTPUT.is_file() or OUTPUT.read_text(encoding="utf-8") != payload:
+        current = OUTPUT.read_text(encoding="utf-8") if OUTPUT.is_file() else ""
+        if current != payload:
             print(f"STALE: {OUTPUT.relative_to(REPO)}", file=sys.stderr)
+            # Print the difference, not just the verdict. "STALE" alone sent four
+            # rounds of this PR guessing at what a CI runner saw that a developer
+            # machine did not -- an un-anchored .gitignore rule, then a job that
+            # checked out no submodules, then something a full local reproduction
+            # of the same commit could not reproduce at all. A generated artifact
+            # that can differ by environment has to say HOW it differs, or the
+            # only debugging tool left is cloning the repository and guessing.
+            diff = list(
+                difflib.unified_diff(
+                    current.splitlines(),
+                    payload.splitlines(),
+                    fromfile=f"{OUTPUT.relative_to(REPO)} (committed)",
+                    tofile="regenerated here",
+                    lineterm="",
+                    n=1,
+                )
+            )
+            shown = diff[:60]
+            for line in shown:
+                print(line, file=sys.stderr)
+            if len(diff) > len(shown):
+                print(f"... {len(diff) - len(shown)} more diff line(s)", file=sys.stderr)
             print("Run: python3 scripts/build_ci_register.py", file=sys.stderr)
             return 1
         print("CI register is current")

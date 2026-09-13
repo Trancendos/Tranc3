@@ -348,9 +348,9 @@
     {
       "type": "library",
       "name": "sse-starlette",
-      "bom-ref": "pkg:pypi/sse-starlette@3.4.8",
-      "purl": "pkg:pypi/sse-starlette@3.4.8",
-      "version": "3.4.8"
+      "bom-ref": "pkg:pypi/sse-starlette@3.4.11",
+      "purl": "pkg:pypi/sse-starlette@3.4.11",
+      "version": "3.4.11"
     },
     {
       "type": "library",

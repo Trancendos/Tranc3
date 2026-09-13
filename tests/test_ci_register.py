@@ -356,3 +356,89 @@ class TestThePartialCheckout:
             "submodules, so they measure a smaller estate than the one the "
             "committed register describes: " + ", ".join(offenders)
         )
+
+
+class TestTheDockerfileResolution:
+    """Compose resolves `dockerfile:` against `context:`, not the repository root.
+
+    Reading it as repo-relative turned the estate's commonest build shape --
+
+        build:
+          context: ./workers/nexus-ws-rs
+          dockerfile: Dockerfile
+
+    -- into `Path("Dockerfile").parent == "."`, so the scan read the ROOT
+    Dockerfile and globbed the ROOT's requirements*.txt. Measured before the fix:
+    74 of 88 built containers carried a bare `dockerfile:` filename, all 74 were
+    attributed the root manifests, and **87 of 88 reported the same base image**.
+    The container half of the CMDB was describing one image 87 times.
+
+    The three Rust services are where it showed plainest: they build FROM
+    rust:1.79-slim onto debian:bookworm-slim and ship a Cargo.lock and no
+    requirements at all, yet each had a 76-package Python SBOM. Raised by cubic.
+    """
+
+    def test_a_bare_dockerfile_resolves_against_the_context(self):
+        from src.cmdb.containers import _resolve_dockerfile
+
+        assert (
+            _resolve_dockerfile("./workers/nexus-ws-rs", "Dockerfile")
+            == "workers/nexus-ws-rs/Dockerfile"
+        )
+
+    def test_an_already_qualified_dockerfile_is_left_alone(self):
+        from src.cmdb.containers import _resolve_dockerfile
+
+        assert (
+            _resolve_dockerfile(".", "workers/the-lab/Dockerfile") == "workers/the-lab/Dockerfile"
+        )
+
+    def test_a_context_with_no_such_dockerfile_falls_back(self):
+        """A join that does not exist must not invent a path."""
+        from src.cmdb.containers import _resolve_dockerfile
+
+        assert _resolve_dockerfile("./no/such/dir", "Dockerfile") == "Dockerfile"
+
+    def test_the_estate_does_not_report_one_base_image_for_everything(self):
+        """The property that would have caught this without anyone reading code.
+
+        88 built containers sharing a single base image is not an estate, it is a
+        scan resolving every path to the same file.
+        """
+        register = json.loads((REPO / "docs/architecture/ci-register.json").read_text())
+        built = [
+            ci
+            for ci in register["configuration_items"]
+            if str(ci.get("ci_id", "")).startswith("CI-CT-") and ci.get("provenance") == "built"
+        ]
+        distinct = {tuple(ci.get("base_images") or ()) for ci in built}
+
+        assert len(built) > 20, "expected a substantial built-container population"
+        assert len(distinct) > 1, (
+            f"all {len(built)} built containers report the same base image "
+            f"{next(iter(distinct))} — the Dockerfile path is not being resolved "
+            "against the build context"
+        )
+
+    def test_a_rust_container_is_not_inventoried_as_python(self):
+        """Ecosystem agreement: a Rust image must not carry pypi components."""
+        register = json.loads((REPO / "docs/architecture/ci-register.json").read_text())
+        rust = [
+            ci
+            for ci in register["configuration_items"]
+            if any("rust:" in base for base in (ci.get("base_images") or []))
+        ]
+        assert rust, "expected the three Rust services in the register"
+
+        for ci in rust:
+            sbom = json.loads(
+                (
+                    REPO / "docs/architecture/sbom" / f"{ci['ci_id'][len('CI-CT-') :]}.cdx.json"
+                ).read_text()
+            )
+            purls = [c.get("purl", "") for c in sbom["components"]]
+            assert purls, f"{ci['ci_id']} has a Cargo.lock but an empty SBOM"
+            assert all(p.startswith("pkg:cargo/") for p in purls), (
+                f"{ci['ci_id']} is a Rust container but its SBOM lists non-cargo "
+                f"components: {[p for p in purls if not p.startswith('pkg:cargo/')][:5]}"
+            )

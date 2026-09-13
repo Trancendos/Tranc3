@@ -159,6 +159,29 @@ def _dockerfile_facts(dockerfile: str) -> tuple[List[str], str]:
     return bases, (users[-1] if users else "")
 
 
+def _resolve_dockerfile(build_context: str, dockerfile: str) -> str:
+    """Repo-relative path to a service's Dockerfile.
+
+    Compose resolves `dockerfile:` against `context:`, not against the repository
+    root. Reading it as repo-relative turns every bare `dockerfile: Dockerfile`
+    into the root Dockerfile -- which is what made 87 of 88 built containers
+    report an identical base image.
+    """
+    if not dockerfile:
+        return ""
+    candidate = Path(dockerfile)
+    if candidate.is_absolute():
+        return dockerfile
+    context = (build_context or "").strip()
+    if context and context.strip("./") not in ("", "."):
+        joined = Path(context.strip("./")) / candidate
+        if (REPO / joined).is_file():
+            return joined.as_posix()
+    # No context, or the join does not exist: fall back to the literal path, which
+    # is correct for `dockerfile: workers/x/Dockerfile` and for context-less builds.
+    return candidate.as_posix()
+
+
 def _requirements_near(build_context: str, dockerfile: str) -> List[str]:
     """Requirement manifests shipped with this container."""
     found: List[str] = []
@@ -179,6 +202,15 @@ def _requirements_near(build_context: str, dockerfile: str) -> List[str]:
         for manifest in sorted(directory.glob("requirements*.txt")):
             found.append(manifest.relative_to(REPO).as_posix())
         for manifest in sorted(directory.glob("package.json")):
+            found.append(manifest.relative_to(REPO).as_posix())
+        # Cargo.lock, not Cargo.toml: the lock names resolved versions, which is
+        # what an inventory needs. Three services here are Rust (nexus-ws-rs,
+        # vault-service-rs, rate-limit-service-rs) and shipped SBOMs listing 76
+        # Python packages none of them contain, because the manifest scan only
+        # knew two ecosystems and the Dockerfile misresolution handed it the
+        # root's. With that fixed they reported zero components instead -- honest,
+        # but still not the inventory, since the crates were sitting right there.
+        for manifest in sorted(directory.glob("Cargo.lock")):
             found.append(manifest.relative_to(REPO).as_posix())
     return sorted(set(found))
 
@@ -284,11 +316,32 @@ def discover() -> List[Container]:
         elif isinstance(build, str):
             build_context = build
 
-        bases, runs_as = _dockerfile_facts(dockerfile)
+        # Compose resolves `dockerfile:` RELATIVE TO `context:`, and this code
+        # treated it as repo-relative. For the estate's commonest shape --
+        #
+        #     build:
+        #       context: ./workers/nexus-ws-rs
+        #       dockerfile: Dockerfile
+        #
+        # -- `Path("Dockerfile").parent` is ".", so `_dockerfile_facts` read the
+        # REPO ROOT's Dockerfile and `_requirements_near` globbed the ROOT's
+        # requirements*.txt. Measured before this fix: 74 of 88 built containers
+        # carried a bare `dockerfile:` filename, all 74 were attributed the root
+        # manifests, and 87 of 88 reported the same base image. The container half
+        # of the CMDB was describing one image 87 times.
+        #
+        # The three Rust services are where it shows plainest: nexus-ws-rs,
+        # vault-service-rs and rate-limit-service-rs build FROM rust:1.79-slim
+        # onto debian:bookworm-slim and ship a Cargo.lock and no requirements at
+        # all, yet each had an SBOM of 76 Python packages and a python:3.11-slim
+        # base. Raised by cubic on nexus-ws-rs.
+        dockerfile_path = _resolve_dockerfile(build_context, dockerfile)
+
+        bases, runs_as = _dockerfile_facts(dockerfile_path)
         # A build context of "." with a worker-specific Dockerfile is the estate's
         # normal shape, so the Dockerfile's directory identifies the Location far
         # more often than the context does.
-        owner_path = str(Path(dockerfile).parent) if dockerfile else build_context
+        owner_path = str(Path(dockerfile_path).parent) if dockerfile_path else build_context
 
         containers.append(
             Container(
@@ -296,7 +349,7 @@ def discover() -> List[Container]:
                 container_name=str(spec.get("container_name", "") or ""),
                 image=str(spec.get("image", "") or ""),
                 build_context=build_context,
-                dockerfile=dockerfile,
+                dockerfile=dockerfile_path,
                 base_images=bases,
                 runs_as=runs_as,
                 ports=_as_list(spec.get("ports")),
@@ -304,7 +357,7 @@ def discover() -> List[Container]:
                 networks=_as_list(spec.get("networks")),
                 provenance="built" if build else "pulled",
                 jurisdiction=_location_for(owner_path, _as_list(spec.get("ports"))),
-                requirements=_requirements_near(build_context, dockerfile),
+                requirements=_requirements_near(build_context, dockerfile_path),
             )
         )
     return containers

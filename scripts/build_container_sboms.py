@@ -93,6 +93,49 @@ def _parse_requirements(path: Path) -> tuple[list[dict], list[str]]:
     return components, unparsed
 
 
+def _parse_cargo_lock(path: Path) -> list[dict]:
+    """Components from a Cargo.lock's `[[package]]` blocks.
+
+    Deliberately a small hand-rolled reader rather than a TOML dependency:
+    Cargo.lock's package blocks are a fixed, boring shape, and this script runs
+    in CI jobs that install nothing beyond the repository's own requirements.
+
+    purl type is `cargo`, per the package-url spec, so a Rust component cannot be
+    mistaken for a PyPI one by anything matching advisories downstream.
+    """
+    components: list[dict] = []
+    name = version = ""
+    in_package = False
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if line == "[[package]]":
+            in_package, name, version = True, "", ""
+            continue
+        if line.startswith("[") and line != "[[package]]":
+            in_package = False
+            continue
+        if not in_package or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        value = value.strip().strip('"')
+        if key.strip() == "name":
+            name = value
+        elif key.strip() == "version":
+            version = value
+        if name and version:
+            components.append(
+                {
+                    "type": "library",
+                    "name": name,
+                    "bom-ref": f"pkg:cargo/{name}@{version}",
+                    "purl": f"pkg:cargo/{name}@{version}",
+                    "version": version,
+                }
+            )
+            in_package = False
+    return components
+
+
 def build_sbom(container) -> dict:
     components: list[dict] = []
     unparsed: list[str] = []
@@ -104,6 +147,13 @@ def build_sbom(container) -> dict:
         parsed, bad = _parse_requirements(path)
         components.extend(parsed)
         unparsed.extend(bad)
+        sources.append(manifest)
+
+    for manifest in container.requirements:
+        path = REPO / manifest
+        if path.name != "Cargo.lock" or not path.is_file():
+            continue
+        components.extend(_parse_cargo_lock(path))
         sources.append(manifest)
 
     # De-duplicate on bom-ref, keeping first occurrence.

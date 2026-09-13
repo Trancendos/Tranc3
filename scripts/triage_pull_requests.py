@@ -258,8 +258,18 @@ def main(argv: list[str] | None = None) -> int:
         payload = json.loads(args.from_json.read_text())
         numbers += [p["number"] if isinstance(p, dict) else int(p) for p in payload]
 
+    # Validated before survey() runs, because subprocess raises
+    # FileNotFoundError/NotADirectoryError from `cwd=` before any git command
+    # executes -- and main() catches only GitUnavailable, so a mistyped --repo
+    # exited with a traceback rather than the clean message every other failure
+    # here gets. Raised by cubic.
+    repo = args.repo.resolve()
+    if not repo.is_dir():
+        print(f"cannot triage pull requests: --repo {repo} is not a directory", file=sys.stderr)
+        return 1
+
     try:
-        verdicts = survey(sorted(set(numbers)), base=args.base, root=args.repo)
+        verdicts = survey(sorted(set(numbers)), base=args.base, root=repo)
     except GitUnavailable as exc:
         print(f"cannot triage pull requests: {exc}", file=sys.stderr)
         return 1
