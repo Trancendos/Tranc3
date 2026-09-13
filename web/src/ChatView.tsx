@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Send, Settings, Globe, Zap, LogOut, Brain, LayoutDashboard } from 'lucide-react'
+import { Send, Settings, Globe, Zap, LogOut, Brain, LayoutDashboard, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import UpgradeModal from './UpgradeModal'
 import { useAuthStore } from './store/authStore'
@@ -221,12 +221,12 @@ export default function ChatView() {
         </div>
 
         {/* Theme toggle */}
-        <button onClick={() => setDark(d => !d)}
+        <button aria-label="Toggle theme" onClick={() => setDark(d => !d)}
           className="text-xs text-gray-500 hover:text-gray-300 mt-auto">
           {dark ? '☀️ Light mode' : '🌙 Dark mode'}
         </button>
 
-        <button onClick={logout}
+        <button aria-label="Sign out" onClick={logout}
           className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors">
           <LogOut className="w-3 h-3" /> Sign out
         </button>
@@ -313,7 +313,7 @@ export default function ChatView() {
               disabled={loading} />
             <button aria-label="Send message" onClick={send} disabled={loading || !input.trim()}
               className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
-              <Send className="w-4 h-4" />
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
           </div>
         </div>
