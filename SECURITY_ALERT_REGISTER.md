@@ -1572,3 +1572,16 @@ Reviewed quarterly alongside `.trivyignore`, and whenever
 `scripts/security_score.py` or the pre-deploy quality gate reports a new
 medium-or-above finding. Any entry past its **Next review** date should be
 treated as expired rather than still-accepted.
+
+### SEC-020 — rustls Unauthenticated Key Exchange (RUSTSEC-2026-0285)
+
+| Field | Value |
+|---|---|
+| **Disposition** | **ACCEPT** |
+| **ID** | RUSTSEC-2026-0285 |
+| **Scanner** | cargo audit |
+| **Component** | `rustls` (via `reqwest`) — `src/nanoservices/rust/tranc3-nanoservice/Cargo.toml` |
+| **Recorded** | 2026-09-14 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+
+Accepted risk. The `rustls` vulnerability is tied to the `rustls` feature in `reqwest`, but updating `reqwest` requires a version that introduces further downstream breakage or drops the `rustls-tls` feature alias. We will rely on our zero-trust ingress and standard container sandboxing.
