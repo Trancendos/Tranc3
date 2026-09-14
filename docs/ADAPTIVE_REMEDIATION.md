@@ -62,17 +62,17 @@ Each factor is **context-aware** for Tranc3 specifically.
 risk_score = cvss_score * p_exploit * p_impact * p_exposure
 
 if CRITICAL and risk_score > 3.0:
-    remediate_immediately()          # Same day
+    remediate_immediately()  # Same day
 elif HIGH and risk_score > 2.0:
     if fixed_version_exists:
-        remediate_within_7_days()    # Urgent
+        remediate_within_7_days()  # Urgent
 elif MEDIUM and risk_score > 1.5:
     if easy_patch:
-        remediate_proactively()      # Auto-patch
+        remediate_proactively()  # Auto-patch
     else:
-        monitor_for_escalation()     # Watch for signals
+        monitor_for_escalation()  # Watch for signals
 else:
-    accept_and_document()            # Audit trail
+    accept_and_document()  # Audit trail
 ```
 
 ## Real-World Example: torch Vulnerabilities
