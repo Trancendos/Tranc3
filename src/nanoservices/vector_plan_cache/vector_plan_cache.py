@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import operator
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -119,7 +120,7 @@ class SimpleTextEncoder:
             embedding[idx] += sign
 
         # L2 normalize
-        norm = sum(x * x for x in embedding) ** 0.5
+        norm = sum(map(operator.mul, embedding, embedding)) ** 0.5
         if norm > 0:
             embedding = [x / norm for x in embedding]
 
@@ -185,13 +186,9 @@ class InMemoryVectorStore:
         """
         import math
 
-        dot = 0.0
-        norm_a_sq = 0.0
-        norm_b_sq = 0.0
-        for x, y in zip(a, b):
-            dot += x * y
-            norm_a_sq += x * x
-            norm_b_sq += y * y
+        dot = sum(map(operator.mul, a, b))
+        norm_a_sq = sum(map(operator.mul, a, a))
+        norm_b_sq = sum(map(operator.mul, b, b))
         if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
         return dot / math.sqrt(norm_a_sq * norm_b_sq)

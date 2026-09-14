@@ -320,7 +320,7 @@ class FusionEngine:
             )
 
         # Normalize
-        norm = math.sqrt(sum(x * x for x in all_emb)) or 1.0
+        norm = math.sqrt(sum(map(operator.mul, all_emb, all_emb))) or 1.0
         fused = [x / norm for x in all_emb[: self.embedding_dim]]
         while len(fused) < self.embedding_dim:
             fused.append(0.0)
@@ -397,7 +397,7 @@ class FusionEngine:
                 fused[i] *= emb[i] + 0.1  # Add small constant to prevent zeroing
 
         # Normalize
-        norm = math.sqrt(sum(x * x for x in fused)) or 1.0
+        norm = math.sqrt(sum(map(operator.mul, fused, fused))) or 1.0
         fused = [x / norm for x in fused]
 
         contributions = {mod: 1.0 / len(embeddings) for mod in embeddings}
