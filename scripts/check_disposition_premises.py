@@ -95,7 +95,7 @@ _WEB_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".svelte", ".vue"
 #: code, and the measurement would have to be redone before the acceptance
 #: means anything; CI has no `node_modules` to re-read it from, so the
 #: lockfile pin is what makes the evidence checkable at all.
-_SEC_007_MEASURED = {"posthog-js": "1.422.5", "fflate": "0.4.8"}
+_SEC_007_MEASURED = {"posthog-js": "1.422.5", "fflate": "0.4.9"}
 _WEB_LOCKFILE = "web/package-lock.json"
 
 #: SEC-006 is a SUPPRESS, and a SUPPRESS is only honest while no fix exists.

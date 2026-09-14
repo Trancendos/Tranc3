@@ -213,8 +213,8 @@ import raises and the keyword-heuristic fallback runs instead.
 | **Disposition** | **ACCEPT** |
 | **ID** | GHSA-px8p-9vwx-vf98 |
 | **Scanner** | npm audit (census `web` surface) |
-| **Component** | `fflate@0.4.8` — transitive via `posthog-js`, `web/` |
-| **Blocked-by** | `posthog-js` declares `fflate: ^0.4.8` through its latest release (1.425.1), and `web/`'s peer graph cannot be re-resolved to apply an override — see below |
+| **Component** | `fflate@0.4.9` — transitive via `posthog-js`, `web/` |
+| **Blocked-by** | `posthog-js` declares `fflate: ^0.4.9` through its latest release (1.425.1), and `web/`'s peer graph cannot be re-resolved to apply an override — see below |
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
@@ -223,7 +223,7 @@ import raises and the keyword-heuristic fallback runs instead.
 A patched release exists — fflate 0.8.3 — so this is `blocked`, not `SUPPRESS`, and the
 **Blocked-by** row above is what produces that classification.
 
-**Why the fix is unreachable.** `posthog-js` declares `fflate: ^0.4.8`, a range that
+**Why the fix is unreachable.** `posthog-js` declares `fflate: ^0.4.9`, a range that
 excludes every patched release, and it still does so at 1.425.1 (verified against the
 registry, not assumed) — so bumping `posthog-js` does not help. The remaining route is
 an `overrides` entry, the mechanism `web/package.json` already uses for four other
@@ -252,7 +252,7 @@ resolves — and says nothing about any other release. A different version ships
 code, so a bump invalidates the measurement rather than inheriting it. Because CI has no
 `node_modules` to re-read the call sites from, the lockfile pin is what makes the scope
 checkable: `scripts/check_disposition_premises.py` fails if `posthog-js` moves off
-1.422.5 or `fflate` off 0.4.8, which is the signal to re-measure before this acceptance
+1.422.5 or `fflate` off 0.4.9, which is the signal to re-measure before this acceptance
 is relied on again.
 
 | Evidence | Measured on `web/node_modules/posthog-js@1.422.5` — the version `web/package-lock.json` pins, enforced by `scripts/check_disposition_premises.py` |
