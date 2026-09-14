@@ -155,7 +155,7 @@ tranc3/
 ├── Dimensional/                  Shared utilities (bus, models, security)
 ├── web/                          React + Vite frontend
 ├── cloudflare/                   Cloudflare Workers (legacy fallback)
-├── tests/                        Test suite (966 tests)
+├── tests/                        Test suite (1045 tests)
 ├── scripts/                      Training + utility scripts
 ├── deploy/                       Deployment configs (Prometheus, Grafana, OTel)
 ├── docker/                       Dockerfiles + nginx config
@@ -175,7 +175,7 @@ tranc3/
 ## Testing
 
 ```bash
-# Full suite (966 tests)
+# Full suite (1045 tests)
 python -m pytest tests/ -q --tb=short
 
 # Quick smoke test
