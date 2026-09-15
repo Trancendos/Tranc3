@@ -111,7 +111,7 @@ export function DocumentCard({
           )}
           {onDelete && (
             <button
-              onClick={onDelete}
+              onClick={() => { if (window.confirm(`Are you sure you want to delete ${title}?`)) onDelete() }}
               className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 focus-visible:ring-offset-card"
               aria-label={`Delete ${title}`}
               title="Delete"
