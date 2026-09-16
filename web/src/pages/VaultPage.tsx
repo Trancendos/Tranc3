@@ -164,12 +164,16 @@ export default function VaultPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-700/60">
+      <div className="flex gap-1 border-b border-slate-700/60" role="tablist" aria-label="Vault views">
         {(['secrets', 'audit'] as Tab[]).map(t => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
+            id={`tab-${t}`}
+            aria-controls={`panel-${t}`}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-t-sm ${
               tab === t ? 'border-red-500 text-red-400' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -179,7 +183,7 @@ export default function VaultPage() {
       </div>
 
       {tab === 'secrets' && (
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/70 overflow-hidden">
+        <div id="panel-secrets" role="tabpanel" aria-labelledby="tab-secrets" className="rounded-xl border border-slate-700/60 bg-slate-900/70 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60">
             <h2 className="text-sm font-semibold text-white">Secret Registry</h2>
             <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
@@ -233,7 +237,7 @@ export default function VaultPage() {
       )}
 
       {tab === 'audit' && (
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/70 overflow-hidden">
+        <div id="panel-audit" role="tabpanel" aria-labelledby="tab-audit" className="rounded-xl border border-slate-700/60 bg-slate-900/70 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-700/60">
             <h2 className="text-sm font-semibold text-white">Vault Audit Log</h2>
           </div>
