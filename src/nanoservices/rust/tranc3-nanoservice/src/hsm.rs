@@ -5,9 +5,9 @@
 //! All key operations are performed inside the HSM boundary — private key
 //! material never leaves the token.
 
-use cryptoki::context::{CInitializeArgs, Pkcs11};
+use cryptoki::context::{CInitializeArgs, Pkcs11, CInitializeFlags};
 use cryptoki::error::Error as Pkcs11Error;
-use cryptoki::object::{Attribute, AttributeInfo, AttributeType, ObjectClass};
+use cryptoki::object::{Attribute, AttributeType, ObjectClass};
 use cryptoki::session::{UserType, Session};
 use cryptoki::slot::Slot;
 use cryptoki::types::AuthPin;
@@ -271,7 +271,8 @@ impl HsmEngine {
             HsmError::InitFailed(format!("Failed to load module: {}", e))
         })?;
 
-        pkcs11.initialize(CInitializeArgs::OsThreads).map_err(|e| {
+        let builder = CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK);
+        pkcs11.initialize(builder).map_err(|e| {
             HsmError::InitFailed(format!("C_Initialize failed: {}", e))
         })?;
 
@@ -338,7 +339,7 @@ impl HsmEngine {
             HsmError::Internal(format!("Failed to open session: {}", e))
         })?;
 
-        let pin = AuthPin::new(self.config.pin.clone());
+        let pin = AuthPin::new(self.config.pin.clone().into());
         session.login(UserType::User, Some(&pin)).map_err(|e| {
             HsmError::LoginFailed(format!("Login failed: {}", e))
         })?;
