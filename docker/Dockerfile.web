@@ -3,7 +3,7 @@ FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a
 
 WORKDIR /app
 COPY web/package*.json ./
-RUN npm ci --frozen-lockfile
+RUN npm ci --legacy-peer-deps --ignore-scripts
 COPY web/ .
 RUN npm run build
 
