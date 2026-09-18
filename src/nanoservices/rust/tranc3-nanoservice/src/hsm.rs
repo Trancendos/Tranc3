@@ -271,7 +271,7 @@ impl HsmEngine {
             HsmError::InitFailed(format!("Failed to load module: {}", e))
         })?;
 
-        pkcs11.initialize(CInitializeArgs::OsThreads).map_err(|e| {
+        pkcs11.initialize(CInitializeArgs::new(cryptoki::context::CInitializeFlags::OS_LOCKING_OK)).map_err(|e| {
             HsmError::InitFailed(format!("C_Initialize failed: {}", e))
         })?;
 
@@ -338,7 +338,7 @@ impl HsmEngine {
             HsmError::Internal(format!("Failed to open session: {}", e))
         })?;
 
-        let pin = AuthPin::new(self.config.pin.clone());
+        let pin = AuthPin::new(self.config.pin.clone().into());
         session.login(UserType::User, Some(&pin)).map_err(|e| {
             HsmError::LoginFailed(format!("Login failed: {}", e))
         })?;

@@ -15,7 +15,6 @@ Two primary abstractions:
 import asyncio
 import gc
 import logging
-import operator
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -408,22 +407,17 @@ class AdaptiveConfigTuner:
 
         values = [p.value for p in series[-50:]]
         n = len(values)
+        xs = list(range(n))
 
         # OLS linear: y = a + b*x  →  optimal is the value at x=n (next step)
-        sum_y = sum(values)
-        y_mean = sum_y / n
-
-        sum_x = (n * (n - 1)) / 2
-        sum_xy = sum(map(operator.mul, range(n), values))
-
-        ss_xy = sum_xy - (sum_x * sum_y) / n
-        ss_xx = (n * (n - 1) * (2 * n - 1)) / 6 - (sum_x * sum_x) / n
-
+        x_mean = sum(xs) / n
+        y_mean = sum(values) / n
+        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
+        ss_xx = sum((x - x_mean) ** 2 for x in xs)
         if abs(ss_xx) < 1e-12:
             return y_mean
 
         b = ss_xy / ss_xx
-        x_mean = sum_x / n
         a = y_mean - b * x_mean
         predicted_next = a + b * n
 
@@ -446,30 +440,21 @@ class AdaptiveConfigTuner:
 
         values = [p.value for p in series[-50:]]
         n = len(values)
-        sum_y = sum(values)
-
-        sum_yy = sum(map(operator.mul, values, values))
-        ss_tot = sum_yy - (sum_y * sum_y) / n
+        xs = list(range(n))
+        y_mean = sum(values) / n
+        ss_tot = sum((y - y_mean) ** 2 for y in values)
         if ss_tot < 1e-12:
             return 0.0
 
-        sum_x = (n * (n - 1)) / 2
-        sum_xy = sum(map(operator.mul, range(n), values))
-
-        ss_xy = sum_xy - (sum_x * sum_y) / n
-        ss_xx = (n * (n - 1) * (2 * n - 1)) / 6 - (sum_x * sum_x) / n
+        x_mean = sum(xs) / n
+        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
+        ss_xx = sum((x - x_mean) ** 2 for x in xs)
         if abs(ss_xx) < 1e-12:
             return 0.0
-
-        # x_mean, a, and b are not needed to calculate residual sum of squares
-
-        # Calculate residual sum of squares much faster algebraically:
-        # ss_res = ss_tot - (ss_xy ** 2) / ss_xx
-        # Note: This is mathematically identical to sum((y - (a + b * x))**2)
-        ss_res = ss_tot - (ss_xy * ss_xy) / ss_xx
-
-        # Ensure r2 doesn't exceed 1.0 or fall below 0.0 due to float precision
-        r2 = max(0.0, min(1.0, 1.0 - (ss_res / ss_tot)))
+        b = ss_xy / ss_xx
+        a = y_mean - b * x_mean
+        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
+        r2 = 1.0 - (ss_res / ss_tot)
 
         # Scale by sample adequacy (fully confident after 50+ samples)
         adequacy = min(1.0, n / 50.0)
