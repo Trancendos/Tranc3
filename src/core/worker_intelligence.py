@@ -285,12 +285,20 @@ class WorkerIntelligence:
         n = len(points)
         if n < 2:
             return 0.0
-        xs = [p[0] for p in points]
-        ys = [p[1] for p in points]
-        mx = sum(xs) / n
-        my = sum(ys) / n
-        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
-        den = sum((x - mx) ** 2 for x in xs)
+
+        sum_x = 0.0
+        sum_y = 0.0
+        sum_xy = 0.0
+        sum_xx = 0.0
+        for x, y in points:
+            sum_x += x
+            sum_y += y
+            sum_xy += x * y
+            sum_xx += x * x
+
+        num = sum_xy - (sum_x * sum_y) / n
+        den = sum_xx - (sum_x * sum_x) / n
+
         return num / den if den != 0 else 0.0
 
     def _get_cb_state(self, state: _WorkerState) -> str:
