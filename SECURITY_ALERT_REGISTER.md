@@ -117,16 +117,17 @@ release ships.
 
 ---
 
-### SEC-005 — mcp session-hijacking / host-validation advisories (RESOLVED)
+### SEC-005 — mcp session-hijacking / host-validation advisories (ACCEPT)
 
 | Field | Value |
 |---|---|
-| **Disposition** | **RESOLVED** |
-| **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950) |
+| **Disposition** | **ACCEPT** |
+| **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950), PYSEC-2026-3740 |
 | **Scanner** | pip-audit |
 | **Component** | `mcp==1.29.0` — transitive via `semgrep`, `requirements-oss.txt` |
 | **Recorded** | 2026-08-21 |
 | **Resolved** | 2026-09-11 |
+| **Blocked-by** | Unresolvable transitive dependency via `semgrep` |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 
 **Historical context.** This entry previously recorded an accepted finding: semgrep
