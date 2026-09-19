@@ -123,12 +123,20 @@ class BehavioralBiometrics:
         if not all_times:
             return {"speed_cpm": 0.0, "consistency": 0.0, "anomaly": True}
 
-        total_time_minutes = sum(all_times) / 60000.0
-        speed_cpm = (len(all_times) / total_time_minutes) if total_time_minutes > 0 else 0.0
+        count = len(all_times)
 
-        mean = sum(all_times) / len(all_times)
-        if mean > 0 and len(all_times) > 1:
-            variance = sum((t - mean) ** 2 for t in all_times) / len(all_times)
+        sum_t = 0.0
+        sum_t2 = 0.0
+        for t in all_times:
+            sum_t += t
+            sum_t2 += t * t
+
+        total_time_minutes = sum_t / 60000.0
+        speed_cpm = (count / total_time_minutes) if total_time_minutes > 0 else 0.0
+
+        mean = sum_t / count
+        if mean > 0 and count > 1:
+            variance = max(0.0, (sum_t2 / count) - (mean * mean))
             std = math.sqrt(variance)
             consistency = max(0.0, 1.0 - std / mean)
         else:

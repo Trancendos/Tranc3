@@ -199,16 +199,24 @@ class LoadForecaster:
             return {"predicted_requests": 0.0, "confidence": 0.0, "scale_factor": 1.0}
 
         counts = list(self._hourly_counts)
+
+        # Calculate sum and sum of squares in one pass for variance
+        count_len = len(counts)
+        sum_c = 0.0
+        sum_c2 = 0.0
+        for c in counts:
+            sum_c += c
+            sum_c2 += c * c
+
+        mean = sum_c / count_len
+        variance = max(0.0, (sum_c2 / count_len) - (mean * mean))
+        std = math.sqrt(variance)
+        confidence = max(0.0, 1.0 - std / (mean + 1))
+
         # EMA with alpha=0.3
         ema = counts[0]
         for c in counts[1:]:
             ema = 0.3 * c + 0.7 * ema
-
-        # Variance for confidence
-        mean = sum(counts) / len(counts)
-        variance = sum((c - mean) ** 2 for c in counts) / len(counts)
-        std = math.sqrt(variance)
-        confidence = max(0.0, 1.0 - std / (mean + 1))
 
         scale_factor = max(1.0, ema / (mean + 1) * 1.2)  # 20% headroom
 

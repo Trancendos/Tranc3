@@ -282,8 +282,14 @@ class LoadForecaster:
         # Confidence intervals based on historical variance
         if len(samples) >= 5:
             recent_values = [s.value for s in samples[-20:]]
-            mean_val = sum(recent_values) / len(recent_values)
-            variance = sum((v - mean_val) ** 2 for v in recent_values) / len(recent_values)
+            count = len(recent_values)
+            sum_val = 0.0
+            sum_val2 = 0.0
+            for v in recent_values:
+                sum_val += v
+                sum_val2 += v * v
+            mean_val = sum_val / count
+            variance = max(0.0, (sum_val2 / count) - (mean_val * mean_val))
             std_dev = math.sqrt(variance)
             # Widen intervals with forecast distance
             interval_width = std_dev * (1 + steps * 0.1) * 1.645  # 90% CI

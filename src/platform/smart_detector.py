@@ -103,10 +103,18 @@ class SlidingWindowStats:
         return sum(self._buf) / len(self._buf)
 
     def std(self) -> float:
-        if len(self._buf) < 2:
+        count = len(self._buf)
+        if count < 2:
             return 0.0
-        m = self.mean()
-        variance = sum((x - m) ** 2 for x in self._buf) / len(self._buf)
+
+        sum_x = 0.0
+        sum_x2 = 0.0
+        for x in self._buf:
+            sum_x += x
+            sum_x2 += x * x
+
+        m = sum_x / count
+        variance = max(0.0, (sum_x2 / count) - (m * m))
         return math.sqrt(variance)
 
     def z_score(self, value: float) -> float:
