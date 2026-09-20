@@ -407,16 +407,27 @@ class AdaptiveConfigTuner:
 
         values = [p.value for p in series[-50:]]
         n = len(values)
-        xs = list(range(n))
 
+        # Optimization: Single pass accumulator loop avoids O(N) generator overhead
         # OLS linear: y = a + b*x  →  optimal is the value at x=n (next step)
-        x_mean = sum(xs) / n
-        y_mean = sum(values) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+        sum_y = 0.0
+        sum_xy = 0.0
+        for x, y in enumerate(values):
+            sum_y += y
+            sum_xy += x * y
+
+        y_mean = sum_y / n
+        # xs are 0..n-1
+        x_mean = (n - 1) / 2.0
+
+        # ss_xx = sum(x^2) - n * x_mean^2
+        # sum(x^2) for x=0..n-1 is (n-1)*n*(2*n-1)/6
+        ss_xx = (n - 1) * n * (2 * n - 1) / 6.0 - n * x_mean * x_mean
+
         if abs(ss_xx) < 1e-12:
             return y_mean
 
+        ss_xy = sum_xy - n * x_mean * y_mean
         b = ss_xy / ss_xx
         a = y_mean - b * x_mean
         predicted_next = a + b * n
@@ -440,25 +451,36 @@ class AdaptiveConfigTuner:
 
         values = [p.value for p in series[-50:]]
         n = len(values)
-        xs = list(range(n))
-        y_mean = sum(values) / n
-        ss_tot = sum((y - y_mean) ** 2 for y in values)
+
+        # Optimization: Single pass accumulator loop avoids O(N) generator overhead
+        sum_y = 0.0
+        sum_y_sq = 0.0
+        sum_xy = 0.0
+        for x, y in enumerate(values):
+            sum_y += y
+            sum_y_sq += y * y
+            sum_xy += x * y
+
+        y_mean = sum_y / n
+        x_mean = (n - 1) / 2.0
+
+        ss_tot = sum_y_sq - n * y_mean * y_mean
         if ss_tot < 1e-12:
             return 0.0
 
-        x_mean = sum(xs) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+        ss_xx = (n - 1) * n * (2 * n - 1) / 6.0 - n * x_mean * x_mean
         if abs(ss_xx) < 1e-12:
             return 0.0
-        b = ss_xy / ss_xx
-        a = y_mean - b * x_mean
-        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
-        r2 = 1.0 - (ss_res / ss_tot)
+
+        ss_xy = sum_xy - n * x_mean * y_mean
+
+        # ss_res = ss_tot - (ss_xy^2)/ss_xx (algebraic equivalent)
+        ss_res = max(0.0, ss_tot - (ss_xy * ss_xy) / ss_xx)
+        r2 = max(0.0, min(1.0, 1.0 - (ss_res / ss_tot)))
 
         # Scale by sample adequacy (fully confident after 50+ samples)
         adequacy = min(1.0, n / 50.0)
-        return max(0.0, min(1.0, r2 * adequacy))
+        return r2 * adequacy
 
 
 # ---------------------------------------------------------------------------
