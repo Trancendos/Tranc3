@@ -7,3 +7,6 @@
 ## 2024-05-27 - [Fast Mean Squared Error Optimization]
 **Learning:** `sum(map(operator.mul, diffs, diffs))` after `diffs = list(map(operator.sub, a, b))` is ~30% faster than `sum((p - t) ** 2 for p, t in zip(a, b))` for computing squared errors in pure Python due to eliminating generator expression overhead.
 **Action:** When calculating sum of squared differences or MSE in pure Python without `numpy`, use `map(operator.sub, ...)` combined with `sum(map(operator.mul, ...))` instead of generator expressions with `zip` and `**2`.
+## 2024-05-27 - [Anti-Pattern: Manual Loop Fusion in Python]
+**Learning:** In compiled languages, 'loop fusion' (combining multiple loops into one) is a standard optimization. However, in CPython, explicit `for` loops carry significant interpreter overhead per iteration (evaluating bytecodes for unpacking, math ops, etc). Attempting to optimize `sum(map(operator.mul, ...))` or generator expressions into a single `for` loop actually creates a performance regression.
+**Action:** Do not use 'loop fusion' (single-pass `for` loops) to optimize array math in pure Python. Always rely on C-optimized built-ins like `map()` and `operator`. To eliminate generator overhead in vector norms, use `sum(map(operator.mul, a, a))` instead of `sum(x * x for x in a)`.
