@@ -81,10 +81,8 @@ def _verify_password(plain: str, hashed: str) -> bool:
 
 def _lookup_user(username: str) -> Optional[dict[str, Any]]:
     """Stub user lookup — replace with SQLAlchemy query in production."""
-    # Default is bcrypt hash of "changeme" — override via DEMO_USER_HASH env var.
-    _DEMO_DEFAULT_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TgownFs9e1NmDOKWo2u4TbM6BVGU"
-    demo_hash = os.getenv("DEMO_USER_HASH", _DEMO_DEFAULT_HASH)
-    if username == os.getenv("DEMO_USER", "admin"):
+    demo_hash = os.getenv("DEMO_USER_HASH")
+    if username == os.getenv("DEMO_USER", "admin") and demo_hash is not None:
         return {"sub": username, "hashed_password": demo_hash}
     return None
 
