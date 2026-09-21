@@ -213,7 +213,7 @@ import raises and the keyword-heuristic fallback runs instead.
 | **Disposition** | **ACCEPT** |
 | **ID** | GHSA-px8p-9vwx-vf98 |
 | **Scanner** | npm audit (census `web` surface) |
-| **Component** | `fflate@0.4.8` — transitive via `posthog-js`, `web/` |
+| **Component** | `fflate@0.4.9` — transitive via `posthog-js`, `web/` |
 | **Blocked-by** | `posthog-js` declares `fflate: ^0.4.8` through its latest release (1.425.1), and `web/`'s peer graph cannot be re-resolved to apply an override — see below |
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |

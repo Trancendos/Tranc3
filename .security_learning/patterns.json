@@ -41,7 +41,7 @@
     "file_glob": "./*.py",
     "observation_count": 1425,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.562690+00:00",
+    "last_seen": "2026-09-21T22:37:09.148910+00:00",
     "notes": ""
   },
   "CWE-209:.": {
@@ -59,7 +59,7 @@
     "file_glob": "src/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.562788+00:00",
+    "last_seen": "2026-09-21T22:37:09.148958+00:00",
     "notes": ""
   },
   "PY-008:src/master/adapters": {
@@ -68,7 +68,7 @@
     "file_glob": "src/master/adapters/*.py",
     "observation_count": 236,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588307+00:00",
+    "last_seen": "2026-09-21T22:37:09.171596+00:00",
     "notes": ""
   },
   "CWE-117:src/gateway": {
@@ -77,7 +77,7 @@
     "file_glob": "src/gateway/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586481+00:00",
+    "last_seen": "2026-09-21T22:37:09.170100+00:00",
     "notes": ""
   },
   "PY-008:src/gateway": {
@@ -86,7 +86,7 @@
     "file_glob": "src/gateway/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586530+00:00",
+    "last_seen": "2026-09-21T22:37:09.170142+00:00",
     "notes": ""
   },
   "CWE-022:src/evaluation": {
@@ -95,7 +95,7 @@
     "file_glob": "src/evaluation/*.py",
     "observation_count": 118,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.581834+00:00",
+    "last_seen": "2026-09-21T22:37:09.165904+00:00",
     "notes": ""
   },
   "CWE-022:src/training": {
@@ -104,7 +104,7 @@
     "file_glob": "src/training/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586843+00:00",
+    "last_seen": "2026-09-21T22:37:09.170366+00:00",
     "notes": ""
   },
   "PY-008:src/training": {
@@ -113,7 +113,7 @@
     "file_glob": "src/training/*.py",
     "observation_count": 118,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586897+00:00",
+    "last_seen": "2026-09-21T22:37:09.170408+00:00",
     "notes": ""
   },
   "CWE-117:src/research": {
@@ -122,7 +122,7 @@
     "file_glob": "src/research/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583474+00:00",
+    "last_seen": "2026-09-21T22:37:09.167330+00:00",
     "notes": ""
   },
   "CWE-209:src/routers": {
@@ -131,7 +131,7 @@
     "file_glob": "src/routers/*.py",
     "observation_count": 532,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.584318+00:00",
+    "last_seen": "2026-09-21T22:37:09.168106+00:00",
     "notes": ""
   },
   "PY-008:src/routers": {
@@ -140,7 +140,7 @@
     "file_glob": "src/routers/*.py",
     "observation_count": 2470,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585283+00:00",
+    "last_seen": "2026-09-21T22:37:09.169120+00:00",
     "notes": ""
   },
   "CWE-117:src/healing": {
@@ -149,7 +149,7 @@
     "file_glob": "src/healing/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583423+00:00",
+    "last_seen": "2026-09-21T22:37:09.167284+00:00",
     "notes": ""
   },
   "PY-008:src/intelligence": {
@@ -158,7 +158,7 @@
     "file_glob": "src/intelligence/*.py",
     "observation_count": 585,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.577832+00:00",
+    "last_seen": "2026-09-21T22:37:09.162374+00:00",
     "notes": ""
   },
   "CWE-022:src/fluidic": {
@@ -167,7 +167,7 @@
     "file_glob": "src/fluidic/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588201+00:00",
+    "last_seen": "2026-09-21T22:37:09.171498+00:00",
     "notes": ""
   },
   "CWE-022:src/benchmark": {
@@ -176,7 +176,7 @@
     "file_glob": "src/benchmark/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583546+00:00",
+    "last_seen": "2026-09-21T22:37:09.167376+00:00",
     "notes": ""
   },
   "PY-008:src/benchmark": {
@@ -185,7 +185,7 @@
     "file_glob": "src/benchmark/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583648+00:00",
+    "last_seen": "2026-09-21T22:37:09.167464+00:00",
     "notes": ""
   },
   "CWE-117:src/evolution": {
@@ -194,7 +194,7 @@
     "file_glob": "src/evolution/*.py",
     "observation_count": 351,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585560+00:00",
+    "last_seen": "2026-09-21T22:37:09.169302+00:00",
     "notes": ""
   },
   "PY-008:src/inference": {
@@ -203,7 +203,7 @@
     "file_glob": "src/inference/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585919+00:00",
+    "last_seen": "2026-09-21T22:37:09.169581+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/query_intent_llm": {
@@ -212,7 +212,7 @@
     "file_glob": "src/nanoservices/query_intent_llm/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.589848+00:00",
+    "last_seen": "2026-09-21T22:37:09.173034+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/wasm_edge": {
@@ -221,7 +221,7 @@
     "file_glob": "src/nanoservices/wasm_edge/*.py",
     "observation_count": 468,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588513+00:00",
+    "last_seen": "2026-09-21T22:37:09.171823+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/genetic_optimizer": {
@@ -230,7 +230,7 @@
     "file_glob": "src/nanoservices/genetic_optimizer/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.589289+00:00",
+    "last_seen": "2026-09-21T22:37:09.172539+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/adaptive_loop": {
@@ -239,7 +239,7 @@
     "file_glob": "src/nanoservices/adaptive_loop/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.589426+00:00",
+    "last_seen": "2026-09-21T22:37:09.172638+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/vector_plan_cache": {
@@ -248,7 +248,7 @@
     "file_glob": "src/nanoservices/vector_plan_cache/*.py",
     "observation_count": 747,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.590161+00:00",
+    "last_seen": "2026-09-21T22:37:09.173297+00:00",
     "notes": ""
   },
   "CWE-327:src/nanoservices/vector_plan_cache": {
@@ -275,7 +275,7 @@
     "file_glob": "src/nanoservices/circuit_breaker/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588565+00:00",
+    "last_seen": "2026-09-21T22:37:09.171879+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/predictive_drift": {
@@ -284,7 +284,7 @@
     "file_glob": "src/nanoservices/predictive_drift/*.py",
     "observation_count": 468,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.589690+00:00",
+    "last_seen": "2026-09-21T22:37:09.172912+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/auto_healing": {
@@ -293,7 +293,7 @@
     "file_glob": "src/nanoservices/auto_healing/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.589483+00:00",
+    "last_seen": "2026-09-21T22:37:09.172689+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/gpu_kernel_service": {
@@ -302,7 +302,7 @@
     "file_glob": "src/nanoservices/gpu_kernel_service/*.py",
     "observation_count": 468,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588877+00:00",
+    "last_seen": "2026-09-21T22:37:09.172177+00:00",
     "notes": ""
   },
   "CWE-117:src/nanoservices/aerial_drone_adapter": {
@@ -311,7 +311,7 @@
     "file_glob": "src/nanoservices/aerial_drone_adapter/*.py",
     "observation_count": 702,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.589186+00:00",
+    "last_seen": "2026-09-21T22:37:09.172447+00:00",
     "notes": ""
   },
   "PY-008:src/nanoservices/nsa_client": {
@@ -320,7 +320,7 @@
     "file_glob": "src/nanoservices/nsa_client/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588616+00:00",
+    "last_seen": "2026-09-21T22:37:09.171928+00:00",
     "notes": ""
   },
   "CWE-117:src/validation": {
@@ -329,7 +329,7 @@
     "file_glob": "src/validation/*.py",
     "observation_count": 585,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580884+00:00",
+    "last_seen": "2026-09-21T22:37:09.165229+00:00",
     "notes": ""
   },
   "PY-008:src/validation": {
@@ -338,7 +338,7 @@
     "file_glob": "src/validation/*.py",
     "observation_count": 420,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.581082+00:00",
+    "last_seen": "2026-09-21T22:37:09.165406+00:00",
     "notes": ""
   },
   "CWE-022:src/personality": {
@@ -347,7 +347,7 @@
     "file_glob": "src/personality/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585712+00:00",
+    "last_seen": "2026-09-21T22:37:09.169438+00:00",
     "notes": ""
   },
   "PY-008:src/personality": {
@@ -356,7 +356,7 @@
     "file_glob": "src/personality/*.py",
     "observation_count": 185,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585807+00:00",
+    "last_seen": "2026-09-21T22:37:09.169482+00:00",
     "notes": ""
   },
   "PY-008:src/tensorflow_core": {
@@ -365,7 +365,7 @@
     "file_glob": "src/tensorflow_core/*.py",
     "observation_count": 468,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.578589+00:00",
+    "last_seen": "2026-09-21T22:37:09.163090+00:00",
     "notes": ""
   },
   "CWE-117:src/protocols/three_bridge": {
@@ -374,7 +374,7 @@
     "file_glob": "src/protocols/three_bridge/*.py",
     "observation_count": 2574,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.591331+00:00",
+    "last_seen": "2026-09-21T22:37:09.174287+00:00",
     "notes": ""
   },
   "PY-008:src/protocols/three_bridge": {
@@ -383,7 +383,7 @@
     "file_glob": "src/protocols/three_bridge/*.py",
     "observation_count": 351,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.591482+00:00",
+    "last_seen": "2026-09-21T22:37:09.174413+00:00",
     "notes": ""
   },
   "CWE-117:src/protocols/a2a": {
@@ -392,7 +392,7 @@
     "file_glob": "src/protocols/a2a/*.py",
     "observation_count": 351,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.591635+00:00",
+    "last_seen": "2026-09-21T22:37:09.174541+00:00",
     "notes": ""
   },
   "PY-008:src/protocols/a2a": {
@@ -401,7 +401,7 @@
     "file_glob": "src/protocols/a2a/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.591686+00:00",
+    "last_seen": "2026-09-21T22:37:09.174583+00:00",
     "notes": ""
   },
   "CWE-117:src/protocols/hil_a": {
@@ -410,7 +410,7 @@
     "file_glob": "src/protocols/hil_a/*.py",
     "observation_count": 2340,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.592794+00:00",
+    "last_seen": "2026-09-21T22:37:09.175515+00:00",
     "notes": ""
   },
   "PY-008:src/cloud": {
@@ -419,7 +419,7 @@
     "file_glob": "src/cloud/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580329+00:00",
+    "last_seen": "2026-09-21T22:37:09.164724+00:00",
     "notes": ""
   },
   "PY-008:src/workers": {
@@ -428,7 +428,7 @@
     "file_glob": "src/workers/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.582054+00:00",
+    "last_seen": "2026-09-21T22:37:09.166119+00:00",
     "notes": ""
   },
   "PY-008:src/resilience": {
@@ -437,7 +437,7 @@
     "file_glob": "src/resilience/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583371+00:00",
+    "last_seen": "2026-09-21T22:37:09.167237+00:00",
     "notes": ""
   },
   "CWE-117:src/bridge": {
@@ -446,7 +446,7 @@
     "file_glob": "src/bridge/*.py",
     "observation_count": 1053,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.578336+00:00",
+    "last_seen": "2026-09-21T22:37:09.162817+00:00",
     "notes": ""
   },
   "PY-008:src/bridge": {
@@ -455,7 +455,7 @@
     "file_glob": "src/bridge/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.578398+00:00",
+    "last_seen": "2026-09-21T22:37:09.162867+00:00",
     "notes": ""
   },
   "PY-008:src/core": {
@@ -464,7 +464,7 @@
     "file_glob": "src/core/*.py",
     "observation_count": 489,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580181+00:00",
+    "last_seen": "2026-09-21T22:37:09.164528+00:00",
     "notes": ""
   },
   "CWE-022:src/core": {
@@ -473,7 +473,7 @@
     "file_glob": "src/core/*.py",
     "observation_count": 351,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580231+00:00",
+    "last_seen": "2026-09-21T22:37:09.164626+00:00",
     "notes": ""
   },
   "CWE-117:src/core": {
@@ -482,7 +482,7 @@
     "file_glob": "src/core/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580033+00:00",
+    "last_seen": "2026-09-21T22:37:09.164378+00:00",
     "notes": ""
   },
   "PY-008:src/security": {
@@ -491,7 +491,7 @@
     "file_glob": "src/security/*.py",
     "observation_count": 531,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.581544+00:00",
+    "last_seen": "2026-09-21T22:37:09.165763+00:00",
     "notes": ""
   },
   "CWE-117:src/security": {
@@ -500,7 +500,7 @@
     "file_glob": "src/security/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.581717+00:00",
+    "last_seen": "2026-09-21T22:37:09.165860+00:00",
     "notes": ""
   },
   "PY-008:src/ai_gateway": {
@@ -509,7 +509,7 @@
     "file_glob": "src/ai_gateway/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.581944+00:00",
+    "last_seen": "2026-09-21T22:37:09.166023+00:00",
     "notes": ""
   },
   "PY-008:src/ai_gateway/providers": {
@@ -518,7 +518,7 @@
     "file_glob": "src/ai_gateway/providers/*.py",
     "observation_count": 1075,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.593793+00:00",
+    "last_seen": "2026-09-21T22:37:09.176355+00:00",
     "notes": ""
   },
   "PY-008:aeonmind/python/tests": {
@@ -527,7 +527,7 @@
     "file_glob": "aeonmind/python/tests/*.py",
     "observation_count": 819,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.594526+00:00",
+    "last_seen": "2026-09-21T22:37:09.177107+00:00",
     "notes": ""
   },
   "PY-008:shared_core/dimensionals": {
@@ -554,7 +554,7 @@
     "file_glob": "tranc3-bots/server/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.605197+00:00",
+    "last_seen": "2026-09-21T22:37:09.186815+00:00",
     "notes": ""
   },
   "PY-008:tranc3-bots/bots": {
@@ -563,7 +563,7 @@
     "file_glob": "tranc3-bots/bots/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.605097+00:00",
+    "last_seen": "2026-09-21T22:37:09.186725+00:00",
     "notes": ""
   },
   "PY-008:tranc3-bots/client": {
@@ -572,7 +572,7 @@
     "file_glob": "tranc3-bots/client/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.605295+00:00",
+    "last_seen": "2026-09-21T22:37:09.186912+00:00",
     "notes": ""
   },
   "CWE-022:scripts": {
@@ -581,7 +581,7 @@
     "file_glob": "scripts/*.py",
     "observation_count": 1006,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.566669+00:00",
+    "last_seen": "2026-09-21T22:37:09.152416+00:00",
     "notes": ""
   },
   "PY-008:tests": {
@@ -590,7 +590,7 @@
     "file_glob": "tests/*.py",
     "observation_count": 11709,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.577419+00:00",
+    "last_seen": "2026-09-21T22:37:09.162049+00:00",
     "notes": ""
   },
   "CWE-022:tests": {
@@ -599,7 +599,7 @@
     "file_glob": "tests/*.py",
     "observation_count": 205,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.574317+00:00",
+    "last_seen": "2026-09-21T22:37:09.159320+00:00",
     "notes": ""
   },
   "PY-008:workers/gateway-service": {
@@ -608,7 +608,7 @@
     "file_glob": "workers/gateway-service/*.py",
     "observation_count": 819,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.595761+00:00",
+    "last_seen": "2026-09-21T22:37:09.178274+00:00",
     "notes": ""
   },
   "CWE-117:workers/dimensional-nexus-service": {
@@ -617,7 +617,7 @@
     "file_glob": "workers/dimensional-nexus-service/*.py",
     "observation_count": 936,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.597948+00:00",
+    "last_seen": "2026-09-21T22:37:09.180287+00:00",
     "notes": ""
   },
   "PY-008:workers/sentinel-station-service": {
@@ -626,7 +626,7 @@
     "file_glob": "workers/sentinel-station-service/*.py",
     "observation_count": 351,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.595331+00:00",
+    "last_seen": "2026-09-21T22:37:09.177813+00:00",
     "notes": ""
   },
   "PY-008:workers/the-grid": {
@@ -635,7 +635,7 @@
     "file_glob": "workers/the-grid/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.594885+00:00",
+    "last_seen": "2026-09-21T22:37:09.177378+00:00",
     "notes": ""
   },
   "CWE-117:workers/infinity-bridge-service": {
@@ -644,7 +644,7 @@
     "file_glob": "workers/infinity-bridge-service/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598775+00:00",
+    "last_seen": "2026-09-21T22:37:09.181171+00:00",
     "notes": ""
   },
   "PY-008:workers/infinity-portal-service": {
@@ -653,7 +653,7 @@
     "file_glob": "workers/infinity-portal-service/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598439+00:00",
+    "last_seen": "2026-09-21T22:37:09.180826+00:00",
     "notes": ""
   },
   "CWE-327:workers/cdn-service": {
@@ -680,7 +680,7 @@
     "file_glob": "workers/hive-service/*.py",
     "observation_count": 1404,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596377+00:00",
+    "last_seen": "2026-09-21T22:37:09.178865+00:00",
     "notes": ""
   },
   "CWE-209:workers/gbrain-bridge": {
@@ -689,7 +689,7 @@
     "file_glob": "workers/gbrain-bridge/*.py",
     "observation_count": 351,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598587+00:00",
+    "last_seen": "2026-09-21T22:37:09.181007+00:00",
     "notes": ""
   },
   "PY-008:workers/gbrain-bridge": {
@@ -698,7 +698,7 @@
     "file_glob": "workers/gbrain-bridge/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598635+00:00",
+    "last_seen": "2026-09-21T22:37:09.181065+00:00",
     "notes": ""
   },
   "CWE-117:Dimensional": {
@@ -707,7 +707,7 @@
     "file_glob": "Dimensional/*.py",
     "observation_count": 1872,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.567602+00:00",
+    "last_seen": "2026-09-21T22:37:09.153339+00:00",
     "notes": ""
   },
   "PY-008:Dimensional/dimensionals": {
@@ -716,7 +716,7 @@
     "file_glob": "Dimensional/dimensionals/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.601483+00:00",
+    "last_seen": "2026-09-21T22:37:09.183558+00:00",
     "notes": ""
   },
   "CWE-117:Dimensional/hive": {
@@ -725,7 +725,7 @@
     "file_glob": "Dimensional/hive/*.py",
     "observation_count": 2808,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.604633+00:00",
+    "last_seen": "2026-09-21T22:37:09.186367+00:00",
     "notes": ""
   },
   "PY-008:Dimensional/infinity": {
@@ -734,7 +734,7 @@
     "file_glob": "Dimensional/infinity/*.py",
     "observation_count": 234,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.603385+00:00",
+    "last_seen": "2026-09-21T22:37:09.185269+00:00",
     "notes": ""
   },
   "CWE-117:Dimensional/infinity": {
@@ -743,7 +743,7 @@
     "file_glob": "Dimensional/infinity/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.603285+00:00",
+    "last_seen": "2026-09-21T22:37:09.185180+00:00",
     "notes": ""
   },
   "CWE-117:Dimensional/infinity/bridge": {
@@ -752,7 +752,7 @@
     "file_glob": "Dimensional/infinity/bridge/*.py",
     "observation_count": 585,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.604945+00:00",
+    "last_seen": "2026-09-21T22:37:09.186592+00:00",
     "notes": ""
   },
   "CWE-117:Dimensional/nexus": {
@@ -761,7 +761,7 @@
     "file_glob": "Dimensional/nexus/*.py",
     "observation_count": 1287,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.602175+00:00",
+    "last_seen": "2026-09-21T22:37:09.184134+00:00",
     "notes": ""
   },
   "PY-008:Dimensional/nexus": {
@@ -770,7 +770,7 @@
     "file_glob": "Dimensional/nexus/*.py",
     "observation_count": 117,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.601977+00:00",
+    "last_seen": "2026-09-21T22:37:09.183917+00:00",
     "notes": ""
   },
   "PY-008:Dimensional/architecture": {
@@ -779,7 +779,7 @@
     "file_glob": "Dimensional/architecture/*.py",
     "observation_count": 2292,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.603234+00:00",
+    "last_seen": "2026-09-21T22:37:09.185133+00:00",
     "notes": ""
   },
   "PY-008:shared_core/architecture": {
@@ -788,7 +788,7 @@
     "file_glob": "shared_core/architecture/*.py",
     "observation_count": 248,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.605045+00:00",
+    "last_seen": "2026-09-21T22:37:09.186680+00:00",
     "notes": ""
   },
   "PY-008:src/observability": {
@@ -797,7 +797,7 @@
     "file_glob": "src/observability/*.py",
     "observation_count": 277,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.579072+00:00",
+    "last_seen": "2026-09-21T22:37:09.163464+00:00",
     "notes": ""
   },
   "CWE-022:src/admin_os": {
@@ -806,7 +806,7 @@
     "file_glob": "src/admin_os/*.py",
     "observation_count": 210,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.579223+00:00",
+    "last_seen": "2026-09-21T22:37:09.163601+00:00",
     "notes": ""
   },
   "PY-008:scripts": {
@@ -815,7 +815,7 @@
     "file_glob": "scripts/*.py",
     "observation_count": 288,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.566720+00:00",
+    "last_seen": "2026-09-21T22:37:09.152462+00:00",
     "notes": ""
   },
   "CWE-022:workers/triposr-worker": {
@@ -833,7 +833,7 @@
     "file_glob": "workers/triposr-worker/*.py",
     "observation_count": 70,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.595382+00:00",
+    "last_seen": "2026-09-21T22:37:09.177867+00:00",
     "notes": ""
   },
   "PY-008:workers/swarm-coordinator-service": {
@@ -842,7 +842,7 @@
     "file_glob": "workers/swarm-coordinator-service/*.py",
     "observation_count": 70,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.599090+00:00",
+    "last_seen": "2026-09-21T22:37:09.181472+00:00",
     "notes": ""
   },
   "CWE-022:src/database": {
@@ -851,7 +851,7 @@
     "file_glob": "src/database/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.577891+00:00",
+    "last_seen": "2026-09-21T22:37:09.162419+00:00",
     "notes": ""
   },
   "PY-008:src/mesh": {
@@ -860,7 +860,7 @@
     "file_glob": "src/mesh/*.py",
     "observation_count": 281,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586430+00:00",
+    "last_seen": "2026-09-21T22:37:09.170055+00:00",
     "notes": ""
   },
   "PY-008:src/platform": {
@@ -869,7 +869,7 @@
     "file_glob": "src/platform/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.582263+00:00",
+    "last_seen": "2026-09-21T22:37:09.166296+00:00",
     "notes": ""
   },
   "PY-008:src/compliance": {
@@ -878,7 +878,7 @@
     "file_glob": "src/compliance/*.py",
     "observation_count": 87,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.579571+00:00",
+    "last_seen": "2026-09-21T22:37:09.163943+00:00",
     "notes": ""
   },
   "CWE-022:src/compliance": {
@@ -887,7 +887,7 @@
     "file_glob": "src/compliance/*.py",
     "observation_count": 285,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.579669+00:00",
+    "last_seen": "2026-09-21T22:37:09.164085+00:00",
     "notes": ""
   },
   "PY-008:src/section7": {
@@ -896,7 +896,7 @@
     "file_glob": "src/section7/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585403+00:00",
+    "last_seen": "2026-09-21T22:37:09.169167+00:00",
     "notes": ""
   },
   "PY-008:src/event_bus": {
@@ -905,7 +905,7 @@
     "file_glob": "src/event_bus/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580580+00:00",
+    "last_seen": "2026-09-21T22:37:09.164956+00:00",
     "notes": ""
   },
   "CWE-209:src/storage": {
@@ -914,7 +914,7 @@
     "file_glob": "src/storage/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586182+00:00",
+    "last_seen": "2026-09-21T22:37:09.169800+00:00",
     "notes": ""
   },
   "PY-008:src/storage": {
@@ -923,7 +923,7 @@
     "file_glob": "src/storage/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586231+00:00",
+    "last_seen": "2026-09-21T22:37:09.169848+00:00",
     "notes": ""
   },
   "PY-008:src/zero_cost": {
@@ -932,7 +932,7 @@
     "file_glob": "src/zero_cost/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.585611+00:00",
+    "last_seen": "2026-09-21T22:37:09.169350+00:00",
     "notes": ""
   },
   "PY-008:src/backup": {
@@ -941,7 +941,7 @@
     "file_glob": "src/backup/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.578639+00:00",
+    "last_seen": "2026-09-21T22:37:09.163138+00:00",
     "notes": ""
   },
   "PY-008:src/admin_os": {
@@ -950,7 +950,7 @@
     "file_glob": "src/admin_os/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.579273+00:00",
+    "last_seen": "2026-09-21T22:37:09.163644+00:00",
     "notes": ""
   },
   "CWE-327:src/core": {
@@ -959,7 +959,7 @@
     "file_glob": "src/core/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.579879+00:00",
+    "last_seen": "2026-09-21T22:37:09.164234+00:00",
     "notes": ""
   },
   "CWE-022:src/security": {
@@ -968,7 +968,7 @@
     "file_glob": "src/security/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.581133+00:00",
+    "last_seen": "2026-09-21T22:37:09.165453+00:00",
     "notes": ""
   },
   "CWE-022:compliance/magna-carta/scripts": {
@@ -977,7 +977,7 @@
     "file_glob": "compliance/magna-carta/scripts/*.py",
     "observation_count": 161,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.594169+00:00",
+    "last_seen": "2026-09-21T22:37:09.176733+00:00",
     "notes": ""
   },
   "CWE-022:shared_core": {
@@ -995,7 +995,7 @@
     "file_glob": "api/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.562864+00:00",
+    "last_seen": "2026-09-21T22:37:09.149045+00:00",
     "notes": ""
   },
   "PY-008:workers/the-studio": {
@@ -1004,7 +1004,7 @@
     "file_glob": "workers/the-studio/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.594578+00:00",
+    "last_seen": "2026-09-21T22:37:09.177153+00:00",
     "notes": ""
   },
   "PY-008:workers/the-dutchy": {
@@ -1013,7 +1013,7 @@
     "file_glob": "workers/the-dutchy/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.595183+00:00",
+    "last_seen": "2026-09-21T22:37:09.177670+00:00",
     "notes": ""
   },
   "PY-008:workers/backup-service": {
@@ -1022,7 +1022,7 @@
     "file_glob": "workers/backup-service/*.py",
     "observation_count": 70,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596831+00:00",
+    "last_seen": "2026-09-21T22:37:09.179294+00:00",
     "notes": ""
   },
   "PY-008:workers/devocity": {
@@ -1031,7 +1031,7 @@
     "file_glob": "workers/devocity/*.py",
     "observation_count": 207,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.599039+00:00",
+    "last_seen": "2026-09-21T22:37:09.181427+00:00",
     "notes": ""
   },
   "PY-008:workers/tateking": {
@@ -1040,7 +1040,7 @@
     "file_glob": "workers/tateking/*.py",
     "observation_count": 261,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596570+00:00",
+    "last_seen": "2026-09-21T22:37:09.179099+00:00",
     "notes": ""
   },
   "PY-008:workers/imaginarium": {
@@ -1049,7 +1049,7 @@
     "file_glob": "workers/imaginarium/*.py",
     "observation_count": 69,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598685+00:00",
+    "last_seen": "2026-09-21T22:37:09.181126+00:00",
     "notes": ""
   },
   "PY-008:archive": {
@@ -1058,7 +1058,7 @@
     "file_glob": "archive/*.py",
     "observation_count": 1449,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.563947+00:00",
+    "last_seen": "2026-09-21T22:37:09.149967+00:00",
     "notes": ""
   },
   "PY-008:src/shared": {
@@ -1067,7 +1067,7 @@
     "file_glob": "src/shared/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.582213+00:00",
+    "last_seen": "2026-09-21T22:37:09.166252+00:00",
     "notes": ""
   },
   "PY-008:src/search": {
@@ -1076,7 +1076,7 @@
     "file_glob": "src/search/*.py",
     "observation_count": 128,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.577526+00:00",
+    "last_seen": "2026-09-21T22:37:09.162148+00:00",
     "notes": ""
   },
   "CWE-209:src/access": {
@@ -1085,7 +1085,7 @@
     "file_glob": "src/access/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588049+00:00",
+    "last_seen": "2026-09-21T22:37:09.171372+00:00",
     "notes": ""
   },
   "CWE-022:src/vector": {
@@ -1094,7 +1094,7 @@
     "file_glob": "src/vector/*.py",
     "observation_count": 192,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580480+00:00",
+    "last_seen": "2026-09-21T22:37:09.164864+00:00",
     "notes": ""
   },
   "PY-008:src/vector": {
@@ -1103,7 +1103,7 @@
     "file_glob": "src/vector/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.580530+00:00",
+    "last_seen": "2026-09-21T22:37:09.164908+00:00",
     "notes": ""
   },
   "PY-008:src/workflow/nodes": {
@@ -1112,7 +1112,7 @@
     "file_glob": "src/workflow/nodes/*.py",
     "observation_count": 131,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.593064+00:00",
+    "last_seen": "2026-09-21T22:37:09.175742+00:00",
     "notes": ""
   },
   "CWE-209:src/deployment_modes": {
@@ -1121,7 +1121,7 @@
     "file_glob": "src/deployment_modes/*.py",
     "observation_count": 192,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583856+00:00",
+    "last_seen": "2026-09-21T22:37:09.167625+00:00",
     "notes": ""
   },
   "PY-008:workers/fabulousa-service": {
@@ -1130,7 +1130,7 @@
     "file_glob": "workers/fabulousa-service/*.py",
     "observation_count": 128,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596942+00:00",
+    "last_seen": "2026-09-21T22:37:09.179388+00:00",
     "notes": ""
   },
   "CWE-117:workers/dimensional-nexus-service/Dimensional/nexus": {
@@ -1139,7 +1139,7 @@
     "file_glob": "workers/dimensional-nexus-service/Dimensional/nexus/*.py",
     "observation_count": 704,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.601425+00:00",
+    "last_seen": "2026-09-21T22:37:09.183512+00:00",
     "notes": ""
   },
   "PY-008:workers/dimensional-nexus-service/Dimensional/nexus": {
@@ -1148,7 +1148,7 @@
     "file_glob": "workers/dimensional-nexus-service/Dimensional/nexus/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.601057+00:00",
+    "last_seen": "2026-09-21T22:37:09.183327+00:00",
     "notes": ""
   },
   "PY-008:workers/infinity-admin-service": {
@@ -1157,7 +1157,7 @@
     "file_glob": "workers/infinity-admin-service/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596992+00:00",
+    "last_seen": "2026-09-21T22:37:09.179436+00:00",
     "notes": ""
   },
   "PY-008:workers/infinity-admin-service/tests": {
@@ -1166,7 +1166,7 @@
     "file_glob": "workers/infinity-admin-service/tests/*.py",
     "observation_count": 128,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.600582+00:00",
+    "last_seen": "2026-09-21T22:37:09.182877+00:00",
     "notes": ""
   },
   "PY-008:workers/queue-service": {
@@ -1175,7 +1175,7 @@
     "file_glob": "workers/queue-service/*.py",
     "observation_count": 192,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.594826+00:00",
+    "last_seen": "2026-09-21T22:37:09.177333+00:00",
     "notes": ""
   },
   "PY-008:workers/litellm-service": {
@@ -1184,7 +1184,7 @@
     "file_glob": "workers/litellm-service/*.py",
     "observation_count": 128,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598891+00:00",
+    "last_seen": "2026-09-21T22:37:09.181260+00:00",
     "notes": ""
   },
   "CWE-022:workers/storage-service": {
@@ -1193,7 +1193,7 @@
     "file_glob": "workers/storage-service/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.597042+00:00",
+    "last_seen": "2026-09-21T22:37:09.179484+00:00",
     "notes": ""
   },
   "PY-008:workers/storage-service": {
@@ -1202,7 +1202,7 @@
     "file_glob": "workers/storage-service/*.py",
     "observation_count": 65,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.597140+00:00",
+    "last_seen": "2026-09-21T22:37:09.179577+00:00",
     "notes": ""
   },
   "CWE-117:workers/hive-service/Dimensional/hive": {
@@ -1211,7 +1211,7 @@
     "file_glob": "workers/hive-service/Dimensional/hive/*.py",
     "observation_count": 1536,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.600478+00:00",
+    "last_seen": "2026-09-21T22:37:09.182770+00:00",
     "notes": ""
   },
   "PY-008:workers/infinity-ai": {
@@ -1220,7 +1220,7 @@
     "file_glob": "workers/infinity-ai/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.594630+00:00",
+    "last_seen": "2026-09-21T22:37:09.177201+00:00",
     "notes": ""
   },
   "PY-008:workers/cache-service": {
@@ -1229,7 +1229,7 @@
     "file_glob": "workers/cache-service/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596618+00:00",
+    "last_seen": "2026-09-21T22:37:09.179147+00:00",
     "notes": ""
   },
   "PY-008:workers/payments-service": {
@@ -1238,7 +1238,7 @@
     "file_glob": "workers/payments-service/*.py",
     "observation_count": 320,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.595133+00:00",
+    "last_seen": "2026-09-21T22:37:09.177623+00:00",
     "notes": ""
   },
   "CWE-209:workers/files-service": {
@@ -1247,7 +1247,7 @@
     "file_glob": "workers/files-service/*.py",
     "observation_count": 64,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.597189+00:00",
+    "last_seen": "2026-09-21T22:37:09.179625+00:00",
     "notes": ""
   },
   "CWE-022:workers/files-service": {
@@ -1256,7 +1256,7 @@
     "file_glob": "workers/files-service/*.py",
     "observation_count": 192,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.597393+00:00",
+    "last_seen": "2026-09-21T22:37:09.179763+00:00",
     "notes": ""
   },
   "PY-008:workers/files-service": {
@@ -1265,7 +1265,7 @@
     "file_glob": "workers/files-service/*.py",
     "observation_count": 128,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.597496+00:00",
+    "last_seen": "2026-09-21T22:37:09.179862+00:00",
     "notes": ""
   },
   "PY-008:workers/orders-service": {
@@ -1274,7 +1274,7 @@
     "file_glob": "workers/orders-service/*.py",
     "observation_count": 261,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.598388+00:00",
+    "last_seen": "2026-09-21T22:37:09.180776+00:00",
     "notes": ""
   },
   "PY-008:workers/analytics-service": {
@@ -1283,7 +1283,7 @@
     "file_glob": "workers/analytics-service/*.py",
     "observation_count": 126,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.599188+00:00",
+    "last_seen": "2026-09-21T22:37:09.181559+00:00",
     "notes": ""
   },
   "CWE-209:src/models": {
@@ -1292,7 +1292,7 @@
     "file_glob": "src/models/*.py",
     "observation_count": 486,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583209+00:00",
+    "last_seen": "2026-09-21T22:37:09.167084+00:00",
     "notes": ""
   },
   "CWE-209:src/auth": {
@@ -1301,7 +1301,7 @@
     "file_glob": "src/auth/*.py",
     "observation_count": 21,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.588100+00:00",
+    "last_seen": "2026-09-21T22:37:09.171414+00:00",
     "notes": ""
   },
   "CWE-209:src/relations": {
@@ -1310,7 +1310,7 @@
     "file_glob": "src/relations/*.py",
     "observation_count": 21,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.587998+00:00",
+    "last_seen": "2026-09-21T22:37:09.171329+00:00",
     "notes": ""
   },
   "CWE-209:src/notebooks": {
@@ -1319,7 +1319,7 @@
     "file_glob": "src/notebooks/*.py",
     "observation_count": 21,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583318+00:00",
+    "last_seen": "2026-09-21T22:37:09.167191+00:00",
     "notes": ""
   },
   "CWE-209:src/roles": {
@@ -1328,7 +1328,7 @@
     "file_glob": "src/roles/*.py",
     "observation_count": 21,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586686+00:00",
+    "last_seen": "2026-09-21T22:37:09.170282+00:00",
     "notes": ""
   },
   "PY-008:src/roles": {
@@ -1337,7 +1337,7 @@
     "file_glob": "src/roles/*.py",
     "observation_count": 9,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586776+00:00",
+    "last_seen": "2026-09-21T22:37:09.170324+00:00",
     "notes": ""
   },
   "PY-008:tranc3-bots/tests": {
@@ -1346,7 +1346,7 @@
     "file_glob": "tranc3-bots/tests/*.py",
     "observation_count": 27,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.605512+00:00",
+    "last_seen": "2026-09-21T22:37:09.187087+00:00",
     "notes": ""
   },
   "PY-008:Dimensional": {
@@ -1355,7 +1355,7 @@
     "file_glob": "Dimensional/*.py",
     "observation_count": 3,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.566975+00:00",
+    "last_seen": "2026-09-21T22:37:09.152712+00:00",
     "notes": ""
   },
   "PY-004:scripts": {
@@ -1364,7 +1364,7 @@
     "file_glob": "scripts/*.py",
     "observation_count": 1,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.564798+00:00",
+    "last_seen": "2026-09-21T22:37:09.150720+00:00",
     "notes": ""
   },
   "CWE-117:scripts": {
@@ -1373,7 +1373,7 @@
     "file_glob": "scripts/*.py",
     "observation_count": 20,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.566133+00:00",
+    "last_seen": "2026-09-21T22:37:09.151856+00:00",
     "notes": ""
   },
   "PY-008:src/nanoservices": {
@@ -1382,7 +1382,7 @@
     "file_glob": "src/nanoservices/*.py",
     "observation_count": 3,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.578865+00:00",
+    "last_seen": "2026-09-21T22:37:09.163282+00:00",
     "notes": ""
   },
   "PY-008:src/mcp": {
@@ -1391,7 +1391,7 @@
     "file_glob": "src/mcp/*.py",
     "observation_count": 1,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.582001+00:00",
+    "last_seen": "2026-09-21T22:37:09.166074+00:00",
     "notes": ""
   },
   "CWE-209:src/exchange": {
@@ -1400,7 +1400,7 @@
     "file_glob": "src/exchange/*.py",
     "observation_count": 2,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.582160+00:00",
+    "last_seen": "2026-09-21T22:37:09.166209+00:00",
     "notes": ""
   },
   "PY-008:src/library": {
@@ -1409,7 +1409,7 @@
     "file_glob": "src/library/*.py",
     "observation_count": 1,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.583265+00:00",
+    "last_seen": "2026-09-21T22:37:09.167130+00:00",
     "notes": ""
   },
   "CWE-022:src/dvms": {
@@ -1418,7 +1418,7 @@
     "file_glob": "src/dvms/*.py",
     "observation_count": 2,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586025+00:00",
+    "last_seen": "2026-09-21T22:37:09.169669+00:00",
     "notes": ""
   },
   "CWE-022:src/immune": {
@@ -1427,7 +1427,7 @@
     "file_glob": "src/immune/*.py",
     "observation_count": 2,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586131+00:00",
+    "last_seen": "2026-09-21T22:37:09.169757+00:00",
     "notes": ""
   },
   "PY-008:src/cmdb": {
@@ -1436,7 +1436,7 @@
     "file_glob": "src/cmdb/*.py",
     "observation_count": 2,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586634+00:00",
+    "last_seen": "2026-09-21T22:37:09.170237+00:00",
     "notes": ""
   },
   "PY-008:src/warp_radio": {
@@ -1445,7 +1445,7 @@
     "file_glob": "src/warp_radio/*.py",
     "observation_count": 1,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.586952+00:00",
+    "last_seen": "2026-09-21T22:37:09.170453+00:00",
     "notes": ""
   },
   "CWE-209:src/townhall": {
@@ -1454,7 +1454,7 @@
     "file_glob": "src/townhall/*.py",
     "observation_count": 11,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.587493+00:00",
+    "last_seen": "2026-09-21T22:37:09.170909+00:00",
     "notes": ""
   },
   "PY-008:src/townhall": {
@@ -1463,7 +1463,7 @@
     "file_glob": "src/townhall/*.py",
     "observation_count": 7,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.587893+00:00",
+    "last_seen": "2026-09-21T22:37:09.171242+00:00",
     "notes": ""
   },
   "CWE-022:src/townhall": {
@@ -1472,7 +1472,7 @@
     "file_glob": "src/townhall/*.py",
     "observation_count": 1,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.587947+00:00",
+    "last_seen": "2026-09-21T22:37:09.171286+00:00",
     "notes": ""
   },
   "CWE-209:workers/backup-service": {
@@ -1481,7 +1481,7 @@
     "file_glob": "workers/backup-service/*.py",
     "observation_count": 1,
     "false_positive_count": 0,
-    "last_seen": "2026-09-21T21:48:55.596671+00:00",
+    "last_seen": "2026-09-21T22:37:09.179200+00:00",
     "notes": ""
   }
 }
