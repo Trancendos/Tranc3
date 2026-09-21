@@ -64,7 +64,7 @@ ID_PATTERN = re.compile(
 )
 
 #: Only these mean "knowingly carried".
-ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS")
+ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS", "RESOLVED")
 
 #: The header row of SECURITY.md's accepted-risk table. Rows beneath it are
 #: accepted by construction; ids elsewhere in that file are prose.
