@@ -132,9 +132,11 @@ export default function HivePage() {
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
+          aria-busy={loading}
+          aria-label={loading ? 'Refreshing hive status' : 'Refresh hive status'}
+          className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+          <RefreshCw size={12} aria-hidden="true" className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
 
@@ -244,12 +246,12 @@ export default function HivePage() {
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {p.status !== 'active' ? (
-                              <button onClick={() => pipelineAction(p.pipeline_id, 'start')} className="text-emerald-400 hover:text-emerald-300 transition-colors" title="Start">
-                                <Play size={13} />
+                              <button onClick={() => pipelineAction(p.pipeline_id, 'start')} className="text-emerald-400 hover:text-emerald-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded" aria-label="Start pipeline" title="Start">
+                                <Play size={13} aria-hidden="true" />
                               </button>
                             ) : (
-                              <button onClick={() => pipelineAction(p.pipeline_id, 'pause')} className="text-amber-400 hover:text-amber-300 transition-colors" title="Pause">
-                                <Pause size={13} />
+                              <button onClick={() => pipelineAction(p.pipeline_id, 'pause')} className="text-amber-400 hover:text-amber-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded" aria-label="Pause pipeline" title="Pause">
+                                <Pause size={13} aria-hidden="true" />
                               </button>
                             )}
                           </div>
@@ -283,10 +285,11 @@ export default function HivePage() {
                   </div>
                   <button
                     onClick={() => dissolveSwarm(s.swarm_id)}
-                    className="text-red-400/60 hover:text-red-400 transition-colors"
+                    className="text-red-400/60 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
+                    aria-label="Dissolve swarm"
                     title="Dissolve swarm"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={13} aria-hidden="true" />
                   </button>
                 </div>
                 {s.nodes.length > 0 && (

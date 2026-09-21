@@ -116,16 +116,18 @@ export default function CachePage() {
           <button
             onClick={flushAll}
             title="Flush all cache"
-            className="flex items-center gap-1.5 rounded-lg border border-red-700/50 bg-red-900/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-900/40 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-red-700/50 bg-red-900/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-900/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
           >
-            <Trash2 size={12} /> Flush All
+            <Trash2 size={12} aria-hidden="true" /> Flush All
           </button>
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
+            aria-busy={loading}
+            aria-label={loading ? 'Refreshing cache' : 'Refresh cache'}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
           >
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw size={12} aria-hidden="true" className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
       </div>
@@ -219,9 +221,9 @@ export default function CachePage() {
                 <button
                   onClick={() => deleteKey(selectedKey)}
                   title="Delete key"
-                  className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+                  className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded px-1"
                 >
-                  <Trash2 size={11} /> Delete
+                  <Trash2 size={11} aria-hidden="true" /> Delete
                 </button>
               </div>
             )}
