@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import math
+import operator
 import random
 import uuid
 from dataclasses import dataclass, field
@@ -329,29 +330,36 @@ class HyperdimensionalVectorOps:
     def similarity(
         self, a: Hypervector, b: Hypervector, metric: LatticeTopology = LatticeTopology.COSINE
     ) -> float:
-        """Compute similarity between two hypervectors."""
+        """Compute similarity between two hypervectors.
+
+        Performance optimization: Uses C-optimized map() and operator functions
+        instead of generator expressions with indices. This eliminates generator
+        overhead and is significantly faster in pure Python.
+        """
         if len(a.data) != len(b.data) or len(a.data) == 0:
             return 0.0
 
         if metric == LatticeTopology.COSINE:
-            dot = sum(a.data[i] * b.data[i] for i in range(len(a.data)))
-            mag_a = math.sqrt(sum(x * x for x in a.data))
-            mag_b = math.sqrt(sum(x * x for x in b.data))
+            dot = sum(map(operator.mul, a.data, b.data))
+            mag_a = math.sqrt(sum(map(operator.mul, a.data, a.data)))
+            mag_b = math.sqrt(sum(map(operator.mul, b.data, b.data)))
             if mag_a == 0 or mag_b == 0:
                 return 0.0
             return dot / (mag_a * mag_b)
 
         elif metric == LatticeTopology.HAMMING:
-            matches = sum(1 for i in range(len(a.data)) if a.data[i] == b.data[i])
+            matches = sum(map(operator.eq, a.data, b.data))
             return matches / len(a.data)
 
         elif metric == LatticeTopology.EUCLIDEAN:
-            dist = math.sqrt(sum((a.data[i] - b.data[i]) ** 2 for i in range(len(a.data))))
+            diffs = list(map(operator.sub, a.data, b.data))
+            dist = math.sqrt(sum(map(operator.mul, diffs, diffs)))
             max_dist = math.sqrt(len(a.data)) * 2
             return max(0.0, 1.0 - dist / max_dist)
 
         elif metric == LatticeTopology.MANHATTAN:
-            dist = sum(abs(a.data[i] - b.data[i]) for i in range(len(a.data)))
+            diffs_map = map(operator.sub, a.data, b.data)
+            dist = sum(map(abs, diffs_map))
             max_dist = len(a.data) * 2
             return max(0.0, 1.0 - dist / max_dist)
 
