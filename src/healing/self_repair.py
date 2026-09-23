@@ -412,8 +412,14 @@ class AdaptiveConfigTuner:
         # OLS linear: y = a + b*x  →  optimal is the value at x=n (next step)
         x_mean = sum(xs) / n
         y_mean = sum(values) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+
+        ss_xx = 0.0
+        ss_xy = 0.0
+        for x, y in zip(xs, values, strict=False):
+            dx = x - x_mean
+            ss_xx += dx * dx
+            ss_xy += dx * (y - y_mean)
+
         if abs(ss_xx) < 1e-12:
             return y_mean
 
@@ -442,18 +448,31 @@ class AdaptiveConfigTuner:
         n = len(values)
         xs = list(range(n))
         y_mean = sum(values) / n
-        ss_tot = sum((y - y_mean) ** 2 for y in values)
+        x_mean = sum(xs) / n
+
+        ss_tot = 0.0
+        ss_xx = 0.0
+        ss_xy = 0.0
+        for x, y in zip(xs, values, strict=False):
+            dy = y - y_mean
+            dx = x - x_mean
+            ss_tot += dy * dy
+            ss_xx += dx * dx
+            ss_xy += dx * dy
+
         if ss_tot < 1e-12:
             return 0.0
 
-        x_mean = sum(xs) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
         if abs(ss_xx) < 1e-12:
             return 0.0
         b = ss_xy / ss_xx
         a = y_mean - b * x_mean
-        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
+
+        ss_res = 0.0
+        for x, y in zip(xs, values, strict=False):
+            diff = y - (a + b * x)
+            ss_res += diff * diff
+
         r2 = 1.0 - (ss_res / ss_tot)
 
         # Scale by sample adequacy (fully confident after 50+ samples)
