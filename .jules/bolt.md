@@ -7,3 +7,6 @@
 ## 2024-05-27 - [Fast Mean Squared Error Optimization]
 **Learning:** `sum(map(operator.mul, diffs, diffs))` after `diffs = list(map(operator.sub, a, b))` is ~30% faster than `sum((p - t) ** 2 for p, t in zip(a, b))` for computing squared errors in pure Python due to eliminating generator expression overhead.
 **Action:** When calculating sum of squared differences or MSE in pure Python without `numpy`, use `map(operator.sub, ...)` combined with `sum(map(operator.mul, ...))` instead of generator expressions with `zip` and `**2`.
+## 2024-05-28 - [Fast Cosine Similarity in pure Python]
+**Learning:** For calculations requiring multiple passes (like cosine similarity needing a dot product and two norms), fusing these into a single explicit `for` loop avoids massive generator overhead and multiple passes over vectors compared to `map`/`zip` generator comprehensions.
+**Action:** Use a single `for x, y in zip(a, b)` loop for cosine similarity or OLS regression components when `numpy` is unavailable.
