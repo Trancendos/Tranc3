@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import operator
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -120,8 +119,7 @@ class SimpleTextEncoder:
             embedding[idx] += sign
 
         # L2 normalize
-        # Bolt: as elsewhere.
-        norm = sum(map(operator.mul, embedding, embedding)) ** 0.5
+        norm = sum(x * x for x in embedding) ** 0.5
         if norm > 0:
             embedding = [x / norm for x in embedding]
 

@@ -22,7 +22,6 @@ matmul_i8(a, a_rows, a_cols, b, b_cols) → list[int]
 from __future__ import annotations
 
 import logging
-import operator
 from typing import List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -75,13 +74,7 @@ def _py_leaky_step_i8(
     new_mem: List[float] = []
     for j in range(out_dim):
         row = weights[j * in_dim : (j + 1) * in_dim]
-        # Bolt, with the int() cast kept. #1214 proposed
-        # `sum(map(operator.mul, row, inputs))`, which is 3.1x faster and drops
-        # the truncation: this is the *quantized* i8 kernel and the Rust path it
-        # falls back from takes i8, so float weights must truncate the same way.
-        # Measured with float weights the two differ by 20%. Casting inside the
-        # map keeps the truncation and is still 1.54x faster than the generator.
-        current = sum(map(operator.mul, map(int, row), inputs)) + bias[j]
+        current = sum(int(w) * x for w, x in zip(row, inputs)) + bias[j]
         current = max(0.0, current)  # ReLU
         nm = beta * mem[j] + current
         if nm >= threshold:

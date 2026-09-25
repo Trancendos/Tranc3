@@ -165,8 +165,7 @@ def _dot_product(a: List[float], b: List[float]) -> float:
 
 def _vector_norm(v: List[float]) -> float:
     """Compute L2 norm of a vector."""
-    # Bolt: as the dot product above.
-    return math.sqrt(sum(map(operator.mul, v, v)))
+    return math.sqrt(sum(x * x for x in v))
 
 
 def _softmax(scores: List[float], temperature: float = 1.0) -> List[float]:
