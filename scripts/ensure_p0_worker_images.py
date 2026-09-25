@@ -16,7 +16,7 @@ P0_WORKERS: list[tuple[str, int, list[str]]] = [
     (
         "api-gateway",
         8003,
-        ["COPY --chown=worker:worker Dimensional/sanitize.py ./Dimensional/sanitize.py"],
+        ["COPY --chown=worker:worker Dimensionals/sanitize.py ./Dimensionals/sanitize.py"],
     ),
     ("infinity-ws", 8004, []),
     ("infinity-auth", 8005, ["COPY --chown=worker:worker shared_core/ ./shared_core/"]),
@@ -33,9 +33,9 @@ P0_WORKERS: list[tuple[str, int, list[str]]] = [
 def _dockerfile(worker: str, port: int, extras: list[str]) -> str:
     extra_block = "\n".join(extras)
     init_py = (
-        "RUN mkdir -p src/observability Dimensional 2>/dev/null; "
+        "RUN mkdir -p src/observability Dimensionals 2>/dev/null; "
         "touch src/__init__.py src/entities/__init__.py src/observability/__init__.py; "
-        "[ -f Dimensional/sanitize.py ] && touch Dimensional/__init__.py || true"
+        "[ -f Dimensionals/sanitize.py ] && touch Dimensionals/__init__.py || true"
     )
     return f"""FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends curl \\

@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.sanitize"""
+"""Backward-compatibility shim — canonical: Dimensionals.sanitize"""
 
-from Dimensional.sanitize import *  # noqa: F401, F403
+from Dimensionals.sanitize import *  # noqa: F401, F403

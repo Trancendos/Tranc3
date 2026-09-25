@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:373dcf1fc437a41fda9ad07bb6975a24",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "mattermost-db",
+      "bom-ref": "CI-CT-mattermost-db",
+      "version": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "pulled"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-mattermost-db"
+      },
+      {
+        "name": "trancendos:no-manifest",
+        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+      }
+    ]
+  },
+  "components": []
+}

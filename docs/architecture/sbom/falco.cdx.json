@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:d24e3b31f682db71d3e601c7539da78b",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "falco",
+      "bom-ref": "CI-CT-falco",
+      "version": "falcosecurity/falco-no-driver:latest@sha256:ba05dfb209cc1c2e912ce116d230b5f59c4542e7286f05b663c499066d5d6a42"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "pulled"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-falco"
+      },
+      {
+        "name": "trancendos:no-manifest",
+        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+      }
+    ]
+  },
+  "components": []
+}

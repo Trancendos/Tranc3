@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from trance_one.platform_manifest import (
     PlatformManifest,
     get_manifest,

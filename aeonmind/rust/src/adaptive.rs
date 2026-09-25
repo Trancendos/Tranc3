@@ -88,11 +88,11 @@ pub struct AdaptiveMetaLearner {
 
 impl AdaptiveMetaLearner {
     pub fn new(config: AdaptiveConfig) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let parameters: Vec<f64> = (0..config.n_parameters)
             .map(|_| {
                 let (lo, hi) = config.bounds;
-                rand::Rng::gen_range(&mut rng, lo..hi)
+                rand::Rng::random_range(&mut rng, lo..hi)
             })
             .collect();
 

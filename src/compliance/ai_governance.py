@@ -32,7 +32,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.compliance.ai_governance")
 

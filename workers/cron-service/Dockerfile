@@ -13,7 +13,7 @@ RUN mkdir -p /data \
 # repo root. Supplied by docker-compose.production.yml, or for a direct
 #   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=worker:worker . /app/Dimensional/
+COPY --from=sharedcore --chown=worker:worker . /app/Dimensionals/
 COPY --from=observability --chown=worker:worker . /app/src/observability/
 ENV PYTHONPATH=/app
 # --- end SFSC ---

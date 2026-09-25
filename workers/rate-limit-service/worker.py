@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8026")
 WORKER_NAME = "rate-limit-service"
@@ -199,7 +199,7 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # Delegated to Dimensionals.service_auth, which this worker now reaches
     # through the `sharedcore` named build context. It compares with
     # compare_digest and refuses when the secret is unset.
     guard_internal_secret(
@@ -302,6 +302,32 @@ async def update_policy(name: str, req: PolicyUpdate):
             raise HTTPException(status_code=404, detail="Policy not found")
         updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
+            # The VALUES are bound, but the COLUMN NAMES are interpolated into
+            # the statement below, so they have to come from a closed set.
+            #
+            # TODAY THIS BRANCH CANNOT FIRE, and saying so is the point.
+            # `model_dump()` can only return PolicyUpdate's own fields, so
+            # `unexpected` is always empty and the 400 is unreachable. An
+            # earlier version of this comment implied otherwise ("reach this
+            # line with anything else and it is refused"), which overstated a
+            # guard that is really an assertion. Raised by cubic on PR #1207.
+            #
+            # It stays, because what protects the interpolation is a fact about
+            # Pydantic held in a reader's head, and the shapes that break it are
+            # ordinary: switching to `model_dump(by_alias=True)`, merging query
+            # parameters or a PATCH body into `updates`, or adding a
+            # `model_config` that permits extras. Each would make this branch
+            # reachable, and each would otherwise reach the interpolation
+            # instead. Deriving the permitted names from PolicyUpdate rather
+            # than restating them means a new field is allowed automatically and
+            # nothing else ever is -- so the guard cannot drift from the model
+            # it guards.
+            unexpected = set(updates) - set(PolicyUpdate.model_fields)
+            if unexpected:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown policy fields: {sorted(unexpected)}",
+                )
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
                 f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]

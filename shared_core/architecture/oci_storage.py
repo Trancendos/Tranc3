@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.oci_storage"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.oci_storage"""
 
-from Dimensional.architecture.oci_storage import *  # noqa: F401, F403
+from Dimensionals.architecture.oci_storage import *  # noqa: F401, F403

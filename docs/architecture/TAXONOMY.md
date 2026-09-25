@@ -1,0 +1,570 @@
+# Trancendos Taxonomy
+
+> **Generated — do not edit.** `python3 scripts/build_taxonomy_tree.py`
+> regenerates this file and `taxonomy.json`; `--check` fails CI when they
+> drift from the code. The structure below is the owner's; every node's
+> content is read from the source named beside it.
+
+## What this is
+
+Three branches, each assembled from registers that already existed and had
+never been assembled:
+
+| Branch | Read from |
+|---|---|
+| **Locations** | `PLATFORM_ENTITIES` — 43 entities, their abilities, code paths and ports |
+| **AIs** | `get_orchestration_tier()` for the tier, `src/personality/profiles/` for profile and personality, `agent_teams` / `bot_01..04` for agents and bots |
+| **Dimensionals (Shared-Core)** | the `Dimensionals/` package, classified into Services, Middleware, Databases, Mesh and Routers |
+
+## Measured totals
+
+| Node kind | Count |
+|---|---:|
+| Location | 44 |
+| Ability | 180 |
+| Component | 173 |
+| Module | 213 |
+| Nanoservice | 60 |
+| Job Description | 56 |
+| Power Up | 344 |
+| Ai | 47 |
+| Trait | 564 |
+| Agent | 94 |
+| Bot | 188 |
+| Dimensional | 32 |
+
+## Gaps
+
+None. Every branch of the structure is populated by a source in this repository. That is a statement about coverage, not quality: it says each level has content, not that the content is complete.
+
+## Tree (to depth 3)
+
+- **Trancendos** — `src/entities/platform.py`
+  - **Locations** — `src/entities/platform.py`
+    - **API Marketplace** — `src/entities/platform.py` · Central Integration Hub (APIs, Webhooks, OAuth)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Arcadia** — `src/entities/platform.py` · Post-Login User Frontend, Forum & Email Hub
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _9 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Arcadian Exchange** — `src/entities/platform.py` · Procurement & Resource Trading
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _10 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **ChronosSphere / ArcStream** — `src/entities/platform.py` · Task, Time and Scheduling Management
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Cryptex** — `src/entities/platform.py` · Cyber Defense (Threat Intelligence, DDoS, CVE Scanning)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _7 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **DevOcity** — `src/entities/platform.py` · Development Operations
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **DocUtari** — `src/entities/platform.py` · Document Management Hub
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Fabulousa** — `src/entities/platform.py` · Styling, UX, UI & Design Center
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **I-Mind** — `src/entities/platform.py` · Sensitivity to Emotion Engine
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Imaginarium** — `src/entities/platform.py` · Omni-Creative Masterpiece Wizard
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Infinity** — `src/entities/platform.py` · Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _8 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _2 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Luminous** — `src/entities/platform.py` · Core Platform Brain & Orchestration Engine
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _11 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Resonate** — `src/entities/platform.py` · Empathy Engine
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Royal Bank of Arcadia** — `src/entities/platform.py` · Financial & Operations Management
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Sashas Photo Studio** — `src/entities/platform.py` · Photo & Image Generation Center
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Section 7** — `src/entities/platform.py` · Intelligence (Predictive lore, market intelligence)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **TateKing** — `src/entities/platform.py` · Video Creation & Editing Platform
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _2 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Academy** — `src/entities/platform.py` · Education & Skill Training
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Artifactory** — `src/entities/platform.py` · Central Artifact Repository Library (JFrog style)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Basement** — `src/entities/platform.py` · Archived Information Store
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Chaos Party** — `src/entities/platform.py` · Central Testing Platform (Wonderland Theme)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _3 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _2 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Citadel** — `src/entities/platform.py` · Strategic Ops (Main fortress for Think Tank/R&D/Temporal nodes)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _19 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Digital Grid** — `src/entities/platform.py` · Workflow Platform
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _7 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The HIVE** — `src/entities/platform.py` · Data Transport Hub
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Ice Box** — `src/entities/platform.py` · Inception-Layered Sandbox Threat Isolation & Quarantine Centre
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Lab** — `src/entities/platform.py` · Code Creation Platform
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _2 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Library** — `src/entities/platform.py` · Knowledge Base & Wiki
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _6 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Lighthouse** — `src/entities/platform.py` · Cryptographic Token Applicator
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Nexus** — `src/entities/platform.py` · AI Communication Gateway & AI, Agent, and Bot / Worker Transfer Hub
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Observatory** — `src/entities/platform.py` · Audit Log & Monitoring Platform
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Spark** — `src/entities/platform.py` · The MCP Skills Matrix
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _9 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Studio** — `src/entities/platform.py` · Central Hub of the Creativity Center
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Town Hall** — `src/entities/platform.py` · Governance & Compliance Center
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _14 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Void** — `src/entities/platform.py` · Secrets Vault, Password Store & Sensitive Data Store
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _1 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Warp Tunnel** — `src/entities/platform.py` · Cryptographic Scanner & Automated Quarantine Transport
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **The Workshop** — `src/entities/platform.py` · Repository Storage (Forgejo)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _10 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Think Tank** — `src/entities/platform.py` · R&D Centre
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _4 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **TranceFlow** — `src/entities/platform.py` · 3D Modeling & Games Creation Studio
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _7 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Tranquility** — `src/entities/platform.py` · Wellbeing Central Hub
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Turing's Hub** — `src/entities/platform.py` · Central Creation Forge (3D Avatar & AI Entity Generation)
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _7 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **VRAR3D** — `src/entities/platform.py` · Standalone 3D / VR immersion
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _7 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **Warp Radio** — `src/entities/platform.py` · Music & Audio Streaming Integration
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **tAimra** — `src/entities/platform.py` · Opt-in Digital Twin System & Life Assistant
+      - **Abilities**
+        - _2 more — see `taxonomy.json`_
+      - **Components**
+        - _2 more — see `taxonomy.json`_
+      - **Job Descriptions**
+        - _1 more — see `taxonomy.json`_
+      - **Power Ups**
+        - _8 more — see `taxonomy.json`_
+    - **_unrouted_** — `config/estate/registry.yaml::TRC-P0-006` · 60 nano-services with no owning Location (registry records lead_ai: null)
+      - **Components**
+        - _60 more — see `taxonomy.json`_
+  - **AIs** — `src/entities/platform.py`
+    - **Tier 1 (Orchestrator)** — `src/entities/platform.py::get_orchestration_tier`
+      - **Cornelius MacIntyre** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **The Queen** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **tAImra** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+    - **Tier 2 (Primes)** — `src/entities/platform.py::get_orchestration_tier`
+      - **Voxx** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **The Guardian (Marcus Magnolia)** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Dorris Fontaine** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Trancendos** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **The Dr. (Nikolai O'denhime)** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Norman Hawkins** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Savania** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+    - **Tier 3 (Lead AI)** — `src/entities/platform.py::get_orchestration_tier`
+      - **Solarscene** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Lilli SC** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Clarence Porter** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Ann Porter** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **George Porter** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Edward Porter** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **James Porter** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Chronos** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Renik** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Kitty** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Fiddsy** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Baron Von Hilton** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Elouise** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **The Orb of Orisis** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Magdalena** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Madam Krystal** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **The Dutchy** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Benji Tate** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Sam King** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Shimshi** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Lunascene** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Gary Glowman (Glow-Worm)** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **The Mad Hatter** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Alice Dream** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Tyler Towncroft** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Neonach** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Slime** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Zimik** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Rocking Ricki** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Nexus-Prime** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Imfy** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Tristuran** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Prometheus** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Larry Lowhammer** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Junior Cesar** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Samantha Turing** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+      - **Entari** — `src/entities/platform.py`
+        - _4 more — see `taxonomy.json`_
+  - **Dimensionals (Shared-Core)** — `Dimensionals`
+    - **Services**
+      - **architecture** — `Dimensionals/architecture`
+      - **orchestration** — `Dimensionals/orchestration`
+      - **infinity** — `Dimensionals/infinity`
+      - **nexus** — `Dimensionals/nexus`
+      - **hive** — `Dimensionals/hive`
+      - **swarm** — `Dimensionals/swarm`
+    - **Middleware**
+      - **middleware** — `Dimensionals/middleware`
+      - **security** — `Dimensionals/security.py`
+      - **security_automation** — `Dimensionals/security_automation`
+      - **cors** — `Dimensionals/cors.py`
+      - **error_handlers** — `Dimensionals/error_handlers.py`
+    - **Databases**
+      - **dimensionals** — `Dimensionals/dimensionals`
+      - **models** — `Dimensionals/models.py`
+      - **registry** — `Dimensionals/registry.py`
+    - **Mesh**
+      - **bus** — `Dimensionals/bus.py`
+      - **cellular** — `Dimensionals/cellular`
+      - **genetics** — `Dimensionals/genetics`
+      - **gas** — `Dimensionals/gas`
+      - **liquid** — `Dimensionals/liquid`
+      - **quantum** — `Dimensionals/quantum`
+      - **reservoir** — `Dimensionals/reservoir`
+      - **pillars** — `Dimensionals/pillars`
+    - **Routers**
+      - **cross_bridge_orchestrator** — `Dimensionals/cross_bridge_orchestrator.py`
+      - **three_bridge_coordinator** — `Dimensionals/three_bridge_coordinator.py`
+      - **circuit_state** — `Dimensionals/circuit_state.py`
+    - **Unclassified**
+      - **log_sanitize** — `Dimensionals/log_sanitize.py`
+      - **optional_import** — `Dimensionals/optional_import.py`
+      - **path_validation** — `Dimensionals/path_validation.py`
+      - **sanitize** — `Dimensionals/sanitize.py`
+      - **service_auth** — `Dimensionals/service_auth.py`
+      - **service_auth_fastapi** — `Dimensionals/service_auth_fastapi.py`
+      - **url_validation** — `Dimensionals/url_validation.py`

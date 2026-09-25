@@ -1,0 +1,736 @@
+{
+  "summary": {
+    "locations": 43,
+    "in_cmdb": 40,
+    "with_documentation": 34,
+    "with_registry_ref": 43,
+    "env_ok": 8,
+    "env_undeclared": 33,
+    "env_unchecked": 2,
+    "dependencies_declared": 40,
+    "dependencies_unchecked": 3,
+    "complete_on_all_six": 6
+  },
+  "locations": [
+    {
+      "location": "API Marketplace",
+      "in_cmdb": false,
+      "documentation": "docs/services/api-marketplace/README.md",
+      "registry_ref": "TRC-P3-042",
+      "env_status": "ok",
+      "env_consumed": 1,
+      "env_undeclared": [],
+      "dependency_status": "not checked",
+      "depends_on": [],
+      "in_domain_model": false
+    },
+    {
+      "location": "Arcadia",
+      "in_cmdb": true,
+      "documentation": "docs/services/arcadia/README.md",
+      "registry_ref": "TRC-P3-024",
+      "env_status": "not checked",
+      "env_consumed": 0,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Arcadian Exchange",
+      "in_cmdb": true,
+      "documentation": "docs/services/arcadian-exchange/README.md",
+      "registry_ref": "TRC-P3-027",
+      "env_status": "ok",
+      "env_consumed": 3,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "ChronosSphere / ArcStream",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-050",
+      "env_status": "undeclared",
+      "env_consumed": 24,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "CRON_DB_PATH"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Cryptex",
+      "in_cmdb": true,
+      "documentation": "docs/services/cryptex/README.md",
+      "registry_ref": "TRC-P3-043",
+      "env_status": "undeclared",
+      "env_consumed": 27,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "CLAMAV_SOCKET",
+        "CRYPTEX_TLS_VERIFY",
+        "SURICATA_LOG_DIR",
+        "YARA_RULES_DIR"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-RATELIMIT-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "DevOcity",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-051",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "DocUtari",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-031",
+      "env_status": "undeclared",
+      "env_consumed": 13,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "INTERNAL_SERVICE_TOKEN"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Fabulousa",
+      "in_cmdb": true,
+      "documentation": "docs/services/fabulousa/README.md",
+      "registry_ref": "TRC-P3-037",
+      "env_status": "undeclared",
+      "env_consumed": 7,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "FIGMA_TOKEN",
+        "PENPOT_TOKEN"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "I-Mind",
+      "in_cmdb": true,
+      "documentation": "docs/services/i-mind/README.md",
+      "registry_ref": "TRC-P3-053",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Imaginarium",
+      "in_cmdb": true,
+      "documentation": "docs/services/imaginarium/README.md",
+      "registry_ref": "TRC-P3-038",
+      "env_status": "undeclared",
+      "env_consumed": 10,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Infinity",
+      "in_cmdb": true,
+      "documentation": "docs/services/infinity/README.md",
+      "registry_ref": "TRC-P1-001",
+      "env_status": "undeclared",
+      "env_consumed": 11,
+      "env_undeclared": [
+        "AUTH_BASE_URL",
+        "AUTH_ISSUER",
+        "JWT_PUBLIC_KEY"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-VOID-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Luminous",
+      "in_cmdb": true,
+      "documentation": "docs/services/luminous/README.md",
+      "registry_ref": "TRC-P3-023",
+      "env_status": "undeclared",
+      "env_consumed": 17,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "DEFAULT_DAILY_TOKEN_LIMIT",
+        "HUGGINGFACE_BASE_URL",
+        "LRU_CACHE_MAX_SIZE",
+        "OPENROUTER_BASE_URL",
+        "SMART_CACHE_CAPACITY",
+        "SMART_CACHE_TTL_S"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Resonate",
+      "in_cmdb": true,
+      "documentation": "docs/services/resonate/README.md",
+      "registry_ref": "TRC-P3-056",
+      "env_status": "undeclared",
+      "env_consumed": 6,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "NOTIFICATIONS_URL"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Royal Bank of Arcadia",
+      "in_cmdb": true,
+      "documentation": "docs/services/royal-bank-of-arcadia/README.md",
+      "registry_ref": "TRC-P3-026",
+      "env_status": "ok",
+      "env_consumed": 3,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Sashas Photo Studio",
+      "in_cmdb": true,
+      "documentation": "docs/services/sashas-photo-studio/README.md",
+      "registry_ref": "TRC-P3-034",
+      "env_status": "undeclared",
+      "env_consumed": 6,
+      "env_undeclared": [
+        "A1111_URL",
+        "ALLOWED_ORIGINS",
+        "COMFYUI_URL"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Section 7",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-047",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "TateKing",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-036",
+      "env_status": "undeclared",
+      "env_consumed": 10,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "TATEKING_ALLOWED_INPUT_HOSTS",
+        "TATEKING_DB_PATH",
+        "TATEKING_MEDIA_DIR",
+        "VIDEO_OUTPUT_DIR"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Academy",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-academy/README.md",
+      "registry_ref": "TRC-P3-030",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Artifactory",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-artifactory/README.md",
+      "registry_ref": "TRC-P3-041",
+      "env_status": "undeclared",
+      "env_consumed": 8,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "LOCAL_ARTIFACT_PATH"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Basement",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-basement/README.md",
+      "registry_ref": "TRC-P3-032",
+      "env_status": "undeclared",
+      "env_consumed": 5,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-OBS-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Chaos Party",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-chaos-party/README.md",
+      "registry_ref": "TRC-P3-040",
+      "env_status": "undeclared",
+      "env_consumed": 10,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "CHAOS_TREND_BASELINE_WINDOW",
+        "CHAOS_TREND_RECENT_WINDOW",
+        "CHAOS_TREND_REGRESSION_DROP",
+        "OBSERVATORY_FORWARD_TIMEOUT"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Citadel",
+      "in_cmdb": false,
+      "documentation": "docs/services/the-citadel/README.md",
+      "registry_ref": "TRC-P3-048",
+      "env_status": "undeclared",
+      "env_consumed": 2,
+      "env_undeclared": [
+        "ICEBOX_PORT",
+        "ICEBOX_SECRET"
+      ],
+      "dependency_status": "not checked",
+      "depends_on": [],
+      "in_domain_model": true
+    },
+    {
+      "location": "The Digital Grid",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-digital-grid/README.md",
+      "registry_ref": "TRC-P0-002",
+      "env_status": "undeclared",
+      "env_consumed": 21,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "GRID_DB_PATH"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-SPARK-001",
+        "SRV-VOID-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The HIVE",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-hive/README.md",
+      "registry_ref": "TRC-P1-014",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-HIVE-001",
+        "SRV-INF-001",
+        "SRV-QUEUE-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Ice Box",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-ice-box/README.md",
+      "registry_ref": "TRC-P3-044",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ICE_BOX_PORT",
+        "ICE_BOX_QUARANTINE_DB",
+        "ICE_BOX_STRICT_MODE"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": true
+    },
+    {
+      "location": "The Lab",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-lab/README.md",
+      "registry_ref": "TRC-P3-039",
+      "env_status": "undeclared",
+      "env_consumed": 9,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "EXEC_TIMEOUT"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-LAB-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Library",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-library/README.md",
+      "registry_ref": "TRC-P3-029",
+      "env_status": "undeclared",
+      "env_consumed": 26,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "DOKUWIKI_PASS",
+        "DOKUWIKI_USER",
+        "LIBRARY_PHEROMONE_DECAY",
+        "LIBRARY_PROBE_TIMEOUT",
+        "LIBRARY_QUOTA_MAX_CALLS",
+        "LIBRARY_QUOTA_WINDOW"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Lighthouse",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-lighthouse/README.md",
+      "registry_ref": "TRC-P1-013",
+      "env_status": "ok",
+      "env_consumed": 3,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Nexus",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-nexus/README.md",
+      "registry_ref": "TRC-P0-003",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Observatory",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-observatory/README.md",
+      "registry_ref": "TRC-P1-010",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-MONDASH-001",
+        "SRV-OBS-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Spark",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-spark/README.md",
+      "registry_ref": "TRC-P0-001",
+      "env_status": "ok",
+      "env_consumed": 2,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-VOID-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Studio",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-studio/README.md",
+      "registry_ref": "TRC-P3-033",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Town Hall",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-town-hall/README.md",
+      "registry_ref": "TRC-P3-028",
+      "env_status": "ok",
+      "env_consumed": 0,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-SPARK-001",
+        "SRV-WORKSHOP-001"
+      ],
+      "in_domain_model": true
+    },
+    {
+      "location": "The Void",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-void/README.md",
+      "registry_ref": "TRC-P3-021",
+      "env_status": "ok",
+      "env_consumed": 6,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Warp Tunnel",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-warp-tunnel/README.md",
+      "registry_ref": "TRC-P3-045",
+      "env_status": "undeclared",
+      "env_consumed": 5,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "MAX_FILE_SIZE"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "The Workshop",
+      "in_cmdb": true,
+      "documentation": "docs/services/the-workshop/README.md",
+      "registry_ref": "TRC-P3-025",
+      "env_status": "not checked",
+      "env_consumed": 0,
+      "env_undeclared": [],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001",
+        "SRV-VOID-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Think Tank",
+      "in_cmdb": false,
+      "documentation": "docs/services/think-tank/README.md",
+      "registry_ref": "TRC-P3-049",
+      "env_status": "ok",
+      "env_consumed": 0,
+      "env_undeclared": [],
+      "dependency_status": "not checked",
+      "depends_on": [],
+      "in_domain_model": false
+    },
+    {
+      "location": "TranceFlow",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-035",
+      "env_status": "undeclared",
+      "env_consumed": 22,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "TRANCEFLOW_PROBE_TIMEOUT",
+        "TRANCEFLOW_TLS_VERIFY"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Tranquility",
+      "in_cmdb": true,
+      "documentation": "docs/services/tranquility/README.md",
+      "registry_ref": "TRC-P3-052",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Turing's Hub",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-018",
+      "env_status": "undeclared",
+      "env_consumed": 5,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "VRAR3D",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-055",
+      "env_status": "undeclared",
+      "env_consumed": 28,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "VRAR3D_PROBE_TIMEOUT",
+        "VRAR3D_TLS_VERIFY"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "Warp Radio",
+      "in_cmdb": true,
+      "documentation": "docs/services/warp-radio/README.md",
+      "registry_ref": "TRC-P3-046",
+      "env_status": "undeclared",
+      "env_consumed": 5,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS",
+        "NAVIDROME_URL"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    },
+    {
+      "location": "tAimra",
+      "in_cmdb": true,
+      "documentation": "",
+      "registry_ref": "TRC-P3-054",
+      "env_status": "undeclared",
+      "env_consumed": 4,
+      "env_undeclared": [
+        "ALLOWED_ORIGINS"
+      ],
+      "dependency_status": "ok",
+      "depends_on": [
+        "SRV-INF-001"
+      ],
+      "in_domain_model": false
+    }
+  ]
+}

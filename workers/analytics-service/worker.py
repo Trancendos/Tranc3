@@ -32,7 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ── Config ────────────────────────────────────────────────────────────────────
 WORKER_PORT = int(os.environ.get("ANALYTICS_PORT", "8016"))
@@ -316,13 +316,44 @@ def _duckdb_query_events(
 def _polars_aggregate(
     name: str, agg: str, since: Optional[float], until: Optional[float]
 ) -> Optional[float]:
+    """Aggregate one metric, honouring the same time window as the SQL path.
+
+    `since` and `until` were accepted here and then ignored: the query was
+    `SELECT value FROM metrics WHERE name=?` with no time predicate. Because
+    `get_metric` tries this backend FIRST and returns whatever it produces,
+    a request like `/metrics/foo?since=X&until=Y` silently aggregated every
+    timestamp on record whenever polars was selected and succeeded — the same
+    request answered differently depending on which backend won, with no error
+    either way. Raised by CodeAnt on PR #1207.
+
+    The predicate below is the same one `get_metric`'s SQL fallback builds, so
+    the two backends now agree by construction. `is not None` rather than a
+    truthiness test in both places: `since=0.0` is a valid epoch timestamp, and
+    a falsy check would drop the filter for it.
+    """
     try:
         import polars as pl  # type: ignore[import-untyped]
 
+        clauses, params = ["name = ?"], [name]
+        if since is not None:
+            clauses.append("timestamp >= ?")
+            params.append(since)
+        if until is not None:
+            clauses.append("timestamp <= ?")
+            params.append(until)
+        where = "WHERE " + " AND ".join(clauses)
+
         with _db_conn() as c:
-            rows = c.execute("SELECT value FROM metrics WHERE name=?", (name,)).fetchall()
+            rows = c.execute(f"SELECT value FROM metrics {where}", params).fetchall()
         if not rows:
-            return None
+            # `count` of an empty window is 0; every other aggregation of an
+            # empty window is genuinely unknown. Returning None for all five made
+            # the two backends disagree on exactly one case -- SQLite's
+            # COUNT(value) over zero rows is 0, not NULL -- so
+            # `?agg=count&since=<future>` answered `null` when polars won and `0`
+            # when SQL did. Found by adding `count` to the differential test, at
+            # cubic's suggestion on PR #1207.
+            return 0.0 if agg == "count" else None
         df = pl.DataFrame({"value": [r["value"] for r in rows]})
         if agg == "avg":
             return df["value"].mean()
@@ -589,11 +620,14 @@ def get_metric(
             return {"name": name, "aggregation": agg, "result": result, "backend": backend}
         _GUARDS[backend].decay()
 
+    # `is not None`, not truthiness: `since=0.0` is a valid epoch timestamp and a
+    # falsy check silently drops the filter for it. Matches _polars_aggregate so
+    # the two backends cannot answer the same request differently.
     clauses, params = ["name = ?"], [name]
-    if since:
+    if since is not None:
         clauses.append("timestamp >= ?")
         params.append(since)
-    if until:
+    if until is not None:
         clauses.append("timestamp <= ?")
         params.append(until)
     where = "WHERE " + " AND ".join(clauses)
@@ -614,11 +648,16 @@ def metric_timeseries(
     limit: int = Query(90, le=365),
 ) -> Dict[str, Any]:
     fmt = "%Y-%m-%dT%H" if bucket == "hour" else "%Y-%m-%d"
+    # `is not None`, matching get_metric and _polars_aggregate: since=0.0 is a
+    # real bound (midnight 1970) and a truthiness test silently drops it. This
+    # endpoint kept the truthiness form after the other two were fixed, which is
+    # how the same defect survives a fix -- by living in a third place nobody
+    # listed.
     clauses, params = ["name = ?"], [name]
-    if since:
+    if since is not None:
         clauses.append("timestamp >= ?")
         params.append(since)
-    if until:
+    if until is not None:
         clauses.append("timestamp <= ?")
         params.append(until)
     where = "WHERE " + " AND ".join(clauses)

@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:87fadd2d8f2aa0f4a10116a71290ad22",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "stirling-pdf",
+      "bom-ref": "CI-CT-stirling-pdf",
+      "version": "stirlingtools/stirling-pdf:latest@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "pulled"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-stirling-pdf"
+      },
+      {
+        "name": "trancendos:no-manifest",
+        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+      }
+    ]
+  },
+  "components": []
+}

@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:111383619f012226c79d772b2095ddee",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "valkey",
+      "bom-ref": "CI-CT-valkey",
+      "version": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "pulled"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-valkey"
+      },
+      {
+        "name": "trancendos:no-manifest",
+        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+      }
+    ]
+  },
+  "components": []
+}

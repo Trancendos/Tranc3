@@ -22,7 +22,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from Dimensional.infinity.bridge.bridge_core import (
+from Dimensionals.infinity.bridge.bridge_core import (
     InfinityBridge,
     InfinityBridgeEvent,
     get_infinity_bridge,

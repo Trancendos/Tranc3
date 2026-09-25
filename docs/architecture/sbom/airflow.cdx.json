@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:be7fa1f69f2c5a8e65d24985da251982",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "airflow",
+      "bom-ref": "CI-CT-airflow",
+      "version": "apache/airflow:3.3.1@sha256:0c4bcc0370e526de1b7892a3bf4343d260c6c82359c66f77155b53cd773d6339"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "pulled"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-airflow"
+      },
+      {
+        "name": "trancendos:no-manifest",
+        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+      }
+    ]
+  },
+  "components": []
+}

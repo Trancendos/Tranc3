@@ -570,7 +570,7 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # Delegated to Dimensionals.service_auth, which this worker now reaches
     # through the `sharedcore` named build context. It compares with
     # compare_digest and refuses when the secret is unset.
     guard_internal_secret(
@@ -811,7 +811,7 @@ import asyncio  # noqa: E402
 
 from fastapi.responses import StreamingResponse  # noqa: E402
 
-from Dimensional.service_auth_fastapi import guard_internal_secret  # noqa: E402
+from Dimensionals.service_auth_fastapi import guard_internal_secret  # noqa: E402
 
 # In-process fan-out bus: user_id → list of asyncio.Queue
 _sse_subscribers: dict[str, list[asyncio.Queue]] = {}  # type: ignore[type-arg]

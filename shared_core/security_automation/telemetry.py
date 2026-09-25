@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.security_automation.telemetry"""
+"""Backward-compatibility shim — canonical: Dimensionals.security_automation.telemetry"""
 
-from Dimensional.security_automation.telemetry import *  # noqa: F401, F403
+from Dimensionals.security_automation.telemetry import *  # noqa: F401, F403

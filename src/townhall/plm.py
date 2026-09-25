@@ -54,7 +54,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.event_bus.types import PlatformEventType
 
 logger = logging.getLogger("tranc3.townhall.plm")

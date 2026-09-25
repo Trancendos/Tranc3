@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from Dimensional.path_validation import (
+from Dimensionals.path_validation import (
     PathTraversalError,
     list_validated_children_fd,
     read_validated_file_text,

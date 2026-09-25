@@ -25,6 +25,8 @@ from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from src.utils.url_guard import require_http_url
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -103,7 +105,10 @@ class WazuhConnector:
         password: Optional[str] = None,
         buffer_db: Optional[str] = None,
     ) -> None:
-        self._url = (url or _WAZUH_URL).rstrip("/")
+        # WAZUH_URL is env/caller supplied and reaches urlopen below, so it selects
+        # the scheme. Validated once here; both call sites are inside broad excepts
+        # that would otherwise mask a file:// read as a Wazuh outage.
+        self._url = require_http_url((url or _WAZUH_URL).rstrip("/"))
         self._username = username or _WAZUH_USER
         self._password = password or _WAZUH_PASSWORD
         self._buffer_db_path = buffer_db or _BUFFER_DB
@@ -176,7 +181,7 @@ class WazuhConnector:
                     "Content-Type": "application/json",
                 },
             )
-            with urlopen(req, timeout=10) as resp:  # nosec B310
+            with urlopen(req, timeout=10) as resp:  # nosec B310 — scheme validated in __init__
                 data = json.loads(resp.read().decode())
             token = data.get("data", {}).get("token")
             if not token:
@@ -221,7 +226,7 @@ class WazuhConnector:
             },
         )
         try:
-            with urlopen(req, timeout=15) as resp:  # nosec B310
+            with urlopen(req, timeout=15) as resp:  # nosec B310 — scheme validated in __init__
                 return json.loads(resp.read().decode())
         except URLError as exc:
             logger.warning("wazuh: network error [%s %s]: %s", method, path, exc)

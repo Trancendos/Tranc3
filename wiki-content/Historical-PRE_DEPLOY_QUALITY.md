@@ -43,7 +43,7 @@ make pre-deploy-fix
 
 - Bandit **B324**: `usedforsecurity=False` on MD5/SHA1 used for etags/hashing (not passwords)
 - **api.py**: `EnhancedPersonalityMatrix` + `get_brain()` / dream-cycle hook
-- **mypy**: exclude `Dimensional/`, ignore stub `src.*.routes` modules
+- **mypy**: exclude `Dimensionals/`, ignore stub `src.*.routes` modules
 - **bandit**: skip B311/B324 where documented; exclude non-production trees
 
 ## Full repo scans (informational)

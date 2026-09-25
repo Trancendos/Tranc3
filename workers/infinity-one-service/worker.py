@@ -41,28 +41,28 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
 
 # Phase 22: Infinity Ecosystem security
-from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import (
+from Dimensionals.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensionals.infinity.nomenclature import (
     SentinelChannel,
 )
-from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensionals.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensionals.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station
-from Dimensional.infinity.sentinel_station import (
+from Dimensionals.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 
 # Phase 22.4: Dimensional Services
 
@@ -520,10 +520,10 @@ async def create_identity(request: Request, identity: IdentityCreate):
         raise HTTPException(status_code=409, detail="Identity already exists")
 
     # Determine tier and infinity_role from role
-    from Dimensional.infinity.nomenclature import (
+    from Dimensionals.infinity.nomenclature import (
         get_infinity_role_for_role as _girr,
     )
-    from Dimensional.infinity.nomenclature import (
+    from Dimensionals.infinity.nomenclature import (
         get_tier_for_role as _gtr,
     )
 
@@ -691,10 +691,10 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from Dimensional.infinity.nomenclature import (
+        from Dimensionals.infinity.nomenclature import (
             get_infinity_role_for_role as _girr,
         )
-        from Dimensional.infinity.nomenclature import (
+        from Dimensionals.infinity.nomenclature import (
             get_tier_for_role as _gtr,
         )
 

@@ -16,7 +16,7 @@ RUN mkdir -p /data/tranceflow-assets && chown tranceflow:tranceflow /data /data/
 # repo root. Supplied by docker-compose.production.yml, or for a direct
 #   docker build --build-context sharedcore=../../Dimensional .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=tranceflow:tranceflow . /app/Dimensional/
+COPY --from=sharedcore --chown=tranceflow:tranceflow . /app/Dimensionals/
 ENV PYTHONPATH=/app
 # --- end SFSC ---
 

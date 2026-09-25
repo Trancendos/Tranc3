@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.middleware.auth"""
+"""Backward-compatibility shim — canonical: Dimensionals.middleware.auth"""
 
-from Dimensional.middleware.auth import *  # noqa: F401, F403
+from Dimensionals.middleware.auth import *  # noqa: F401, F403

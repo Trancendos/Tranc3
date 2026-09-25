@@ -1,0 +1,19 @@
+{
+  "_comment": "Compose image pins with no @sha256 digest, keyed on file + image so an unrelated edit that moves a line cannot redden CI. This is a debt register to burn down, not an allowance to grow. scripts/check_compose_image_digests.py fails on any pin not listed here.",
+  "undigested": [
+    "deploy/forgejo/docker-compose.yml trancendos/act-runner:latest",
+    "docker-compose.optional-services.yml code.forgejo.org/forgejo/runner:3",
+    "docker-compose.oss-foundations.yml yanwk/comfyui-boot:latest",
+    "docker-compose.production.yml code.forgejo.org/forgejo/runner:3",
+    "docker-compose.production.yml cr.weaviate.io/semitechnologies/weaviate:1.25.4",
+    "docker-compose.production.yml cuckoosandbox/cuckoo:latest",
+    "docker-compose.production.yml filigran/openbas-platform:latest",
+    "docker-compose.production.yml ghcr.io/dagster-io/dagster:latest",
+    "docker-compose.production.yml ghcr.io/ggerganov/llama.cpp:server",
+    "docker-compose.production.yml greenbone/community-edition:latest",
+    "docker-compose.production.yml mattermost/mattermost-team-edition:9",
+    "docker-compose.production.yml temporalio/temporalite:latest",
+    "docker-compose.production.yml trancendos/cryptex:latest",
+    "docker-compose.storage.yml minio/mc:RELEASE.2024-08-29T01-40-52Z"
+  ]
+}

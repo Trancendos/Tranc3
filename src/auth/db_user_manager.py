@@ -11,7 +11,7 @@ import bcrypt
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.auth.passwords import hash_password as _hash_password
 from src.auth.passwords import verify_password as _verify_password
 from src.validation.validators import validate_email, validate_username

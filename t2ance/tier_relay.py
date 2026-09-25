@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from t2ance.prime_registry import get_prime_registry
 
 logger = logging.getLogger("t2ance.tier_relay")

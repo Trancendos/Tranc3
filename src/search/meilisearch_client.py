@@ -66,7 +66,7 @@ def _request(method: str, path: str, body: Optional[bytes] = None) -> Any:
     )
     req = urllib.request.Request(url, data=body, headers=_headers(), method=method)  # nosec B310
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
+        with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310 — scheme validated in _validated_base_url
             return json.loads(resp.read())
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"Meilisearch {method} {path} → HTTP {exc.code}: {exc.read()}") from exc

@@ -1,0 +1,78 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:abf7d7fa1d7a9c8c118d1a99710e05de",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "imaginarium",
+      "bom-ref": "CI-CT-imaginarium",
+      "version": "built-from-source"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "built"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "Imaginarium"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-imaginarium"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
+      },
+      {
+        "name": "trancendos:manifest",
+        "value": "workers/imaginarium/requirements.txt"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "fastapi",
+      "bom-ref": "pkg:pypi/fastapi@0.141.1",
+      "purl": "pkg:pypi/fastapi@0.141.1",
+      "version": "0.141.1"
+    },
+    {
+      "type": "library",
+      "name": "starlette",
+      "bom-ref": "pkg:pypi/starlette@1.6.0",
+      "purl": "pkg:pypi/starlette@1.6.0",
+      "version": "1.6.0"
+    },
+    {
+      "type": "library",
+      "name": "uvicorn",
+      "bom-ref": "pkg:pypi/uvicorn@0.52.4",
+      "purl": "pkg:pypi/uvicorn@0.52.4",
+      "version": "0.52.4"
+    },
+    {
+      "type": "library",
+      "name": "httpx",
+      "bom-ref": "pkg:pypi/httpx@0.28.1",
+      "purl": "pkg:pypi/httpx@0.28.1",
+      "version": "0.28.1"
+    }
+  ]
+}

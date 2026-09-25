@@ -17,7 +17,7 @@ from fastapi import HTTPException
 
 from config import AUTH_SERVICE_URL
 from database import db
-from Dimensional.infinity.nomenclature import (
+from Dimensionals.infinity.nomenclature import (
     GATE_ROUTING,
     INFINITY_LOCATIONS,
     InfinityLocation,

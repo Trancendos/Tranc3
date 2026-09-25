@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from Dimensional.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
+from Dimensionals.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
 from src.shared.client_ip import resolve_client_ip
 

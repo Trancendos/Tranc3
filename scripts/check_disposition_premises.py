@@ -40,6 +40,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.security import accepted_risk_register  # noqa: E402
+
 REGISTER = "SECURITY_ALERT_REGISTER.md"
 
 #: Directories whose contents are not ours to reason about.
@@ -498,8 +503,92 @@ def check_sec_007() -> list[str]:
     return failures
 
 
+#: The disposition vocabulary, imported rather than restated. An earlier version
+#: of this guard duplicated the tuple and hand-rolled a parser beside it, with a
+#: comment saying the two "cannot disagree" -- which duplication is precisely how
+#: they would have. `accepted_risk_register` is what the census reads; this gate
+#: now reads the same constant through the same regex.
+#:
+#: The hand-rolled parser was `cells[1].strip("* ").split()[0]`, and it was wrong
+#: in the one way that matters here. `strip` removes the listed characters from
+#: BOTH ends, so it ate the leading `**` and left the trailing one attached to
+#: whatever followed:
+#:
+#:   "**SUPPRESS** - no patched release exists"  ->  "SUPPRESS**"
+#:   "**ACCEPT** - **RETIRED** (upstream fix landed)"  ->  "ACCEPT**"
+#:
+#: Neither is in ACCEPTING_DISPOSITIONS, so a live SUPPRESS with a reason written
+#: after it would have been read as closed and its premise checks skipped, with
+#: the gate reporting PASSED. The second line is the exact row shape that caused
+#: the SEC-005 defect this engagement started from -- read the wrong way round by
+#: the guard written to stop it happening again. Raised by cubic, confidence 10.
+_ACCEPTING = accepted_risk_register.ACCEPTING_DISPOSITIONS
+
+#: Tokens that close an entry. Listed explicitly so an unrecognised one -- a typo,
+#: a new word nobody taught this script -- fails rather than silently reading as
+#: closed and disabling the premise checks. Every value currently in the register
+#: is covered: ACCEPT, SUPPRESS, FIX, FP, RESOLVED, RETIRED.
+_CLOSING = ("FIX", "FP", "RESOLVED", "RETIRED")
+
+
+def disposition_of(entry_id: str, register: Path | None = None) -> str | None:
+    """Return the first word of `entry_id`'s Disposition row, or None if absent."""
+    text = (register or (ROOT / REGISTER)).read_text(encoding="utf-8")
+    for entry in accepted_risk_register._entries(text):
+        # _entries() splits on "^### " and drops the marker, so a block starts
+        # at the id itself -- "SEC-007 — fflate ...", not "### SEC-007 — ...".
+        heading = entry.splitlines()[0].strip()
+        if not heading.startswith(f"{entry_id} ") and heading != entry_id:
+            continue
+        match = accepted_risk_register._DISPOSITION_ROW.search(entry)
+        return match.group(1).upper() if match else None
+    return None
+
+
+def still_accepting(entry_id: str) -> tuple[bool, list[str]]:
+    """(enforce?, failures) for one register entry.
+
+    A premise only needs enforcing while the entry still rests on it. Once an
+    entry is RESOLVED or RETIRED there is no acceptance left to protect, and a
+    guard that goes on failing for it punishes cleaning up -- which is how
+    entries stop being closed.
+
+    Two things are deliberately NOT treated as closed, because both would
+    disable a check by accident rather than by decision: an entry that has
+    vanished from the register, and a disposition word this script does not
+    recognise.
+    """
+    word = disposition_of(entry_id)
+    if word is None:
+        return False, [
+            f"{entry_id}: no entry with a Disposition row in {REGISTER}. This guard "
+            "enforces the premises that entry rests on, so its disappearance "
+            "silently disables a check rather than resolving anything. Restore the "
+            "entry, or remove this guard's clause for it deliberately."
+        ]
+    if word not in (*_ACCEPTING, *_CLOSING):
+        return False, [
+            f"{entry_id}: unrecognised Disposition {word!r} in {REGISTER}. Refusing "
+            "to treat it as closed, because an unknown word would disable this "
+            f"entry's premise checks by accident. Known: {(*_ACCEPTING, *_CLOSING)}"
+        ]
+    return word in _ACCEPTING, []
+
+
 def main() -> int:
-    failures = check_sec_006() + check_sec_007()
+    failures: list[str] = []
+    enforced: list[str] = []
+    skipped: list[str] = []
+
+    for entry_id, check in (("SEC-006", check_sec_006), ("SEC-007", check_sec_007)):
+        enforce, problems = still_accepting(entry_id)
+        failures += problems
+        if enforce:
+            enforced.append(entry_id)
+            failures += check()
+        elif not problems:
+            skipped.append(f"{entry_id} ({disposition_of(entry_id)})")
+
     if failures:
         print(
             "[ERROR] A recorded disposition rests on a premise that no longer holds.\n"
@@ -509,13 +598,14 @@ def main() -> int:
         for failure in failures:
             print(f"  {failure}")
         return 1
-    pins = ", ".join(f"{name}@{version}" for name, version in _SEC_007_MEASURED.items())
     print(
-        "Disposition premises: PASSED — SEC-006 (nltk 3.10.3 with no fix available, "
-        "undeclared in runtime manifests, reached lazily, wordnet only, no path call) "
-        "and SEC-007 (no fflate "
-        f"decompression in web/; {pins} still the versions the call-site evidence was "
-        "measured on) both still hold"
+        "Disposition premises: PASSED — "
+        + (f"enforced for {', '.join(enforced)}" if enforced else "no entry is still accepting")
+        + (
+            f"; not enforced for {', '.join(skipped)}, which no longer accept anything"
+            if skipped
+            else ""
+        )
     )
     return 0
 

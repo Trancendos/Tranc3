@@ -25,7 +25,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_NAME = "llamaindex-service"
 WORKER_PORT = int(os.getenv("PORT", "8096"))

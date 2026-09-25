@@ -1,5 +1,5 @@
 """
-Tests for Dimensional.architecture.proactive_orchestrator.
+Tests for Dimensionals.architecture.proactive_orchestrator.
 
 Covers: ProactiveAction, ActionPriority, ActionStatus, SystemVitalSign,
 OrchestratorMode, MetricSample, HealthPrediction, ActionPlan,
@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from Dimensional.architecture.proactive_orchestrator import (
+from Dimensionals.architecture.proactive_orchestrator import (
     ActionDispatcher,
     ActionPlan,
     ActionPriority,

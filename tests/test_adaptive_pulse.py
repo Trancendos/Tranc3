@@ -1,5 +1,5 @@
 """
-Tests for Dimensional.architecture.adaptive_pulse.
+Tests for Dimensionals.architecture.adaptive_pulse.
 
 Covers: PulseMode, PulseConfig, PulseTransition, PulseMetrics,
 AdaptivePulseController.
@@ -7,7 +7,7 @@ AdaptivePulseController.
 
 from __future__ import annotations
 
-from Dimensional.architecture.adaptive_pulse import (
+from Dimensionals.architecture.adaptive_pulse import (
     AdaptivePulseController,
     PulseConfig,
     PulseMetrics,

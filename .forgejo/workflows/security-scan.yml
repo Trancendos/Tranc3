@@ -162,10 +162,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install semgrep
-        # Pinned to match requirements-security.txt / Makefile's security-install --
-        # that pin's accepted-risk notes (mcp==1.23.3, SECURITY.md) are only
-        # authoritative if every semgrep invocation actually uses the same version.
-        run: python3 -m pip install semgrep==1.172.0 --quiet
+        # Pinned to match requirements-security.txt and Makefile's security-install.
+        # A pin's dependency reasoning is only authoritative if every semgrep
+        # invocation actually uses the same version, and this estate has three.
+        #
+        # The three drifted. requirements-security.txt moved 1.172.0 -> 1.173.0 ->
+        # 1.177.0; this line and Makefile:security-install both stayed at 1.172.0 --
+        # the last release that requires `mcp==1.23.3`, the version carrying
+        # CVE-2026-52869/52870/59950. From 1.173.0 onward semgrep requires
+        # `mcp==1.29.0`, which has zero OSV advisories, and SEC-005 is retired on
+        # that basis. So the register said the risk was gone while two of the three
+        # install paths kept installing it -- one of them inside the security scan.
+        #
+        # An earlier revision of this comment said fixing this line would leave the
+        # estate clean; it would not have, because the Makefile was still on 1.172.0.
+        # Both are on 1.177.0 now, and `tests/test_semgrep_pin_alignment.py` fails
+        # when any two pins disagree or when any pin predates 1.173.0 -- so the next
+        # partial bump is a red test rather than a comment someone has to re-read.
+        # Drift raised by CodeRabbit and the Makefile miss by cubic, on PR #1207.
+        run: python3 -m pip install semgrep==1.177.0 --quiet
 
       - name: Run semgrep (Python security + OWASP + FastAPI + JWT + SQL injection)
         run: |
