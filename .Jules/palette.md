@@ -24,3 +24,6 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
+## 2024-05-20 - Destructive Action Confirmation
+**Learning:** Destructive actions in the UI (e.g., deleting nodes, cancelling executions) must have a confirmation step to prevent accidental data loss. This is an important UX and accessibility principle, as users can misclick or trigger actions by accident.
+**Action:** Always add `window.confirm` to critical destructive actions unless they have an undo capability.
