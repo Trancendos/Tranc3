@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT))  # noqa: E402
 from fastapi import Depends, FastAPI, Header, HTTPException  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from Dimensional.service_auth_fastapi import guard_internal_secret  # noqa: E402
+from Dimensionals.service_auth_fastapi import guard_internal_secret  # noqa: E402
 from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict  # noqa: E402
 from src.security.ice_box.quarantine import QuarantineStore  # noqa: E402
 from src.security.ice_box.signatures import get_library  # noqa: E402
@@ -54,7 +54,7 @@ def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
     release quarantined content with no credential at all.
 
     It now answers 503 when the secret is unset, which is what
-    `Dimensional.service_auth` does for every gate on the platform.
+    `Dimensionals.service_auth` does for every gate on the platform.
     """
     guard_internal_secret(x_internal_secret, mismatch_status=403, detail="Forbidden")
 

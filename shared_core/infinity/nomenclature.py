@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.nomenclature"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.nomenclature"""
 
-from Dimensional.infinity.nomenclature import *  # noqa: F401, F403
+from Dimensionals.infinity.nomenclature import *  # noqa: F401, F403

@@ -17,17 +17,17 @@ from router import init_router_deps, router
 
 from config import CORS_ORIGINS, JWT_SECRET, PORT, logger
 from database import db
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
-from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import SentinelChannel
-from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
-from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensionals.infinity.nomenclature import SentinelChannel
+from Dimensionals.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensionals.infinity.rbac import RBACEngine
+from Dimensionals.infinity.sentinel_station import SentinelEvent, get_sentinel_station
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Security Engines

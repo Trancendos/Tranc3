@@ -27,20 +27,20 @@ from config import (
 from database import log_access_audit
 
 # Dimensional Services (Phase 22.4)
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
 
 # Dimensional security engines
-from Dimensional.infinity.abac import ABACEngine, get_default_policies
-from Dimensional.infinity.auth_gateway import WebSocketAuthManager
-from Dimensional.infinity.nomenclature import InfinityRole, Tier
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensionals.infinity.abac import ABACEngine, get_default_policies
+from Dimensionals.infinity.auth_gateway import WebSocketAuthManager
+from Dimensionals.infinity.nomenclature import InfinityRole, Tier
+from Dimensionals.infinity.rbac import RBACEngine
 
 # Sentinel Station
-from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
+from Dimensionals.infinity.sentinel_station import SentinelEvent, get_sentinel_station
 
 logger = logging.getLogger("gateway-service")
 

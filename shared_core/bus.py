@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.bus"""
+"""Backward-compatibility shim — canonical: Dimensionals.bus"""
 
-from Dimensional.bus import *  # noqa: F401, F403
+from Dimensionals.bus import *  # noqa: F401, F403

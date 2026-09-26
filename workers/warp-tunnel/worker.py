@@ -25,7 +25,7 @@ from typing import Optional
 from fastapi import APIRouter, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8040")
 WORKER_NAME = "warp-tunnel"

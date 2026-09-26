@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.optional_import"""
+"""Backward-compatibility shim — canonical: Dimensionals.optional_import"""
 
-from Dimensional.optional_import import *  # noqa: F401, F403
+from Dimensionals.optional_import import *  # noqa: F401, F403

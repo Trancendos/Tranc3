@@ -1,6 +1,6 @@
 # workers/notifications/url_validation.py
-# Vendored copy of Dimensional/url_validation.py — see sanitize.py in this same
-# directory for why. Keep in sync with Dimensional/url_validation.py.
+# Vendored copy of Dimensionals/url_validation.py — see sanitize.py in this same
+# directory for why. Keep in sync with Dimensionals/url_validation.py.
 #
 # SSRF (Server-Side Request Forgery) prevention utilities.
 #
@@ -10,7 +10,7 @@
 # internal surfaces that an attacker could probe via SSRF.
 #
 # Usage:
-#   from Dimensional.url_validation import validate_webhook_url, SSRFError
+#   from Dimensionals.url_validation import validate_webhook_url, SSRFError
 #
 #   validate_webhook_url(url)          # raises SSRFError if unsafe
 #   safe_url = sanitize_and_validate_url(url)  # returns parsed URL or raises

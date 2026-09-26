@@ -9,7 +9,7 @@ import service
 from fastapi import APIRouter, Depends, Header, Query
 
 import config
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import SignalType
 
 

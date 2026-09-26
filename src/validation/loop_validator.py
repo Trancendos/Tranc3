@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 
 # Shared transition primitives (TASD-001 Phase 2).
 from src.resilience.circuit_core import log_circuit_transition, should_recover

@@ -392,7 +392,7 @@ class TestInfinityAdminService:
 
     @pytest.mark.skip(
         reason=(
-            "401 comes from Dimensional/middleware/auth.py's JWT-based gateway "
+            "401 comes from Dimensionals/middleware/auth.py's JWT-based gateway "
             "(response body: 'Authentication required for this endpoint'), not "
             "router.py's own X-Internal-Secret check (already sent below, "
             "correctly, using the INTERNAL_SECRET env var config.py reads from — "

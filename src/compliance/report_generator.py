@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from Dimensional.path_validation import has_parent_traversal
+from Dimensionals.path_validation import has_parent_traversal
 
 if TYPE_CHECKING:
     from src.compliance.checker import ComplianceReport

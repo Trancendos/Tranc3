@@ -42,10 +42,10 @@ from config import UPSTREAM_WORKERS
 from database import fetch_access_audit, fetch_events, insert_event
 
 # Dimensional imports
-from Dimensional.infinity.abac import ThreatLevel
-from Dimensional.infinity.nomenclature import Pillar
-from Dimensional.infinity.sentinel_station import SharedSSEGenerator
-from Dimensional.path_validation import PathTraversalError, safe_join
+from Dimensionals.infinity.abac import ThreatLevel
+from Dimensionals.infinity.nomenclature import Pillar
+from Dimensionals.infinity.sentinel_station import SharedSSEGenerator
+from Dimensionals.path_validation import PathTraversalError, safe_join
 from models import AgentCreate, EventCreate, TopologySwitch, WorkflowCreate
 
 logger = logging.getLogger("gateway-service")
@@ -516,7 +516,7 @@ async def sentinel_status(request: Request):
 async def sentinel_channels(request: Request):
     """List available Sentinel Station channels."""
     check_rbac(request, "/api/security", "GET")
-    from Dimensional.infinity.sentinel_config import sentinel_config
+    from Dimensionals.infinity.sentinel_config import sentinel_config
 
     channels = {}
     for name, cfg in sentinel_config.channels.items():

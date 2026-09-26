@@ -1951,7 +1951,7 @@ def get_all_ids() -> List[Dict]:
 # PLATFORM ROLES — accountable ownership for things that are NOT Locations
 #
 # Every one of the 43 Locations has a Lead AI who notices when it breaks. The
-# Shared Functional Services Core (`Dimensional/`) had nobody, and the cost of
+# Shared Functional Services Core (`Dimensionals/`) had nobody, and the cost of
 # that showed up as a specific class of defect rather than as an abstraction:
 # 447 lines of point-of-authorship security scanning built and never wired to
 # anything; three duplicate CircuitState enums sitting inside the core while an
@@ -1981,12 +1981,12 @@ class PlatformRole:
 
 
 PLATFORM_ROLES: Dict[str, PlatformRole] = {
-    "Dimensional": PlatformRole(
-        role_id="Dimensional",
+    "Dimensionals": PlatformRole(
+        role_id="Dimensionals",
         job_description="Head of Data Transport & Swarm Operations",
         default_holder="The Queen",
         scope=(
-            "The Shared Functional Services Core (Dimensional/) — 101 modules "
+            "The Shared Functional Services Core (Dimensionals/) — 101 modules "
             "imported by 314 files: sanitisation, path/URL validation, security "
             "automation, event bus, service registry, circuit state."
         ),

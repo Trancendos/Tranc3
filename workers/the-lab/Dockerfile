@@ -12,9 +12,9 @@ COPY main.py .
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the
 # repo root. Supplied by docker-compose.production.yml, or for a direct
-#   docker build --build-context sharedcore=../../Dimensional .
+#   docker build --build-context sharedcore=../../Dimensionals .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=appuser:appuser . /app/Dimensional/
+COPY --from=sharedcore --chown=appuser:appuser . /app/Dimensionals/
 ENV PYTHONPATH=/app
 # --- end SFSC ---
 

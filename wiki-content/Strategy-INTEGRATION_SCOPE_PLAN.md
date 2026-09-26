@@ -14,7 +14,7 @@ Do **not** bulk-merge. This branch deletes 41 files under `shared_core/` and wou
 |----------|-------|--------|
 | 1 | `workers/` (+10 Dockerfiles/requirements) | Cherry-pick per worker; verify healthchecks still use `curl` if Dockerfile removes it |
 | 2 | `tests/` | Port only with matching worker/src changes |
-| 3 | `Dimensional/` | Medium risk — run targeted tests (`test_sentinel_cluster`, raft, hive) |
+| 3 | `Dimensionals/` | Medium risk — run targeted tests (`test_sentinel_cluster`, raft, hive) |
 | 4 | `src/` | Small mods — review entity templates and error catalog |
 | 5 | `web/` | UX/a11y as separate Arcadia PR |
 | 6 | `monitoring/`, `scripts/` | Safe if additive |
