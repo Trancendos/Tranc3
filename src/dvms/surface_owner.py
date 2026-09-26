@@ -133,6 +133,15 @@ DECLARED_OWNERS: Dict[str, Tuple[Optional[str], str]] = {
     "cloudflare/infinity-void": ("The Void", "the CF worker the vault is migrating off"),
     "workers/workflow-engine-service": ("The Digital Grid", "the Grid's execution engine"),
     "workers/hive-service": ("The HIVE", "the HIVE's task queue and agent coordination"),
+    # Became a scanned surface the moment it got a lockfile (it had none, so
+    # its own Dockerfile's `npm ci` could not run). Its package.json names the
+    # owner outright -- "The HIVE — BullMQ job queue service backed by Valkey"
+    # -- but neither ladder reaches it: no Location record points at this path,
+    # and compose port 8092 resolves to no entity.
+    "workers/bullmq-queue-service": (
+        "The HIVE",
+        "compose port 8092 — the BullMQ job queue behind the HIVE's task queue",
+    ),
     "workers/ledger-service": ("Royal Bank of Arcadia", "the bank's ledger"),
     "workers/infinity-portal-service": ("Infinity", "Infinity Portal — the front entrance"),
     "workers/infinity-one-service": ("Infinity", "Infinity-One — the single identity layer"),

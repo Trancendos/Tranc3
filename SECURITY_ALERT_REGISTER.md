@@ -1572,3 +1572,110 @@ Reviewed quarterly alongside `.trivyignore`, and whenever
 `scripts/security_score.py` or the pre-deploy quality gate reports a new
 medium-or-above finding. Any entry past its **Next review** date should be
 treated as expired rather than still-accepted.
+
+---
+
+## Appendix — scanner scope and procedures, merged from the wiki copy
+
+`wiki-content/Security-SECURITY_ALERT_REGISTER.md` was a second document with
+this same title, last touched 2026-09-11, and
+`scripts/check_doc_duplication.py` failed on the pair: two documents claiming
+to be the same thing drift, and each stays blind to the other's contents.
+
+It is now a pointer to this file. The material below is what it held that this
+register did not, moved rather than dropped — four Forgejo-export rows and the
+scanner-scope tables. The SEC-009…SEC-019 findings that copy listed are not
+repeated here; it was already pointing at this register for those.
+
+Dates and run identifiers are as that copy recorded them (2026-09-11) and have
+not been re-verified in the move.
+
+### Forgejo code-scanning export (sample, 2026-09-11)
+
+| ID | Source | Finding | Status | Action |
+|----|--------|---------|--------|--------|
+| #1539 | Trivy/Forgejo | Tiller CVE in `flux/base/deployments.yaml:251` | **FP** | Line 251 is `fmd-distiller` labels, not Tiller. No `tiller` image in repo. |
+| #2127 | Dockerfile | `workers/ffmpeg-worker` runs as root | **FIX** | Non-root `tranc3` user added (Phase 1) |
+| #1 | Trivy | `sentencepiece` CVE in requirements | **SUPPRESS** | Pinned `0.2.1`; documented in `.trivyignore` |
+| #2638 | CodeQL | SSRF in `workers/notifications/worker.py` | **FIX** | `validate_webhook_url()` before `urlopen`; tests in `tests/test_url_validation.py`. Webhook target refusal now includes query containment (SEC-011) |
+| #985 | CodeQL | SSRF in `workers/gateway-service/worker.py` | **FP** | Internal `httpx` to workflow service URL from env — not user-controlled fetch |
+
+Run when `FORGEJO_TOKEN` is set (the Forgejo UI must show **0 open Critical**):
+
+```bash
+export FORGEJO_URL="https://trancendos.com/the-workshop"
+export FORGEJO_TOKEN="<token>"
+export FORGEJO_REPO="Trancendos/Tranc3"
+python scripts/export_forgejo_code_scan_alerts.py --merge
+```
+
+Without a token: merge the latest `logs/forgejo-code-scanning-alerts-*.json`
+after a manual UI export, or use the CI artifact from the `security-scan`
+workflow.
+
+### Kubernetes manifest hardening
+
+| Finding | Location | Status | Action |
+|---------|----------|--------|--------|
+| Missing `securityContext` | `src/nanoservices/igi_gitops/flux/base/deployments.yaml` | **FIX** | Pod + container hardening aligned with `flux/base/` |
+| `hostIPC: true` | NSA broker, SHI gateway, DNF orchestrator (both flux trees) | **ACCEPT** | Required for POSIX shm IPC between nanoservice pods. See `docs/HOSTIPC_RISK_ACCEPTANCE.md` |
+| `hostPath` `/dev/shm` | `igi_gitops` deployments | **ACCEPT** | Paired with hostIPC; mitigated by network policies + non-root |
+| `readOnlyRootFilesystem` | Partial coverage | **FIX** | Applied where compatible; writable `/tmp` emptyDir where needed |
+
+### npm audit scope
+
+Directories scanned in CI, with the audit level each is held to per
+`security-scan.yml`:
+
+| Directory | `--audit-level` |
+|-----------|-----------------|
+| `cloudflare/tranc3-ai` | moderate |
+| `cloudflare/infinity-void` | moderate |
+| `cloudflare/trancendos-api-gateway` | high |
+| `tranc3-bots` | moderate |
+
+### SAST scope (Bandit / Semgrep / Ruff)
+
+| Tool | CI scope | Gate | Notes |
+|------|----------|------|-------|
+| **bandit** | `src/`, `api.py`, `workers/infinity-auth`, `workers/infinity-ws`, `workers/api-gateway` | medium+ severity and confidence | `# nosec` only where justified (B104 Docker bind, B108 `/dev/shm`, B310 validated URLs, B102 workflow sandbox). Ceiling tracked in `config/immune/nosec_ceiling.txt` |
+| **semgrep** | `src/` only | ERROR severity | Fix, or inline `nosemgrep` with the rule id |
+| **ruff** | `src/`, `api.py` | warn-only (`--exit-zero`) | E501 ignored |
+
+### Trivy / IaC row not otherwise recorded here
+
+| CVE | Status | Review | Notes |
+|-----|--------|--------|-------|
+| KSV118 | **FP** | 2027-03-01 | Helm Tiller false positive — the pod name `fmd-distiller` contains the substring "tiller". Re-check: when `fmd-distiller` is renamed, or Helm Tiller is genuinely deployed |
+
+### Security guard calibration
+
+`.forgejo/workflows/production-gate.yml` and
+`.github/workflows/production-gate.yml` run targeted mutation testing via
+`scripts/check_guard_calibration.py`. Each security guard is deleted in turn
+and its named tests must fail. A guard whose removal keeps the suite green is
+decorative, and blocks the gate.
+
+### Vulnerability census
+
+Run history is tracked in
+`docs/governance/vulnerability-census-history.jsonl`, covering the Python, npm,
+Go and Rust surfaces. The census routes findings to owning Locations per
+`config/estate/location_codes.yaml`.
+
+### Verification commands
+
+```bash
+python scripts/security_score.py
+python scripts/production_readiness_score.py
+python -m pytest tests/test_url_validation.py tests/test_zero_cost_registry.py tests/test_adaptive_rotator.py -q
+python scripts/pre_deploy_quality_gate.py
+```
+
+### Open items carried over (not P0 security blockers)
+
+- Marketing architecture terms (quantum, dimensional, transcendent) are **not
+  implemented** as production services; excluded from the security score.
+- Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
+  --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
+  Forgejo UI.
