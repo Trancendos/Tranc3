@@ -321,14 +321,15 @@ def _duckdb_query_events(
 # person to edit it can see that from the call site, and Sourcery/opengrep
 # rightly would not take it on trust. Replacing the f-string with a module
 # constant did not help either: the rule reads any non-literal statement the
-# same way, and it is right to. So each `execute()` now takes a literal.
+# same way, and it is right to. So each `execute()` takes a literal, and
+# `tests/test_analytics_time_window.py` asserts that the `WHERE` clause is
+# character-for-character identical across all of them -- comparing the
+# statements with each other rather than against a constant that could itself
+# be edited. (An earlier revision kept that predicate as a module constant used
+# only by the tests, which CodeQL correctly flagged as an unused global.)
 #
-# `_METRIC_WINDOW_SQL` is the text every one of them ends with. It is not
-# interpolated anywhere -- it exists so a test can assert that the three query
-# paths carry the identical predicate, which is the property that stops them
-# drifting apart again. `_EPOCH_FLOOR`/`_EPOCH_CEIL` stand in for an absent
-# bound; they are far outside any real epoch timestamp.
-_METRIC_WINDOW_SQL = "WHERE name = ? AND timestamp >= ? AND timestamp <= ?"
+# `_EPOCH_FLOOR`/`_EPOCH_CEIL` stand in for an absent bound; they are far
+# outside any real epoch timestamp.
 _EPOCH_FLOOR = -1e308
 _EPOCH_CEIL = 1e308
 
@@ -338,7 +339,7 @@ def _window(since: Optional[float], until: Optional[float]) -> tuple[float, floa
 
     Every metric query below binds both bounds unconditionally, which is what
     lets every statement stay a literal (see the note above
-    `_METRIC_WINDOW_SQL`).
+    `_EPOCH_FLOOR`).
     `is not None` rather than a truthiness test: `since=0.0` is a valid epoch
     timestamp, and a falsy check silently drops the filter for it.
     """
@@ -669,7 +670,7 @@ def get_metric(
 
     low, high = _window(since, until)
     # One statement for all five aggregations rather than one per `agg`. It
-    # keeps the SQL a literal (see the note above `_METRIC_WINDOW_SQL`), costs
+    # keeps the SQL a literal (see the note above `_EPOCH_FLOOR`), costs
     # one round trip instead of one per request, and makes it impossible for
     # two aggregations of the same request to be computed over different rows.
     with _db_conn() as c:

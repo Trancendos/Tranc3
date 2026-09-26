@@ -37,6 +37,7 @@ being trimmed to fit.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -73,6 +74,13 @@ def _execute_literals(func_name: str) -> list[str]:
     return out  # type: ignore[return-value]
 
 
+def _window_clause(sql: str) -> str:
+    """The `WHERE ...` portion of a statement, up to GROUP BY if there is one."""
+    match = re.search(r"WHERE .*?(?= GROUP BY|$)", sql, re.DOTALL)
+    assert match, f"statement has no WHERE clause: {sql!r}"
+    return match.group(0)
+
+
 def _time_predicate_params(func: ast.AST) -> set[str]:
     """Which of `since` / `until` this function actually reads."""
     return {
@@ -100,16 +108,18 @@ def test_polars_backend_reads_the_time_window_it_accepts(param):
     )
 
 
-def test_polars_backend_builds_a_timestamp_predicate(worker):
+def test_polars_backend_builds_a_timestamp_predicate():
     """Reading the parameter is not enough -- it must reach the query."""
-    assert "timestamp >= ?" in worker._METRIC_WINDOW_SQL, worker._METRIC_WINDOW_SQL
-    assert "timestamp <= ?" in worker._METRIC_WINDOW_SQL, worker._METRIC_WINDOW_SQL
     statements = _execute_literals("_polars_aggregate")
-    assert statements and all(sql and worker._METRIC_WINDOW_SQL in sql for sql in statements), (
-        "_polars_aggregate no longer runs a windowed statement. Reading "
-        "`since`/`until` without putting them in the WHERE clause leaves the "
-        "filter inert, which is the original defect."
-    )
+    assert statements, "_polars_aggregate runs no query at all"
+    for sql in statements:
+        assert sql, "_polars_aggregate passes a non-literal statement to execute()"
+        clause = _window_clause(sql)
+        assert "timestamp >= ?" in clause and "timestamp <= ?" in clause, (
+            f"_polars_aggregate runs an unwindowed statement: {sql!r}. Reading "
+            "`since`/`until` without putting them in the WHERE clause leaves the "
+            "filter inert, which is the original defect."
+        )
     assert "_window(" in ast.unparse(_function("_polars_aggregate"))
 
 
@@ -118,30 +128,38 @@ def test_polars_backend_builds_a_timestamp_predicate(worker):
 # --------------------------------------------------------------------------
 
 
-def test_both_backends_use_the_same_time_predicate(worker):
-    """Not merely a predicate in each path -- the identical predicate text.
+def test_both_backends_use_the_same_time_predicate():
+    """Not a predicate in each path -- the identical predicate, compared.
 
     The first version of this test compared text found in each function body.
     That caught a drift but could not prevent one: two copies of
-    `timestamp >= ?` satisfy it, and two copies can be edited apart. Every
-    statement in all three paths is now asserted to carry the one
-    `_METRIC_WINDOW_SQL` string, so a change to one and not the others fails
-    here rather than in production.
+    `timestamp >= ?` satisfy it, and two copies can be edited apart. The second
+    version compared each statement against a module constant -- which CodeQL
+    then flagged, correctly, as a global nothing in the module used.
+
+    So the statements are compared with each other. Every `WHERE` clause across
+    all three query paths must be character-for-character the same string;
+    there is no expected value to keep in step, and no dead constant in the
+    worker.
     """
+    clauses = {}
     for func_name in ("_polars_aggregate", "get_metric", "metric_timeseries"):
         statements = _execute_literals(func_name)
         assert statements, f"{func_name} runs no query at all"
         for sql in statements:
-            assert sql and worker._METRIC_WINDOW_SQL in sql, (
-                f"{func_name} runs a statement without the shared window "
-                f"predicate: {sql!r}. get_metric prefers polars and falls back "
-                "to SQL, so a window applied in one path and not the other means "
-                "the same request returns different numbers depending on which "
-                "backend happens to serve it."
-            )
+            assert sql, f"{func_name} passes a non-literal statement to execute()"
+            clauses[f"{func_name}: {sql[:40]}..."] = _window_clause(sql)
         assert "_window(" in ast.unparse(_function(func_name)), (
             f"{func_name} no longer resolves its bounds through _window()."
         )
+
+    distinct = set(clauses.values())
+    assert len(distinct) == 1, (
+        "the metric paths do not share one window predicate, so the same "
+        f"request can be answered over different rows: {clauses}"
+    )
+    only = distinct.pop()
+    assert "name = ?" in only and "timestamp >= ?" in only and "timestamp <= ?" in only, only
 
 
 def test_no_metric_query_is_assembled_by_interpolation():
