@@ -17,12 +17,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGS = ROOT / "logs"
@@ -140,6 +142,51 @@ class VerifyReport:
 
 
 # ---------------------------------------------------------------------------
+# URL validation helper
+# ---------------------------------------------------------------------------
+
+
+def build_validated_url(base_url: str, port: int, path: str) -> str:
+    try:
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        parsed = urlparse(base_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        # No host allowlist. It listed the compose service names plus
+        # localhost, which is right for the default `base=None` path (each
+        # entity probed at its own service name) and wrong for every other
+        # documented use: `--base http://host` and TRANC3_BASE_URL exist so an
+        # operator can verify a real deployment, and any VM hostname, LAN IP
+        # or domain failed the list. _probe swallows the ValueError and
+        # returns "unreachable" without sending a request or logging anything,
+        # so the critical pass rate fell to 0% and the run HARD STOPped -- a
+        # config mismatch reported as an estate-wide outage, silently. The
+        # scheme and port checks do the real work and stay.
+        # (CodeRabbit, chatgpt-codex-connector on #1239)
+        port_int = int(port)
+        if not 1 <= port_int <= 65535:
+            raise ValueError("Invalid port")
+        # `parsed.hostname` strips the brackets off an IPv6 literal, so
+        # rebuilding the authority without them yields `http://::1:8000/health`,
+        # which urllib cannot request -- every probe would report `unreachable`
+        # and the critical pass rate would read 0%. `scripts/health_check.py:122`
+        # already does this; leaving the sibling unfixed was an inconsistent
+        # fix, not a scoped one. (coderabbitai on #1239)
+        host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        parsed = parsed._replace(netloc=f"{host}:{port_int}", path=path)
+        return urlunparse(parsed)
+    except Exception:
+        # `from None` rather than `from exc`: the cause carries the rejected
+        # URL, and these helpers exist so a malformed or hostile URL is never
+        # echoed onward. Discarding it is the point, and stating that here is
+        # what B904 is asking for.
+        raise ValueError("Invalid URL") from None
+
+
+# ---------------------------------------------------------------------------
 # Probe
 # ---------------------------------------------------------------------------
 
@@ -155,7 +202,10 @@ def _probe(base: str | None, entity: dict, timeout: float = 5.0) -> tuple[str, i
     manual testing against 127.0.0.1 with all worker ports published).
     """
     host = base if base is not None else f"http://{entity['name']}"
-    url = f"{host}:{entity['port']}{entity['path']}"
+    try:
+        url = build_validated_url(host, entity["port"], entity["path"])
+    except ValueError:
+        return "unreachable", 0, 0
     t0 = time.monotonic()
     try:
         req = urllib.request.Request(url, method="GET")
@@ -215,6 +265,10 @@ def probe_with_retry(
 def _report_to_observatory(base: str | None, report: VerifyReport) -> None:
     host = base if base is not None else "http://monitoring"
     try:
+        url = build_validated_url(host, 8007, "/events")
+    except ValueError:
+        return
+    try:
         payload = json.dumps(
             {
                 "source": "post-deploy-verify",
@@ -227,7 +281,7 @@ def _report_to_observatory(base: str | None, report: VerifyReport) -> None:
             }
         ).encode()
         req = urllib.request.Request(
-            f"{host}:8007/events",
+            url,
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",

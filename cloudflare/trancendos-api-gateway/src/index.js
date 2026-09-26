@@ -122,9 +122,99 @@ class CircuitBreaker {
 
 // ── Proxy ─────────────────────────────────────────────────────────────────────
 
+// Upstreams this gateway may proxy to.
+//
+// The Aikido fix this came from listed `['trancendos.workers.dev', 'fly.dev']`,
+// which was wrong in both directions at once:
+//
+//   - This account's Workers subdomain is `luminous-aimastermind.workers.dev`,
+//     not `trancendos.workers.dev` (see wrangler.toml, and CLAUDE.md's
+//     "Workers subdomain"). Every configured upstream -- users, products,
+//     orders, payments, AI -- failed the check, so those routes returned 502
+//     while the services behind them were healthy.
+//   - `fly.dev` matched by suffix permits proxying to ANY Fly application on
+//     the platform, so a mistyped or tampered service URL would forward
+//     authenticated requests and their tokens to somebody else's tenant.
+//
+// So the list was simultaneously too narrow to work and too broad to protect.
+// It now names this account's Workers subdomain and the two Fly apps this
+// platform actually runs. (chatgpt-codex-connector, codeant-ai on #1239)
+const ALLOWED_UPSTREAM_SUFFIXES = ['luminous-aimastermind.workers.dev'];
+const ALLOWED_UPSTREAM_HOSTS = ['tranc3-backend.fly.dev', 'trancendos-bots.fly.dev'];
+
+/**
+ * Reject a path that resolves outside its base, including through encoding.
+ *
+ * Checking for the literal `/../` and `/%2e%2e/` missed `%2e%2e%2f`, where the
+ * SLASH is encoded too: `/%2e%2e%2fadmin` passed the gateway and was decoded
+ * and normalised upstream. Decoding first, then looking at path segments,
+ * catches every spelling rather than the two that were spelled out.
+ */
+function hasTraversal(value) {
+  if (!value) return false;
+  let decoded = value;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      // A malformed escape is not something to pass upstream either.
+      return true;
+    }
+  }
+  return decoded.split(/[/\\]/).some(segment => segment === '..');
+}
+
+function buildValidatedUrl(baseUrl, targetPath, queryString) {
+  try {
+    if (hasTraversal(baseUrl) || hasTraversal(targetPath)) {
+      throw new Error('Invalid path');
+    }
+
+    const url = new URL(baseUrl);
+
+    const isAllowedDomain =
+      ALLOWED_UPSTREAM_HOSTS.includes(url.hostname) ||
+      ALLOWED_UPSTREAM_SUFFIXES.some(
+        domain => url.hostname === domain || url.hostname.endsWith('.' + domain)
+      );
+    if (!isAllowedDomain) {
+      throw new Error('Invalid host');
+    }
+
+    // HTTPS only, not http-or-https. `proxy()` copies every inbound header
+    // onto the upstream request, Authorization included, and `redirect:
+    // "manual"` does not protect the FIRST hop -- an allowed host configured
+    // with an `http:` URL would put the caller's bearer token on the wire in
+    // cleartext. Every host this list admits is public HTTPS, so there is no
+    // legitimate cleartext upstream to preserve. (coderabbitai on #1239)
+    if (url.protocol !== 'https:') {
+      throw new Error('Invalid protocol');
+    }
+
+    // Build pathname from base + validated target path
+    if (targetPath) {
+      // Preserve the base pathname and append the target path
+      const basePath = url.pathname.endsWith('/') ? url.pathname.slice(0, -1) : url.pathname;
+      const cleanTargetPath = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
+      url.pathname = basePath + cleanTargetPath;
+    }
+
+    // Add query string if provided
+    if (queryString) {
+      url.search = queryString;
+    }
+
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 async function proxy(request, targetBase, targetPath, requestId) {
   const orig = new URL(request.url);
-  const url  = `${targetBase}${targetPath}${orig.search}`;
+  const url = buildValidatedUrl(targetBase, targetPath, orig.search);
   const hdrs = new Headers();
   for (const [k, v] of request.headers) {
     if (!["host"].includes(k.toLowerCase())) hdrs.set(k, v);
@@ -230,11 +320,11 @@ export default {
 
     // Public (no auth)
     if (path === "/health" || path === "/api/health" || path.startsWith("/health/")) {
-      targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+      targetService = env.TRANC3_BACKEND_URL || "https://tranc3-backend.fly.dev";
       targetPath = path; breaker = cb.ai; requiresAuth = false;
     } else if (path === "/mcp" || path.startsWith("/mcp/") || path === "/api/mcp" || path.startsWith("/api/mcp/")) {
       // MCP tools are authenticated at the MCP layer, not the gateway
-      targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+      targetService = env.TRANC3_BACKEND_URL || "https://tranc3-backend.fly.dev";
       targetPath = path; breaker = cb.ai; requiresAuth = false;
     } else if (path.startsWith("/api/auth")) {
       targetService = env.USERS_SERVICE_URL; targetPath = path.replace("/api/auth", "");
@@ -261,7 +351,7 @@ export default {
       }
 
       if (path.startsWith("/api/v1/ai")) {
-        targetService = env.TRANC3_AI_SERVICE_URL || "https://tranc3-ai.trancendos.workers.dev";
+        targetService = env.TRANC3_AI_SERVICE_URL || "https://tranc3-ai.luminous-aimastermind.workers.dev";
         targetPath    = path; // keep full path — tranc3-ai handles its own routing
         breaker       = cb.ai;
       } else if (path.startsWith("/api/users")) {
@@ -274,7 +364,7 @@ export default {
         targetService = env.PRODUCTS_SERVICE_URL; targetPath = path.replace("/api/products", "/products"); breaker = cb.products;
       } else if (path.startsWith("/api/")) {
         // Fallback: route remaining /api/* paths to tranc3-backend on Fly.io
-        targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+        targetService = env.TRANC3_BACKEND_URL || "https://tranc3-backend.fly.dev";
         targetPath    = path;
         breaker       = cb.ai;
       } else {

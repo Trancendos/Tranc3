@@ -39,7 +39,8 @@ def _ncps():
     model = CfC(4, wiring, batch_first=True)
     x = torch.randn(1, 5, 4)
     out, _ = model(x)
-    assert out.shape == (1, 5, 3)
+    if out.shape != (1, 5, 3):
+        raise AssertionError()
     return f"CfC output shape {tuple(out.shape)}"
 
 
@@ -123,7 +124,8 @@ def _quantum_engine():
     info = engine.get_quantum_state_info()
     params = np.random.rand(12)
     updated = engine.quantum_parameter_optimization(0.5, params)
-    assert len(updated) == len(params)
+    if len(updated) != len(params):
+        raise AssertionError()
     return f"qubits={info['num_qubits']} backend={info['backend']}"
 
 

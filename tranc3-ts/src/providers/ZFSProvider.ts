@@ -20,7 +20,7 @@
 
 import { promises as fs } from 'fs';
 import { createHash } from 'crypto';
-import { join, dirname, basename } from 'path';
+import { join, dirname, resolve as resolvePath, relative as relativePath, isAbsolute } from 'path';
 import { IStorageProvider, FileMetadata, StorageHealth, StorageStats } from './IStorageProvider';
 import { Logger } from '../core/logger';
 
@@ -40,14 +40,32 @@ export class ZFSProvider implements IStorageProvider {
     logger.info('ZFSProvider initialized', { rootDir });
   }
 
-  /** Resolve a logical path to a physical path under rootDir */
+  /**
+   * Resolve a logical path to a physical path under rootDir.
+   *
+   * `require` was used here (and in exists()) although tranc3-ts declares
+   * `"type": "module"` and the compiler emits ES2022 modules, where `require`
+   * is not defined. Every read, write, delete, list and metadata call goes
+   * through this method, so all of them threw
+   * `ReferenceError: require is not defined` at runtime -- and exists() hid it
+   * by catching and returning false. The path helpers now come through the
+   * existing ESM import at the top of the file.
+   * (chatgpt-codex-connector on #1239)
+   *
+   * A leading `/` is treated as logical-root-relative rather than as an
+   * absolute filesystem path, because callers use `/` to mean "the root of
+   * this provider" -- getStats() did, and `resolvePath(base, '/')` returns
+   * `/`, which then failed containment for any rootDir other than `/`.
+   */
   private resolve(path: string): string {
-    // Prevent path traversal
-    const resolved = join(this.rootDir, path);
-    if (!resolved.startsWith(this.rootDir)) {
-      throw new Error(`Path traversal detected: ${path}`);
+    const base = resolvePath(this.rootDir);
+    const logical = path.replace(/^\/+/, '');
+    const target = resolvePath(base, logical);
+    const relative = relativePath(base, target);
+    if (relative.startsWith('..') || isAbsolute(relative)) {
+      throw new Error(`Invalid path: ${path}`);
     }
-    return resolved;
+    return target;
   }
 
   /** Increment operation counter */
@@ -137,6 +155,11 @@ export class ZFSProvider implements IStorageProvider {
   /** Check if a file exists */
   async exists(path: string): Promise<boolean> {
     try {
+      // resolve() already proves containment under rootDir and throws
+      // otherwise. The second check here compared against the process working
+      // directory instead, so with the documented root /tank/tranc3 and a
+      // typical /app working directory every real file reported false.
+      // (chatgpt-codex-connector, codeant-ai, CodeRabbit on #1239)
       const resolved = this.resolve(path);
       await fs.access(resolved);
       return true;
@@ -149,6 +172,9 @@ export class ZFSProvider implements IStorageProvider {
   async getMetadata(path: string): Promise<FileMetadata> {
     this.tick();
     try {
+      // resolve() already proves containment under rootDir and throws
+      // otherwise; this repeated the check with CommonJS `require`, which is
+      // not defined in this ESM package. (#1239)
       const resolved = this.resolve(path);
       const stat = await fs.stat(resolved);
 
@@ -202,6 +228,11 @@ export class ZFSProvider implements IStorageProvider {
   /** Get provider statistics */
   async getStats(): Promise<StorageStats> {
     try {
+      // '/' means this provider's logical root, which resolve() now strips
+      // to a relative path; before that it resolved to the filesystem root
+      // and failed containment for any rootDir other than '/', so getStats
+      // fell into its error path and reported zero files and zero bytes.
+      // (CodeRabbit on #1239)
       const files = await this.list('/');
       let totalBytes = 0;
       for (const file of files) {

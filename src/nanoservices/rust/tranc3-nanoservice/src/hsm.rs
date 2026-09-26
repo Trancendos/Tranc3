@@ -5,7 +5,7 @@
 //! All key operations are performed inside the HSM boundary — private key
 //! material never leaves the token.
 
-use cryptoki::context::{CInitializeArgs, Pkcs11};
+use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::Error as Pkcs11Error;
 use cryptoki::object::{Attribute, AttributeInfo, AttributeType, ObjectClass};
 use cryptoki::session::{UserType, Session};
@@ -271,7 +271,12 @@ impl HsmEngine {
             HsmError::InitFailed(format!("Failed to load module: {}", e))
         })?;
 
-        pkcs11.initialize(CInitializeArgs::OsThreads).map_err(|e| {
+        // cryptoki 0.12 replaced the `CInitializeArgs::OsThreads` variant with a
+        // flags struct. OsThreads set CKF_OS_LOCKING_OK, so OS_LOCKING_OK is the
+        // same request: let the PKCS#11 module use the platform's own locking.
+        pkcs11
+            .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
+            .map_err(|e| {
             HsmError::InitFailed(format!("C_Initialize failed: {}", e))
         })?;
 
@@ -338,7 +343,8 @@ impl HsmEngine {
             HsmError::Internal(format!("Failed to open session: {}", e))
         })?;
 
-        let pin = AuthPin::new(self.config.pin.clone());
+        // secrecy 0.10's Secret::new takes Box<S>, so AuthPin::new wants Box<str>.
+        let pin = AuthPin::new(self.config.pin.clone().into_boxed_str());
         session.login(UserType::User, Some(&pin)).map_err(|e| {
             HsmError::LoginFailed(format!("Login failed: {}", e))
         })?;

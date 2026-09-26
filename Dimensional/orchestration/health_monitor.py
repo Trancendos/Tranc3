@@ -4,17 +4,53 @@
 
 import asyncio
 import logging
+import re
 import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlparse, urlunparse
 
 from Dimensional.circuit_state import CircuitState  # noqa: F401
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
+
+
+def build_validated_url(base_url: str) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+
+        parsed = urlparse(base_url)
+
+        # Protocol + host checks
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        # No host allowlist. The Aikido fix this came from shipped
+        # `allowed_domains = ["example.com"]  # add your allowed domains here`,
+        # and register_service takes health URLs from code, which registers
+        # hosts like `localhost`, `auth` and other compose service names --
+        # never example.com. So every check_health raised here before sending
+        # a request, the broad `except Exception` below recorded UNHEALTHY and
+        # tripped the breaker, and the monitor reported the whole estate down.
+        # A placeholder allowlist is not a weaker control than none; it is a
+        # control that acts on every call and always wrongly. The scheme check
+        # above is the part that was doing real work, and it stays.
+        # (CodeRabbit, chatgpt-codex-connector, codeant-ai on #1239)
+
+        return urlunparse(parsed)
+    except Exception:
+        # `from None` rather than `from exc`: the cause carries the rejected
+        # URL, and these helpers exist so a malformed or hostile URL is never
+        # echoed onward. Discarding it is the point, and stating that here is
+        # what B904 is asking for.
+        raise ValueError("Invalid URL") from None
 
 
 # CircuitState is imported at the top of this module from its canonical home,
@@ -292,7 +328,7 @@ class AdaptiveHealthMonitor:
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    config["health_url"],
+                    build_validated_url(config["health_url"]),
                     timeout=aiohttp.ClientTimeout(total=config["timeout"]),
                 ) as resp:
                     latency = (time.monotonic() - start) * 1000
@@ -328,7 +364,7 @@ class AdaptiveHealthMonitor:
             try:
                 import urllib.request
 
-                req = urllib.request.Request(config["health_url"])
+                req = urllib.request.Request(build_validated_url(config["health_url"]))
                 with urllib.request.urlopen(req, timeout=config["timeout"]) as resp:
                     latency = (time.monotonic() - start) * 1000
                     result = HealthCheckResult(
