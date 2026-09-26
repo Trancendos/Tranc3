@@ -189,10 +189,12 @@ export default function LoginPage() {
               </div>
 
               {/* Tabs */}
-              <div className="flex rounded-lg bg-gray-900 border border-gray-800 p-1 mb-6">
+              <div role="tablist" className="flex rounded-lg bg-gray-900 border border-gray-800 p-1 mb-6">
                 {(['login', 'register'] as const).map(m => (
                   <button
                     key={m}
+                    role="tab"
+                    aria-selected={mode === m}
                     onClick={() => { setMode(m); setError('') }}
                     className={`flex-1 py-2 rounded-md text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       mode === m
