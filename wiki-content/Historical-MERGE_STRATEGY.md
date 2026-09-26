@@ -47,7 +47,7 @@ Use `make integration-plan` → `logs/integration_scope_cursor_production-integr
 | Observability / Prometheus | Phase 1 only (additive) |
 | Worker requirements pins | Reject loosening |
 | `shared_core/` removals | Block |
-| New `Dimensional/` modules | Cherry-pick file-by-file from `refactor/shared-core-to-dimensional` |
+| New `Dimensionals/` modules | Cherry-pick file-by-file from `refactor/shared-core-to-dimensional` |
 
 ## Phase 4 — Archive (no merge to `main`)
 

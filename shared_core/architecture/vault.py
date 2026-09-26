@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.vault"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.vault"""
 
-from Dimensional.architecture.vault import *  # noqa: F401, F403
+from Dimensionals.architecture.vault import *  # noqa: F401, F403

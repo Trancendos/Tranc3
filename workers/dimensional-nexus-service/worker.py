@@ -51,12 +51,12 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from Dimensional.nexus.nexus_core import (  # noqa: E402
+from Dimensionals.nexus.nexus_core import (  # noqa: E402
     Nexus,
     create_nexus_app,
     get_nexus,
 )
-from Dimensional.service_auth import check_internal_secret  # noqa: E402
+from Dimensionals.service_auth import check_internal_secret  # noqa: E402
 
 # Backward-compatible alias — only valid when referring to both Dimensional AND Nexus
 DimensionalNexus = Nexus

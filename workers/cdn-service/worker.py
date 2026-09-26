@@ -28,7 +28,7 @@ from fastapi.responses import FileResponse, Response
 from path_validation import PathTraversalError, safe_join
 from pydantic import BaseModel
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8028")
 WORKER_NAME = "cdn-service"
@@ -194,7 +194,7 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # Delegated to Dimensionals.service_auth, which this worker now reaches
     # through the `sharedcore` named build context. It compares with
     # compare_digest and refuses when the secret is unset.
     guard_internal_secret(

@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-from Dimensional.path_validation import validate_path
+from Dimensionals.path_validation import validate_path
 
 PROJECT_DIR = Path(__file__).parent.parent
 

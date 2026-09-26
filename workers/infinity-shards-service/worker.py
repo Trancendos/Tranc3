@@ -51,7 +51,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger(__name__)

@@ -18,7 +18,7 @@ RUN chown -R tranc3:tranc3 /app
 # repo root. Supplied by docker-compose.production.yml, or for a direct
 #   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=tranc3:tranc3 . /app/Dimensional/
+COPY --from=sharedcore --chown=tranc3:tranc3 . /app/Dimensionals/
 COPY --from=observability --chown=tranc3:tranc3 . /app/src/observability/
 ENV PYTHONPATH=/app
 # --- end SFSC ---

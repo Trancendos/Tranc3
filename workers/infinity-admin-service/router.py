@@ -24,12 +24,12 @@ from service import (
 
 from config import _INTERNAL_SECRET, PORT
 from database import db
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
-from Dimensional.infinity.nomenclature import (
+from Dimensionals.infinity.nomenclature import (
     ECOSYSTEM_NAME,
     INFINITY_LOCATIONS,
     PILLAR_PRIME_MAP,
@@ -39,7 +39,7 @@ from Dimensional.infinity.nomenclature import (
     Pillar,
     Tier,
 )
-from Dimensional.infinity.sentinel_station import (
+from Dimensionals.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
 )
@@ -106,8 +106,8 @@ async def require_internal_auth(
 # Sentinel channel reference (imported inline to avoid circular import issues)
 # ---------------------------------------------------------------------------
 
-from Dimensional.infinity.nomenclature import SentinelChannel  # noqa: E402
-from Dimensional.service_auth_fastapi import guard_internal_secret  # noqa: E402
+from Dimensionals.infinity.nomenclature import SentinelChannel  # noqa: E402
+from Dimensionals.service_auth_fastapi import guard_internal_secret  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Router
@@ -527,8 +527,8 @@ async def compliance_events(
 @router.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
-    from Dimensional.infinity.sentinel_config import sentinel_config
+    from Dimensionals.infinity.nomenclature import SENTINEL_CHANNELS
+    from Dimensionals.infinity.sentinel_config import sentinel_config
 
     return {
         "running": sentinel.is_running,

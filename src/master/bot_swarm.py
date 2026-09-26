@@ -29,7 +29,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

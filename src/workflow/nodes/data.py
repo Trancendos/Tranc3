@@ -7,7 +7,7 @@ from __future__ import annotations
 import time
 from typing import Any, Dict, List
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensionals.error_handlers import safe_error_detail
 
 from .base import BaseNode, NodeResult, _deep_get, _safe_eval
 

@@ -224,8 +224,8 @@ behavioural change rather than being a pure no-op.
   exists **within the circuit-breaker consolidation surface** — scoped to
   `src/mesh/`, `src/resilience/`, `src/nanoservices/`, `src/validation/` (or keyed off the
   canonical import path). It must **not** be a global `class CircuitState` check: unrelated
-  `CircuitState` types exist elsewhere (e.g. `Dimensional/orchestration/health_monitor.py`,
-  `Dimensional/infinity/sentinel_station.py`, `Dimensional/architecture/oci_adaptive_provider.py`)
+  `CircuitState` types exist elsewhere (e.g. `Dimensionals/orchestration/health_monitor.py`,
+  `Dimensionals/infinity/sentinel_station.py`, `Dimensionals/architecture/oci_adaptive_provider.py`)
   and are out of scope for this consolidation.
 - **RACI:** Platform Eng (R) authors each phase; Platform Owner (A) approves; The Town Hall (C)
   gates; SRE (I). Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §3.
@@ -246,5 +246,5 @@ behavioural change rather than being a pure no-op.
 |------|----------|--------|
 | 2026-07-02 | Platform Engineering | Initial TASD — 3-implementation audit, options, phased recommendation (Option C, Phase 1) |
 | 2026-07-02 | Platform Engineering (review response) | Corrected the CircuitState claim: the four definitions differ in base type and in `HALF_OPEN` value (mesh `"half-open"`); documented config-schema incompatibility (Pydantic/ms vs dataclass/s); narrowed Phase 1 to enum-only with an explicit value-migration decision (not a pure no-op); added §3.1 canonical-home justification + concrete shim pattern. |
-| 2026-07-02 | Platform Engineering (review response) | Canonical name "The Town Hall"; scoped the proposed lint to the circuit-breaker surface (unrelated `CircuitState` types exist in `Dimensional/*`); noted the governance framework is introduced in PR #185 (pending merge), with `PROC-CHG-001` as the interim change gate. |
+| 2026-07-02 | Platform Engineering (review response) | Canonical name "The Town Hall"; scoped the proposed lint to the circuit-breaker surface (unrelated `CircuitState` types exist in `Dimensionals/*`); noted the governance framework is introduced in PR #185 (pending merge), with `PROC-CHG-001` as the interim change gate. |
 | 2026-07-30 | Platform Engineering | Corrected the implementation count to 4 (§1); executed Phase 2 per direct Platform Owner approval — added §3.2 addendum documenting the narrower-than-planned safe extraction (`should_recover()` + `log_circuit_transition()` in `src/resilience/circuit_core.py`), wired into all four breakers, verified against full existing test suites plus new `tests/test_circuit_core.py`. Phase 3 (config unification + duplicate deletion) remains future work. |

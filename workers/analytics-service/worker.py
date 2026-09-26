@@ -32,7 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ── Config ────────────────────────────────────────────────────────────────────
 WORKER_PORT = int(os.environ.get("ANALYTICS_PORT", "8016"))

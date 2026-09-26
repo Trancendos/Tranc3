@@ -91,7 +91,7 @@ per service: (a) whether the service's own code calls `PlatformInfraMode` / bran
 mode directly (verify by grep against that entity's own code root — of the 43 named entities,
 only **The Citadel** does, via `should_run_citadel_docker()`; note that mode-aware code *does*
 exist elsewhere in the repo — `src/routers/adaptive.py`, `src/routers/ecosystem.py`,
-`Dimensional/architecture/storage_factory.py` — but none of it is owned by one of the 43
+`Dimensionals/architecture/storage_factory.py` — but none of it is owned by one of the 43
 named entities, so it must not be cited as evidence for or against any *other* entity's own
 mode-awareness), (b) what actually runs and where under each of the three modes (which
 `docker-compose.production.yml` service block, on which host class, whether a persistent

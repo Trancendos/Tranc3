@@ -17,14 +17,14 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-adaptive-000001")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from Dimensional.infinity.adaptive_intelligence import (
+from Dimensionals.infinity.adaptive_intelligence import (
     AIConfig,
     HealthSummary,
     InfinityHealthOrchestrator,
 )
-from Dimensional.infinity.fluidic_gateway import InfinityFluidicGateway
-from Dimensional.infinity.proactive_defense import ProactiveDefenseLayer
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensionals.infinity.fluidic_gateway import InfinityFluidicGateway
+from Dimensionals.infinity.proactive_defense import ProactiveDefenseLayer
+from Dimensionals.infinity.worker_integration import InfinityWorkerKit
 
 
 def _make_orchestrator(name: str = "test-service") -> InfinityHealthOrchestrator:

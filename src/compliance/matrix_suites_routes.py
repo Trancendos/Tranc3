@@ -10,8 +10,8 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-from Dimensional.sanitize import sanitize_for_log
-from Dimensional.security import constant_time_compare
+from Dimensionals.sanitize import sanitize_for_log
+from Dimensionals.security import constant_time_compare
 from src.compliance.matrix_suites import (
     MatrixSuitesError,
     MatrixSuitesRegistryError,

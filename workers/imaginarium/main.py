@@ -11,7 +11,7 @@ import time
 from fastapi import Depends, FastAPI, Header
 from fastapi.responses import JSONResponse
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 app = FastAPI(title="Imaginarium", version="1.0.0")
 
@@ -33,7 +33,7 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # Delegated to Dimensionals.service_auth, which this worker now reaches
     # through the `sharedcore` named build context. It compares with
     # compare_digest and refuses when the secret is unset.
     guard_internal_secret(

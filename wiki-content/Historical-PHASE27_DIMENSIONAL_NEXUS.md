@@ -69,11 +69,11 @@ These are **three separate systems**, each purpose-built for its traffic type. T
 
 The InfinityBridge handles all user context and human movement across the platform. Users traversing between Admin, Arcadia, and The Citadel use the light bridges of the InfinityBridge.
 
-**Package:** `Dimensional/infinity/bridge/`
+**Package:** `Dimensionals/infinity/bridge/`
 **Port:** 8070
 **Worker Service:** `workers/infinity-bridge-service/`
 
-**Defined in:** `Dimensional/infinity/nomenclature.py`
+**Defined in:** `Dimensionals/infinity/nomenclature.py`
 ```python
 TransferSystem.BRIDGE  # "bridge" — The Infinity Bridge
 InfinityLocation.BRIDGE  # "infinity_bridge"
@@ -153,7 +153,7 @@ Bidirectional event bridge between InfinityBridge and Sentinel Station. User tra
 
 The Nexus is the dedicated routing and coordination system for AI, Agent, and Bot traffic (Tier 3–5). It provides causal event ordering, tier-aware access control, real-time health aggregation, cross-Nexus event routing, and a live WebSocket dashboard.
 
-**Package:** `Dimensional/nexus/`
+**Package:** `Dimensionals/nexus/`
 **Port:** 8050
 
 ### Nexus Subsystems
@@ -251,7 +251,7 @@ Bidirectional event bridge between The Nexus and Sentinel Station. AI/Agent/Bot 
 
 The HIVE is the dedicated routing and coordination system for data movement and swarm systems. It handles data pipelines, chunk routing with priority and replication, distributed swarm coordination for data processing, and flow monitoring with throughput/latency tracking.
 
-**Package:** `Dimensional/hive/`
+**Package:** `Dimensionals/hive/`
 **Port:** 8060
 
 ### HIVE Subsystems
@@ -395,7 +395,7 @@ class DataPipeline(BaseModel):
 
 The `ThreeBridgeCoordinator` is the central wiring module that connects all three bridges through Sentinel Station. It manages cross-bridge event forwarding, provides a unified status endpoint, and enforces traffic separation at the coordinator level.
 
-**Package:** `Dimensional/three_bridge_coordinator.py`
+**Package:** `Dimensionals/three_bridge_coordinator.py`
 
 ### Coordinator Enums
 
@@ -507,7 +507,7 @@ Returns:
 ### Singleton
 
 ```python
-from Dimensional.three_bridge_coordinator import get_coordinator
+from Dimensionals.three_bridge_coordinator import get_coordinator
 
 coordinator = get_coordinator()  # Returns the same instance
 ```
@@ -531,7 +531,7 @@ The ThreeBridgeCoordinator extends this format with additional keys (`sentinel_b
 
 ## Nomenclature Integration
 
-The three bridges are formally defined in `Dimensional/infinity/nomenclature.py`:
+The three bridges are formally defined in `Dimensionals/infinity/nomenclature.py`:
 
 ```python
 class TransferSystem(str, Enum):
@@ -675,7 +675,7 @@ All three bridges maintain the platform's zero-cost infrastructure commitment:
 
 ```
 Tranc3/
-├── Dimensional/
+├── Dimensionals/
 │   ├── three_bridge_coordinator.py  — Central coordinator wiring all three bridges
 │   ├── nexus/
 │   │   ├── __init__.py           — Package init, exports Nexus as primary class
@@ -726,7 +726,7 @@ The `DimensionalNexus` name is preserved as a backward-compatible alias for `Nex
 DimensionalNexus = Nexus  # Only valid when referring to both Dimensional AND Nexus
 
 # In __init__.py:
-from Dimensional.nexus.nexus_core import Nexus, DimensionalNexus
+from Dimensionals.nexus.nexus_core import Nexus, DimensionalNexus
 ```
 
 This alias should ONLY be used when referring to both the Dimensional package AND The Nexus in conjunction. For the Nexus specifically, always use the `Nexus` class name.

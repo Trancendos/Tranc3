@@ -383,10 +383,10 @@ declared `{key:path}`, so FastAPI hands over the raw remainder of the URL:
   created it.
 
 **Remediation.** All three sites now route through `_contained()`, which wraps
-`safe_join` from the shared core (`Dimensional/path_validation.py`) — the same
+`safe_join` from the shared core (`Dimensionals/path_validation.py`) — the same
 helper `src/admin_os/files_manager.py` already uses. No new copy of the
 validator was vendored: the storage-service Dockerfile already mounts the
-shared core at `/app/Dimensional/` via the SFSC named build context, so the
+shared core at `/app/Dimensionals/` via the SFSC named build context, so the
 import resolves in the container and in the test tree alike. `create_bucket`
 validates *before* the insert, so SQLite and the filesystem cannot disagree.
 
@@ -653,7 +653,7 @@ fetched; any it cannot gets up to 1000 bytes of ffmpeg's stderr returned in the
 `safe_join` from the shared core — the **same helper SEC-009 used for
 storage-service**, deliberately, because a second copy of a path validator is a
 second thing to keep right. `workers/tateking/Dockerfile` already mounts the
-shared core at `/app/Dimensional/` through the SFSC named build context, so
+shared core at `/app/Dimensionals/` through the SFSC named build context, so
 nothing new had to be vendored.
 
 Applied in two places, the pattern SEC-010 also used:
@@ -918,7 +918,7 @@ and needs a machine that can run CodeQL to calibrate it.
 `validate_path()` appears nowhere in `src/personality/spawner.py`. The file uses
 `safe_join()` and its own `_resolve_output_base()`. The only two surviving
 mentions of `_assert_under_base` in the tree are that header and a list of
-recognised guard names in `Dimensional/security_automation/scanner.py`. So the
+recognised guard names in `Dimensionals/security_automation/scanner.py`. So the
 header described a fix in terms of a function the named file does not contain,
 while the scanner still reported the rule it claimed was resolved — SEC-013's
 shape, one layer further out.
