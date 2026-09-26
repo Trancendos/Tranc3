@@ -59,7 +59,7 @@ jobs:
 
       - name : Zscaler IAC Scan
         if: steps.credentials.outputs.configured == 'true'
-        uses : ZscalerCWP/Zscaler-IaC-Action@8d2afb33b10b4bd50e2dc2c932b37c6e70ac1087
+        uses : ZscalerCWP/Zscaler-IaC-Action@df1ce913b51df9f5e42eca910f0b6b5e8ad61945
         id : zscaler-iac-scan
         with:
           client_id : ${{ secrets.ZSCANNER_CLIENT_ID }}

@@ -54,13 +54,13 @@ jobs:
 
     - name: Endor Labs scan pull request
       if: github.event_name == 'pull_request' && steps.namespace.outputs.configured == 'true'
-      uses: endorlabs/github-action@b51bd06466b545f01a6ac788e3e1147695d3936c
+      uses: endorlabs/github-action@f46ffb04c928a9c9c356f9627bd60b710ed0963e
       with:
         namespace: ${{ vars.ENDOR_NAMESPACE }}
         sarif_file: findings.sarif
     - name: Endor Labs scan monitor
       if: github.event_name == 'push' && steps.namespace.outputs.configured == 'true'
-      uses: endorlabs/github-action@b51bd06466b545f01a6ac788e3e1147695d3936c
+      uses: endorlabs/github-action@f46ffb04c928a9c9c356f9627bd60b710ed0963e
       with:
         namespace: ${{ vars.ENDOR_NAMESPACE }}
         ci_run: "false"
