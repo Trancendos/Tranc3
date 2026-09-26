@@ -169,7 +169,14 @@ def build_validated_url(base_url: str, port: int, path: str) -> str:
         port_int = int(port)
         if not 1 <= port_int <= 65535:
             raise ValueError("Invalid port")
-        parsed = parsed._replace(netloc=f"{parsed.hostname}:{port_int}", path=path)
+        # `parsed.hostname` strips the brackets off an IPv6 literal, so
+        # rebuilding the authority without them yields `http://::1:8000/health`,
+        # which urllib cannot request -- every probe would report `unreachable`
+        # and the critical pass rate would read 0%. `scripts/health_check.py:122`
+        # already does this; leaving the sibling unfixed was an inconsistent
+        # fix, not a scoped one. (coderabbitai on #1239)
+        host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        parsed = parsed._replace(netloc=f"{host}:{port_int}", path=path)
         return urlunparse(parsed)
     except Exception:
         # `from None` rather than `from exc`: the cause carries the rejected

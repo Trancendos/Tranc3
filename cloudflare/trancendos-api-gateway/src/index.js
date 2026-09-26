@@ -183,7 +183,13 @@ function buildValidatedUrl(baseUrl, targetPath, queryString) {
       throw new Error('Invalid host');
     }
 
-    if (!['http:', 'https:'].includes(url.protocol)) {
+    // HTTPS only, not http-or-https. `proxy()` copies every inbound header
+    // onto the upstream request, Authorization included, and `redirect:
+    // "manual"` does not protect the FIRST hop -- an allowed host configured
+    // with an `http:` URL would put the caller's bearer token on the wire in
+    // cleartext. Every host this list admits is public HTTPS, so there is no
+    // legitimate cleartext upstream to preserve. (coderabbitai on #1239)
+    if (url.protocol !== 'https:') {
       throw new Error('Invalid protocol');
     }
 
@@ -314,11 +320,11 @@ export default {
 
     // Public (no auth)
     if (path === "/health" || path === "/api/health" || path.startsWith("/health/")) {
-      targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+      targetService = env.TRANC3_BACKEND_URL || "https://tranc3-backend.fly.dev";
       targetPath = path; breaker = cb.ai; requiresAuth = false;
     } else if (path === "/mcp" || path.startsWith("/mcp/") || path === "/api/mcp" || path.startsWith("/api/mcp/")) {
       // MCP tools are authenticated at the MCP layer, not the gateway
-      targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+      targetService = env.TRANC3_BACKEND_URL || "https://tranc3-backend.fly.dev";
       targetPath = path; breaker = cb.ai; requiresAuth = false;
     } else if (path.startsWith("/api/auth")) {
       targetService = env.USERS_SERVICE_URL; targetPath = path.replace("/api/auth", "");
@@ -345,7 +351,7 @@ export default {
       }
 
       if (path.startsWith("/api/v1/ai")) {
-        targetService = env.TRANC3_AI_SERVICE_URL || "https://tranc3-ai.trancendos.workers.dev";
+        targetService = env.TRANC3_AI_SERVICE_URL || "https://tranc3-ai.luminous-aimastermind.workers.dev";
         targetPath    = path; // keep full path — tranc3-ai handles its own routing
         breaker       = cb.ai;
       } else if (path.startsWith("/api/users")) {
@@ -358,7 +364,7 @@ export default {
         targetService = env.PRODUCTS_SERVICE_URL; targetPath = path.replace("/api/products", "/products"); breaker = cb.products;
       } else if (path.startsWith("/api/")) {
         // Fallback: route remaining /api/* paths to tranc3-backend on Fly.io
-        targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+        targetService = env.TRANC3_BACKEND_URL || "https://tranc3-backend.fly.dev";
         targetPath    = path;
         breaker       = cb.ai;
       } else {

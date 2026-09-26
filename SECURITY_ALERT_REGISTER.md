@@ -1622,6 +1622,33 @@ workflow.
 | `hostPath` `/dev/shm` | `igi_gitops` deployments | **ACCEPT** | Paired with hostIPC; mitigated by network policies + non-root |
 | `readOnlyRootFilesystem` | Partial coverage | **FIX** | Applied where compatible; writable `/tmp` emptyDir where needed |
 
+### Dependency hygiene
+
+Recovered 2026-09-26. This section and `pip-audit suppressions (OSV)` below existed
+**only** in the wiki copy, and the first pass of this appendix dropped both — which
+would have deleted five live governance facts from the repository the moment the wiki
+copy became a pointer. Caught in review on #1239 before that merged. The appendix is
+what keeps them, so they are restored verbatim rather than paraphrased.
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `torch` / `sentencepiece` pins | **SUPPRESS** | Torch bootstrap optional; sentencepiece CVE tracked in `.trivyignore` |
+| `pip-audit` gate | **WARN** | Logged in Forgejo `security-scan.yml` (`continue-on-error`); local gate matches (warn-only) |
+| Framework pins (`fastapi`, `starlette`, `pydantic`, `uvicorn`, `redis`) | **GOVERNED** | Centrally governed via `scripts/align_framework_pins.py`. Both Dependabot and Renovate exclude these packages; `scripts/check_canonical_pin_governance.py` fails CI on drift |
+
+The framework-pin row is the one worth not losing: it names the *only* mechanism by
+which those five pins move, and the CI gate that fails when something moves them
+another way. Losing it would not have broken the gate — it would have left the gate
+running with nothing documenting why it exists, which is how a control ends up
+deleted as unexplained.
+
+### pip-audit suppressions (OSV)
+
+Tracked in `.osv-scanner.toml` with `reason` + quarterly review per CVE. Reconcile
+after `pip-audit` on Linux/Python 3.11 in Forgejo CI (`security-scan.yml`, warn-only).
+
+Also recovered 2026-09-26 — see the note above.
+
 ### npm audit scope
 
 Directories scanned in CI, with the audit level each is held to per

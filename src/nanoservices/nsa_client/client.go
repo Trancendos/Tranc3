@@ -334,7 +334,14 @@ func (c *NanoserviceClient) Send(target string, msgType string, payload map[stri
 	}
 
 	// Write to target's SHM segment
-	targetShm, err := NewShmRingBuffer(segmentNameFor(target), false)
+	// Strip the `NSA-` prefix before resolving, because the Python peer does:
+	// nsa_client.py:331 builds `f"{str(target).replace('NSA-', '').lower()}_seg"`.
+	// Without this, `NSA-FOO` resolves to `nsa_foo_seg` here and `foo_seg` there
+	// -- two different segments, and the message is never delivered. Deliberately
+	// NOT applied to the client's own segment above: nsa_client.py:303 does not
+	// strip there either, so adding it would break the side that currently works.
+	// (coderabbitai on #1239)
+	targetShm, err := NewShmRingBuffer(segmentNameFor(strings.TrimPrefix(target, "NSA-")), false)
 	if err != nil {
 		return fmt.Errorf("open target shm %s: %w", target, err)
 	}

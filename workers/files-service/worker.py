@@ -634,8 +634,17 @@ def download_document(doc_id: str):
         os.close(fd)
         raise HTTPException(status_code=404, detail="File not found on disk") from None
 
+    # Wrap the descriptor now, not inside `_iter`. `fd` is a raw int, and
+    # `_iter` runs only on the first read -- if the client disconnects before
+    # then, the generator is collected without ever entering the `with`, and
+    # garbage collection does not close a raw int. Repeated aborted downloads
+    # would leak descriptors until the worker hit its limit. Binding here means
+    # the generator closes it on completion, and CPython closes it on collection
+    # if the stream never starts. (coderabbitai on #1239)
+    handle = os.fdopen(fd, "rb")
+
     def _iter():
-        with os.fdopen(fd, "rb") as f:
+        with handle as f:
             while chunk := f.read(65536):
                 yield chunk
 
