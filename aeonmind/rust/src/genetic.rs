@@ -66,10 +66,12 @@ pub struct Individual {
 
 impl Individual {
     pub fn random(id: usize, dna_length: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         Self {
             id,
-            dna: (0..dna_length).map(|_| rng.gen_range(-1.0..1.0)).collect(),
+            dna: (0..dna_length)
+                .map(|_| rng.random_range(-1.0..1.0))
+                .collect(),
             fitness: f64::NEG_INFINITY,
             generation: 0,
             age: 0,
@@ -256,10 +258,10 @@ impl EvolutionEngine {
 
     /// Tournament selection.
     pub fn tournament_select(&self) -> &Individual {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut best: Option<&Individual> = None;
         for _ in 0..self.config.tournament_size {
-            let idx = rng.gen_range(0..self.population.len());
+            let idx = rng.random_range(0..self.population.len());
             let candidate = &self.population[idx];
             if best.is_none() || candidate.fitness > best.unwrap().fitness {
                 best = Some(candidate);
@@ -270,8 +272,8 @@ impl EvolutionEngine {
 
     /// Multi-point crossover.
     pub fn crossover(&self, dna1: &[f64], dna2: &[f64]) -> (Vec<f64>, Vec<f64>) {
-        let mut rng = rand::thread_rng();
-        if rng.gen::<f64>() > self.config.crossover_rate {
+        let mut rng = rand::rng();
+        if rng.random::<f64>() > self.config.crossover_rate {
             return (dna1.to_vec(), dna2.to_vec());
         }
 
@@ -279,7 +281,7 @@ impl EvolutionEngine {
         if n <= 1 {
             return (dna1.to_vec(), dna2.to_vec());
         }
-        let crossover_point = rng.gen_range(1..n);
+        let crossover_point = rng.random_range(1..n);
 
         let mut child1 = Vec::with_capacity(n);
         let mut child2 = Vec::with_capacity(n);
@@ -299,11 +301,11 @@ impl EvolutionEngine {
 
     /// Gaussian mutation.
     pub fn mutate(&self, dna: &[f64]) -> Vec<f64> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         dna.iter()
             .map(|&gene| {
-                if rng.gen::<f64>() < self.config.mutation_rate {
-                    let mutation: f64 = rng.gen_range(-1.0..1.0) * self.mutation_strength;
+                if rng.random::<f64>() < self.config.mutation_rate {
+                    let mutation: f64 = rng.random_range(-1.0..1.0) * self.mutation_strength;
                     gene + mutation
                 } else {
                     gene
