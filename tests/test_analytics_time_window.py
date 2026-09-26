@@ -82,12 +82,15 @@ def test_polars_backend_reads_the_time_window_it_accepts(param):
     )
 
 
-def test_polars_backend_builds_a_timestamp_predicate():
+def test_polars_backend_builds_a_timestamp_predicate(worker):
     """Reading the parameter is not enough -- it must reach the query."""
+    assert "timestamp >= ?" in worker._METRIC_WINDOW, worker._METRIC_WINDOW
+    assert "timestamp <= ?" in worker._METRIC_WINDOW, worker._METRIC_WINDOW
     source = ast.unparse(_function("_polars_aggregate"))
-    assert "timestamp >= ?" in source and "timestamp <= ?" in source, (
-        "_polars_aggregate builds no timestamp predicate. Reading `since`/`until` "
-        "without putting them in the WHERE clause leaves the filter inert."
+    assert "_METRIC_VALUES_SQL" in source and "_window(" in source, (
+        "_polars_aggregate no longer runs the shared windowed statement. Reading "
+        "`since`/`until` without putting them in the WHERE clause leaves the "
+        "filter inert, which is the original defect."
     )
 
 
@@ -96,33 +99,65 @@ def test_polars_backend_builds_a_timestamp_predicate():
 # --------------------------------------------------------------------------
 
 
-def test_both_backends_use_the_same_time_predicate():
-    """Identical predicate text in both paths, so they cannot disagree."""
-    polars = ast.unparse(_function("_polars_aggregate"))
-    sql = ast.unparse(_function("get_metric"))
-    for predicate in ("timestamp >= ?", "timestamp <= ?"):
-        assert predicate in polars and predicate in sql, (
-            f"{predicate!r} appears in only one of _polars_aggregate / get_metric. "
-            "get_metric prefers polars and falls back to SQL, so a predicate in "
-            "one path and not the other means the same request returns different "
-            "numbers depending on which backend happens to serve it."
+def test_both_backends_use_the_same_time_predicate(worker):
+    """Not merely identical text in both paths -- literally the same string.
+
+    The first version of this test compared the predicate text found in each
+    function body. That caught a drift but could not prevent one: two copies of
+    `timestamp >= ?` satisfy it, and two copies can be edited apart. Every
+    statement is now built from one `_METRIC_WINDOW` constant, so the two paths
+    cannot disagree without someone deleting the constant -- which this test
+    also notices.
+    """
+    for sql in [worker._METRIC_VALUES_SQL, *worker._METRIC_SQL.values()]:
+        assert sql.endswith(worker._METRIC_WINDOW), sql
+    for sql in worker._TIMESERIES_SQL.values():
+        assert worker._METRIC_WINDOW in sql, sql
+
+    for func_name in ("_polars_aggregate", "get_metric", "metric_timeseries"):
+        source = ast.unparse(_function(func_name))
+        assert "_window(" in source, (
+            f"{func_name} no longer resolves its bounds through _window(). "
+            "get_metric prefers polars and falls back to SQL, so a window "
+            "resolved differently in one path means the same request returns "
+            "different numbers depending on which backend happens to serve it."
         )
 
 
-@pytest.mark.parametrize("func_name", ["_polars_aggregate", "get_metric", "metric_timeseries"])
-def test_epoch_zero_is_not_treated_as_absent(func_name):
+def test_no_metric_query_is_assembled_by_interpolation():
+    """The statements are fixed strings; only values are bound.
+
+    The predicate used to be joined from a clause list and interpolated with an
+    f-string. It was not injectable -- literal clauses, bound values -- but a
+    reader (human or SAST) cannot tell that from the call site. Raised by
+    Sourcery as a blocking finding on PR #1242.
+    """
+    for func_name in ("_polars_aggregate", "get_metric", "metric_timeseries"):
+        tree = _function(func_name)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "execute":
+                statement = node.args[0] if node.args else None
+                assert not isinstance(statement, ast.JoinedStr), (
+                    f"{func_name} passes an f-string to execute(); metric queries "
+                    "are fixed statements with bound parameters."
+                )
+
+
+def test_epoch_zero_is_not_treated_as_absent(worker):
     """`since=0.0` is a real timestamp; a truthiness test drops the filter.
 
-    Both paths originally used `if since:`. At `since=0.0` — midnight 1970, a
-    value a caller can legitimately send — that is falsy, so the predicate was
-    skipped and the window silently widened to everything. `is not None` is the
-    test that distinguishes "not supplied" from "supplied as zero".
+    All three paths originally used `if since:`. At `since=0.0` -- midnight
+    1970, a value a caller can legitimately send -- that is falsy, so the
+    predicate was skipped and the window silently widened to everything. The
+    distinction now lives in one place, `_window`, which is also why
+    `metric_timeseries` can no longer keep the old form after the other two are
+    fixed: there is only one form left.
     """
-    source = ast.unparse(_function(func_name))
-    assert "if since is not None" in source and "if until is not None" in source, (
-        f"{func_name}() gates its time predicate on truthiness rather than "
-        "`is not None`, so since=0.0 / until=0.0 silently disable the filter."
-    )
+    source = ast.unparse(_function("_window"))
+    assert "is not None" in source, source
+    assert worker._window(0.0, None)[0] == 0.0, "since=0.0 was treated as absent"
+    assert worker._window(None, 0.0)[1] == 0.0, "until=0.0 was treated as absent"
+    assert worker._window(None, None) == (worker._EPOCH_FLOOR, worker._EPOCH_CEIL)
 
 
 # --------------------------------------------------------------------------
@@ -202,6 +237,12 @@ def _seed(module, rows):
         c.commit()
 
 
+def _polars_result(module, *args):
+    """The aggregate only; _polars_aggregate returns (result, samples)."""
+    aggregated = module._polars_aggregate(*args)
+    return None if aggregated is None else aggregated[0]
+
+
 def _sql_result(module, **kwargs):
     """get_metric's SQL answer, with the polars backend forced out of the way."""
     import unittest.mock as mock
@@ -239,18 +280,42 @@ class TestBackendsAgreeOnTheSameRows:
     @pytest.mark.parametrize("agg", ["avg", "sum", "min", "max", "count"])
     def test_polars_and_sql_return_the_same_number(self, worker, since, until, agg):
         _seed(worker, self.ROWS)
-        polars_result = worker._polars_aggregate("cpu", agg, since, until)
+        polars_result = _polars_result(worker, "cpu", agg, since, until)
         sql_result = _sql_result(worker, name="cpu", agg=agg, since=since, until=until)
         assert polars_result == sql_result, (
             f"backends disagree for agg={agg} since={since} until={until}: "
             f"polars={polars_result}, sql={sql_result}"
         )
 
+    def test_both_backends_return_the_same_response_shape(self, worker):
+        """Same keys whichever backend wins, not just the same number.
+
+        The SQL branch has always returned `samples`; the polars branch never
+        did, so a caller reading it saw the field appear and disappear with
+        whichever backend happened to serve the request. Making the polars
+        branch return 0 for an empty `count` window widened that -- it started
+        winning in a case where it previously fell through to SQL. Raised by
+        CodeAnt on PR #1242. Agreeing on the number is not agreeing.
+        """
+        import unittest.mock as mock
+
+        _seed(worker, self.ROWS)
+        with mock.patch.object(worker, "_select_backend", return_value="polars"):
+            via_polars = worker.get_metric(name="cpu", agg="count", since=500.0, until=None)
+            with mock.patch.object(worker, "_polars_aggregate", return_value=None):
+                via_sql = worker.get_metric(name="cpu", agg="count", since=500.0, until=None)
+
+        assert set(via_polars) == set(via_sql), (
+            f"response shape differs by backend: polars={sorted(via_polars)}, sql={sorted(via_sql)}"
+        )
+        assert via_polars["result"] == via_sql["result"]
+        assert via_polars["samples"] == via_sql["samples"] == 0
+
     def test_the_window_actually_narrows(self, worker):
         """Guard against both backends agreeing by both ignoring the window."""
         _seed(worker, self.ROWS)
-        unbounded = worker._polars_aggregate("cpu", "sum", None, None)
-        bounded = worker._polars_aggregate("cpu", "sum", 200.0, 300.0)
+        unbounded = _polars_result(worker, "cpu", "sum", None, None)
+        bounded = _polars_result(worker, "cpu", "sum", 200.0, 300.0)
         assert unbounded == 100.0, unbounded
         assert bounded == 50.0, (
             f"expected only the 20.0 and 30.0 rows in [200, 300], got sum={bounded} "
@@ -260,8 +325,8 @@ class TestBackendsAgreeOnTheSameRows:
     def test_a_backend_that_ignored_the_window_would_be_caught(self, worker):
         """Probe: the comparison fails when one side drops the predicate."""
         _seed(worker, self.ROWS)
-        windowed = worker._polars_aggregate("cpu", "sum", 200.0, 300.0)
-        unwindowed = worker._polars_aggregate("cpu", "sum", None, None)
+        windowed = _polars_result(worker, "cpu", "sum", 200.0, 300.0)
+        unwindowed = _polars_result(worker, "cpu", "sum", None, None)
         assert windowed != unwindowed, (
             "windowed and unwindowed sums are equal on this fixture, so the "
             "comparison above could pass with a broken backend"

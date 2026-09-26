@@ -313,57 +313,109 @@ def _duckdb_query_events(
 # ── Polars backend ────────────────────────────────────────────────────────────
 
 
+# Every metric statement below is a fixed string with bound parameters, and the
+# time window is always present rather than assembled from a list of clauses.
+# The previous form built `WHERE ...` by joining clauses and interpolated it
+# with an f-string. It was not injectable -- the clauses were literals and the
+# values were bound -- but a SAST reader cannot see that from the call site, and
+# neither can the next person to edit it. A fixed statement per query shape
+# removes the question. `_EPOCH_FLOOR`/`_EPOCH_CEIL` stand in for an absent
+# bound; they are far outside any real epoch timestamp.
+_EPOCH_FLOOR = -1e308
+_EPOCH_CEIL = 1e308
+
+_METRIC_WINDOW = "WHERE name = ? AND timestamp >= ? AND timestamp <= ?"
+
+_METRIC_VALUES_SQL = "SELECT value FROM metrics " + _METRIC_WINDOW
+
+_METRIC_SQL = {
+    "avg": "SELECT AVG(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
+    "sum": "SELECT SUM(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
+    "min": "SELECT MIN(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
+    "max": "SELECT MAX(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
+    "count": "SELECT COUNT(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
+}
+
+_TIMESERIES_SQL = {
+    "hour": (
+        "SELECT strftime('%Y-%m-%dT%H', timestamp, 'unixepoch') AS bucket, "
+        "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
+    )
+    + _METRIC_WINDOW
+    + " GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
+    "day": (
+        "SELECT strftime('%Y-%m-%d', timestamp, 'unixepoch') AS bucket, "
+        "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
+    )
+    + _METRIC_WINDOW
+    + " GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
+}
+
+
+def _window(since: Optional[float], until: Optional[float]) -> tuple[float, float]:
+    """Resolve an open-ended window to explicit bounds.
+
+    Every metric query below binds both bounds unconditionally, which is what
+    lets the SQL stay a fixed string with no interpolation (see `_METRIC_SQL`).
+    `is not None` rather than a truthiness test: `since=0.0` is a valid epoch
+    timestamp, and a falsy check silently drops the filter for it.
+    """
+    return (
+        since if since is not None else _EPOCH_FLOOR,
+        until if until is not None else _EPOCH_CEIL,
+    )
+
+
 def _polars_aggregate(
     name: str, agg: str, since: Optional[float], until: Optional[float]
-) -> Optional[float]:
-    """Aggregate one metric, honouring the same time window as the SQL path.
+) -> Optional[tuple[Optional[float], int]]:
+    """Aggregate one metric over the same window, and report the same shape.
 
-    `since` and `until` were accepted here and then ignored: the query was
+    Returns `(result, samples)`, or `None` when polars is unavailable or the
+    query failed -- which is the only case `get_metric` should treat as a
+    backend fault.
+
+    Two defects fixed here, both raised on PR #1207:
+
+    `since` and `until` were accepted and then ignored: the query was
     `SELECT value FROM metrics WHERE name=?` with no time predicate. Because
-    `get_metric` tries this backend FIRST and returns whatever it produces,
-    a request like `/metrics/foo?since=X&until=Y` silently aggregated every
-    timestamp on record whenever polars was selected and succeeded — the same
+    `get_metric` tries this backend FIRST and returns whatever it produces, a
+    request like `/metrics/foo?since=X&until=Y` silently aggregated every
+    timestamp on record whenever polars was selected and succeeded -- the same
     request answered differently depending on which backend won, with no error
-    either way. Raised by CodeAnt on PR #1207.
+    either way. It now runs the same statement as the SQL path.
 
-    The predicate below is the same one `get_metric`'s SQL fallback builds, so
-    the two backends now agree by construction. `is not None` rather than a
-    truthiness test in both places: `since=0.0` is a valid epoch timestamp, and
-    a falsy check would drop the filter for it.
+    And the two paths returned different *shapes*: the SQL branch has always
+    carried `samples`, and this one did not, so a caller reading `samples` saw
+    it appear and disappear with whichever backend happened to win. Returning
+    the count alongside the result is what makes the two responses
+    interchangeable, which is the whole point of the fix above. Raised by
+    CodeAnt, who noticed that returning 0 for an empty `count` window made this
+    branch win in a case where it previously fell through.
     """
     try:
         import polars as pl  # type: ignore[import-untyped]
 
-        clauses, params = ["name = ?"], [name]
-        if since is not None:
-            clauses.append("timestamp >= ?")
-            params.append(since)
-        if until is not None:
-            clauses.append("timestamp <= ?")
-            params.append(until)
-        where = "WHERE " + " AND ".join(clauses)
-
+        low, high = _window(since, until)
         with _db_conn() as c:
-            rows = c.execute(f"SELECT value FROM metrics {where}", params).fetchall()
+            rows = c.execute(_METRIC_VALUES_SQL, (name, low, high)).fetchall()
+        samples = len(rows)
         if not rows:
             # `count` of an empty window is 0; every other aggregation of an
-            # empty window is genuinely unknown. Returning None for all five made
-            # the two backends disagree on exactly one case -- SQLite's
-            # COUNT(value) over zero rows is 0, not NULL -- so
-            # `?agg=count&since=<future>` answered `null` when polars won and `0`
-            # when SQL did. Found by adding `count` to the differential test, at
-            # cubic's suggestion on PR #1207.
-            return 0.0 if agg == "count" else None
+            # empty window is genuinely unknown -- which is exactly what
+            # SQLite returns, `COUNT(value)` being 0 and `AVG(value)` NULL over
+            # zero rows. Matching that is what keeps the two answers identical.
+            return (0.0 if agg == "count" else None, 0)
         df = pl.DataFrame({"value": [r["value"] for r in rows]})
         if agg == "avg":
-            return df["value"].mean()
+            return (df["value"].mean(), samples)
         if agg == "sum":
-            return df["value"].sum()
+            return (df["value"].sum(), samples)
         if agg == "min":
-            return df["value"].min()
+            return (df["value"].min(), samples)
         if agg == "max":
-            return df["value"].max()
-        return float(len(df))
+            return (df["value"].max(), samples)
+        return (float(samples), samples)
     except Exception:  # Polars not installed or failure
         return None
 
@@ -614,29 +666,32 @@ def get_metric(
     backend = _select_backend()
 
     if backend == "polars":
-        result = _polars_aggregate(name, agg, since, until)
-        if result is not None:
+        aggregated = _polars_aggregate(name, agg, since, until)
+        if aggregated is not None:
+            result, samples = aggregated
             _GUARDS[backend].reinforce()
-            return {"name": name, "aggregation": agg, "result": result, "backend": backend}
+            return {
+                "name": name,
+                "aggregation": agg,
+                "result": result,
+                "samples": samples,
+                "backend": backend,
+            }
+        # Only a genuine backend fault reaches here now. An empty window used to
+        # look identical to polars being broken, so an honest "no rows in that
+        # range" decayed the backend's health score.
         _GUARDS[backend].decay()
 
-    # `is not None`, not truthiness: `since=0.0` is a valid epoch timestamp and a
-    # falsy check silently drops the filter for it. Matches _polars_aggregate so
-    # the two backends cannot answer the same request differently.
-    clauses, params = ["name = ?"], [name]
-    if since is not None:
-        clauses.append("timestamp >= ?")
-        params.append(since)
-    if until is not None:
-        clauses.append("timestamp <= ?")
-        params.append(until)
-    where = "WHERE " + " AND ".join(clauses)
-    agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
+    low, high = _window(since, until)
     with _db_conn() as c:
-        row = c.execute(
-            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}", params
-        ).fetchone()
-    return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
+        row = c.execute(_METRIC_SQL[agg], (name, low, high)).fetchone()
+    return {
+        "name": name,
+        "aggregation": agg,
+        "result": row["result"],
+        "samples": row["samples"],
+        "backend": "sqlite",
+    }
 
 
 @_router.get("/metrics/{name}/timeseries")
@@ -647,26 +702,9 @@ def metric_timeseries(
     until: Optional[float] = None,
     limit: int = Query(90, le=365),
 ) -> Dict[str, Any]:
-    fmt = "%Y-%m-%dT%H" if bucket == "hour" else "%Y-%m-%d"
-    # `is not None`, matching get_metric and _polars_aggregate: since=0.0 is a
-    # real bound (midnight 1970) and a truthiness test silently drops it. This
-    # endpoint kept the truthiness form after the other two were fixed, which is
-    # how the same defect survives a fix -- by living in a third place nobody
-    # listed.
-    clauses, params = ["name = ?"], [name]
-    if since is not None:
-        clauses.append("timestamp >= ?")
-        params.append(since)
-    if until is not None:
-        clauses.append("timestamp <= ?")
-        params.append(until)
-    where = "WHERE " + " AND ".join(clauses)
+    low, high = _window(since, until)
     with _db_conn() as c:
-        rows = c.execute(
-            f"SELECT strftime('{fmt}', timestamp, 'unixepoch') as bucket, AVG(value) as avg, COUNT(*) as samples "
-            f"FROM metrics {where} GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
-            params + [limit],
-        ).fetchall()
+        rows = c.execute(_TIMESERIES_SQL[bucket], (name, low, high, limit)).fetchall()
     return {"name": name, "bucket": bucket, "series": [dict(r) for r in rows]}
 
 

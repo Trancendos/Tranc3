@@ -13,6 +13,17 @@ on:
     - cron: '42 23 * * 3'
   push:
     branches: [ "main" ]
+  # Without this, the SARIF upload below produces a code-scanning configuration
+  # that exists on `refs/heads/main` and on no pull request, so GitHub reports
+  # "configuration not found" and fails the generated check on every PR --
+  # the same defect `trivy-enforce` had, found by
+  # scripts/check_sarif_categories_reach_prs.py. The job's own `if` already
+  # ends in `|| github.event_name == 'pull_request'`, so PR runs were intended;
+  # only the trigger was missing, which made that branch of the condition dead.
+  # `publish_results` is forced off by the action outside the default branch,
+  # so a PR run reports without publishing.
+  pull_request:
+    branches: [ "main" ]
 
 # Declare default permissions as read only.
 permissions: read-all
