@@ -206,75 +206,75 @@ import raises and the keyword-heuristic fallback runs instead.
 
 ---
 
-### SEC-007 — fflate unzipSync ZIP64 infinite loop, fix unreachable behind web's peer graph
+### SEC-007 — fflate unzipSync ZIP64 infinite loop, resolved by the 0.4.x patch line
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** |
+| **Disposition** | **RESOLVED** |
 | **ID** | GHSA-px8p-9vwx-vf98 |
 | **Scanner** | npm audit (census `web` surface) |
-| **Component** | `fflate@0.4.8` — transitive via `posthog-js`, `web/` |
-| **Blocked-by** | `posthog-js` declares `fflate: ^0.4.8` through its latest release (1.425.1), and `web/`'s peer graph cannot be re-resolved to apply an override — see below |
-| **Recorded** | 2026-09-03 |
+| **Component** | `fflate@0.4.9` — transitive via `posthog-js`, `web/` |
+| **Recorded** | 2026-09-03 as ACCEPT; moved to RESOLVED 2026-09-26 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
-| **Next review** | 2026-12-03 |
-| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved; when `posthog-js` widens its `fflate` range; or as soon as `web/` gains any fflate **decompression** path (`unzipSync`, `unzip`, `decompressSync`, `gunzipSync`, `inflateSync`, `unzlibSync`) or begins processing archives from an untrusted source. **Enforced by `scripts/check_disposition_premises.py`**, not left to memory |
+| **Next review** | 2026-12-26 |
+| **Re-evaluate** | If `web/package-lock.json` ever resolves `fflate` back into an affected range. **Enforced by `scripts/check_disposition_premises.py`**, which now checks the resolved version against the advisory's own ranges rather than against a hardcoded pin |
 
-A patched release exists — fflate 0.8.3 — so this is `blocked`, not `SUPPRESS`, and the
-**Blocked-by** row above is what produces that classification.
+**What changed, and it is the advisory's own data that changed it.** OSV records
+GHSA-px8p-9vwx-vf98 as five separate affected ranges, one per minor line, each with its
+own fix:
 
-**Why the fix is unreachable.** `posthog-js` declares `fflate: ^0.4.8`, a range that
-excludes every patched release, and it still does so at 1.425.1 (verified against the
-registry, not assumed) — so bumping `posthog-js` does not help. The remaining route is
-an `overrides` entry, the mechanism `web/package.json` already uses for four other
-packages. It cannot be applied cleanly: `npm install` fails ERESOLVE on clean `main`
-before any override is added, because `react-router@8.3.1` requires React 19 while the
-app pins `react@^18.3.1` (and `react-router-dom` sits on a different major, 7.18.3).
-Forcing it through with `--legacy-peer-deps` succeeds but re-resolves the entire tree:
-**982 package versions and roughly 16,000 lockfile lines changed**, measured, to
-remediate one moderate advisory. That trade was rejected — an unreviewable whole-tree
-rewrite carries more risk than the finding does.
-
-CI is unaffected by the ERESOLVE because `frontend-build.yml` runs `npm ci
---ignore-scripts`, which replays the committed lockfile rather than re-resolving peers.
-`make frontend` (`Makefile:150`) runs plain `npm install` and therefore does not work
-today. Resolving that peer conflict is the prerequisite for *any* automated dependency
-remediation in `web/`, this one included.
-
-**Not exploitable as used — at the version `web/` installs.** The advisory is an
-infinite loop in `unzipSync` when parsing malformed ZIP64 archives. `posthog-js` uses
-fflate only to compress *outbound* payloads, and the evidence for that is the shipped
-code, not the dependency graph.
-
-That evidence was read from **one version**, and the conclusion is scoped to it. The
-table below was measured on `posthog-js@1.422.5` — the version `web/package-lock.json`
-resolves — and says nothing about any other release. A different version ships different
-code, so a bump invalidates the measurement rather than inheriting it. Because CI has no
-`node_modules` to re-read the call sites from, the lockfile pin is what makes the scope
-checkable: `scripts/check_disposition_premises.py` fails if `posthog-js` moves off
-1.422.5 or `fflate` off 0.4.8, which is the signal to re-measure before this acceptance
-is relied on again.
-
-| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` — the version `web/package-lock.json` pins, enforced by `scripts/check_disposition_premises.py` |
+| Introduced | Fixed |
 |---|---|
-| Sites that import fflate at all | 2 — `lib/src/request.js:77` and `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`, both `require("fflate")` |
-| Symbols those sites call | `gzipSync`, `strToU8`, `strFromU8` (`request.js:143`, `lazy-loaded-session-recorder.js:170`) — compression and UTF-8 conversion only |
-| Decompression entry points reached | **zero** — no `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync` anywhere in the package |
+| 0.4.5 | **0.4.9** |
+| 0.5.0 | 0.5.4 |
+| 0.6.0 | 0.6.11 |
+| 0.7.0 | 0.7.5 |
+| 0.8.0 | 0.8.3 |
 
-No attacker-supplied archive is ever unzipped by `posthog-js@1.422.5`, so the vulnerable
-function is never called by the code `web/` actually ships today. Stated no wider than
-that: this is a measurement of one version's call sites, not a general property of
-`posthog-js`, and not a prediction about its next release.
+`web/package-lock.json` resolves `fflate` to **0.4.9** — the fixed release for the 0.4.x
+line, which `posthog-js`'s `^0.4.8` range admits. The advisory does not apply to the tree
+`web/` actually installs. Nothing was done to achieve this; the lockfile already carried
+0.4.9 while the entry was still asserting 0.4.8.
 
-An earlier revision of this entry cited "18 references each to `strToU8` and
-`gzipSync`" and `npm audit`'s `effects: []`. Both are corrected here. The 18 counted
-`.js.map` source maps alongside the 2 real call sites, inflating the figure ninefold
-without adding evidence. And `effects: []` does not mean what it was read to mean: it
-lists the packages npm reports as vulnerable *because of* this one, so an empty list
-says only that no dependent was separately flagged — `posthog-js` does depend on
-fflate, and always did. The direct call-site evidence above is what carries this
-disposition; the audit field never did.
+**That gap is the finding worth keeping.** The entry was accepted on 2026-09-03 with a
+long, carefully measured argument for why the fix was unreachable, and it was wrong on
+the one fact that decided the outcome: it read `posthog-js`'s *declared range*
+(`^0.4.8`) as if it were the *resolved version*, and never checked the lockfile. The
+patched release was inside the declared range the whole time. A whole-tree override was
+costed at 982 package versions and ~16,000 lockfile lines, and rejected as too risky —
+against a risk that had already been remediated by ordinary resolution.
 
+The generalisable rule: **a declared range is not a resolved version.** Read the
+lockfile. `scripts/check_disposition_premises.py` now does exactly that, and compares
+what it finds against the advisory's ranges rather than against a version this document
+asserts.
+
+**Superseded analysis, retained as the record.** The ACCEPT rested on two premises, both
+now moot:
+
+- *"The fix is unreachable."* False, as above — 0.4.9 satisfies `^0.4.8`.
+- *"Not exploitable as used."* Measured on `posthog-js@1.422.5`: two import sites
+  (`lib/src/request.js:77`, `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`),
+  calling `gzipSync` / `strToU8` / `strFromU8` only, and zero decompression entry points
+  anywhere in the package. That measurement stands, but it no longer carries the
+  disposition — the patched version does. The premise check's `web/`-wide decompression
+  scan has been removed with it: it would now fail CI on a legitimate decompression call
+  while `fflate` is patched, which is a false positive wearing a security label.
+
+Two corrections from earlier revisions stay on the record. The entry once cited "18
+references each to `strToU8` and `gzipSync`" — that counted `.js.map` source maps
+alongside the 2 real call sites, inflating the figure ninefold. And it read npm audit's
+`effects: []` as evidence of non-reachability; `effects` lists packages flagged
+*because of* this one, so an empty list says only that no dependent was separately
+flagged. `posthog-js` does depend on fflate, and always did.
+
+**The peer-graph problem is real and still open, just not this entry's.** `npm install`
+in `web/` fails ERESOLVE on clean `main`: `react-router@8.3.1` requires React 19 while
+the app pins `react@^18.3.1` (and `react-router-dom` sits on 7.18.3). CI is unaffected —
+`frontend-build.yml` runs `npm ci --ignore-scripts`, replaying the committed lockfile —
+but `make frontend` (`Makefile:150`) runs plain `npm install` and does not work today.
+That blocks *any* automated dependency remediation in `web/`, which is why it is tracked
+on its own (#1133 / #1203) rather than as a rider on a resolved advisory.
 
 ---
 
@@ -1572,3 +1572,137 @@ Reviewed quarterly alongside `.trivyignore`, and whenever
 `scripts/security_score.py` or the pre-deploy quality gate reports a new
 medium-or-above finding. Any entry past its **Next review** date should be
 treated as expired rather than still-accepted.
+
+---
+
+## Appendix — scanner scope and procedures, merged from the wiki copy
+
+`wiki-content/Security-SECURITY_ALERT_REGISTER.md` was a second document with
+this same title, last touched 2026-09-11, and
+`scripts/check_doc_duplication.py` failed on the pair: two documents claiming
+to be the same thing drift, and each stays blind to the other's contents.
+
+It is now a pointer to this file. The material below is what it held that this
+register did not, moved rather than dropped — four Forgejo-export rows and the
+scanner-scope tables. The SEC-009…SEC-019 findings that copy listed are not
+repeated here; it was already pointing at this register for those.
+
+Dates and run identifiers are as that copy recorded them (2026-09-11) and have
+not been re-verified in the move.
+
+### Forgejo code-scanning export (sample, 2026-09-11)
+
+| ID | Source | Finding | Status | Action |
+|----|--------|---------|--------|--------|
+| #1539 | Trivy/Forgejo | Tiller CVE in `flux/base/deployments.yaml:251` | **FP** | Line 251 is `fmd-distiller` labels, not Tiller. No `tiller` image in repo. |
+| #2127 | Dockerfile | `workers/ffmpeg-worker` runs as root | **FIX** | Non-root `tranc3` user added (Phase 1) |
+| #1 | Trivy | `sentencepiece` CVE in requirements | **SUPPRESS** | Pinned `0.2.1`; documented in `.trivyignore` |
+| #2638 | CodeQL | SSRF in `workers/notifications/worker.py` | **FIX** | `validate_webhook_url()` before `urlopen`; tests in `tests/test_url_validation.py`. Webhook target refusal now includes query containment (SEC-011) |
+| #985 | CodeQL | SSRF in `workers/gateway-service/worker.py` | **FP** | Internal `httpx` to workflow service URL from env — not user-controlled fetch |
+
+Run when `FORGEJO_TOKEN` is set (the Forgejo UI must show **0 open Critical**):
+
+```bash
+export FORGEJO_URL="https://trancendos.com/the-workshop"
+export FORGEJO_TOKEN="<token>"
+export FORGEJO_REPO="Trancendos/Tranc3"
+python scripts/export_forgejo_code_scan_alerts.py --merge
+```
+
+Without a token: merge the latest `logs/forgejo-code-scanning-alerts-*.json`
+after a manual UI export, or use the CI artifact from the `security-scan`
+workflow.
+
+### Kubernetes manifest hardening
+
+| Finding | Location | Status | Action |
+|---------|----------|--------|--------|
+| Missing `securityContext` | `src/nanoservices/igi_gitops/flux/base/deployments.yaml` | **FIX** | Pod + container hardening aligned with `flux/base/` |
+| `hostIPC: true` | NSA broker, SHI gateway, DNF orchestrator (both flux trees) | **ACCEPT** | Required for POSIX shm IPC between nanoservice pods. See `docs/HOSTIPC_RISK_ACCEPTANCE.md` |
+| `hostPath` `/dev/shm` | `igi_gitops` deployments | **ACCEPT** | Paired with hostIPC; mitigated by network policies + non-root |
+| `readOnlyRootFilesystem` | Partial coverage | **FIX** | Applied where compatible; writable `/tmp` emptyDir where needed |
+
+### Dependency hygiene
+
+Recovered 2026-09-26. This section and `pip-audit suppressions (OSV)` below existed
+**only** in the wiki copy, and the first pass of this appendix dropped both — which
+would have deleted five live governance facts from the repository the moment the wiki
+copy became a pointer. Caught in review on #1239 before that merged. The appendix is
+what keeps them, so they are restored verbatim rather than paraphrased.
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `torch` / `sentencepiece` pins | **SUPPRESS** | Torch bootstrap optional; sentencepiece CVE tracked in `.trivyignore` |
+| `pip-audit` gate | **WARN** | Logged in Forgejo `security-scan.yml` (`continue-on-error`); local gate matches (warn-only) |
+| Framework pins (`fastapi`, `starlette`, `pydantic`, `uvicorn`, `redis`) | **GOVERNED** | Centrally governed via `scripts/align_framework_pins.py`. Both Dependabot and Renovate exclude these packages; `scripts/check_canonical_pin_governance.py` fails CI on drift |
+
+The framework-pin row is the one worth not losing: it names the *only* mechanism by
+which those five pins move, and the CI gate that fails when something moves them
+another way. Losing it would not have broken the gate — it would have left the gate
+running with nothing documenting why it exists, which is how a control ends up
+deleted as unexplained.
+
+### pip-audit suppressions (OSV)
+
+Tracked in `.osv-scanner.toml` with `reason` + quarterly review per CVE. Reconcile
+after `pip-audit` on Linux/Python 3.11 in Forgejo CI (`security-scan.yml`, warn-only).
+
+Also recovered 2026-09-26 — see the note above.
+
+### npm audit scope
+
+Directories scanned in CI, with the audit level each is held to per
+`security-scan.yml`:
+
+| Directory | `--audit-level` |
+|-----------|-----------------|
+| `cloudflare/tranc3-ai` | moderate |
+| `cloudflare/infinity-void` | moderate |
+| `cloudflare/trancendos-api-gateway` | high |
+| `tranc3-bots` | moderate |
+
+### SAST scope (Bandit / Semgrep / Ruff)
+
+| Tool | CI scope | Gate | Notes |
+|------|----------|------|-------|
+| **bandit** | `src/`, `api.py`, `workers/infinity-auth`, `workers/infinity-ws`, `workers/api-gateway` | medium+ severity and confidence | `# nosec` only where justified (B104 Docker bind, B108 `/dev/shm`, B310 validated URLs, B102 workflow sandbox). Ceiling tracked in `config/immune/nosec_ceiling.txt` |
+| **semgrep** | `src/` only | ERROR severity | Fix, or inline `nosemgrep` with the rule id |
+| **ruff** | `src/`, `api.py` | warn-only (`--exit-zero`) | E501 ignored |
+
+### Trivy / IaC row not otherwise recorded here
+
+| CVE | Status | Review | Notes |
+|-----|--------|--------|-------|
+| KSV118 | **FP** | 2027-03-01 | Helm Tiller false positive — the pod name `fmd-distiller` contains the substring "tiller". Re-check: when `fmd-distiller` is renamed, or Helm Tiller is genuinely deployed |
+
+### Security guard calibration
+
+`.forgejo/workflows/production-gate.yml` and
+`.github/workflows/production-gate.yml` run targeted mutation testing via
+`scripts/check_guard_calibration.py`. Each security guard is deleted in turn
+and its named tests must fail. A guard whose removal keeps the suite green is
+decorative, and blocks the gate.
+
+### Vulnerability census
+
+Run history is tracked in
+`docs/governance/vulnerability-census-history.jsonl`, covering the Python, npm,
+Go and Rust surfaces. The census routes findings to owning Locations per
+`config/estate/location_codes.yaml`.
+
+### Verification commands
+
+```bash
+python scripts/security_score.py
+python scripts/production_readiness_score.py
+python -m pytest tests/test_url_validation.py tests/test_zero_cost_registry.py tests/test_adaptive_rotator.py -q
+python scripts/pre_deploy_quality_gate.py
+```
+
+### Open items carried over (not P0 security blockers)
+
+- Marketing architecture terms (quantum, dimensional, transcendent) are **not
+  implemented** as production services; excluded from the security score.
+- Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
+  --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
+  Forgejo UI.

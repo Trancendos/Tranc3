@@ -17,16 +17,34 @@ This record answers it with measurements rather than posture, so that a later
 A `DAEMON.md` looks like documentation. It is not, here.
 
 `charliecreates[bot]` (GitHub App `charliecreates`, app id 198680274) is the
-**author** of all fourteen branches and pull requests. Creating a branch and
-opening a pull request requires write access, so the App is already installed on
-this repository and already holds it. Nothing in this repo reads `.agents/` —
-measured: `git ls-tree -r origin/main` returns no `.agents/` path, and a
-repository-wide grep for `.agents/`, `DAEMON.md` and `daemons/` across `.py`,
-`.yml`, `.yaml`, `.md` and `.json` returns nothing. The consumer is external.
+**author** of all fourteen branches and pull requests.
+
+Authorship alone would not prove write access — a fork author can open a pull
+request against a public base repository without it. So the head repository was
+checked rather than assumed. Every one of the fourteen reports
+`head.repo.full_name = "Trancendos/Tranc3"`, not a fork, and the branches live
+in this repository under the `charlie/daemon-installs/` prefix. Pushing a branch
+here requires write access, so the App holds it. (Raised by
+chatgpt-codex-connector on #1240 — the conclusion stood, the evidence for it was
+not written down.)
+
+Nothing in this repo reads `.agents/`. Measured: `git ls-tree -r origin/main`
+returns no `.agents/` path, and a repository-wide grep for `.agents/`,
+`DAEMON.md` and `daemons/` returns nothing across `.py`, `.yml`, `.yaml`, `.md`,
+`.json`, **`.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.go`, `.rs`, `.sh` and
+`.toml`**. The executable extensions matter and were missing from the first pass
+of this record: the cluster itself ships TypeScript, so a `.ts` consumer is
+exactly the one that would have been overlooked. (sourcery-ai on #1240.) The
+consumer is external.
 
 So merging a `DAEMON.md` does not add a document. It **arms an agent that already
-has the access to act**, against a queue of 78 open pull requests. That is the
-decision, and it is the same decision fourteen times.
+has the access to act**, against a queue of **78 open pull requests — measured
+2026-09-26** by listing `state=open` pull requests for this repository and
+counting the result. (Not to be confused with the 84 in
+`docs/governance/CI-ESTATE-CONSOLIDATION.md`: that is a different figure from
+2026-09-10, counting pull requests blocked by one CI cause. Flagged by
+codeant-ai on #1240.) That is the decision, and it is the same decision fourteen
+times.
 
 ## What each one was measured against
 
@@ -93,8 +111,13 @@ limits that bite under prolonged/heavy use)". The policy's reasoning does not st
 at Actions; it is about what a fleet of writers costs.
 
 **Collision.** Conflict resolution and drive-to-green on this estate's pull
-requests are already performed, by the sessions doing the merge work and by
-Mergify's queue. `pr-check-repair`'s own specification concedes the hazard and
+requests are already performed by the sessions doing the merge work. Mergify is
+*not* a second party to that, and an earlier draft of this record said it was:
+`.mergify.yml` defines `merge`, `label` and `comment` actions only — it merges
+eligible pull requests and manages metadata, and resolves no conflicts and
+repairs no checks. (codeant-ai on #1240.) One concurrent writer, not two, and
+adding a third-party agent to the same branches still makes it a race.
+`pr-check-repair`'s own specification concedes the hazard and
 spends three sections on it — "Expect parallel `pr-check-repair` activations",
 a flaky-rerun guard that must "fail closed", and an admission that its checks
 "do not provide atomic exactly-once execution". A design that documents its own
@@ -113,6 +136,34 @@ compiler, a formatter, a linter, or another review" are on its never-report list
 and it refuses to `APPROVE` or `REQUEST_CHANGES`. That is better behaviour than
 most of the eight already here. It is still a ninth reviewer on a queue whose
 problem is not too little review.
+
+### One is the closest call, and it is a concurrency decision (#1186)
+
+`pr-review-triage`. This is the one the first draft of this record omitted
+entirely — the groups covered thirteen of fourteen, and #1186 had a disposition
+on its own pull request but none here. (Caught independently by sourcery-ai and
+chatgpt-codex-connector on #1240. An exhaustive classification that is not
+exhaustive is the same defect as a register that claims to carry content it
+dropped, which is the other thing review caught this week.)
+
+It is the one that targets a problem this estate demonstrably has. Eight review
+bots produce a great deal of output across 78 open pull requests, and this
+daemon's job is to disposition *non-human* review threads — `valid`, `invalid`,
+`duplicate`, `fixed`, `uncertain` — reply with rationale, and resolve or
+minimise the duplicates. Its deny list is strict in the right direction: it will
+not reply to, hide, minimise or react to human-authored feedback, will not
+approve or merge, will not push commits, and will not resolve a thread "just
+because a new commit mentions it" without code-level evidence.
+
+Declined on concurrency, not on quality. Review-thread triage on these pull
+requests is already being done by the sessions working the merge queue — reading
+each bot finding, deciding whether it is real, replying and resolving. Two
+agents resolving the same threads is the same race as #1187 and #1190, and this
+one cannot be scoped to a subset of pull requests.
+
+Its disposition model is a good starting design if the bot-noise problem is
+attacked later, and this record says so deliberately rather than leaving the
+reasoning to a closed pull request.
 
 ### Two would add scheduled pull requests to a 78-deep queue (#1183, #1184)
 
@@ -133,14 +184,26 @@ from measuring something, not from inferring it from filenames and headings.
 non-draft pull requests whose `mergeable` is `CONFLICTING`. With 78 open pull
 requests that is a genuinely useful thing to know, independent of any daemon.
 
-It needs `gh`, which is not installed in this estate's environments, and `bun`,
-which appears **nowhere** in this repository's toolchain — measured: no reference
-in `.github/`, `Makefile` or `package.json`. Both scripts run only inside
-Charlie's own runtime. Nobody here can execute or test them, which also means
-nobody here can review them against a run.
+**An earlier draft of this record rejected it on tool availability, and that was
+wrong.** It claimed `gh` is not installed in this estate's environments and that
+nobody here could run the script. Measured properly: **11 workflows in
+`.github/workflows/` invoke `gh`**, three of them calling `gh pr` / `gh api` /
+`gh issue` directly on `ubuntu-latest` without an install step, because GitHub's
+runners ship it. `bun` is likewise present in the agent container (1.3.11). The
+script is runnable. (chatgpt-codex-connector on #1240 — and the correct lesson
+is the one it stated: an absent executable and missing authentication are
+different findings, and neither had been established.)
 
-If the conflict scan is wanted, it should be rewritten against this repository's
-own tooling rather than adopted as a side effect of installing a daemon.
+What survives the correction is narrower and still real: `bun` appears **nowhere
+in this repository's own toolchain** — no reference in `.github/`, `Makefile` or
+`package.json` — so adopting these scripts introduces a new runtime dependency
+for the estate to carry and pin. For a read-only GraphQL query over open pull
+requests, that is a poor trade against the same query in the Python tooling
+`scripts/` already uses everywhere else.
+
+So: if the conflict scan is wanted, write it against this repository's own
+tooling. Not because the original cannot run, but because adopting it would add
+a runtime to the estate as a side effect of a decision about daemons.
 
 ## What is left for the owner
 
