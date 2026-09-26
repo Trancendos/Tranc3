@@ -45,6 +45,11 @@ jobs:
         working-directory: src/nanoservices/rust/tranc3-nanoservice
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Cargo runs dependency build scripts after checkout, and this job
+          # never pushes, so it has no use for a persisted git credential.
+          # (zizmor artipacked, via CodeRabbit on #1239)
+          persist-credentials: false
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - name: Cache Cargo

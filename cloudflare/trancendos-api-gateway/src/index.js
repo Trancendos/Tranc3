@@ -122,23 +122,63 @@ class CircuitBreaker {
 
 // ── Proxy ─────────────────────────────────────────────────────────────────────
 
+// Upstreams this gateway may proxy to.
+//
+// The Aikido fix this came from listed `['trancendos.workers.dev', 'fly.dev']`,
+// which was wrong in both directions at once:
+//
+//   - This account's Workers subdomain is `luminous-aimastermind.workers.dev`,
+//     not `trancendos.workers.dev` (see wrangler.toml, and CLAUDE.md's
+//     "Workers subdomain"). Every configured upstream -- users, products,
+//     orders, payments, AI -- failed the check, so those routes returned 502
+//     while the services behind them were healthy.
+//   - `fly.dev` matched by suffix permits proxying to ANY Fly application on
+//     the platform, so a mistyped or tampered service URL would forward
+//     authenticated requests and their tokens to somebody else's tenant.
+//
+// So the list was simultaneously too narrow to work and too broad to protect.
+// It now names this account's Workers subdomain and the two Fly apps this
+// platform actually runs. (chatgpt-codex-connector, codeant-ai on #1239)
+const ALLOWED_UPSTREAM_SUFFIXES = ['luminous-aimastermind.workers.dev'];
+const ALLOWED_UPSTREAM_HOSTS = ['tranc3-backend.fly.dev', 'trancendos-bots.fly.dev'];
+
+/**
+ * Reject a path that resolves outside its base, including through encoding.
+ *
+ * Checking for the literal `/../` and `/%2e%2e/` missed `%2e%2e%2f`, where the
+ * SLASH is encoded too: `/%2e%2e%2fadmin` passed the gateway and was decoded
+ * and normalised upstream. Decoding first, then looking at path segments,
+ * catches every spelling rather than the two that were spelled out.
+ */
+function hasTraversal(value) {
+  if (!value) return false;
+  let decoded = value;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      // A malformed escape is not something to pass upstream either.
+      return true;
+    }
+  }
+  return decoded.split(/[/\\]/).some(segment => segment === '..');
+}
+
 function buildValidatedUrl(baseUrl, targetPath, queryString) {
   try {
-    // Minimal path validation
-    if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
-      throw new Error('Invalid path');
-    }
-    if (targetPath && (targetPath.includes('/../') || /\/%2e%2e\//i.test(targetPath))) {
+    if (hasTraversal(baseUrl) || hasTraversal(targetPath)) {
       throw new Error('Invalid path');
     }
 
     const url = new URL(baseUrl);
 
-    // Protocol + host checks
-    const allowedDomains = ['trancendos.workers.dev', 'fly.dev'];
-    const isAllowedDomain = allowedDomains.some(domain =>
-      url.hostname === domain || url.hostname.endsWith('.' + domain)
-    );
+    const isAllowedDomain =
+      ALLOWED_UPSTREAM_HOSTS.includes(url.hostname) ||
+      ALLOWED_UPSTREAM_SUFFIXES.some(
+        domain => url.hostname === domain || url.hostname.endsWith('.' + domain)
+      );
     if (!isAllowedDomain) {
       throw new Error('Invalid host');
     }

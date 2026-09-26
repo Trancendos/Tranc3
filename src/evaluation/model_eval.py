@@ -31,6 +31,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
+from Dimensional.path_validation import has_parent_traversal
+
 logger = logging.getLogger("tranc3.evaluation")
 
 # ---------------------------------------------------------------------------
@@ -451,8 +453,12 @@ class EvalSuite:
         jsonl_path: str,
     ) -> EvalResult:
         """Load samples from a JSONL file (one JSON object per line)."""
-        if ".." in jsonl_path:
-            raise Exception("Invalid file path")
+        # `..` as a path SEGMENT, not two dots anywhere in the string. This
+        # is a library API with no declared root, so the substring form
+        # bought no containment while rejecting `../data/eval.jsonl` and
+        # `eval..set.jsonl`. (CodeRabbit, chatgpt-codex-connector on #1239)
+        if has_parent_traversal(jsonl_path):
+            raise ValueError("Invalid file path")
         samples = []
         with open(jsonl_path) as f:
             for line in f:

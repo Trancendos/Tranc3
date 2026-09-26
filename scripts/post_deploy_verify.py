@@ -155,74 +155,17 @@ def build_validated_url(base_url: str, port: int, path: str) -> str:
             raise ValueError("Invalid protocol")
         if not parsed.hostname:
             raise ValueError("Invalid host")
-        allowed_domains = [
-            "tranc3-backend",
-            "tranc3-ai",
-            "infinity-ws",
-            "infinity-auth",
-            "infinity-portal",
-            "infinity-one",
-            "infinity-admin",
-            "infinity-shards",
-            "infinity-bridge",
-            "cranbania",
-            "users-service",
-            "monitoring",
-            "notifications",
-            "infinity-ai",
-            "the-grid",
-            "products-service",
-            "orders-service",
-            "payments-service",
-            "files-service",
-            "identity-service",
-            "analytics-service",
-            "search-service",
-            "email-service",
-            "sms-service",
-            "storage-service",
-            "cron-service",
-            "queue-service",
-            "cache-service",
-            "config-service",
-            "audit-service",
-            "rate-limit-service",
-            "geo-service",
-            "cdn-service",
-            "health-aggregator",
-            "gbrain-bridge",
-            "topology-service",
-            "ledger-service",
-            "model-router-service",
-            "workflow-engine-service",
-            "skills-benchmark-service",
-            "langchain-integration-service",
-            "deepagents-orchestrator-service",
-            "vault-service",
-            "mlflow-service",
-            "the-academy",
-            "basement",
-            "the-studio",
-            "sashas-photo-studio",
-            "tranceflow",
-            "tateking",
-            "imaginarium",
-            "the-lab",
-            "warp-tunnel",
-            "warp-radio",
-            "the-dutchy",
-            "devocity",
-            "tranquility",
-            "imind",
-            "taimra",
-            "vrar3d",
-            "resonate",
-            "chaos-party",
-            "127.0.0.1",
-            "localhost",
-        ]
-        if parsed.hostname.lower() not in allowed_domains:
-            raise ValueError("Invalid host")
+        # No host allowlist. It listed the compose service names plus
+        # localhost, which is right for the default `base=None` path (each
+        # entity probed at its own service name) and wrong for every other
+        # documented use: `--base http://host` and TRANC3_BASE_URL exist so an
+        # operator can verify a real deployment, and any VM hostname, LAN IP
+        # or domain failed the list. _probe swallows the ValueError and
+        # returns "unreachable" without sending a request or logging anything,
+        # so the critical pass rate fell to 0% and the run HARD STOPped -- a
+        # config mismatch reported as an estate-wide outage, silently. The
+        # scheme and port checks do the real work and stay.
+        # (CodeRabbit, chatgpt-codex-connector on #1239)
         port_int = int(port)
         if not 1 <= port_int <= 65535:
             raise ValueError("Invalid port")

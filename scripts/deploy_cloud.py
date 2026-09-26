@@ -332,7 +332,13 @@ def main() -> int:
     _log("")
     _log("Cloud deploy finished.")
     _log(f"  API:  {BACKEND_HEALTH}")
-    _log(f"  Bots: {BOTS_HEALTH}")
+    # BOTS_HEALTH only exists when bots were deployed. It used to be a
+    # module-level constant; the security fix moved it inside
+    # `if not args.backend_only:` and left this line unconditional, so
+    # `--backend-only` raised NameError after the health checks had already
+    # passed and never returned an exit code. (CodeRabbit on #1239)
+    if not args.backend_only:
+        _log(f"  Bots: {BOTS_HEALTH}")
     _log(f"  Adaptive layers: {BACKEND_HEALTH.replace('/health', '')}/adaptive/layers")
     return 0 if ok else 1
 

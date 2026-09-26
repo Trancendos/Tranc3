@@ -104,6 +104,23 @@ type ShmRingBuffer struct {
 	mu          sync.Mutex
 }
 
+// segmentNameFor maps a service name to the shared-memory segment name the
+// rest of the estate uses for it.
+//
+// The Python client (nsa_client.py) names segments
+// `<service, lowercased, dashes to underscores>_seg`, and the broker's
+// registry records that same value. This Go client passed the bare service
+// name straight through, so Go opened /dev/shm/nsa_<service> while every
+// Python peer opened /dev/shm/nsa_<service>_seg -- two different files, and
+// no messages between them. (codeant-ai on #1239)
+func segmentNameFor(serviceName string) string {
+	normalised := strings.ToLower(strings.ReplaceAll(serviceName, "-", "_"))
+	if strings.HasSuffix(normalised, "_seg") {
+		return normalised
+	}
+	return normalised + "_seg"
+}
+
 // NewShmRingBuffer creates or opens a shared memory ring buffer
 func NewShmRingBuffer(segmentName string, create bool) (*ShmRingBuffer, error) {
 	for _, seg := range strings.Split(filepath.ToSlash(segmentName), "/") {
@@ -273,7 +290,7 @@ func NewNanoserviceClient(serviceName string, tier int, brokerURL string) *Nanos
 // Start initializes the client and begins message processing
 func (c *NanoserviceClient) Start() error {
 	// Create shared memory segment
-	shm, err := NewShmRingBuffer(c.serviceName, true)
+	shm, err := NewShmRingBuffer(segmentNameFor(c.serviceName), true)
 	if err != nil {
 		return fmt.Errorf("create shm: %w", err)
 	}
@@ -317,7 +334,7 @@ func (c *NanoserviceClient) Send(target string, msgType string, payload map[stri
 	}
 
 	// Write to target's SHM segment
-	targetShm, err := NewShmRingBuffer(target, false)
+	targetShm, err := NewShmRingBuffer(segmentNameFor(target), false)
 	if err != nil {
 		return fmt.Errorf("open target shm %s: %w", target, err)
 	}

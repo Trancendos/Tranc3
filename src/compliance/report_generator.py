@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from Dimensional.path_validation import has_parent_traversal
+
 if TYPE_CHECKING:
     from src.compliance.checker import ComplianceReport
 
@@ -337,8 +339,11 @@ def _build_donut_svg(score: float) -> str:
 
 def save_reports(report: "ComplianceReport", output_dir: Path) -> dict[str, Path]:
     """Save JSON, Markdown, and HTML reports to output_dir. Returns paths."""
-    if ".." in str(output_dir):
-        raise Exception("Invalid file path")
+    # `..` as a path SEGMENT, not two dots anywhere in the string; the
+    # substring form rejected any output directory whose name contains two
+    # dots. (CodeRabbit, chatgpt-codex-connector on #1239)
+    if has_parent_traversal(output_dir):
+        raise ValueError("Invalid file path")
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = {}
 

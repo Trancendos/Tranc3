@@ -52,22 +52,50 @@ const SIZE_STYLES: Record<CardSize, string> = {
   expanded: 'p-6 text-base',
 }
 
+// Extra origins a card's liveUrl may point at, beyond the page's own.
+// Comma-separated, e.g. "api.trancendos.com,status.trancendos.com".
+const EXTRA_LIVE_HOSTS: string[] = (import.meta.env.VITE_ALLOWED_LIVE_HOSTS || '')
+  .split(',')
+  .map((host: string) => host.trim())
+  .filter((host: string) => host.length > 0)
+
+/**
+ * Resolve a card's liveUrl and refuse anything outside the permitted origins.
+ *
+ * Two things the Aikido fix this came from got wrong, both of which stopped
+ * every card from ever fetching:
+ *
+ *   1. `allowedDomains = ['example.com']  // add your allowed domains here`
+ *      rejected every real endpoint. A placeholder allowlist is not a strict
+ *      control; it is the feature switched off for all callers at once.
+ *   2. `new URL(baseUrl)` throws on a relative path, and `liveUrl` has always
+ *      accepted same-origin relative URLs such as `/api/health`.
+ *
+ * The policy that actually fits a browser component polling its own backend is
+ * same-origin by default, which needs no list to maintain and cannot drift,
+ * plus an explicit deployment-configured set for the cross-origin cases.
+ * (CodeRabbit, chatgpt-codex-connector, codeant-ai on #1239)
+ */
 function buildValidatedUrl(baseUrl: string): string {
   try {
-    // Minimal path validation
     if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
       throw new Error('Invalid path');
     }
 
-    const url = new URL(baseUrl);
+    // A relative liveUrl resolves against the page, which is the common case.
+    const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const url = new URL(baseUrl, origin);
 
-    // Protocol + host checks
-    const allowedDomains = ['example.com']; // add your allowed domains here
-    if (!allowedDomains.includes(url.hostname)) {
-      throw new Error('Invalid host');
-    }
     if (!['http:', 'https:'].includes(url.protocol)) {
       throw new Error('Invalid protocol');
+    }
+
+    const sameOrigin = origin !== undefined && url.origin === origin;
+    const permittedHost = EXTRA_LIVE_HOSTS.some(
+      (host) => url.hostname === host || url.hostname.endsWith('.' + host),
+    );
+    if (!sameOrigin && !permittedHost) {
+      throw new Error('Invalid host');
     }
 
     return url.href;

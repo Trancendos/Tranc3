@@ -113,8 +113,14 @@ def build_validated_url(base_url: str, port: int, path: str) -> str:
         if not re.fullmatch(r"/[A-Za-z0-9_/-]*", path):
             raise ValueError("Invalid parameter")
 
-        # Build URL with validated port and path
-        parsed = parsed._replace(netloc=f"{parsed.hostname}:{port}", path=path)
+        # Build URL with validated port and path.
+        # `parsed.hostname` strips the brackets from an IPv6 literal, so
+        # http://[::1] became the unparseable http://::1:8000/health and every
+        # service failed -- and because this runs outside the probe's error
+        # handling, the whole run could abort rather than report. Put the
+        # brackets back. (chatgpt-codex-connector on #1239)
+        host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        parsed = parsed._replace(netloc=f"{host}:{port}", path=path)
 
         return urlunparse(parsed)
     except Exception:

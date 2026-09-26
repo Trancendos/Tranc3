@@ -120,12 +120,30 @@
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.setAttribute('role', 'alert');
-    toast.innerHTML = `
-      <span class="toast-icon" aria-hidden="true">${TOAST_ICONS[type] || TOAST_ICONS.info}</span>
-      <span class="toast-message"></span>
-      <button class="toast-close" aria-label="Close notification" onclick="this.closest('.toast').remove()">×</button>
-    `;
-    toast.querySelector('.toast-message').textContent = message;
+
+    // Built with DOM calls rather than innerHTML. The message already went
+    // through textContent, so opengrep's two findings landed on the static
+    // template around it -- but arguing that on a security rule is worse
+    // value than not having the sink at all, and this also drops the inline
+    // onclick, which no CSP worth setting would allow.
+    // (sourcery-ai, blocking, on #1239)
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = TOAST_ICONS[type] || TOAST_ICONS.info;
+
+    const text = document.createElement('span');
+    text.className = 'toast-message';
+    text.textContent = message;
+
+    const close = document.createElement('button');
+    close.className = 'toast-close';
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close notification');
+    close.textContent = '×';
+    close.addEventListener('click', () => toast.remove());
+
+    toast.append(icon, text, close);
     container.appendChild(toast);
 
     setTimeout(() => {

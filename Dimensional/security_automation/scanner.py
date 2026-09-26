@@ -32,6 +32,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set
 
+from Dimensional.path_validation import has_parent_traversal
+
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -840,8 +842,12 @@ class SecurityScanner:
 
     def scan_file(self, filepath: str) -> List[Violation]:
         """Scan a single Python file for security violations."""
-        if ".." in filepath:
-            raise Exception("Invalid file path")
+        # `..` as a path SEGMENT, not two dots anywhere in the string. The
+        # substring form rejected valid names like `release..candidate.py`,
+        # and in scan_path one such file aborted the whole directory scan.
+        # (CodeRabbit, chatgpt-codex-connector on #1239)
+        if has_parent_traversal(filepath):
+            raise ValueError("Invalid file path")
         try:
             with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 source = f.read()

@@ -32,9 +32,17 @@ def build_validated_url(base_url: str) -> str:
             raise ValueError("Invalid protocol")
         if not parsed.hostname:
             raise ValueError("Invalid host")
-        allowed_domains = ["example.com"]  # add your allowed domains here
-        if parsed.hostname.lower() not in allowed_domains:
-            raise ValueError("Invalid host")
+        # No host allowlist. The Aikido fix this came from shipped
+        # `allowed_domains = ["example.com"]  # add your allowed domains here`,
+        # and register_service takes health URLs from code, which registers
+        # hosts like `localhost`, `auth` and other compose service names --
+        # never example.com. So every check_health raised here before sending
+        # a request, the broad `except Exception` below recorded UNHEALTHY and
+        # tripped the breaker, and the monitor reported the whole estate down.
+        # A placeholder allowlist is not a weaker control than none; it is a
+        # control that acts on every call and always wrongly. The scheme check
+        # above is the part that was doing real work, and it stays.
+        # (CodeRabbit, chatgpt-codex-connector, codeant-ai on #1239)
 
         return urlunparse(parsed)
     except Exception:
