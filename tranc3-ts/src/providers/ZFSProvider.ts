@@ -20,7 +20,7 @@
 
 import { promises as fs } from 'fs';
 import { createHash } from 'crypto';
-import { join, dirname, basename, resolve as resolvePath, relative as relativePath, isAbsolute } from 'path';
+import { join, dirname, resolve as resolvePath, relative as relativePath, isAbsolute } from 'path';
 import { IStorageProvider, FileMetadata, StorageHealth, StorageStats } from './IStorageProvider';
 import { Logger } from '../core/logger';
 
