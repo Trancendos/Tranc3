@@ -1,0 +1,6 @@
+# getrandom 0.3 refuses to guess an entropy source for wasm32-unknown-unknown:
+# the backend has to be named at build time, and the crate will not compile for
+# that target without it. Scoped to the target, so x86_64 host builds -- which
+# is everything `.github/workflows/rust.yml` runs -- see no change.
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
