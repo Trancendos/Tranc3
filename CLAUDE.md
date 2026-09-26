@@ -245,6 +245,18 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   and 2,259). So act on their findings and ignore their counts, and do not build the
   "triage blitz" machinery all three propose for a backlog that does not exist.
   Read it before acting on any externally generated report of this estate
+- `docs/governance/AGENT-DAEMON-FLEET-DECISION.md` — why all fourteen
+  `charliecreates[bot]` daemon-install pull requests (#1183–#1196) were declined
+  rather than merged. The rule it sets: **a configuration file for an installed
+  agent is a grant of authority, not a document** — `charliecreates` already held
+  the write access it used to open those PRs, nothing in this repo reads
+  `.agents/`, so merging a `DAEMON.md` arms an agent rather than documenting one.
+  Measured against each: no Linear integration exists (4 of them), 12 open issues
+  is not a backlog needing triage machinery (3), `pr-metadata` would normalise
+  away the measured evidence this estate writes into PR bodies (1), two push to
+  PR branches across a 78-deep queue against `CLAUDE.md`'s own rate-limit policy,
+  and `pr-review` would be the ninth review bot. Read it before merging any
+  `.agents/`, `.github/agents/` or similar agent-configuration file
 - `docs/governance/REFERENCE-NUMBERING.md` — Wiki (`WIX`, administrative) vs Knowledge Base
   (`KB`, user) reference numbering across three scopes: platform-wide `TKB000001`/`TWIX000042`,
   Location-scoped `Infi-KB-0001`, and personal `#One:KB-0001` (Infinity-One, per-user, private
