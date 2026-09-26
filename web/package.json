@@ -13,8 +13,8 @@
     "dependencies": {
         "lucide-react": "^1.0.0",
         "posthog-js": "^1.418.2",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8",
         "zustand": "^5.0.15"
     },
     "devDependencies": {
@@ -41,7 +41,7 @@
         "@storybook/react-vite": "10.5.10",
         "@tailwindcss/postcss": "4.3.3",
         "@types/node": "26.4.0",
-        "@types/react": "18.3.29",
+        "@types/react": "19.2.18",
         "@types/react-dom": "18.3.7",
         "@vitejs/plugin-react": "6.1.1",
         "@vitest/browser-playwright": "4.1.11",
