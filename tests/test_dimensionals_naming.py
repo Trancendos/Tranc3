@@ -191,3 +191,64 @@ def test_the_singular_form_is_never_a_bare_literal_here() -> None:
         f"a bare {singular} literal is rewritable by the migration script; "
         'build it at runtime instead, as `"Dimension" + "al"`'
     )
+
+
+#: Documents that record a past assessment. Rewriting them would put a name in
+#: the record that did not exist when the assessment was made, so the sweep
+#: below exempts them rather than the rename touching them.
+HISTORICAL_RECORDS = {
+    "wiki-content/Historical-PHASE25_REPO_REVIEW.md",
+}
+
+#: Path-like shapes for the singular form. Prose is excluded deliberately --
+#: "a Dimensional" is the correct singular concept noun, and a bare-word rule
+#: was tried and reverted for over-applying to it.
+_SINGULAR_PATH = re.compile(r"(?:\.\./|\./|/|=|context[ =])" + "Dimension" + r"al(?!s)")
+
+
+def test_no_path_reference_to_the_singular_form_survives() -> None:
+    """The rename reported itself complete while 69 references remained.
+
+    `scripts/migrate_to_dimensionals.py` printed "0 references across 0 files"
+    on its second run -- correctly, by its own rules -- and the tree still held:
+
+      * 66 Dockerfiles whose build instructions read
+        `--build-context sharedcore=../../Dimension` + `al`, a command that
+        fails as printed, because the path rules needed a trailing slash or a
+        bare `./` after whitespace;
+      * `scripts/apply_shared_core_contexts.py`, which GENERATES those build
+        contexts and still pointed its source at the old directory -- quoted,
+        so the lookbehind did not apply;
+      * `--cov=` naming the old package in `.github/workflows/test.yml`, a live
+        coverage flag measuring a directory that no longer exists.
+
+    A rename that reports complete while incomplete is the defect this estate
+    keeps finding. The script's rules were widened; this sweep is what stops
+    the next narrow rule from reporting the same false clean.
+    """
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=REPO, capture_output=True, text=True, check=True
+    ).stdout.split()
+    suffixes = {".py", ".yml", ".yaml", ".toml", ".md", ".sh", ".cfg", ".ini", ".txt"}
+    offenders = []
+    for rel in tracked:
+        if rel in HISTORICAL_RECORDS or rel == "scripts/migrate_to_dimensionals.py":
+            continue
+        if rel == "tests/test_dimensionals_naming.py":
+            continue
+        path = REPO / rel
+        if not path.is_file():
+            continue  # a submodule pointer, or a path the checkout does not hold
+        if path.suffix not in suffixes and not path.name.startswith("Dockerfile"):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if _SINGULAR_PATH.search(line):
+                offenders.append(f"{rel}:{number}: {line.strip()[:100]}")
+    assert not offenders, (
+        "path references to the pre-rename directory survive the migration:\n  "
+        + "\n  ".join(offenders[:20])
+    )

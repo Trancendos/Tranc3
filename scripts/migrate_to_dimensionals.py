@@ -149,7 +149,28 @@ SUBSTITUTIONS: list[tuple[re.Pattern[str], str]] = [
     # Replaced with explicit, anchored rules per shape. Case matters: the
     # lowercase `dimensional-nexus-service` and `dimensional_nexus` are untouched
     # because every pattern requires the capital D.
-    (re.compile(r"(?<=[\s=:])\./Dimensional(?!s)\b"), "./Dimensionals"),
+    # Any relative path prefix, not just a bare `./` after whitespace. The
+    # narrower rule left 69 references behind, found by sweeping the tree after
+    # the rename reported itself complete:
+    #
+    #   `sharedcore=../../Dimensional`  -- 66 Dockerfiles, in the comment that
+    #                                      tells a developer how to build them.
+    #                                      The command as printed now fails.
+    #   `("./Dimensional", ...)`        -- scripts/apply_shared_core_contexts.py,
+    #                                      quoted, so the `[\s=:]` lookbehind did
+    #                                      not apply. This one GENERATES the
+    #                                      build contexts, so it was emitting the
+    #                                      old path into every Dockerfile it
+    #                                      touched.
+    #
+    # A rename that reports "0 references remaining" while 69 remain is the
+    # defect this estate keeps finding, so the sweep is now a test.
+    (re.compile(r"(?<![\w-])((?:\.\./)+|\./)Dimensional(?!s)\b"), r"\1Dimensionals"),
+    # `--cov=Dimensional` in .github/workflows/test.yml: a live coverage flag
+    # naming a package that no longer exists, so the measurement silently
+    # covered nothing. No trailing slash and no `./`, so none of the path rules
+    # above reached it.
+    (re.compile(r"(?<==)Dimensional(?!s)(?![\w./-])"), "Dimensionals"),
     (re.compile(r"/app/Dimensional(?!s)\b"), "/app/Dimensionals"),
     (re.compile(r"(?<![\w-])Dimensional(?!s)/"), "Dimensionals/"),
     # NOT a bare-word rule. One was tried and reverted: it rewrote prose where

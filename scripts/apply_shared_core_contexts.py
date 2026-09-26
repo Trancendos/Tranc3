@@ -78,7 +78,7 @@ COMPOSE = ROOT / "docker-compose.production.yml"
 
 # Context name -> (repo-relative source, destination inside the image)
 CONTEXTS = {
-    "sharedcore": ("./Dimensional", "/app/Dimensionals/"),
+    "sharedcore": ("./Dimensionals", "/app/Dimensionals/"),
     "observability": ("./src/observability", "/app/src/observability/"),
 }
 
