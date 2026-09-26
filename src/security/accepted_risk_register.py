@@ -63,8 +63,27 @@ ID_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-#: Only these mean "knowingly carried".
-ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS")
+#: Dispositions that make an id *documented* — a decision was recorded about
+#: it, so a scanner reporting it is not reporting something nobody has looked
+#: at. ACCEPT and SUPPRESS mean "knowingly carried". RESOLVED means "fixed at
+#: source", which is not carried at all, and it belongs here for a different
+#: reason: `_classify` only consults this set on a finding with NO reachable
+#: fix, where the question is "has anyone adjudicated this id" rather than "are
+#: we carrying it".
+#:
+#: Leaving RESOLVED out was a live fail-open, not just a red test. SEC-005 was
+#: moved to RESOLVED on 2026-09-11 and the code half never landed, so the six
+#: mcp advisory ids that entry documents in full stopped being parsed: measured
+#: on this branch's base, `registered_ids()` returned PYSEC-2026-3481 and
+#: CVE-2026-52869 only — and those two only because SECURITY.md's accepted
+#: table happens to list them — while 3482, 3483, 52870 and 59950 were invisible
+#: to the parser entirely. Any scanner reporting one of those four would have
+#: been classified `fixable` as undocumented, against an entry that documents it.
+#:
+#: Carried from #1228, which had this fix; taking only that PR's auth and Rust
+#: changes into the security cluster is what left the register and the parser
+#: disagreeing.
+ACCEPTING_DISPOSITIONS = ("ACCEPT", "SUPPRESS", "RESOLVED")
 
 #: The header row of SECURITY.md's accepted-risk table. Rows beneath it are
 #: accepted by construction; ids elsewhere in that file are prose.
@@ -89,7 +108,10 @@ def _entries(text: str) -> Iterable[str]:
 
 
 def registered_ids(register: str = REGISTER, security: str = SECURITY) -> Set[str]:
-    """Advisory ids carrying an explicit ACCEPT or SUPPRESS decision, uppercased.
+    """Advisory ids carrying an explicit adjudication, uppercased.
+
+    That is ACCEPT, SUPPRESS or RESOLVED — see ACCEPTING_DISPOSITIONS for why a
+    resolved entry counts as documented even though nothing is being carried.
 
     Deliberately not "every id mentioned in the security docs" — see the module
     docstring for what that let through.
