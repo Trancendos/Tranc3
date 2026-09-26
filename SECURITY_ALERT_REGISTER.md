@@ -206,75 +206,75 @@ import raises and the keyword-heuristic fallback runs instead.
 
 ---
 
-### SEC-007 — fflate unzipSync ZIP64 infinite loop, fix unreachable behind web's peer graph
+### SEC-007 — fflate unzipSync ZIP64 infinite loop, resolved by the 0.4.x patch line
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** |
+| **Disposition** | **RESOLVED** |
 | **ID** | GHSA-px8p-9vwx-vf98 |
 | **Scanner** | npm audit (census `web` surface) |
-| **Component** | `fflate@0.4.8` — transitive via `posthog-js`, `web/` |
-| **Blocked-by** | `posthog-js` declares `fflate: ^0.4.8` through its latest release (1.425.1), and `web/`'s peer graph cannot be re-resolved to apply an override — see below |
-| **Recorded** | 2026-09-03 |
+| **Component** | `fflate@0.4.9` — transitive via `posthog-js`, `web/` |
+| **Recorded** | 2026-09-03 as ACCEPT; moved to RESOLVED 2026-09-26 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
-| **Next review** | 2026-12-03 |
-| **Re-evaluate** | When `web/`'s React 18 / react-router 8 peer conflict is resolved; when `posthog-js` widens its `fflate` range; or as soon as `web/` gains any fflate **decompression** path (`unzipSync`, `unzip`, `decompressSync`, `gunzipSync`, `inflateSync`, `unzlibSync`) or begins processing archives from an untrusted source. **Enforced by `scripts/check_disposition_premises.py`**, not left to memory |
+| **Next review** | 2026-12-26 |
+| **Re-evaluate** | If `web/package-lock.json` ever resolves `fflate` back into an affected range. **Enforced by `scripts/check_disposition_premises.py`**, which now checks the resolved version against the advisory's own ranges rather than against a hardcoded pin |
 
-A patched release exists — fflate 0.8.3 — so this is `blocked`, not `SUPPRESS`, and the
-**Blocked-by** row above is what produces that classification.
+**What changed, and it is the advisory's own data that changed it.** OSV records
+GHSA-px8p-9vwx-vf98 as five separate affected ranges, one per minor line, each with its
+own fix:
 
-**Why the fix is unreachable.** `posthog-js` declares `fflate: ^0.4.8`, a range that
-excludes every patched release, and it still does so at 1.425.1 (verified against the
-registry, not assumed) — so bumping `posthog-js` does not help. The remaining route is
-an `overrides` entry, the mechanism `web/package.json` already uses for four other
-packages. It cannot be applied cleanly: `npm install` fails ERESOLVE on clean `main`
-before any override is added, because `react-router@8.3.1` requires React 19 while the
-app pins `react@^18.3.1` (and `react-router-dom` sits on a different major, 7.18.3).
-Forcing it through with `--legacy-peer-deps` succeeds but re-resolves the entire tree:
-**982 package versions and roughly 16,000 lockfile lines changed**, measured, to
-remediate one moderate advisory. That trade was rejected — an unreviewable whole-tree
-rewrite carries more risk than the finding does.
-
-CI is unaffected by the ERESOLVE because `frontend-build.yml` runs `npm ci
---ignore-scripts`, which replays the committed lockfile rather than re-resolving peers.
-`make frontend` (`Makefile:150`) runs plain `npm install` and therefore does not work
-today. Resolving that peer conflict is the prerequisite for *any* automated dependency
-remediation in `web/`, this one included.
-
-**Not exploitable as used — at the version `web/` installs.** The advisory is an
-infinite loop in `unzipSync` when parsing malformed ZIP64 archives. `posthog-js` uses
-fflate only to compress *outbound* payloads, and the evidence for that is the shipped
-code, not the dependency graph.
-
-That evidence was read from **one version**, and the conclusion is scoped to it. The
-table below was measured on `posthog-js@1.422.5` — the version `web/package-lock.json`
-resolves — and says nothing about any other release. A different version ships different
-code, so a bump invalidates the measurement rather than inheriting it. Because CI has no
-`node_modules` to re-read the call sites from, the lockfile pin is what makes the scope
-checkable: `scripts/check_disposition_premises.py` fails if `posthog-js` moves off
-1.422.5 or `fflate` off 0.4.8, which is the signal to re-measure before this acceptance
-is relied on again.
-
-| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` — the version `web/package-lock.json` pins, enforced by `scripts/check_disposition_premises.py` |
+| Introduced | Fixed |
 |---|---|
-| Sites that import fflate at all | 2 — `lib/src/request.js:77` and `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`, both `require("fflate")` |
-| Symbols those sites call | `gzipSync`, `strToU8`, `strFromU8` (`request.js:143`, `lazy-loaded-session-recorder.js:170`) — compression and UTF-8 conversion only |
-| Decompression entry points reached | **zero** — no `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync` anywhere in the package |
+| 0.4.5 | **0.4.9** |
+| 0.5.0 | 0.5.4 |
+| 0.6.0 | 0.6.11 |
+| 0.7.0 | 0.7.5 |
+| 0.8.0 | 0.8.3 |
 
-No attacker-supplied archive is ever unzipped by `posthog-js@1.422.5`, so the vulnerable
-function is never called by the code `web/` actually ships today. Stated no wider than
-that: this is a measurement of one version's call sites, not a general property of
-`posthog-js`, and not a prediction about its next release.
+`web/package-lock.json` resolves `fflate` to **0.4.9** — the fixed release for the 0.4.x
+line, which `posthog-js`'s `^0.4.8` range admits. The advisory does not apply to the tree
+`web/` actually installs. Nothing was done to achieve this; the lockfile already carried
+0.4.9 while the entry was still asserting 0.4.8.
 
-An earlier revision of this entry cited "18 references each to `strToU8` and
-`gzipSync`" and `npm audit`'s `effects: []`. Both are corrected here. The 18 counted
-`.js.map` source maps alongside the 2 real call sites, inflating the figure ninefold
-without adding evidence. And `effects: []` does not mean what it was read to mean: it
-lists the packages npm reports as vulnerable *because of* this one, so an empty list
-says only that no dependent was separately flagged — `posthog-js` does depend on
-fflate, and always did. The direct call-site evidence above is what carries this
-disposition; the audit field never did.
+**That gap is the finding worth keeping.** The entry was accepted on 2026-09-03 with a
+long, carefully measured argument for why the fix was unreachable, and it was wrong on
+the one fact that decided the outcome: it read `posthog-js`'s *declared range*
+(`^0.4.8`) as if it were the *resolved version*, and never checked the lockfile. The
+patched release was inside the declared range the whole time. A whole-tree override was
+costed at 982 package versions and ~16,000 lockfile lines, and rejected as too risky —
+against a risk that had already been remediated by ordinary resolution.
 
+The generalisable rule: **a declared range is not a resolved version.** Read the
+lockfile. `scripts/check_disposition_premises.py` now does exactly that, and compares
+what it finds against the advisory's ranges rather than against a version this document
+asserts.
+
+**Superseded analysis, retained as the record.** The ACCEPT rested on two premises, both
+now moot:
+
+- *"The fix is unreachable."* False, as above — 0.4.9 satisfies `^0.4.8`.
+- *"Not exploitable as used."* Measured on `posthog-js@1.422.5`: two import sites
+  (`lib/src/request.js:77`, `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`),
+  calling `gzipSync` / `strToU8` / `strFromU8` only, and zero decompression entry points
+  anywhere in the package. That measurement stands, but it no longer carries the
+  disposition — the patched version does. The premise check's `web/`-wide decompression
+  scan has been removed with it: it would now fail CI on a legitimate decompression call
+  while `fflate` is patched, which is a false positive wearing a security label.
+
+Two corrections from earlier revisions stay on the record. The entry once cited "18
+references each to `strToU8` and `gzipSync`" — that counted `.js.map` source maps
+alongside the 2 real call sites, inflating the figure ninefold. And it read npm audit's
+`effects: []` as evidence of non-reachability; `effects` lists packages flagged
+*because of* this one, so an empty list says only that no dependent was separately
+flagged. `posthog-js` does depend on fflate, and always did.
+
+**The peer-graph problem is real and still open, just not this entry's.** `npm install`
+in `web/` fails ERESOLVE on clean `main`: `react-router@8.3.1` requires React 19 while
+the app pins `react@^18.3.1` (and `react-router-dom` sits on 7.18.3). CI is unaffected —
+`frontend-build.yml` runs `npm ci --ignore-scripts`, replaying the committed lockfile —
+but `make frontend` (`Makefile:150`) runs plain `npm install` and does not work today.
+That blocks *any* automated dependency remediation in `web/`, which is why it is tracked
+on its own (#1133 / #1203) rather than as a rider on a resolved advisory.
 
 ---
 
