@@ -111,7 +111,11 @@ export default function ExecutionPanel({ executionId, onClose }: Props) {
           {/* Cancel */}
           {(status.status === "running" || status.status === "pending") && (
             <button
-              onClick={() => cancelExecution(status.id)}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to cancel this execution?")) {
+                  cancelExecution(status.id)
+                }
+              }}
               className="w-full py-1.5 text-xs font-medium bg-red-900/50 hover:bg-red-900 text-red-300 rounded transition-colors"
             >
               Cancel Execution
