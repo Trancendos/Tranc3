@@ -422,8 +422,18 @@ def check_sec_006() -> list[str]:
     return failures
 
 
-def _locked_versions() -> dict[str, str] | None:
-    """`web/`'s lockfile resolution for the package SEC-007 rests on."""
+def _locked_versions() -> list[tuple[str, str]] | None:
+    """Every `fflate` resolution in `web/`'s lockfile, as (path, version).
+
+    A list, not a dict keyed by name. An npm lockfile can resolve the same
+    package at several paths -- `node_modules/fflate` alongside
+    `node_modules/posthog-js/node_modules/fflate` -- and keying by name made
+    the last one encountered win. A patched top-level copy would then mask an
+    affected nested one, and the check would pass with the vulnerable package
+    still installed. A security check whose whole premise is that the lockfile
+    is the authoritative installed graph cannot read only part of it.
+    (codeant-ai on #1240.)
+    """
     import json  # noqa: PLC0415 - only needed on this path
 
     lock = ROOT / _WEB_LOCKFILE
@@ -434,13 +444,13 @@ def _locked_versions() -> dict[str, str] | None:
     except (json.JSONDecodeError, OSError):
         return None
 
-    found: dict[str, str] = {}
+    found: list[tuple[str, str]] = []
     for key, node in (data.get("packages") or {}).items():
         name = key.rsplit("node_modules/", 1)[-1] if "node_modules/" in key else None
         if name == _SEC_007_PACKAGE and isinstance(node, dict):
             version = node.get("version")
             if isinstance(version, str):
-                found[name] = version
+                found.append((key, version))
     return found
 
 
@@ -486,20 +496,22 @@ def check_sec_007() -> list[str]:
             f"the RESOLVED disposition in {REGISTER} rests on cannot be confirmed."
         ]
 
-    actual = locked.get(_SEC_007_PACKAGE)
-    if actual is None:
+    if not locked:
         # fflate gone from the tree entirely: the advisory cannot apply. Not a
-        # failure — a dependency being dropped is remediation, not regression.
+        # failure -- a dependency being dropped is remediation, not regression.
         return failures
 
-    if _fflate_is_affected(actual):
+    affected = [(path, version) for path, version in locked if _fflate_is_affected(version)]
+    if affected:
         fixes = ", ".join(fixed for _, fixed in _FFLATE_AFFECTED_RANGES)
+        where = "; ".join(f"{path} -> {version}" for path, version in affected)
         failures.append(
-            f"SEC-007: {_WEB_LOCKFILE} resolves `fflate` to {actual}, which is inside an "
-            f"affected range of GHSA-px8p-9vwx-vf98. {REGISTER} records this finding as "
-            f"RESOLVED on the strength of the installed version being patched. Move to a "
-            f"fixed release ({fixes}) or re-open the entry — do not amend it to assert "
-            "the fix is unreachable, which is the error this entry already made once."
+            f"SEC-007: {_WEB_LOCKFILE} resolves `fflate` inside an affected range of "
+            f"GHSA-px8p-9vwx-vf98 at {len(affected)} path(s): {where}. {REGISTER} records "
+            f"this finding as RESOLVED on the strength of every installed copy being "
+            f"patched. Move each to a fixed release ({fixes}) or re-open the entry -- do "
+            "not amend it to assert the fix is unreachable, which is the error this entry "
+            "already made once."
         )
     return failures
 
@@ -515,8 +527,8 @@ def main() -> int:
         for failure in failures:
             print(f"  {failure}")
         return 1
-    locked = _locked_versions() or {}
-    fflate = locked.get(_SEC_007_PACKAGE, "absent")
+    locked = _locked_versions() or []
+    fflate = ", ".join(sorted({version for _, version in locked})) or "absent"
     print(
         "Disposition premises: PASSED — SEC-006 (nltk 3.10.3 with no fix available, "
         "undeclared in runtime manifests, reached lazily, wordnet only, no path call) "
