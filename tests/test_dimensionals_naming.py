@@ -16,6 +16,7 @@ spelling; banning it is the mistake that caused this.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -252,3 +253,138 @@ def test_no_path_reference_to_the_singular_form_survives() -> None:
         "path references to the pre-rename directory survive the migration:\n  "
         + "\n  ".join(offenders[:20])
     )
+
+
+def test_a_reintroduced_directory_merges_rather_than_nesting(tmp_path, monkeypatch) -> None:
+    """The documented rerun case is the one `git mv` gets wrong.
+
+    The script exists to be re-run "on a merge that reintroduces the old name".
+    In exactly that case the renamed directory is already present, and
+    `git mv Dimensional Dimensionals` does not merge -- it moves the source
+    INSIDE the destination, giving `Dimensionals/Dimensional/`. The text pass
+    then rewrites imports to `Dimensionals.foo` for modules that now live a
+    level deeper, so the tree imports nothing and the run reports success.
+
+    Found by `chatgpt-codex-connector` on PR #1244.
+    """
+    import importlib.util
+
+    repo = tmp_path / "repo"
+    (repo / "Dimensionals" / "sub").mkdir(parents=True)
+    old = repo / ("Dimension" + "al")
+    (old / "sub").mkdir(parents=True)
+    (repo / "Dimensionals" / "kept.py").write_text("# already renamed\n", encoding="utf-8")
+    (old / "reintroduced.py").write_text("# came back in a merge\n", encoding="utf-8")
+    (old / "sub" / "deep.py").write_text("# nested\n", encoding="utf-8")
+    (old / "kept.py").write_text("# a second copy\n", encoding="utf-8")
+    for args in (["init", "-q"], ["add", "-A"]):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "seed"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "_mig", REPO / "scripts" / "migrate_to_dimensionals.py"
+    )
+    assert spec and spec.loader
+    mig = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mig)
+    monkeypatch.setattr(mig, "REPO", repo)
+
+    moved, clashes = mig._merge_into(old, repo / "Dimensionals")
+
+    assert not (repo / "Dimensionals" / ("Dimension" + "al")).exists(), (
+        "the reintroduced directory was nested inside the destination instead "
+        "of merged into it -- every import rewritten afterwards points one "
+        "level too shallow"
+    )
+    assert (repo / "Dimensionals" / "reintroduced.py").is_file()
+    assert (repo / "Dimensionals" / "sub" / "deep.py").is_file(), "nesting was not preserved"
+    assert moved == 2, moved
+    assert clashes == [f"{'Dimension' + 'al'}/kept.py"], clashes
+    assert (repo / "Dimensionals" / "kept.py").read_text() == "# already renamed\n", (
+        "an existing destination file was overwritten; which of two copies is "
+        "correct is a merge decision, not a rename's to make"
+    )
+
+
+def test_the_shared_core_detector_sees_the_renamed_import(tmp_path, monkeypatch) -> None:
+    """`\\b` after the singular name does not match the plural.
+
+    `scripts/apply_shared_core_contexts.py` decides which workers need the
+    shared core copied in, and REMOVES the COPY block and the compose
+    `additional_contexts` entry for a context it thinks is unused. After the
+    rename its detector still matched the old name, so every worker importing
+    the renamed package read as not needing it -- running the script would have
+    stripped working build config out of roughly forty workers.
+
+    The second half of that same line already named the new directory, because
+    the rename rewrote the quoted string and could not rewrite the regex. The
+    line was detecting one name and checking for the other. Found by
+    `chatgpt-codex-connector` on PR #1244.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_ctx", REPO / "scripts" / "apply_shared_core_contexts.py"
+    )
+    assert spec and spec.loader
+    ctx = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ctx)
+    monkeypatch.setattr(ctx, "ROOT", tmp_path)
+
+    worker = tmp_path / "workers" / "an-example"
+    worker.mkdir(parents=True)
+    (worker / "worker.py").write_text(
+        "from Dimensionals.service_auth_fastapi import guard_internal_secret\n",
+        encoding="utf-8",
+    )
+    assert "sharedcore" in ctx.needed_contexts("an-example"), (
+        "a worker importing the renamed shared core reads as not needing it, so "
+        "this script would delete its build context rather than supply it"
+    )
+
+    bare = tmp_path / "workers" / "no-shared-core"
+    bare.mkdir(parents=True)
+    (bare / "worker.py").write_text("import os\n", encoding="utf-8")
+    assert "sharedcore" not in ctx.needed_contexts("no-shared-core"), (
+        "a worker that does not import it must not be granted the context"
+    )
+
+
+def test_the_secret_baseline_is_keyed_to_paths_that_exist() -> None:
+    """detect-secrets matches an accepted finding by filename.
+
+    `.secrets.baseline` is not swept by the text pass -- `.baseline` is not a
+    recognised text suffix -- so after the rename its `results` keys still named
+    the old directory. Eight accepted findings across five files stopped being
+    recognised, and the next commit touching any of them would have reported
+    long-accepted values as new secrets, on a pull request with nothing to do
+    with them. Found by `chatgpt-codex-connector` on PR #1244.
+    """
+    baseline = REPO / ".secrets.baseline"
+    if not baseline.is_file():  # pragma: no cover - the repo ships one
+        pytest.skip("no baseline in this checkout")
+    data = json.loads(baseline.read_text(encoding="utf-8"))
+    singular = "Dimension" + "al"
+    stale = [
+        key
+        for key in data.get("results", {})
+        if key.startswith(singular + "/") or f"/{singular}/" in key
+    ]
+    assert not stale, f"baseline entries keyed to the pre-rename directory: {stale}"
+
+    inner = [
+        finding["filename"]
+        for findings in data.get("results", {}).values()
+        for finding in findings
+        if isinstance(finding, dict)
+        and isinstance(finding.get("filename"), str)
+        and (
+            finding["filename"].startswith(singular + "/") or f"/{singular}/" in finding["filename"]
+        )
+    ]
+    assert not inner, f"findings whose filename names the pre-rename directory: {inner[:5]}"

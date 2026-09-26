@@ -159,7 +159,61 @@ class RoleRegistry:
             """
         )
         self._migrate_to_seat_keyed_schema()
+        self._migrate_renamed_role_ids()
         self._conn.commit()
+
+    #: Roles whose id changed, old -> new. A rename in PLATFORM_ROLES is a
+    #: schema change for anyone whose database already holds the old id: the
+    #: row keyed to it stops matching, `_seed_defaults` inserts a fresh one at
+    #: the default holder, and the operator's actual assignment survives only
+    #: as an orphan with no metadata to render it. The listing then shows the
+    #: default as though nobody had ever reassigned the role.
+    #:
+    #: The DIMENSIONALS rename hit exactly this. Found by
+    #: `chatgpt-codex-connector` on PR #1244 -- in a change whose diff contains
+    #: no behaviour at all, which is the point: a rename is only free when
+    #: nothing has persisted the old name.
+    RENAMED_ROLE_IDS = {"Dimension" + "al": "Dimension" + "als"}
+
+    def _migrate_renamed_role_ids(self) -> None:
+        """Carry assignments and history from a retired role id to its new one.
+
+        Runs before `_seed_defaults` so the seed's `INSERT OR IGNORE` finds the
+        migrated row already present and leaves the real holder alone.
+
+        `INSERT OR IGNORE` then `DELETE` rather than a bare `UPDATE`: if a row
+        under the new id somehow exists already (a database written by a newer
+        build, then rolled back), the existing one wins and the old is dropped
+        rather than the update failing on the primary key and leaving both.
+        """
+        for old_id, new_id in self.RENAMED_ROLE_IDS.items():
+            stale = self._conn.execute(
+                "SELECT COUNT(*) FROM role_assignments WHERE location = ?", (old_id,)
+            ).fetchone()[0]
+            historic = self._conn.execute(
+                "SELECT COUNT(*) FROM role_assignment_history WHERE location = ?", (old_id,)
+            ).fetchone()[0]
+            if not stale and not historic:
+                continue
+            logger.info(
+                "Migrating role id %s -> %s (%d assignment(s), %d history row(s))",
+                old_id,
+                new_id,
+                stale,
+                historic,
+            )
+            self._conn.execute(
+                "INSERT OR IGNORE INTO role_assignments "
+                "(location, seat_id, job_description, assigned_ai, assigned_at, assigned_by) "
+                "SELECT ?, seat_id, job_description, assigned_ai, assigned_at, assigned_by "
+                "FROM role_assignments WHERE location = ?",
+                (new_id, old_id),
+            )
+            self._conn.execute("DELETE FROM role_assignments WHERE location = ?", (old_id,))
+            self._conn.execute(
+                "UPDATE role_assignment_history SET location = ? WHERE location = ?",
+                (new_id, old_id),
+            )
 
     def _needs_seat_migration(self, table: str) -> bool:
         """True when `table` exists and predates the `seat_id` column.

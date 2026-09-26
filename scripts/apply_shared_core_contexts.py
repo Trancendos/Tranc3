@@ -121,7 +121,16 @@ def needed_contexts(worker: str) -> list[str]:
         return []
     text = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in wd.rglob("*.py"))
     needed = []
-    if re.search(r"\b(from|import)\s+Dimensional\b", text) and not (wd / "Dimensionals").is_dir():
+    # `\b` after the old singular name did not match the plural, so after the
+    # DIMENSIONALS rename every worker importing `Dimensionals` read as not
+    # needing the shared core -- and this script REMOVES the COPY block and the
+    # compose `additional_contexts` entry for a context it thinks is unused.
+    # Running it would have stripped working build config out of ~40 workers.
+    # The second half of this line already said `Dimensionals`, because the
+    # rename rewrote the quoted string and could not rewrite the regex: the line
+    # was detecting the old name and checking for the new directory. Found by
+    # `chatgpt-codex-connector` on PR #1244.
+    if re.search(r"\b(from|import)\s+Dimensionals\b", text) and not (wd / "Dimensionals").is_dir():
         needed.append("sharedcore")
     if "src.observability" in text and not (wd / "src" / "observability").is_dir():
         needed.append("observability")
@@ -131,7 +140,7 @@ def needed_contexts(worker: str) -> list[str]:
 def render_dockerfile_block(names: list[str], user: str) -> str:
     """Render the COPY block for one worker, naming only the contexts it uses.
 
-    A worker that never imports `Dimensional` does not get it copied in: an
+    A worker that never imports `Dimensionals` does not get it copied in: an
     unused context still has to be supplied at build time, so granting one
     creates a build dependency that buys nothing.
     """

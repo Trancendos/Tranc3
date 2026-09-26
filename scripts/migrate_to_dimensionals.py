@@ -26,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -227,6 +228,84 @@ def shared_core_forks() -> list[tuple[str, int]]:
     return forks
 
 
+def _merge_into(old_root: Path, new_root: Path) -> tuple[int, list[str]]:
+    """Move every tracked file from `old_root` into `new_root`, preserving layout.
+
+    Returns (moved, clashes). A path that already exists at the destination is
+    NOT overwritten -- it is returned as a clash for someone to reconcile.
+    """
+    listed = subprocess.run(
+        ["git", "ls-files", old_root.relative_to(REPO).as_posix()],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+    moved, clashes = 0, []
+    for rel in listed.stdout.split():
+        target = new_root / Path(rel).relative_to(old_root.relative_to(REPO))
+        if target.exists():
+            clashes.append(rel)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(
+            ["git", "mv", rel, target.relative_to(REPO).as_posix()],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            moved += 1
+        else:
+            clashes.append(f"{rel} ({result.stderr.strip()})")
+    return moved, clashes
+
+
+SECRETS_BASELINE = REPO / ".secrets.baseline"
+
+
+def rewrite_secrets_baseline(*, apply: bool) -> int:
+    """Re-key detect-secrets' accepted findings onto the renamed paths.
+
+    `.secrets.baseline` is not touched by the text pass -- `.baseline` is not in
+    TEXT_SUFFIXES -- so after the rename its `results` keys still named the old
+    directory. detect-secrets matches an accepted finding by filename, so eight
+    findings across five files stopped being recognised: the next commit
+    touching any of them would have reported long-accepted values as new
+    secrets, on a pull request that had nothing to do with them. That is the
+    same shape as the stale baseline that was already failing every PR in this
+    repository. Found by `chatgpt-codex-connector` on PR #1244.
+
+    Rewritten as JSON rather than as text, so only the two fields that name a
+    path can change. A blanket substitution over this file would also run across
+    every `hashed_secret`, which must not be touched by a rename.
+    """
+    if not SECRETS_BASELINE.is_file():
+        return 0
+    data = json.loads(SECRETS_BASELINE.read_text(encoding="utf-8"))
+    results = data.get("results")
+    if not isinstance(results, dict):
+        return 0
+
+    def renamed(path: str) -> str:
+        return re.sub(rf"(^|/){_OLD_NAME}(?=/)", rf"\g<1>{_NEW_NAME}", path)
+
+    changed = 0
+    moved: dict[str, list] = {}
+    for key, findings in results.items():
+        new_key = renamed(key)
+        if new_key != key:
+            changed += 1
+        for finding in findings if isinstance(findings, list) else []:
+            if isinstance(finding, dict) and isinstance(finding.get("filename"), str):
+                finding["filename"] = renamed(finding["filename"])
+        moved.setdefault(new_key, []).extend(findings)
+
+    if changed and apply:
+        data["results"] = {k: moved[k] for k in sorted(moved)}
+        SECRETS_BASELINE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return changed
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true", help="perform the rename")
@@ -271,18 +350,45 @@ def main(argv: list[str] | None = None) -> int:
             if not tracked:
                 print(f"skipping {src}/ — untracked (stray build output?), not moving")
                 continue
-            result = subprocess.run(
-                ["git", "mv", src, dst], cwd=REPO, capture_output=True, text=True
-            )
-            if result.returncode != 0:
-                print(f"could not move {src}/ -> {dst}/: {result.stderr.strip()}")
-                continue
-            print(f"moved {src}/ -> {dst}/")
+            if new_root.is_dir():
+                # `git mv A B` where B is an existing directory nests A INSIDE
+                # it -- `Dimensionals/Dimensional/` -- and the text pass then
+                # rewrites imports to `Dimensionals.foo` for modules that now
+                # live a level deeper. That is precisely the documented rerun
+                # case: a merge reintroduces the old directory while the
+                # renamed one is already there, which is the scenario this
+                # script exists to handle. Found by
+                # `chatgpt-codex-connector` on PR #1244.
+                #
+                # So the contents are merged file by file. An existing
+                # destination file is left alone and the reintroduced copy
+                # reported rather than silently overwritten: which of two
+                # versions of a module is correct is a merge decision, not a
+                # rename's to make.
+                merged, clashes = _merge_into(old_root, new_root)
+                for clash in clashes:
+                    print(f"  ! {clash} exists at the destination — left in place, not overwritten")
+                print(f"merged {merged} file(s) from {src}/ into existing {dst}/")
+                if clashes:
+                    print(f"  {len(clashes)} file(s) still under {src}/ — reconcile them by hand")
+            else:
+                result = subprocess.run(
+                    ["git", "mv", src, dst], cwd=REPO, capture_output=True, text=True
+                )
+                if result.returncode != 0:
+                    print(f"could not move {src}/ -> {dst}/: {result.stderr.strip()}")
+                    continue
+                print(f"moved {src}/ -> {dst}/")
         else:
             print(f"would move {src}/ -> {dst}/")
         moved += 1
     if not moved:
         print(f"no {_OLD_NAME}/ directory left to move — rename already applied.")
+
+    rekeyed = rewrite_secrets_baseline(apply=args.apply)
+    if rekeyed:
+        verb = "re-keyed" if args.apply else "would re-key"
+        print(f"{verb} {rekeyed} .secrets.baseline entr(ies) onto the renamed paths")
 
     touched, total = [], 0
     for path in _candidate_files():
