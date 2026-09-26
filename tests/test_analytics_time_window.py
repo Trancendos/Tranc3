@@ -55,6 +55,24 @@ def _function(name: str) -> ast.FunctionDef:
     )
 
 
+def _execute_literals(func_name: str) -> list[str]:
+    """Every SQL string a function hands to `execute()`, literals only.
+
+    A non-literal statement is reported as a `None` entry, so a test can insist
+    that none appear: an f-string, a name or a dict subscript all read the same
+    way to a SAST rule, and to the next person editing the call site.
+    """
+    out: list[str | None] = []
+    for node in ast.walk(_function(func_name)):
+        if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "execute":
+            first = node.args[0] if node.args else None
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                out.append(first.value)
+            else:
+                out.append(None)
+    return out  # type: ignore[return-value]
+
+
 def _time_predicate_params(func: ast.AST) -> set[str]:
     """Which of `since` / `until` this function actually reads."""
     return {
@@ -84,14 +102,15 @@ def test_polars_backend_reads_the_time_window_it_accepts(param):
 
 def test_polars_backend_builds_a_timestamp_predicate(worker):
     """Reading the parameter is not enough -- it must reach the query."""
-    assert "timestamp >= ?" in worker._METRIC_WINDOW, worker._METRIC_WINDOW
-    assert "timestamp <= ?" in worker._METRIC_WINDOW, worker._METRIC_WINDOW
-    source = ast.unparse(_function("_polars_aggregate"))
-    assert "_METRIC_VALUES_SQL" in source and "_window(" in source, (
-        "_polars_aggregate no longer runs the shared windowed statement. Reading "
+    assert "timestamp >= ?" in worker._METRIC_WINDOW_SQL, worker._METRIC_WINDOW_SQL
+    assert "timestamp <= ?" in worker._METRIC_WINDOW_SQL, worker._METRIC_WINDOW_SQL
+    statements = _execute_literals("_polars_aggregate")
+    assert statements and all(sql and worker._METRIC_WINDOW_SQL in sql for sql in statements), (
+        "_polars_aggregate no longer runs a windowed statement. Reading "
         "`since`/`until` without putting them in the WHERE clause leaves the "
         "filter inert, which is the original defect."
     )
+    assert "_window(" in ast.unparse(_function("_polars_aggregate"))
 
 
 # --------------------------------------------------------------------------
@@ -100,47 +119,47 @@ def test_polars_backend_builds_a_timestamp_predicate(worker):
 
 
 def test_both_backends_use_the_same_time_predicate(worker):
-    """Not merely identical text in both paths -- literally the same string.
+    """Not merely a predicate in each path -- the identical predicate text.
 
-    The first version of this test compared the predicate text found in each
-    function body. That caught a drift but could not prevent one: two copies of
+    The first version of this test compared text found in each function body.
+    That caught a drift but could not prevent one: two copies of
     `timestamp >= ?` satisfy it, and two copies can be edited apart. Every
-    statement is now built from one `_METRIC_WINDOW` constant, so the two paths
-    cannot disagree without someone deleting the constant -- which this test
-    also notices.
+    statement in all three paths is now asserted to carry the one
+    `_METRIC_WINDOW_SQL` string, so a change to one and not the others fails
+    here rather than in production.
     """
-    for sql in [worker._METRIC_VALUES_SQL, *worker._METRIC_SQL.values()]:
-        assert sql.endswith(worker._METRIC_WINDOW), sql
-    for sql in worker._TIMESERIES_SQL.values():
-        assert worker._METRIC_WINDOW in sql, sql
-
     for func_name in ("_polars_aggregate", "get_metric", "metric_timeseries"):
-        source = ast.unparse(_function(func_name))
-        assert "_window(" in source, (
-            f"{func_name} no longer resolves its bounds through _window(). "
-            "get_metric prefers polars and falls back to SQL, so a window "
-            "resolved differently in one path means the same request returns "
-            "different numbers depending on which backend happens to serve it."
+        statements = _execute_literals(func_name)
+        assert statements, f"{func_name} runs no query at all"
+        for sql in statements:
+            assert sql and worker._METRIC_WINDOW_SQL in sql, (
+                f"{func_name} runs a statement without the shared window "
+                f"predicate: {sql!r}. get_metric prefers polars and falls back "
+                "to SQL, so a window applied in one path and not the other means "
+                "the same request returns different numbers depending on which "
+                "backend happens to serve it."
+            )
+        assert "_window(" in ast.unparse(_function(func_name)), (
+            f"{func_name} no longer resolves its bounds through _window()."
         )
 
 
 def test_no_metric_query_is_assembled_by_interpolation():
-    """The statements are fixed strings; only values are bound.
+    """The statements are literals; only values are bound.
 
     The predicate used to be joined from a clause list and interpolated with an
     f-string. It was not injectable -- literal clauses, bound values -- but a
-    reader (human or SAST) cannot tell that from the call site. Raised by
-    Sourcery as a blocking finding on PR #1242.
+    reader cannot tell that from the call site, and neither can a SAST rule.
+    Moving it to a module constant did not help: a name reads the same way as
+    an f-string to the rule, and it is right about that. Raised by Sourcery as
+    a blocking finding on PR #1242, twice.
     """
     for func_name in ("_polars_aggregate", "get_metric", "metric_timeseries"):
-        tree = _function(func_name)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "execute":
-                statement = node.args[0] if node.args else None
-                assert not isinstance(statement, ast.JoinedStr), (
-                    f"{func_name} passes an f-string to execute(); metric queries "
-                    "are fixed statements with bound parameters."
-                )
+        statements = _execute_literals(func_name)
+        assert None not in statements, (
+            f"{func_name} passes a non-literal statement to execute(); metric "
+            "queries are written out in full with bound parameters."
+        )
 
 
 def test_epoch_zero_is_not_treated_as_absent(worker):

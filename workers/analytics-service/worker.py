@@ -313,50 +313,32 @@ def _duckdb_query_events(
 # ── Polars backend ────────────────────────────────────────────────────────────
 
 
-# Every metric statement below is a fixed string with bound parameters, and the
-# time window is always present rather than assembled from a list of clauses.
-# The previous form built `WHERE ...` by joining clauses and interpolated it
-# with an f-string. It was not injectable -- the clauses were literals and the
-# values were bound -- but a SAST reader cannot see that from the call site, and
-# neither can the next person to edit it. A fixed statement per query shape
-# removes the question. `_EPOCH_FLOOR`/`_EPOCH_CEIL` stand in for an absent
+# Every metric statement below is written out in full at the point it runs, and
+# the time window is always present rather than assembled from a list of
+# clauses. The first version built `WHERE ...` by joining clauses and
+# interpolated it with an f-string. It was not injectable -- the clauses were
+# literals and the values were bound -- but neither a SAST reader nor the next
+# person to edit it can see that from the call site, and Sourcery/opengrep
+# rightly would not take it on trust. Replacing the f-string with a module
+# constant did not help either: the rule reads any non-literal statement the
+# same way, and it is right to. So each `execute()` now takes a literal.
+#
+# `_METRIC_WINDOW_SQL` is the text every one of them ends with. It is not
+# interpolated anywhere -- it exists so a test can assert that the three query
+# paths carry the identical predicate, which is the property that stops them
+# drifting apart again. `_EPOCH_FLOOR`/`_EPOCH_CEIL` stand in for an absent
 # bound; they are far outside any real epoch timestamp.
+_METRIC_WINDOW_SQL = "WHERE name = ? AND timestamp >= ? AND timestamp <= ?"
 _EPOCH_FLOOR = -1e308
 _EPOCH_CEIL = 1e308
-
-_METRIC_WINDOW = "WHERE name = ? AND timestamp >= ? AND timestamp <= ?"
-
-_METRIC_VALUES_SQL = "SELECT value FROM metrics " + _METRIC_WINDOW
-
-_METRIC_SQL = {
-    "avg": "SELECT AVG(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
-    "sum": "SELECT SUM(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
-    "min": "SELECT MIN(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
-    "max": "SELECT MAX(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
-    "count": "SELECT COUNT(value) AS result, COUNT(*) AS samples FROM metrics " + _METRIC_WINDOW,
-}
-
-_TIMESERIES_SQL = {
-    "hour": (
-        "SELECT strftime('%Y-%m-%dT%H', timestamp, 'unixepoch') AS bucket, "
-        "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
-    )
-    + _METRIC_WINDOW
-    + " GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
-    "day": (
-        "SELECT strftime('%Y-%m-%d', timestamp, 'unixepoch') AS bucket, "
-        "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
-    )
-    + _METRIC_WINDOW
-    + " GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
-}
 
 
 def _window(since: Optional[float], until: Optional[float]) -> tuple[float, float]:
     """Resolve an open-ended window to explicit bounds.
 
     Every metric query below binds both bounds unconditionally, which is what
-    lets the SQL stay a fixed string with no interpolation (see `_METRIC_SQL`).
+    lets every statement stay a literal (see the note above
+    `_METRIC_WINDOW_SQL`).
     `is not None` rather than a truthiness test: `since=0.0` is a valid epoch
     timestamp, and a falsy check silently drops the filter for it.
     """
@@ -398,7 +380,10 @@ def _polars_aggregate(
 
         low, high = _window(since, until)
         with _db_conn() as c:
-            rows = c.execute(_METRIC_VALUES_SQL, (name, low, high)).fetchall()
+            rows = c.execute(
+                "SELECT value FROM metrics WHERE name = ? AND timestamp >= ? AND timestamp <= ?",
+                (name, low, high),
+            ).fetchall()
         samples = len(rows)
         if not rows:
             # `count` of an empty window is 0; every other aggregation of an
@@ -683,12 +668,21 @@ def get_metric(
         _GUARDS[backend].decay()
 
     low, high = _window(since, until)
+    # One statement for all five aggregations rather than one per `agg`. It
+    # keeps the SQL a literal (see the note above `_METRIC_WINDOW_SQL`), costs
+    # one round trip instead of one per request, and makes it impossible for
+    # two aggregations of the same request to be computed over different rows.
     with _db_conn() as c:
-        row = c.execute(_METRIC_SQL[agg], (name, low, high)).fetchone()
+        row = c.execute(
+            "SELECT AVG(value) AS avg, SUM(value) AS sum, MIN(value) AS min, "
+            "MAX(value) AS max, COUNT(value) AS count, COUNT(*) AS samples "
+            "FROM metrics WHERE name = ? AND timestamp >= ? AND timestamp <= ?",
+            (name, low, high),
+        ).fetchone()
     return {
         "name": name,
         "aggregation": agg,
-        "result": row["result"],
+        "result": row[agg],
         "samples": row["samples"],
         "backend": "sqlite",
     }
@@ -703,8 +697,26 @@ def metric_timeseries(
     limit: int = Query(90, le=365),
 ) -> Dict[str, Any]:
     low, high = _window(since, until)
+    # Two literal statements rather than one with the strftime format
+    # interpolated: `bucket` is already constrained to hour|day by the Query
+    # pattern, but a literal is the only form a reader does not have to verify.
     with _db_conn() as c:
-        rows = c.execute(_TIMESERIES_SQL[bucket], (name, low, high, limit)).fetchall()
+        if bucket == "hour":
+            rows = c.execute(
+                "SELECT strftime('%Y-%m-%dT%H', timestamp, 'unixepoch') AS bucket, "
+                "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
+                "WHERE name = ? AND timestamp >= ? AND timestamp <= ? "
+                "GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
+                (name, low, high, limit),
+            ).fetchall()
+        else:
+            rows = c.execute(
+                "SELECT strftime('%Y-%m-%d', timestamp, 'unixepoch') AS bucket, "
+                "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
+                "WHERE name = ? AND timestamp >= ? AND timestamp <= ? "
+                "GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
+                (name, low, high, limit),
+            ).fetchall()
     return {"name": name, "bucket": bucket, "series": [dict(r) for r in rows]}
 
 
