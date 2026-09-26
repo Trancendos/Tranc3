@@ -122,9 +122,53 @@ class CircuitBreaker {
 
 // ── Proxy ─────────────────────────────────────────────────────────────────────
 
+function buildValidatedUrl(baseUrl, targetPath, queryString) {
+  try {
+    // Minimal path validation
+    if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
+      throw new Error('Invalid path');
+    }
+    if (targetPath && (targetPath.includes('/../') || /\/%2e%2e\//i.test(targetPath))) {
+      throw new Error('Invalid path');
+    }
+
+    const url = new URL(baseUrl);
+
+    // Protocol + host checks
+    const allowedDomains = ['trancendos.workers.dev', 'fly.dev'];
+    const isAllowedDomain = allowedDomains.some(domain =>
+      url.hostname === domain || url.hostname.endsWith('.' + domain)
+    );
+    if (!isAllowedDomain) {
+      throw new Error('Invalid host');
+    }
+
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error('Invalid protocol');
+    }
+
+    // Build pathname from base + validated target path
+    if (targetPath) {
+      // Preserve the base pathname and append the target path
+      const basePath = url.pathname.endsWith('/') ? url.pathname.slice(0, -1) : url.pathname;
+      const cleanTargetPath = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
+      url.pathname = basePath + cleanTargetPath;
+    }
+
+    // Add query string if provided
+    if (queryString) {
+      url.search = queryString;
+    }
+
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 async function proxy(request, targetBase, targetPath, requestId) {
   const orig = new URL(request.url);
-  const url  = `${targetBase}${targetPath}${orig.search}`;
+  const url = buildValidatedUrl(targetBase, targetPath, orig.search);
   const hdrs = new Headers();
   for (const [k, v] of request.headers) {
     if (!["host"].includes(k.toLowerCase())) hdrs.set(k, v);

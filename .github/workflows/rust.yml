@@ -1,13 +1,28 @@
 name: Rust CI
 
+# Two crates, and until 2026-09-26 this workflow watched only the first.
+#   aeonmind/rust                              — the generic agent-framework
+#     spec. Per CLAUDE.md it is scanned but not deployed.
+#   src/nanoservices/rust/tranc3-nanoservice   — the storage nanoservice, the
+#     only Rust that ships in the product.
+# The unwatched one had been unbuildable for an unknown period: its manifest
+# asked reqwest 0.13 for a feature named `rustls-tls`, which 0.13 renamed to
+# `rustls`, so `cargo generate-lockfile` refused before compilation began — and
+# behind that sat two more breaks against cryptoki 0.12 and secrecy 0.10. A
+# Rust CI that runs, reports green, and cannot see the Rust that ships is the
+# same failure as no Rust CI at all, only harder to notice.
 on:
   push:
     paths:
       - 'aeonmind/rust/**'
+      - 'src/nanoservices/rust/**'
+      - '.github/workflows/rust.yml'
     branches: [ main, 'phase-*' ]
   pull_request:
     paths:
       - 'aeonmind/rust/**'
+      - 'src/nanoservices/rust/**'
+      - '.github/workflows/rust.yml'
     branches: [ main ]
 
 env:
@@ -86,3 +101,39 @@ jobs:
         run: pip install maturin
       - name: Build wheel
         run: maturin build --release --features python
+
+  nanoservice-check:
+    name: Nanoservice Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/nanoservices/rust/tranc3-nanoservice
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: Cache Cargo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src/nanoservices/rust/tranc3-nanoservice/target
+          key: ${{ runner.os }}-cargo-nano-${{ hashFiles('src/nanoservices/rust/tranc3-nanoservice/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-nano-
+      # The lockfile must resolve against the manifest without being rewritten.
+      # This is the step that fails on a renamed or dropped feature, and it is
+      # what was missing: the reqwest break stopped resolution dead, so no
+      # amount of compiling further in would have reported anything useful.
+      - name: Verify lockfile resolves
+        run: cargo metadata --locked --format-version 1 > /dev/null
+      - name: Check
+        run: cargo check --locked
+      - name: Release build
+        run: cargo build --release --locked
+      # Deliberately no `cargo fmt --check` and no `clippy -D warnings` here.
+      # Both are red on this crate today (53 warnings, and formatting drift
+      # across most files), and turning them on in the same change as a
+      # security fix would either bury the fix under a whole-crate reformat or
+      # add a gate that is red on arrival. They are worth adding — separately,
+      # as their own change, with the cleanup that makes them pass.

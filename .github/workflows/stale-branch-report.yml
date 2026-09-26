@@ -48,9 +48,10 @@ jobs:
         id: classify
         env:
           MIN_AGE_DAYS: ${{ github.event.inputs.min_age_days || '30' }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          DEFAULT="origin/${{ github.event.repository.default_branch }}"
+          DEFAULT="origin/$DEFAULT_BRANCH"
 
           # MIN_AGE_DAYS reaches shell arithmetic, and workflow_dispatch inputs
           # are free text. A non-numeric value would abort the run with an
@@ -134,9 +135,11 @@ jobs:
 
       - name: Delete fully-merged branches
         if: github.event_name == 'workflow_dispatch' && inputs.delete_merged
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          DEFAULT="origin/${{ github.event.repository.default_branch }}"
+          DEFAULT="origin/$DEFAULT_BRANCH"
 
           # Reading merged.txt is necessary but NOT sufficient. Classification
           # happened in an earlier step; with workflow_dispatch it may have

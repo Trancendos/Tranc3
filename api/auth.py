@@ -80,10 +80,26 @@ def _verify_password(plain: str, hashed: str) -> bool:
 
 
 def _lookup_user(username: str) -> Optional[dict[str, Any]]:
-    """Stub user lookup — replace with SQLAlchemy query in production."""
-    # Default is bcrypt hash of "changeme" — override via DEMO_USER_HASH env var.
-    _DEMO_DEFAULT_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TgownFs9e1NmDOKWo2u4TbM6BVGU"
-    demo_hash = os.getenv("DEMO_USER_HASH", _DEMO_DEFAULT_HASH)
+    """Stub user lookup — replace with SQLAlchemy query in production.
+
+    There is no default password hash. Until 2026-09-26 this fell back to a
+    hardcoded bcrypt hash when DEMO_USER_HASH was unset, so a deployment that
+    simply forgot the variable shipped a working "admin" account whose password
+    was a constant committed to a public repository. A credential that appears
+    when configuration is *missing* is the wrong direction for a default to
+    fail: the deployment that most needs protecting is the one that was
+    misconfigured. With no hash configured there is no demo user, and login is
+    refused by the same path as an unknown username.
+
+    Reachability, stated rather than implied: this router is mounted only by
+    api/core.py's create_app(), which nothing currently calls — the production
+    entry point is api.py, which does not import it. So this was a trap rather
+    than a live bypass, and it would have become a live bypass the moment the
+    factory was wired in, silently and with no code change here. (#1228)
+    """
+    demo_hash = os.getenv("DEMO_USER_HASH")
+    if not demo_hash:
+        return None
     if username == os.getenv("DEMO_USER", "admin"):
         return {"sub": username, "hashed_password": demo_hash}
     return None

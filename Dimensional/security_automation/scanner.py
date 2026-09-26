@@ -840,6 +840,8 @@ class SecurityScanner:
 
     def scan_file(self, filepath: str) -> List[Violation]:
         """Scan a single Python file for security violations."""
+        if ".." in filepath:
+            raise Exception("Invalid file path")
         try:
             with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 source = f.read()

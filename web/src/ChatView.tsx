@@ -7,6 +7,17 @@ import { useAnalytics } from './hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || ''
 
+const ALLOWED_HOSTS: string[] = [] // ACTION REQUIRED: Add your allowed hosts before merging
+
+function isSafeExternalUrl(url: string, allowedHosts: string[]) {
+  if (!url) return false
+  try {
+    const parsed = new URL(String(url).replace(/[\t\n\r]/g, ''))
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+    return allowedHosts.some((h) => parsed.hostname === h || parsed.hostname.endsWith('.' + h))
+  } catch (e) { return false }
+}
+
 interface Message {
   id: string
   content: string
@@ -98,7 +109,7 @@ export default function ChatView() {
       })
       if (r.ok) {
         const data = await r.json()
-        if (data.checkout_url) window.open(data.checkout_url, '_blank')
+        if (data.checkout_url && isSafeExternalUrl(data.checkout_url, ALLOWED_HOSTS)) window.open(data.checkout_url, '_blank')
       }
     } catch { }
     setShowUpgrade(false)
