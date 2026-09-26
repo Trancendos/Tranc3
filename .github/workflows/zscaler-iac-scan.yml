@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name : Code Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Absent credentials, this scan cannot run. It used to fail the job,
       # which put a permanent red X on every pull request and taught everyone
