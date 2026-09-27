@@ -34,6 +34,7 @@ DIMENSIONALS_DIR = REPO / "Dimensionals"
 #: it, and test_the_legacy_fallback_survives_a_migration_rerun pins it.
 LEGACY_DIMENSIONAL_DIR = REPO / DIMENSIONALS_DIR.name[:-1]
 LEGACY_SHARED_CORE_DIR = REPO / "shared_core"
+MESH_DIR = REPO / "src" / "mesh"
 SHARDS_WORKER = REPO / "workers" / "infinity-shards-service" / "worker.py"
 
 #: Which Dimensionals subpackage answers to which branch of the owner's tree.
@@ -402,6 +403,27 @@ def _ais_branch() -> Node:
 # ── Dimensionals ─────────────────────────────────────────────────────────────
 
 
+def _shared_core_forks() -> list[tuple[str, int]]:
+    """The real forks, read from `scripts/migrate_to_dimensionals.py` itself.
+
+    Copying the list here would give the taxonomy a second opinion about which
+    shared_core modules are unreconciled, and two registers that can disagree
+    are how an estate ends up not knowing. If the script cannot be imported the
+    branch is still published, with everything marked a shim rather than
+    silently claiming there are no forks.
+    """
+    import sys
+
+    scripts = REPO / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    try:
+        from migrate_to_dimensionals import shared_core_forks
+    except Exception:  # pragma: no cover - defensive
+        return []
+    return list(shared_core_forks())
+
+
 def _dimensionals_branch() -> Node:
     root = _dimensionals_root()
     branch = Node(
@@ -434,6 +456,45 @@ def _dimensionals_branch() -> Node:
             continue
         if child.is_dir() or child.suffix == ".py":
             unclassified.add(Node(stem, "dimensional", source=_rel(child)))
+
+    # The other two shared-core source trees. This module's own contract
+    # (src/taxonomy/__init__.py) says the branch covers "Dimensionals/
+    # subpackages, src/mesh/, router modules", and `shared_core/` still holds
+    # real forks that CLAUDE.md and migrate_to_dimensionals.py both track as an
+    # open decision. Neither appeared: scanning only the canonical directory
+    # means neither can ever reach `Unclassified` either, so the gap was
+    # invisible rather than merely unfilled -- a tree that reports complete
+    # coverage of a layer while omitting two of its three trees. Found by
+    # `chatgpt-codex-connector` on PR #1248.
+    if MESH_DIR.is_dir():
+        node = branch.add(Node("Mesh (src/mesh)", "branch", source=_rel(MESH_DIR)))
+        for child in sorted(MESH_DIR.rglob("*.py")):
+            stem = child.relative_to(MESH_DIR).as_posix()
+            if stem.startswith(("__", ".")) or "/__" in stem:
+                continue
+            node.add(Node(stem, "dimensional", source=_rel(child)))
+
+    if LEGACY_SHARED_CORE_DIR.is_dir():
+        # Only the modules `migrate_to_dimensionals.py --forks` calls real
+        # forks are marked as such; the rest are shims. That list is the
+        # script's, not a second copy of it, so the two cannot drift -- and
+        # `test_the_taxonomy_and_the_migration_script_agree_on_the_forks`
+        # fails if they do.
+        forks = {name for name, _ in _shared_core_forks()}
+        node = branch.add(
+            Node("Shared core (shared_core)", "branch", source=_rel(LEGACY_SHARED_CORE_DIR))
+        )
+        for child in sorted(LEGACY_SHARED_CORE_DIR.rglob("*.py")):
+            stem = child.relative_to(LEGACY_SHARED_CORE_DIR).as_posix()
+            rel = _rel(child)
+            is_fork = rel in forks
+            # A dunder file is skipped as packaging noise UNLESS the script
+            # counts it a real fork: `shared_core/__init__.py` and
+            # `shared_core/middleware/__init__.py` both carry divergent code,
+            # and filtering them showed 9 forks where the script says 11.
+            if not is_fork and (stem.startswith(("__", ".")) or "/__" in stem):
+                continue
+            node.add(Node(stem, "fork" if is_fork else "shim", source=rel))
 
     return branch
 

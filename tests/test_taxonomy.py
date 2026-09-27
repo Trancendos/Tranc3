@@ -367,3 +367,52 @@ def test_the_unrouted_holder_is_not_counted_as_a_location() -> None:
         "it must still appear in the tree -- hiding unrouted work is the "
         "failure this node exists to prevent"
     )
+
+
+def test_the_branch_covers_every_shared_core_tree_its_contract_names() -> None:
+    """`src/taxonomy/__init__.py` names three trees; the builder scanned one.
+
+    Its own contract says the Dimensionals branch covers "`Dimensionals/`
+    subpackages, `src/mesh/`, router modules", and `shared_core/` still holds
+    forks that CLAUDE.md tracks as an open decision. Measured before the fix:
+    no `src/mesh` module and no `shared_core` evidence anywhere in the tree.
+
+    The part that made it invisible rather than merely missing: scanning only
+    the canonical directory means neither tree can reach `Unclassified`
+    either, so a branch claiming to cover the layer omitted two of its three
+    sources and reported nothing wrong.
+    """
+    tree = build_tree()
+    sources = [n.source for n in tree.root.walk() if n.source]
+
+    assert any(s.startswith("src/mesh") for s in sources), (
+        "the contract names src/mesh/ and no node comes from it"
+    )
+    assert any(s.startswith("shared_core") for s in sources), (
+        "shared_core/ still holds unreconciled forks and no node comes from it"
+    )
+
+
+def test_the_taxonomy_and_the_migration_script_agree_on_the_forks() -> None:
+    """One list of real forks, not two that can disagree.
+
+    `migrate_to_dimensionals.py --forks` is the authority on which
+    `shared_core/` modules are genuinely divergent rather than shims. The
+    taxonomy reads that list rather than keeping a copy, so this asserts the
+    reading works -- a silent import failure would mark every module a shim
+    and quietly claim the estate has no unreconciled forks.
+
+    It also pins the dunder case: `shared_core/__init__.py` and
+    `shared_core/middleware/__init__.py` are real forks, and filtering dunder
+    files as packaging noise showed 9 where the script says 11.
+    """
+    from src.taxonomy import build as taxonomy_build
+
+    script_forks = {name for name, _ in taxonomy_build._shared_core_forks()}
+    assert script_forks, "the migration script's fork list could not be read"
+
+    tree_forks = {n.source for n in build_tree().root.walk() if n.kind == "fork"}
+    assert tree_forks == script_forks, (
+        f"taxonomy reports {len(tree_forks)} forks, the script reports "
+        f"{len(script_forks)}: {sorted(tree_forks ^ script_forks)}"
+    )

@@ -14410,6 +14410,415 @@
               "source": "Dimensionals/url_validation.py"
             }
           ]
+        },
+        {
+          "name": "Mesh (src/mesh)",
+          "kind": "branch",
+          "source": "src/mesh",
+          "children": [
+            {
+              "name": "bulkhead.py",
+              "kind": "dimensional",
+              "source": "src/mesh/bulkhead.py"
+            },
+            {
+              "name": "circuit_breaker.py",
+              "kind": "dimensional",
+              "source": "src/mesh/circuit_breaker.py"
+            },
+            {
+              "name": "genetic_router.py",
+              "kind": "dimensional",
+              "source": "src/mesh/genetic_router.py"
+            },
+            {
+              "name": "meta_router.py",
+              "kind": "dimensional",
+              "source": "src/mesh/meta_router.py"
+            },
+            {
+              "name": "nano_mesh.py",
+              "kind": "dimensional",
+              "source": "src/mesh/nano_mesh.py"
+            },
+            {
+              "name": "quantum_router.py",
+              "kind": "dimensional",
+              "source": "src/mesh/quantum_router.py"
+            },
+            {
+              "name": "quota_enforcer.py",
+              "kind": "dimensional",
+              "source": "src/mesh/quota_enforcer.py"
+            },
+            {
+              "name": "rate_limiter.py",
+              "kind": "dimensional",
+              "source": "src/mesh/rate_limiter.py"
+            },
+            {
+              "name": "retry.py",
+              "kind": "dimensional",
+              "source": "src/mesh/retry.py"
+            },
+            {
+              "name": "service_mesh.py",
+              "kind": "dimensional",
+              "source": "src/mesh/service_mesh.py"
+            },
+            {
+              "name": "types.py",
+              "kind": "dimensional",
+              "source": "src/mesh/types.py"
+            }
+          ]
+        },
+        {
+          "name": "Shared core (shared_core)",
+          "kind": "branch",
+          "source": "shared_core",
+          "children": [
+            {
+              "name": "__init__.py",
+              "kind": "fork",
+              "source": "shared_core/__init__.py"
+            },
+            {
+              "name": "architecture/adaptive_pulse.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/adaptive_pulse.py"
+            },
+            {
+              "name": "architecture/audit_ledger.py",
+              "kind": "fork",
+              "source": "shared_core/architecture/audit_ledger.py"
+            },
+            {
+              "name": "architecture/auto_config.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/auto_config.py"
+            },
+            {
+              "name": "architecture/microceph_provider.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/microceph_provider.py"
+            },
+            {
+              "name": "architecture/oci_adaptive_provider.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/oci_adaptive_provider.py"
+            },
+            {
+              "name": "architecture/oci_storage.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/oci_storage.py"
+            },
+            {
+              "name": "architecture/proactive_metrics.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/proactive_metrics.py"
+            },
+            {
+              "name": "architecture/proactive_orchestrator.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/proactive_orchestrator.py"
+            },
+            {
+              "name": "architecture/proactive_wiring.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/proactive_wiring.py"
+            },
+            {
+              "name": "architecture/sentinel.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/sentinel.py"
+            },
+            {
+              "name": "architecture/smart_storage.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/smart_storage.py"
+            },
+            {
+              "name": "architecture/storage_factory.py",
+              "kind": "fork",
+              "source": "shared_core/architecture/storage_factory.py"
+            },
+            {
+              "name": "architecture/vault.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/vault.py"
+            },
+            {
+              "name": "architecture/vault_security.py",
+              "kind": "shim",
+              "source": "shared_core/architecture/vault_security.py"
+            },
+            {
+              "name": "bus.py",
+              "kind": "shim",
+              "source": "shared_core/bus.py"
+            },
+            {
+              "name": "dimensionals/registry.py",
+              "kind": "shim",
+              "source": "shared_core/dimensionals/registry.py"
+            },
+            {
+              "name": "dimensionals/service_bus.py",
+              "kind": "shim",
+              "source": "shared_core/dimensionals/service_bus.py"
+            },
+            {
+              "name": "dimensionals/underverse.py",
+              "kind": "shim",
+              "source": "shared_core/dimensionals/underverse.py"
+            },
+            {
+              "name": "error_handlers.py",
+              "kind": "fork",
+              "source": "shared_core/error_handlers.py"
+            },
+            {
+              "name": "gas/kinetic.py",
+              "kind": "shim",
+              "source": "shared_core/gas/kinetic.py"
+            },
+            {
+              "name": "gas/pressure.py",
+              "kind": "shim",
+              "source": "shared_core/gas/pressure.py"
+            },
+            {
+              "name": "genetics/fitness.py",
+              "kind": "shim",
+              "source": "shared_core/genetics/fitness.py"
+            },
+            {
+              "name": "genetics/genome.py",
+              "kind": "shim",
+              "source": "shared_core/genetics/genome.py"
+            },
+            {
+              "name": "genetics/optimizer.py",
+              "kind": "shim",
+              "source": "shared_core/genetics/optimizer.py"
+            },
+            {
+              "name": "infinity/abac.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/abac.py"
+            },
+            {
+              "name": "infinity/adaptive_intelligence.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/adaptive_intelligence.py"
+            },
+            {
+              "name": "infinity/auth_gateway.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/auth_gateway.py"
+            },
+            {
+              "name": "infinity/fluidic_gateway.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/fluidic_gateway.py"
+            },
+            {
+              "name": "infinity/hil_a.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/hil_a.py"
+            },
+            {
+              "name": "infinity/nomenclature.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/nomenclature.py"
+            },
+            {
+              "name": "infinity/owasp_hardening.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/owasp_hardening.py"
+            },
+            {
+              "name": "infinity/proactive_defense.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/proactive_defense.py"
+            },
+            {
+              "name": "infinity/rbac.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/rbac.py"
+            },
+            {
+              "name": "infinity/sentinel_config.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/sentinel_config.py"
+            },
+            {
+              "name": "infinity/sentinel_station.py",
+              "kind": "fork",
+              "source": "shared_core/infinity/sentinel_station.py"
+            },
+            {
+              "name": "infinity/worker_bridges.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/worker_bridges.py"
+            },
+            {
+              "name": "infinity/worker_integration.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/worker_integration.py"
+            },
+            {
+              "name": "infinity/zkp.py",
+              "kind": "shim",
+              "source": "shared_core/infinity/zkp.py"
+            },
+            {
+              "name": "liquid/ltc_router.py",
+              "kind": "shim",
+              "source": "shared_core/liquid/ltc_router.py"
+            },
+            {
+              "name": "liquid/wiring.py",
+              "kind": "shim",
+              "source": "shared_core/liquid/wiring.py"
+            },
+            {
+              "name": "log_sanitize.py",
+              "kind": "shim",
+              "source": "shared_core/log_sanitize.py"
+            },
+            {
+              "name": "middleware/__init__.py",
+              "kind": "fork",
+              "source": "shared_core/middleware/__init__.py"
+            },
+            {
+              "name": "middleware/auth.py",
+              "kind": "shim",
+              "source": "shared_core/middleware/auth.py"
+            },
+            {
+              "name": "middleware/rate_limiter.py",
+              "kind": "fork",
+              "source": "shared_core/middleware/rate_limiter.py"
+            },
+            {
+              "name": "middleware/telemetry.py",
+              "kind": "shim",
+              "source": "shared_core/middleware/telemetry.py"
+            },
+            {
+              "name": "models.py",
+              "kind": "shim",
+              "source": "shared_core/models.py"
+            },
+            {
+              "name": "optional_import.py",
+              "kind": "shim",
+              "source": "shared_core/optional_import.py"
+            },
+            {
+              "name": "orchestration/config_drift.py",
+              "kind": "shim",
+              "source": "shared_core/orchestration/config_drift.py"
+            },
+            {
+              "name": "orchestration/dependency_graph.py",
+              "kind": "shim",
+              "source": "shared_core/orchestration/dependency_graph.py"
+            },
+            {
+              "name": "orchestration/enhanced_registry.py",
+              "kind": "shim",
+              "source": "shared_core/orchestration/enhanced_registry.py"
+            },
+            {
+              "name": "orchestration/health_monitor.py",
+              "kind": "shim",
+              "source": "shared_core/orchestration/health_monitor.py"
+            },
+            {
+              "name": "orchestration/heartbeat_aggregator.py",
+              "kind": "shim",
+              "source": "shared_core/orchestration/heartbeat_aggregator.py"
+            },
+            {
+              "name": "path_validation.py",
+              "kind": "shim",
+              "source": "shared_core/path_validation.py"
+            },
+            {
+              "name": "registry.py",
+              "kind": "shim",
+              "source": "shared_core/registry.py"
+            },
+            {
+              "name": "sanitize.py",
+              "kind": "shim",
+              "source": "shared_core/sanitize.py"
+            },
+            {
+              "name": "security.py",
+              "kind": "fork",
+              "source": "shared_core/security.py"
+            },
+            {
+              "name": "security_automation/adaptive_scanner.py",
+              "kind": "fork",
+              "source": "shared_core/security_automation/adaptive_scanner.py"
+            },
+            {
+              "name": "security_automation/defense_engine.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/defense_engine.py"
+            },
+            {
+              "name": "security_automation/predictor.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/predictor.py"
+            },
+            {
+              "name": "security_automation/remediator.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/remediator.py"
+            },
+            {
+              "name": "security_automation/remediator_v2.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/remediator_v2.py"
+            },
+            {
+              "name": "security_automation/rule_catalog.py",
+              "kind": "fork",
+              "source": "shared_core/security_automation/rule_catalog.py"
+            },
+            {
+              "name": "security_automation/scanner.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/scanner.py"
+            },
+            {
+              "name": "security_automation/security_reporter.py",
+              "kind": "fork",
+              "source": "shared_core/security_automation/security_reporter.py"
+            },
+            {
+              "name": "security_automation/telemetry.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/telemetry.py"
+            },
+            {
+              "name": "security_automation/watchdog.py",
+              "kind": "shim",
+              "source": "shared_core/security_automation/watchdog.py"
+            },
+            {
+              "name": "url_validation.py",
+              "kind": "shim",
+              "source": "shared_core/url_validation.py"
+            }
+          ]
         }
       ]
     }

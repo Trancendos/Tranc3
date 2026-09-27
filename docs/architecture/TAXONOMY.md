@@ -31,7 +31,7 @@ never been assembled:
 | Trait | 564 |
 | Agent | 94 |
 | Bot | 188 |
-| Dimensional | 32 |
+| Dimensional | 43 |
 
 ## Gaps
 
@@ -568,3 +568,84 @@ None. Every branch of the structure is populated by a source in this repository.
       - **service_auth** — `Dimensionals/service_auth.py`
       - **service_auth_fastapi** — `Dimensionals/service_auth_fastapi.py`
       - **url_validation** — `Dimensionals/url_validation.py`
+    - **Mesh (src/mesh)** — `src/mesh`
+      - **bulkhead.py** — `src/mesh/bulkhead.py`
+      - **circuit_breaker.py** — `src/mesh/circuit_breaker.py`
+      - **genetic_router.py** — `src/mesh/genetic_router.py`
+      - **meta_router.py** — `src/mesh/meta_router.py`
+      - **nano_mesh.py** — `src/mesh/nano_mesh.py`
+      - **quantum_router.py** — `src/mesh/quantum_router.py`
+      - **quota_enforcer.py** — `src/mesh/quota_enforcer.py`
+      - **rate_limiter.py** — `src/mesh/rate_limiter.py`
+      - **retry.py** — `src/mesh/retry.py`
+      - **service_mesh.py** — `src/mesh/service_mesh.py`
+      - **types.py** — `src/mesh/types.py`
+    - **Shared core (shared_core)** — `shared_core`
+      - **__init__.py** — `shared_core/__init__.py`
+      - **architecture/adaptive_pulse.py** — `shared_core/architecture/adaptive_pulse.py`
+      - **architecture/audit_ledger.py** — `shared_core/architecture/audit_ledger.py`
+      - **architecture/auto_config.py** — `shared_core/architecture/auto_config.py`
+      - **architecture/microceph_provider.py** — `shared_core/architecture/microceph_provider.py`
+      - **architecture/oci_adaptive_provider.py** — `shared_core/architecture/oci_adaptive_provider.py`
+      - **architecture/oci_storage.py** — `shared_core/architecture/oci_storage.py`
+      - **architecture/proactive_metrics.py** — `shared_core/architecture/proactive_metrics.py`
+      - **architecture/proactive_orchestrator.py** — `shared_core/architecture/proactive_orchestrator.py`
+      - **architecture/proactive_wiring.py** — `shared_core/architecture/proactive_wiring.py`
+      - **architecture/sentinel.py** — `shared_core/architecture/sentinel.py`
+      - **architecture/smart_storage.py** — `shared_core/architecture/smart_storage.py`
+      - **architecture/storage_factory.py** — `shared_core/architecture/storage_factory.py`
+      - **architecture/vault.py** — `shared_core/architecture/vault.py`
+      - **architecture/vault_security.py** — `shared_core/architecture/vault_security.py`
+      - **bus.py** — `shared_core/bus.py`
+      - **dimensionals/registry.py** — `shared_core/dimensionals/registry.py`
+      - **dimensionals/service_bus.py** — `shared_core/dimensionals/service_bus.py`
+      - **dimensionals/underverse.py** — `shared_core/dimensionals/underverse.py`
+      - **error_handlers.py** — `shared_core/error_handlers.py`
+      - **gas/kinetic.py** — `shared_core/gas/kinetic.py`
+      - **gas/pressure.py** — `shared_core/gas/pressure.py`
+      - **genetics/fitness.py** — `shared_core/genetics/fitness.py`
+      - **genetics/genome.py** — `shared_core/genetics/genome.py`
+      - **genetics/optimizer.py** — `shared_core/genetics/optimizer.py`
+      - **infinity/abac.py** — `shared_core/infinity/abac.py`
+      - **infinity/adaptive_intelligence.py** — `shared_core/infinity/adaptive_intelligence.py`
+      - **infinity/auth_gateway.py** — `shared_core/infinity/auth_gateway.py`
+      - **infinity/fluidic_gateway.py** — `shared_core/infinity/fluidic_gateway.py`
+      - **infinity/hil_a.py** — `shared_core/infinity/hil_a.py`
+      - **infinity/nomenclature.py** — `shared_core/infinity/nomenclature.py`
+      - **infinity/owasp_hardening.py** — `shared_core/infinity/owasp_hardening.py`
+      - **infinity/proactive_defense.py** — `shared_core/infinity/proactive_defense.py`
+      - **infinity/rbac.py** — `shared_core/infinity/rbac.py`
+      - **infinity/sentinel_config.py** — `shared_core/infinity/sentinel_config.py`
+      - **infinity/sentinel_station.py** — `shared_core/infinity/sentinel_station.py`
+      - **infinity/worker_bridges.py** — `shared_core/infinity/worker_bridges.py`
+      - **infinity/worker_integration.py** — `shared_core/infinity/worker_integration.py`
+      - **infinity/zkp.py** — `shared_core/infinity/zkp.py`
+      - **liquid/ltc_router.py** — `shared_core/liquid/ltc_router.py`
+      - **liquid/wiring.py** — `shared_core/liquid/wiring.py`
+      - **log_sanitize.py** — `shared_core/log_sanitize.py`
+      - **middleware/__init__.py** — `shared_core/middleware/__init__.py`
+      - **middleware/auth.py** — `shared_core/middleware/auth.py`
+      - **middleware/rate_limiter.py** — `shared_core/middleware/rate_limiter.py`
+      - **middleware/telemetry.py** — `shared_core/middleware/telemetry.py`
+      - **models.py** — `shared_core/models.py`
+      - **optional_import.py** — `shared_core/optional_import.py`
+      - **orchestration/config_drift.py** — `shared_core/orchestration/config_drift.py`
+      - **orchestration/dependency_graph.py** — `shared_core/orchestration/dependency_graph.py`
+      - **orchestration/enhanced_registry.py** — `shared_core/orchestration/enhanced_registry.py`
+      - **orchestration/health_monitor.py** — `shared_core/orchestration/health_monitor.py`
+      - **orchestration/heartbeat_aggregator.py** — `shared_core/orchestration/heartbeat_aggregator.py`
+      - **path_validation.py** — `shared_core/path_validation.py`
+      - **registry.py** — `shared_core/registry.py`
+      - **sanitize.py** — `shared_core/sanitize.py`
+      - **security.py** — `shared_core/security.py`
+      - **security_automation/adaptive_scanner.py** — `shared_core/security_automation/adaptive_scanner.py`
+      - **security_automation/defense_engine.py** — `shared_core/security_automation/defense_engine.py`
+      - **security_automation/predictor.py** — `shared_core/security_automation/predictor.py`
+      - **security_automation/remediator.py** — `shared_core/security_automation/remediator.py`
+      - **security_automation/remediator_v2.py** — `shared_core/security_automation/remediator_v2.py`
+      - **security_automation/rule_catalog.py** — `shared_core/security_automation/rule_catalog.py`
+      - **security_automation/scanner.py** — `shared_core/security_automation/scanner.py`
+      - **security_automation/security_reporter.py** — `shared_core/security_automation/security_reporter.py`
+      - **security_automation/telemetry.py** — `shared_core/security_automation/telemetry.py`
+      - **security_automation/watchdog.py** — `shared_core/security_automation/watchdog.py`
+      - **url_validation.py** — `shared_core/url_validation.py`
