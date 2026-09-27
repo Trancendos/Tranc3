@@ -593,3 +593,49 @@ def test_every_sbom_the_register_names_is_committed() -> None:
         f"the register names {len(expected)} SBOMs but {len(missing)} are not "
         f"tracked by git (check .gitignore for an unanchored pattern): {missing}"
     )
+
+
+class TestEngineAttribution:
+    """Two findings `chatgpt-codex-connector` raised on #1249, both confirmed."""
+
+    def test_no_file_backed_store_carries_a_networked_engine(self) -> None:
+        """A path literal in the tree cannot be PostgreSQL, MySQL or Redis.
+
+        `_engine_for` named one engine per FILE, so a module holding both a
+        `sqlite3.connect` and a Redis URL gave its SQLite file the Redis
+        engine. Measured on the committed register before the fix:
+        `CI-DS-redis-cron-db | engine: redis | locator: /data/cron.db`, a file
+        opened through sqlite3 in `workers/cron-service/worker.py`.
+
+        Every NETWORKED engine is reached over a URL, so this is decidable
+        rather than a heuristic.
+        """
+        from src.cmdb import datastores
+
+        wrong = [
+            (d.name, d.engine)
+            for d in datastores.discover()
+            if d.file_backed and d.engine in datastores.NETWORKED
+        ]
+        assert not wrong, f"file-backed stores typed with a networked engine: {wrong}"
+
+    def test_the_scanner_does_not_inventory_its_own_documentation(self) -> None:
+        """`src/cmdb/datastores.py` demonstrates the call it searches for.
+
+        Its module docstring contains `sqlite3.connect("data/whatever.db")`
+        and a field comment names `x.db`, so scanning itself registered both
+        as production datastores -- typed postgresql, because that is the
+        first engine its own source mentions. A discovery tool that
+        inventories its own documentation as infrastructure is measuring
+        itself.
+        """
+        from src.cmdb import datastores
+
+        self_sourced = [
+            d.name
+            for d in datastores.discover()
+            if any(e.startswith(datastores.SELF_PACKAGE + "/") for e in d.evidence)
+        ]
+        assert not self_sourced, (
+            f"datastores discovered from the scanner's own package: {self_sourced}"
+        )

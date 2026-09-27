@@ -2,146 +2,16 @@
   "generated_from": "repository scan (src/cmdb/datastores.py, src/cmdb/containers.py)",
   "custodian_of_all_containers": "The Ice Box",
   "counts": {
-    "datastores_registered": 144,
-    "datastores_excluded_as_test_fixtures": 71,
+    "datastores_registered": 125,
+    "datastores_excluded_as_test_fixtures": 53,
     "containers_registered": 174,
     "containers_built_here": 88,
     "containers_pulled": 86,
     "containers_with_sbom": 174,
-    "datastores_unrouted": 114,
+    "datastores_unrouted": 95,
     "containers_unrouted": 128
   },
   "configuration_items": [
-    {
-      "ci_id": "CI-DS-duckdb-analytics-db",
-      "ci_class": "Datastore",
-      "name": "analytics.db",
-      "engine": "duckdb",
-      "locator": "/data/analytics.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "tests/test_workers_p3.py",
-        "workers/analytics-service/worker.py"
-      ],
-      "evidence_count": 2,
-      "locators": [
-        "/data/analytics.db",
-        "analytics.db"
-      ]
-    },
-    {
-      "ci_id": "CI-DS-duckdb-analytics-duckdb",
-      "ci_class": "Datastore",
-      "name": "analytics.duckdb",
-      "engine": "duckdb",
-      "locator": "/data/analytics.duckdb",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "tests/test_workers_p3.py",
-        "workers/analytics-service/worker.py"
-      ],
-      "evidence_count": 2,
-      "locators": [
-        "/data/analytics.duckdb",
-        "analytics.duckdb"
-      ]
-    },
-    {
-      "ci_id": "CI-DS-duckdb-cache-db",
-      "ci_class": "Datastore",
-      "name": "cache.db",
-      "engine": "duckdb",
-      "locator": "/data/cache.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "tests/test_workers_p3.py",
-        "workers/cache-service/worker.py"
-      ],
-      "evidence_count": 2,
-      "locators": [
-        "/data/cache.db",
-        "cache.db"
-      ]
-    },
-    {
-      "ci_id": "CI-DS-duckdb-cache-duckdb",
-      "ci_class": "Datastore",
-      "name": "cache.duckdb",
-      "engine": "duckdb",
-      "locator": "/data/cache.duckdb",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "tests/test_workers_p3.py",
-        "workers/cache-service/worker.py"
-      ],
-      "evidence_count": 2,
-      "locators": [
-        "/data/cache.duckdb",
-        "cache.duckdb"
-      ]
-    },
-    {
-      "ci_id": "CI-DS-duckdb-storage-db",
-      "ci_class": "Datastore",
-      "name": "storage.db",
-      "engine": "duckdb",
-      "locator": "/data/storage.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "tests/test_workers_p3.py",
-        "workers/storage-service/config.py",
-        "workers/storage-service/worker.py"
-      ],
-      "evidence_count": 3,
-      "locators": [
-        "/data/storage.db",
-        "storage.db"
-      ]
-    },
-    {
-      "ci_id": "CI-DS-duckdb-storage-duckdb",
-      "ci_class": "Datastore",
-      "name": "storage.duckdb",
-      "engine": "duckdb",
-      "locator": "/data/storage.duckdb",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "tests/test_workers_p3.py",
-        "workers/storage-service/config.py",
-        "workers/storage-service/worker.py"
-      ],
-      "evidence_count": 3,
-      "locators": [
-        "/data/storage.duckdb",
-        "storage.duckdb"
-      ]
-    },
-    {
-      "ci_id": "CI-DS-postgresql-auth-db",
-      "ci_class": "Datastore",
-      "name": "auth.db",
-      "engine": "postgresql",
-      "locator": "./data/auth.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "scripts/generate_env.py"
-      ],
-      "evidence_count": 1
-    },
     {
       "ci_id": "CI-DS-postgresql-postgresql-api-api",
       "ci_class": "Datastore",
@@ -195,202 +65,6 @@
       "test_only": false,
       "evidence": [
         "src/platform/layer_rotator.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-postgresql-whatever-db",
-      "ci_class": "Datastore",
-      "name": "whatever.db",
-      "engine": "postgresql",
-      "locator": "data/whatever.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "src/cmdb/datastores.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-postgresql-x-db",
-      "ci_class": "Datastore",
-      "name": "x.db",
-      "engine": "postgresql",
-      "locator": "x.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "src/cmdb/datastores.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-auth-db",
-      "ci_class": "Datastore",
-      "name": "auth.db",
-      "engine": "redis",
-      "locator": "auth.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-benchmark-db",
-      "ci_class": "Datastore",
-      "name": "benchmark.db",
-      "engine": "redis",
-      "locator": "benchmark.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-cron-db",
-      "ci_class": "Datastore",
-      "name": "cron.db",
-      "engine": "redis",
-      "locator": "/data/cron.db",
-      "file_backed": true,
-      "jurisdiction": "ChronosSphere / ArcStream",
-      "test_only": false,
-      "evidence": [
-        "workers/cron-service/worker.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-gateway-db",
-      "ci_class": "Datastore",
-      "name": "gateway.db",
-      "engine": "redis",
-      "locator": "gateway.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-gbrain-db",
-      "ci_class": "Datastore",
-      "name": "gbrain.db",
-      "engine": "redis",
-      "locator": "gbrain.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-infinity-admin-db",
-      "ci_class": "Datastore",
-      "name": "infinity_admin.db",
-      "engine": "redis",
-      "locator": "infinity_admin.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-infinity-one-db",
-      "ci_class": "Datastore",
-      "name": "infinity_one.db",
-      "engine": "redis",
-      "locator": "infinity_one.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-infinity-portal-db",
-      "ci_class": "Datastore",
-      "name": "infinity_portal.db",
-      "engine": "redis",
-      "locator": "infinity_portal.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-knowledge-db",
-      "ci_class": "Datastore",
-      "name": "knowledge.db",
-      "engine": "redis",
-      "locator": "knowledge.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-langchain-db",
-      "ci_class": "Datastore",
-      "name": "langchain.db",
-      "engine": "redis",
-      "locator": "langchain.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-ledger-db",
-      "ci_class": "Datastore",
-      "name": "ledger.db",
-      "engine": "redis",
-      "locator": "ledger.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-model-router-db",
-      "ci_class": "Datastore",
-      "name": "model_router.db",
-      "engine": "redis",
-      "locator": "model_router.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
       ],
       "evidence_count": 1
     },
@@ -633,90 +307,6 @@
       "evidence_count": 1
     },
     {
-      "ci_id": "CI-DS-redis-sentinel-db",
-      "ci_class": "Datastore",
-      "name": "sentinel.db",
-      "engine": "redis",
-      "locator": "sentinel.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-sentinel-station-db",
-      "ci_class": "Datastore",
-      "name": "sentinel_station.db",
-      "engine": "redis",
-      "locator": "data/sentinel_station.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "workers/sentinel-station-service/worker.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-topology-db",
-      "ci_class": "Datastore",
-      "name": "topology.db",
-      "engine": "redis",
-      "locator": "topology.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-users-db",
-      "ci_class": "Datastore",
-      "name": "users.db",
-      "engine": "redis",
-      "locator": "users.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-vault-db",
-      "ci_class": "Datastore",
-      "name": "vault.db",
-      "engine": "redis",
-      "locator": "vault.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
-      "ci_id": "CI-DS-redis-workflow-db",
-      "ci_class": "Datastore",
-      "name": "workflow.db",
-      "engine": "redis",
-      "locator": "workflow.db",
-      "file_backed": true,
-      "jurisdiction": "_unrouted_",
-      "test_only": false,
-      "evidence": [
-        "conftest.py"
-      ],
-      "evidence_count": 1
-    },
-    {
       "ci_id": "CI-DS-sqlite-academy-db",
       "ci_class": "Datastore",
       "name": "academy.db",
@@ -777,6 +367,34 @@
         "/data/ai_governance.db",
         "ai_governance.db"
       ]
+    },
+    {
+      "ci_id": "CI-DS-sqlite-analytics-db",
+      "ci_class": "Datastore",
+      "name": "analytics.db",
+      "engine": "sqlite",
+      "locator": "/data/analytics.db",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/analytics-service/worker.py"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "ci_id": "CI-DS-sqlite-analytics-duckdb",
+      "ci_class": "Datastore",
+      "name": "analytics.duckdb",
+      "engine": "sqlite",
+      "locator": "/data/analytics.duckdb",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/analytics-service/worker.py"
+      ],
+      "evidence_count": 1
     },
     {
       "ci_id": "CI-DS-sqlite-audit-db",
@@ -854,6 +472,34 @@
       ]
     },
     {
+      "ci_id": "CI-DS-sqlite-cache-db",
+      "ci_class": "Datastore",
+      "name": "cache.db",
+      "engine": "sqlite",
+      "locator": "/data/cache.db",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/cache-service/worker.py"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "ci_id": "CI-DS-sqlite-cache-duckdb",
+      "ci_class": "Datastore",
+      "name": "cache.duckdb",
+      "engine": "sqlite",
+      "locator": "/data/cache.duckdb",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/cache-service/worker.py"
+      ],
+      "evidence_count": 1
+    },
+    {
       "ci_id": "CI-DS-sqlite-cdn-db",
       "ci_class": "Datastore",
       "name": "cdn.db",
@@ -908,6 +554,25 @@
         "src/inference/conversation_store.py"
       ],
       "evidence_count": 1
+    },
+    {
+      "ci_id": "CI-DS-sqlite-cron-db",
+      "ci_class": "Datastore",
+      "name": "cron.db",
+      "engine": "sqlite",
+      "locator": "/data/cron.db",
+      "file_backed": true,
+      "jurisdiction": "ChronosSphere / ArcStream",
+      "test_only": false,
+      "evidence": [
+        "tests/test_flow_wiring.py",
+        "workers/cron-service/worker.py"
+      ],
+      "evidence_count": 2,
+      "locators": [
+        "/data/cron.db",
+        "cron.db"
+      ]
     },
     {
       "ci_id": "CI-DS-sqlite-data-db",
@@ -1239,10 +904,12 @@
       "test_only": false,
       "evidence": [
         "Dimensionals/hive/hive_core.py",
+        "tests/test_ci_register.py",
+        "tests/test_ci_register.py",
         "workers/hive-service/Dimensionals/hive/hive_core.py",
         "workers/queue-service/worker.py"
       ],
-      "evidence_count": 3,
+      "evidence_count": 5,
       "locators": [
         "data/hive.db",
         "hive.db"
@@ -1812,6 +1479,20 @@
       "evidence_count": 1
     },
     {
+      "ci_id": "CI-DS-sqlite-sentinel-station-db",
+      "ci_class": "Datastore",
+      "name": "sentinel_station.db",
+      "engine": "sqlite",
+      "locator": "data/sentinel_station.db",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/sentinel-station-service/worker.py"
+      ],
+      "evidence_count": 1
+    },
+    {
       "ci_id": "CI-DS-sqlite-sms-db",
       "ci_class": "Datastore",
       "name": "sms.db",
@@ -1822,6 +1503,34 @@
       "test_only": false,
       "evidence": [
         "workers/sms-service/worker.py"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "ci_id": "CI-DS-sqlite-storage-db",
+      "ci_class": "Datastore",
+      "name": "storage.db",
+      "engine": "sqlite",
+      "locator": "/data/storage.db",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/storage-service/worker.py"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "ci_id": "CI-DS-sqlite-storage-duckdb",
+      "ci_class": "Datastore",
+      "name": "storage.duckdb",
+      "engine": "sqlite",
+      "locator": "/data/storage.duckdb",
+      "file_backed": true,
+      "jurisdiction": "_unrouted_",
+      "test_only": false,
+      "evidence": [
+        "workers/storage-service/worker.py"
       ],
       "evidence_count": 1
     },

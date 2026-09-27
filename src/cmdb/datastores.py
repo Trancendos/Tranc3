@@ -155,9 +155,21 @@ class Datastore:
         return record
 
 
+#: The scanner's own package. Its module docstring demonstrates the very call
+#: it looks for -- `sqlite3.connect("data/whatever.db")` -- and a field comment
+#: names `x.db`, so scanning itself registered both as production datastores,
+#: typed postgresql because that is the first engine its own source mentions.
+#: A discovery tool that inventories its own documentation as infrastructure is
+#: measuring itself. Found by `chatgpt-codex-connector` on PR #1249.
+SELF_PACKAGE = "src/cmdb"
+
+
 def _candidate_files() -> Iterable[Path]:
     for path in REPO.rglob("*.py"):
-        if any(part in SKIP_PARTS for part in path.relative_to(REPO).parts):
+        rel = path.relative_to(REPO)
+        if any(part in SKIP_PARTS for part in rel.parts):
+            continue
+        if rel.as_posix().startswith(SELF_PACKAGE + "/"):
             continue
         yield path
 
@@ -183,6 +195,39 @@ def _engine_for(text: str) -> Optional[str]:
     return None
 
 
+#: Engines whose stores are files in the tree. The complement of NETWORKED.
+FILE_BACKED = ("sqlite", "duckdb")
+
+
+def _file_engine_at(text: str, position: int) -> Optional[str]:
+    """Which file-backed engine opens the literal at `position`.
+
+    `_engine_for` names ONE engine for a whole file, which is wrong wherever a
+    module speaks to two stores: `workers/cron-service/worker.py` opens
+    `/data/cron.db` through `sqlite3` and also holds a Redis URL, so the
+    register recorded that SQLite file as `engine: redis`.
+
+    A path literal matched by `DB_PATH_RE` is a file in the tree, and every
+    NETWORKED engine is reached over a URL instead -- so such a literal can
+    only ever belong to a file-backed engine. Of those, the one whose connect
+    call sits NEAREST the literal wins, measured in either direction: the
+    common shape is a module constant (`DB_PATH = "data/foo.db"`) defined
+    above the `connect` that uses it, so looking only backwards drops the
+    store entirely. Measured: backwards-only found 73 of 144.
+
+    A literal in a file with no file-backed connect at all is not attributed
+    rather than being given the file's first engine.
+    """
+    best: Optional[str] = None
+    best_distance = -1
+    for engine in FILE_BACKED:
+        for match in re.finditer(rf"\b{engine}3?\.connect", text):
+            distance = abs(match.start() - position)
+            if best_distance < 0 or distance < best_distance:
+                best, best_distance = engine, distance
+    return best
+
+
 def discover() -> List[Datastore]:
     """Walk the repository and return one Datastore per distinct store."""
     stores: Dict[str, Datastore] = {}
@@ -198,14 +243,31 @@ def discover() -> List[Datastore]:
         rel = path.relative_to(REPO).as_posix()
         location = _location_for(rel)
 
-        found_paths = set(DB_PATH_RE.findall(text))
-        if found_paths:
-            for literal in sorted(found_paths):
+        # Each literal is attributed to the engine that opens IT, not to the
+        # file's first engine.
+        #
+        # Keying stays engine+basename, deliberately. `chatgpt-codex-connector`
+        # found that Sashas Photo Studio's and The Studio's `studio.db` merge
+        # into one CI though their compose volumes are separate, which invents
+        # a cross-jurisdiction relationship -- a fair reading. But
+        # `test_a_store_two_locations_open_names_both` and
+        # `test_this_repository_actually_contains_a_merged_store` assert the
+        # opposite on purpose: a store two Locations open is ONE CI naming
+        # both. Keying by Location instead turns 144 stores into 194 and fails
+        # five tests. Both readings are right about different cases, and
+        # telling them apart needs the deployed volume identity, not the path.
+        # Raised on #1249 rather than decided here.
+        found = {m.group(1): m.start() for m in DB_PATH_RE.finditer(text)}
+        if found:
+            for literal in sorted(found):
+                literal_engine = _file_engine_at(text, found[literal])
+                if literal_engine is None:
+                    continue
                 name = Path(literal).name
-                key = f"{engine}:{name}"
+                key = f"{literal_engine}:{name}"
                 store = stores.setdefault(
                     key,
-                    Datastore(name=name, engine=engine, locator=literal, file_backed=True),
+                    Datastore(name=name, engine=literal_engine, locator=literal, file_backed=True),
                 )
                 store.record_locator(literal)
                 store.record_location(location)
