@@ -73,3 +73,44 @@ def test_every_major_renovate_blocks_is_also_ignored_by_dependabot() -> None:
         f".github/dependabot.yml does not ignore them, so dependabot will keep "
         f"proposing what the policy forbids: {missing}"
     )
+
+
+def test_a_block_holds_majors_only_so_security_patches_still_arrive() -> None:
+    """Blocking an upgrade must not block its security fixes.
+
+    This is the security question a dependency-policy change has to answer,
+    and it is why `.github/dependabot.yml` counts as a security-sensitive
+    surface: an ignore with no `update-types` holds **every** update for that
+    package, so a CVE fix released as a patch would never be proposed.
+
+    Every ignore added for parity is therefore
+    `version-update:semver-major` only — minor and patch continue to arrive
+    for all eleven packages, which is the path security fixes overwhelmingly
+    travel. The residual risk is stated rather than hidden: a fix that exists
+    *only* in a new major is held until the migration renovate.json already
+    calls "a decision, not an update" is made.
+
+    The pre-existing pip ignores (fastapi, starlette, pydantic, uvicorn,
+    redis) deliberately hold all update types, because those five are pinned
+    centrally by `scripts/align_framework_pins.py` and arrive as one reviewed
+    pass rather than 63 identical line changes. They are excluded here by
+    name, not by accident.
+    """
+    document = yaml.safe_load(DEPENDABOT.read_text(encoding="utf-8"))
+    centrally_pinned = {"fastapi", "starlette", "pydantic", "uvicorn", "redis"}
+    renovate_blocked = _renovate_blocked_majors()
+
+    overbroad: list[str] = []
+    for update in document.get("updates") or []:
+        for entry in update.get("ignore") or []:
+            name = str(entry.get("dependency-name", ""))
+            if name in centrally_pinned or name not in renovate_blocked:
+                continue
+            types = entry.get("update-types") or []
+            if types != ["version-update:semver-major"]:
+                overbroad.append(f"{name} in {update.get('directory')}: {types or 'ALL updates'}")
+
+    assert not overbroad, (
+        "these parity ignores hold more than majors, so a security patch for "
+        f"them would never be proposed: {overbroad}"
+    )
