@@ -1,0 +1,60 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:2d85b7facc29f91e1aac8141d0a88bcb",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "ffmpeg-worker",
+      "bom-ref": "CI-CT-ffmpeg-worker",
+      "version": "built-from-source"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "built"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-ffmpeg-worker"
+      },
+      {
+        "name": "trancendos:manifest",
+        "value": "workers/ffmpeg-worker/requirements.txt"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "fastapi",
+      "bom-ref": "pkg:pypi/fastapi@0.141.1",
+      "purl": "pkg:pypi/fastapi@0.141.1",
+      "version": "0.141.1"
+    },
+    {
+      "type": "library",
+      "name": "uvicorn",
+      "bom-ref": "pkg:pypi/uvicorn@0.52.4",
+      "purl": "pkg:pypi/uvicorn@0.52.4",
+      "version": "0.52.4"
+    }
+  ]
+}

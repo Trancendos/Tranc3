@@ -1,0 +1,57 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:b459c2579c3f0e3281c62308605ab1b3",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "cranbania",
+      "bom-ref": "CI-CT-cranbania",
+      "version": "built-from-source"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "built"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-cranbania"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "node:20-alpine"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "node:20-alpine"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "node:20-alpine"
+      },
+      {
+        "name": "trancendos:no-manifest",
+        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+      }
+    ]
+  },
+  "components": []
+}
