@@ -28,7 +28,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 ### CVE-2024-7042 — langchain (CVSS 9.8)
 - **Package:** langchain (PyPI) — MIT
 - **Impact:** SQL injection in GraphCypherQAChain enabling arbitrary data access
-- **Remediation:** Added langchain==1.3.1 in requirements-ai.txt
+- **Remediation:** Added langchain==1.3.1 in requirements-ai.txt (current: 1.4.2)
 - **Verification:** Version 1.3.1 patches all SQL injection vectors
 
 ### CVE-2026-1525 — undici (CVSS 9.8)
@@ -57,7 +57,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2024-7774 — langchain (CVSS 9.1)
 - **Impact:** SSRF vulnerability via web research tools
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### CVE-2024-11394 — transformers (CVSS 8.8)
 - **Impact:** Unsafe deserialization in model loading
@@ -73,7 +73,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2024-58340 — langchain (CVSS 7.5 / CVSS4 8.7)
 - **Impact:** Deserialization vulnerability in LangChain core
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### CVE-2025-1403 — qiskit (CVSS 8.6)
 - **Impact:** Information disclosure in quantum circuit execution
@@ -81,7 +81,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2024-5998 — langchain (CVSS 7.8 / CVSS4 8.4)
 - **Impact:** XSS in agent output rendering
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### CVE-2026-26007 — cryptography (CVSS 6.5 / CVSS4 8.2)
 - **Impact:** Key exchange vulnerability
@@ -93,7 +93,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2024-3095 — langchain (CVSS 7.7)
 - **Impact:** Prompt injection enabling data exfiltration
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### CVE-2025-6638 — transformers (CVSS 7.5)
 - **Impact:** Path traversal in cache directory
@@ -168,7 +168,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2026-41481 — langchain (CVSS 6.5)
 - **Impact:** Data exfiltration via callback
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### CVE-2026-39365 — vite (CVSS4 6.3)
 - **Impact:** Development server vulnerability
@@ -204,7 +204,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2026-41488 — langchain (CVSS 3.1)
 - **Impact:** Low-impact callback data exposure
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### CVE-2026-34073 — cryptography (CVSS4 1.7)
 - **Impact:** Minor timing side-channel
@@ -216,11 +216,11 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2025-9799 — langfuse (CVSS2 4.6 / CVSS3 5 / CVSS4 2.3)
 - **Impact:** SSRF in observability callbacks
-- **Fix:** langfuse==4.6.1
+- **Fix:** langfuse==4.6.1 (current: 4.15.6)
 
 ### CVE-2026-45134 — langchain (No CVSS)
 - **Impact:** Unspecified vulnerability
-- **Fix:** langchain==1.3.1
+- **Fix:** langchain==1.3.1 (current: 1.4.2)
 
 ### debricked-286515 — esbuild (No CVSS)
 - **Impact:** Supply chain concern
@@ -236,19 +236,22 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### Python (PyPI) Packages
 
-| Package | Previous | Updated | CVEs Resolved |
-|---------|----------|---------|---------------|
-| torch | >=2.2.0 | 2.12.0 | 4 |
-| langchain | (new dep) | 1.3.1 | 8 |
-| transformers | (new dep) | 5.8.1 | 15 |
-| qiskit | (new dep) | 2.4.1 | 2 |
-| cryptography | (new dep) | 48.0.0 | 4 |
-| aiohttp | (new dep) | 3.13.5 | 20 |
-| python-multipart | (new dep) | 0.0.29 | 4 |
-| python-dotenv | (new dep) | 1.2.2 | 1 |
-| pytest | (new dep) | 9.1.1 | 1 |
-| langchain-community | (new dep) | 0.4.1 | 1 |
-| langfuse | (new dep) | 4.6.1 | 1 |
+| Package | Previous | Updated | Current | CVEs Resolved |
+|---------|----------|---------|---------|---------------|
+| torch | >=2.2.0 | 2.12.0 | 2.12.0 | 4 |
+| langchain | (new dep) | 1.3.1 | 1.4.2 | 8 |
+| transformers | (new dep) | 5.8.1 | 5.8.1 | 15 |
+| qiskit | (new dep) | 2.4.1 | 2.4.1 | 2 |
+| cryptography | (new dep) | 48.0.0 | 48.0.0 | 4 |
+| aiohttp | (new dep) | 3.13.5 | 3.13.5 | 20 |
+| python-multipart | (new dep) | 0.0.29 | 0.0.29 | 4 |
+| python-dotenv | (new dep) | 1.2.2 | 1.2.2 | 1 |
+| pytest | (new dep) | 9.1.1 | 9.1.1 | 1 |
+| langchain-community | (new dep) | 0.4.1 | 0.4.1 | 1 |
+| langfuse | (new dep) | 4.6.1 | 4.15.6 | 1 |
+| semgrep | (new dep) | 1.173.0 | 1.178.0 | - |
+| cyclonedx-bom | (new dep) | 7.3.1 | 7.4.0 | - |
+| lxml | (new dep) | 6.1.2 | 6.1.3 | 1 |
 
 ### Node.js (npm) Packages
 
