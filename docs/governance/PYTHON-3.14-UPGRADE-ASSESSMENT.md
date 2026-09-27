@@ -369,8 +369,8 @@ Because §2 confirmed no worker requirements file pulls `torch`/`numpy`/`qiskit`
 (direct)/`sentencepiece`/`faiss`, workers are meaningfully lower-risk than the root app. Good
 pilot candidates, in order of preference:
 
-- **`workers/analytics-service`** — exact-pinned (`fastapi==0.136.3`, `pydantic==2.11.5`,
-  `duckdb==1.3.0`, `polars==1.30.0`, `pandas==3.0.3`). `duckdb` and `polars` are both Rust-backed
+- **`workers/analytics-service`** — exact-pinned (`fastapi==0.136.3`, `pydantic==2.13.5`,
+  `duckdb==1.5.5`, `polars==1.44.2`, `pandas==3.0.6`). `duckdb` and `polars` are both Rust-backed
   with historically fast wheel turnaround (per §2's "likely" reasoning, still unverified against
   a real 3.14 index per Stage 1). Currently on `python:3.11-slim`, so this is a genuine 3.11→3.14
   jump, not a repeat of the already-landed 3.11→3.12 workers.
