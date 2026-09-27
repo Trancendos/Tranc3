@@ -73,7 +73,13 @@ def render_markdown(tree) -> str:
         "",
         "| Branch | Read from |",
         "|---|---|",
-        "| **Locations** | `PLATFORM_ENTITIES` — 43 entities, their abilities, code paths and ports |",
+        # Derived, not typed: a literal here stays 43 when PLATFORM_ENTITIES
+        # gains or loses an entry, so regenerating both outputs would leave
+        # --check passing while this row disagreed with the measured total
+        # further down the same document -- the exact staleness the check
+        # exists to prevent. Found by `chatgpt-codex-connector` on PR #1248.
+        f"| **Locations** | `PLATFORM_ENTITIES` — {tree.count('location')} entities, "
+        "their abilities, code paths and ports |",
         "| **AIs** | `get_orchestration_tier()` for the tier, `src/personality/profiles/` for profile and personality, `agent_teams` / `bot_01..04` for agents and bots |",
         "| **Dimensionals (Shared-Core)** | the `Dimensionals/` package, classified into Services, Middleware, Databases, Mesh and Routers |",
         "",

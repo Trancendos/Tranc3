@@ -156,14 +156,85 @@ def _components_for(worker_path: str | None) -> List[Node]:
     return components
 
 
+def _job_description_source(location: str, seat: object, default_title: object) -> str:
+    """Which table this seat's job description actually came from.
+
+    Every node claimed `JOB_DESCRIPTIONS`, but 13 seats are supplied by
+    `CO_LEAD_JOB_DESCRIPTIONS` (Sam King, Slime, Alice Dream) or
+    `EXTERNAL_SEATS` (the Arcadian Exchange revenue seats). The
+    source-existence test strips everything after `::`, so a wrong symbol
+    after it could never fail -- provenance that cannot be checked is the
+    part of a derived tree most worth getting right, since it is the whole
+    claim. Found by `chatgpt-codex-connector` on PR #1248.
+    """
+    from src.entities.platform import (  # imported late: heavy module
+        CO_LEAD_JOB_DESCRIPTIONS,
+        EXTERNAL_SEATS,
+    )
+
+    # seat_id first, because it is unique and the co-lead key is not: the same
+    # person can hold BOTH a procurement seat and an external one at Arcadian
+    # Exchange, so `(location, designed_for)` matches a co-lead entry for four
+    # seats that are really EXTERNAL_SEATS. Checking the ambiguous key first
+    # attributed 4 of the 5 external seats to the wrong table -- measured, and
+    # the reason this is ordered rather than written the obvious way round.
+    seat_id = getattr(seat, "seat_id", None)
+    external = EXTERNAL_SEATS.get(location) or ()
+    if seat_id is not None and any(getattr(e, "seat_id", None) == seat_id for e in external):
+        return "src/entities/platform.py::EXTERNAL_SEATS"
+
+    designed_for = getattr(seat, "designed_for", "")
+    if (location, designed_for) in CO_LEAD_JOB_DESCRIPTIONS:
+        return "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS"
+
+    job_description = getattr(seat, "job_description", None)
+    if job_description and job_description != default_title:
+        # Not the Location default and not matched above: say so rather than
+        # naming a table it did not come from.
+        return "src/entities/platform.py"
+    return "src/entities/platform.py::JOB_DESCRIPTIONS"
+
+
 def _nanoservices() -> List[Node]:
-    if not NANOSERVICES_DIR.is_dir():
-        return []
-    return [
-        Node(d.name, "nanoservice", source=_rel(d))
-        for d in sorted(NANOSERVICES_DIR.iterdir())
-        if d.is_dir() and not d.name.startswith(("__", "."))
-    ]
+    """Every nano-service, both kinds -- the estate has two.
+
+    `NanoServiceRegistry.SERVICES` holds the 13 exposed over HTTP by
+    `nano_server.py`'s `/nano/*` routes; the rest are library packages, one
+    directory each. `discover_library_nanoservices`'s own docstring names the
+    split ("only 13/61 module directories ... were previously registered").
+
+    Reading directories alone published 60 and missed all 13 -- `tokenizer`,
+    `emotion`, `generate` and the others are routes, not folders, so the two
+    sets do not overlap at all and the omission could not show up as a
+    duplicate or a gap. A tree that claims to cover the layer listed 60 of 73.
+    Found by `chatgpt-codex-connector` on PR #1248.
+    """
+    nodes: List[Node] = []
+    seen: set[str] = set()
+
+    if NANOSERVICES_DIR.is_dir():
+        for d in sorted(NANOSERVICES_DIR.iterdir()):
+            if d.is_dir() and not d.name.startswith(("__", ".")):
+                nodes.append(Node(d.name, "nanoservice", source=_rel(d)))
+                seen.add(d.name)
+
+    try:
+        from src.nanoservices.nano_registry import NanoServiceRegistry
+    except Exception:  # pragma: no cover - defensive
+        return nodes
+
+    for name in sorted(getattr(NanoServiceRegistry, "SERVICES", {})):
+        if name in seen:
+            continue
+        nodes.append(
+            Node(
+                name,
+                "nanoservice",
+                source="src/nanoservices/nano_registry.py::SERVICES",
+                detail="exposed over HTTP at /nano/ -- a route, not a package",
+            )
+        )
+    return nodes
 
 
 def _locations_branch() -> Node:
@@ -212,7 +283,7 @@ def _locations_branch() -> Node:
                 Node(
                     seat.job_description or title or "",
                     "job_description",
-                    source="src/entities/platform.py::JOB_DESCRIPTIONS",
+                    source=_job_description_source(name, seat, title),
                     detail=f"designed for {seat.designed_for}",
                     meta={
                         "seat_id": seat.seat_id,
@@ -333,7 +404,18 @@ def _ais_branch() -> Node:
 
             key = f"{label}::{ai_name}"
             if key in seen:
-                seen[key].meta.setdefault("also_serves", []).append(loc_name)
+                # One node per AI is deliberate -- one AI, several roles. But
+                # `continue` here also skipped this Location's TEAM, and the
+                # teams differ per Location: CLAUDE.md is explicit that every
+                # multi-AI Location runs its own Alpha/Beta pair rather than
+                # sharing one. Measured: 47 AI nodes against 51 real
+                # (AI, Location) pairings, so 4 pairings were collapsed and
+                # their 8 agents and 16 bots never appeared anywhere -- a tree
+                # claiming completeness silently omitting existing entities.
+                # Found by `chatgpt-codex-connector` on PR #1248.
+                shared = seen[key]
+                shared.meta.setdefault("also_serves", []).append(loc_name)
+                _add_team(shared.add(Node(f"Serving {loc_name}", "branch")), entity, ai_name)
                 continue
 
             node = tiers[label].add(
@@ -368,34 +450,7 @@ def _ais_branch() -> Node:
             for ability in entity.abilities:
                 abilities.add(Node(ability, "ability", source="src/entities/platform.py"))
 
-            agents = node.add(Node("Agents", "branch", source="src/entities/platform.py"))
-            pair = entity.agent_teams.get(ai_name)
-            alpha = pair.alpha if pair else entity.agent_alpha
-            beta = pair.beta if pair else entity.agent_beta
-            for agent in (alpha, beta):
-                if agent is None:
-                    continue
-                agents.add(
-                    Node(
-                        agent.code_name,
-                        "agent",
-                        source="src/entities/platform.py",
-                        detail=agent.description,
-                    )
-                )
-
-            bots = node.add(Node("Bots", "branch", source="src/entities/platform.py"))
-            for bot in (entity.bot_01, entity.bot_02, entity.bot_03, entity.bot_04):
-                if bot is None:
-                    continue
-                bots.add(
-                    Node(
-                        bot.code_name,
-                        "bot",
-                        source="src/entities/platform.py",
-                        detail=bot.description,
-                    )
-                )
+            _add_team(node, entity, ai_name)
 
     return branch
 
@@ -422,6 +477,44 @@ def _shared_core_forks() -> list[tuple[str, int]]:
     except Exception:  # pragma: no cover - defensive
         return []
     return list(shared_core_forks())
+
+
+def _add_team(parent: Node, entity: object, ai_name: str) -> None:
+    """Attach the Alpha/Beta pair and the four bots this AI runs HERE.
+
+    The pair is per (AI, Location): `entity.agent_teams[ai_name]` when the
+    Location runs several Lead AIs, falling back to the Location's own pair.
+    Extracted so a shared AI's second and third Locations get their teams too
+    rather than being dropped by the dedup.
+    """
+    agents = parent.add(Node("Agents", "branch", source="src/entities/platform.py"))
+    pair = entity.agent_teams.get(ai_name)
+    alpha = pair.alpha if pair else entity.agent_alpha
+    beta = pair.beta if pair else entity.agent_beta
+    for agent in (alpha, beta):
+        if agent is None:
+            continue
+        agents.add(
+            Node(
+                agent.code_name,
+                "agent",
+                source="src/entities/platform.py",
+                detail=agent.description,
+            )
+        )
+
+    bots = parent.add(Node("Bots", "branch", source="src/entities/platform.py"))
+    for bot in (entity.bot_01, entity.bot_02, entity.bot_03, entity.bot_04):
+        if bot is None:
+            continue
+        bots.add(
+            Node(
+                bot.code_name,
+                "bot",
+                source="src/entities/platform.py",
+                detail=bot.description,
+            )
+        )
 
 
 def _dimensionals_branch() -> Node:

@@ -24,13 +24,13 @@ never been assembled:
 | Ability | 180 |
 | Component | 173 |
 | Module | 213 |
-| Nanoservice | 60 |
+| Nanoservice | 73 |
 | Job Description | 56 |
 | Power Up | 344 |
 | Ai | 47 |
 | Trait | 564 |
-| Agent | 94 |
-| Bot | 188 |
+| Agent | 102 |
+| Bot | 204 |
 | Dimensional | 43 |
 
 ## Gaps
@@ -428,9 +428,9 @@ None. Every branch of the structure is populated by a source in this repository.
         - _1 more — see `taxonomy.json`_
       - **Power Ups**
         - _8 more — see `taxonomy.json`_
-    - **_unrouted_** — `config/estate/registry.yaml::TRC-P0-006` · 60 nano-services with no owning Location (registry records lead_ai: null)
+    - **_unrouted_** — `config/estate/registry.yaml::TRC-P0-006` · 73 nano-services with no owning Location (registry records lead_ai: null)
       - **Components**
-        - _60 more — see `taxonomy.json`_
+        - _73 more — see `taxonomy.json`_
   - **AIs** — `src/entities/platform.py`
     - **Tier 1 (Orchestrator)** — `src/entities/platform.py::get_orchestration_tier`
       - **Cornelius MacIntyre** — `src/entities/platform.py`
@@ -441,13 +441,13 @@ None. Every branch of the structure is populated by a source in this repository.
         - _4 more — see `taxonomy.json`_
     - **Tier 2 (Primes)** — `src/entities/platform.py::get_orchestration_tier`
       - **Voxx** — `src/entities/platform.py`
-        - _4 more — see `taxonomy.json`_
+        - _5 more — see `taxonomy.json`_
       - **The Guardian (Marcus Magnolia)** — `src/entities/platform.py`
         - _4 more — see `taxonomy.json`_
       - **Dorris Fontaine** — `src/entities/platform.py`
         - _4 more — see `taxonomy.json`_
       - **Trancendos** — `src/entities/platform.py`
-        - _4 more — see `taxonomy.json`_
+        - _5 more — see `taxonomy.json`_
       - **The Dr. (Nikolai O'denhime)** — `src/entities/platform.py`
         - _4 more — see `taxonomy.json`_
       - **Norman Hawkins** — `src/entities/platform.py`
@@ -512,7 +512,7 @@ None. Every branch of the structure is populated by a source in this repository.
       - **Zimik** — `src/entities/platform.py`
         - _4 more — see `taxonomy.json`_
       - **Rocking Ricki** — `src/entities/platform.py`
-        - _4 more — see `taxonomy.json`_
+        - _6 more — see `taxonomy.json`_
       - **Nexus-Prime** — `src/entities/platform.py`
         - _4 more — see `taxonomy.json`_
       - **Imfy** — `src/entities/platform.py`

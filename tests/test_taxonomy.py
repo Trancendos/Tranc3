@@ -17,6 +17,7 @@ check the two properties that keeps honest:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -416,3 +417,94 @@ def test_the_taxonomy_and_the_migration_script_agree_on_the_forks() -> None:
         f"taxonomy reports {len(tree_forks)} forks, the script reports "
         f"{len(script_forks)}: {sorted(tree_forks ^ script_forks)}"
     )
+
+
+class TestFourFindingsCodexRaised:
+    """All four measured against the built tree before being fixed."""
+
+    def test_both_kinds_of_nanoservice_are_published(self) -> None:
+        """The estate has two kinds and the tree listed one.
+
+        `NanoServiceRegistry.SERVICES` holds the 13 exposed over HTTP by
+        `nano_server.py`'s `/nano/*` routes; the rest are library packages,
+        one directory each. Reading directories alone published 60 and missed
+        all 13 -- and the two sets do not overlap at all, so the omission
+        could never surface as a duplicate or a gap.
+        """
+        from src.nanoservices.nano_registry import NanoServiceRegistry
+
+        published = {n.name for n in build_tree().root.walk() if n.kind == "nanoservice"}
+        missing = sorted(set(NanoServiceRegistry.SERVICES) - published)
+        assert not missing, f"{len(missing)} HTTP nano-service(s) absent from the tree: {missing}"
+
+    def test_a_shared_ai_keeps_every_location_s_team(self) -> None:
+        """One node per AI is deliberate; losing the other teams was not.
+
+        The dedup's `continue` skipped the repeat Location's agents and bots.
+        Measured: 47 AI nodes against 51 real (AI, Location) pairings, so 4
+        pairings were collapsed and their 8 agents and 16 bots appeared
+        nowhere -- a tree claiming completeness omitting existing entities.
+        """
+        pairings = sum(
+            len(entity.lead_ais or [entity.lead_ai]) for entity in PLATFORM_ENTITIES.values()
+        )
+        tree = build_tree()
+        agents = sum(1 for n in tree.root.walk() if n.kind == "agent")
+        assert agents == pairings * 2, (
+            f"{pairings} (AI, Location) pairings should contribute {pairings * 2} agents, "
+            f"found {agents}"
+        )
+
+    def test_a_job_description_names_the_table_it_came_from(self) -> None:
+        """13 seats are not supplied by `JOB_DESCRIPTIONS`, and all claimed it.
+
+        The source-existence test strips everything after `::`, so a wrong
+        symbol there could never fail. Provenance that cannot be checked is
+        the part of a derived tree most worth getting right, because it is
+        the whole claim.
+        """
+        from src.entities.platform import CO_LEAD_JOB_DESCRIPTIONS, EXTERNAL_SEATS
+
+        counts: dict[str, int] = {}
+        for node in build_tree().root.walk():
+            if node.kind == "job_description":
+                counts[node.source.split("::")[-1]] = counts.get(node.source.split("::")[-1], 0) + 1
+
+        assert counts.get("CO_LEAD_JOB_DESCRIPTIONS") == len(CO_LEAD_JOB_DESCRIPTIONS)
+        assert counts.get("EXTERNAL_SEATS") == sum(len(v) for v in EXTERNAL_SEATS.values())
+        assert "src/entities/platform.py" not in counts, (
+            "a seat resolved to no named table -- attribution fell through"
+        )
+
+    def test_the_published_entity_count_is_derived(self) -> None:
+        """A literal in the summary row goes stale where the totals cannot.
+
+        Both are in the same document, so a hard-coded 43 would disagree with
+        the measured Location total the moment PLATFORM_ENTITIES changed --
+        while `--check` still passed, because regenerating rewrites the table
+        and not the sentence.
+        """
+        published = (REPO / "docs/architecture/TAXONOMY.md").read_text(encoding="utf-8")
+        measured = build_tree().count("location")
+        assert f"`PLATFORM_ENTITIES` — {measured} entities" in published, (
+            f"the summary row does not carry the measured count ({measured})"
+        )
+
+        # The rendered output alone cannot tell a derived count from a literal
+        # while the count happens to equal it -- reverting the fix today leaves
+        # the document byte-identical, so the assertion above passes on the
+        # defect. The generator's source is what actually distinguishes them,
+        # so that is what this checks.
+        generator = (REPO / "scripts/build_taxonomy_tree.py").read_text(encoding="utf-8")
+        row = next(
+            (
+                ln
+                for ln in generator.splitlines()
+                if "`PLATFORM_ENTITIES`" in ln and "entities" in ln
+            ),
+            None,
+        )
+        assert row is not None, "the summary row is no longer in the generator"
+        assert re.search(r"\d+\s+entities", row) is None, (
+            f"the entity count is written as a literal rather than derived: {row.strip()}"
+        )

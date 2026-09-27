@@ -1170,7 +1170,7 @@
                 {
                   "name": "Head of Storage Procurement",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for Ann Porter",
                   "meta": {
                     "seat_id": "ann-porter",
@@ -1186,7 +1186,7 @@
                 {
                   "name": "Head of Model & Inference Procurement",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for George Porter",
                   "meta": {
                     "seat_id": "george-porter",
@@ -1202,7 +1202,7 @@
                 {
                   "name": "Head of Workflow Tooling Procurement",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for Edward Porter",
                   "meta": {
                     "seat_id": "edward-porter",
@@ -1218,7 +1218,7 @@
                 {
                   "name": "Head of API Credit Procurement",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for James Porter",
                   "meta": {
                     "seat_id": "james-porter",
@@ -1234,7 +1234,7 @@
                 {
                   "name": "Chief Revenue Officer",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::EXTERNAL_SEATS",
                   "detail": "designed for Clarence Porter",
                   "meta": {
                     "seat_id": "clarence-porter-external",
@@ -1250,7 +1250,7 @@
                 {
                   "name": "Head of Capacity & Asset Monetisation",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::EXTERNAL_SEATS",
                   "detail": "designed for Ann Porter",
                   "meta": {
                     "seat_id": "ann-porter-external",
@@ -1266,7 +1266,7 @@
                 {
                   "name": "Head of Market & Treasury Operations",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::EXTERNAL_SEATS",
                   "detail": "designed for George Porter",
                   "meta": {
                     "seat_id": "george-porter-external",
@@ -1282,7 +1282,7 @@
                 {
                   "name": "Head of Expert & Managed Services",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::EXTERNAL_SEATS",
                   "detail": "designed for Edward Porter",
                   "meta": {
                     "seat_id": "edward-porter-external",
@@ -1298,7 +1298,7 @@
                 {
                   "name": "Head of Data, Knowledge & Audience Products",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::EXTERNAL_SEATS",
                   "detail": "designed for James Porter",
                   "meta": {
                     "seat_id": "james-porter-external",
@@ -2301,7 +2301,7 @@
                 {
                   "name": "Head of Architectural Foresight",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for The Orb of Orisis",
                   "meta": {
                     "seat_id": "the-orb-of-orisis",
@@ -3076,7 +3076,7 @@
                 {
                   "name": "Head of Production Operations & Delivery",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for Sam King",
                   "meta": {
                     "seat_id": "sam-king",
@@ -3552,7 +3552,7 @@
                 {
                   "name": "Head of Deterministic Assurance",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for Alice Dream",
                   "meta": {
                     "seat_id": "alice-dream",
@@ -4445,7 +4445,7 @@
                 {
                   "name": "Head of Diagnostics & Defect Remediation",
                   "kind": "job_description",
-                  "source": "src/entities/platform.py::JOB_DESCRIPTIONS",
+                  "source": "src/entities/platform.py::CO_LEAD_JOB_DESCRIPTIONS",
                   "detail": "designed for Slime",
                   "meta": {
                     "seat_id": "slime",
@@ -6711,7 +6711,7 @@
           "name": "_unrouted_",
           "kind": "unrouted",
           "source": "config/estate/registry.yaml::TRC-P0-006",
-          "detail": "60 nano-services with no owning Location (registry records lead_ai: null)",
+          "detail": "73 nano-services with no owning Location (registry records lead_ai: null)",
           "meta": {
             "worker_path": "src/nanoservices/",
             "worker_port": 8001,
@@ -7021,6 +7021,84 @@
                   "name": "zkp_service",
                   "kind": "nanoservice",
                   "source": "src/nanoservices/zkp_service"
+                },
+                {
+                  "name": "analytics",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "auth",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "billing",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "consciousness",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "emotion",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "evolution",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "generate",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "memory",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "personality",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "predict",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "quantum",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "tokenizer",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
+                },
+                {
+                  "name": "translate",
+                  "kind": "nanoservice",
+                  "source": "src/nanoservices/nano_registry.py::SERVICES",
+                  "detail": "exposed over HTTP at /nano/ -- a route, not a package"
                 }
               ]
             }
@@ -7653,6 +7731,62 @@
                       "detail": "Runs final visual sweeps on lighting, styling, and alignment."
                     }
                   ]
+                },
+                {
+                  "name": "Serving The Studio",
+                  "kind": "branch",
+                  "children": [
+                    {
+                      "name": "Agents",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "The Conductor",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Coordinates asset handoffs between 3D/Video/UI."
+                        },
+                        {
+                          "name": "The Muse",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Generates baseline design schemes and mood boards."
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Bots",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "Palette-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Translates color variables into matching stylesheets."
+                        },
+                        {
+                          "name": "Easel-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Renders dynamic design drafts for live preview."
+                        },
+                        {
+                          "name": "Clay-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Speeds up simple vector and morphing operations."
+                        },
+                        {
+                          "name": "Layout-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Plots design grids, focal alignments, and bounds."
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
@@ -8110,6 +8244,62 @@
                       "kind": "bot",
                       "source": "src/entities/platform.py",
                       "detail": "Broadcasts executive platform priorities directly to low-tier Agents."
+                    }
+                  ]
+                },
+                {
+                  "name": "Serving Think Tank",
+                  "kind": "branch",
+                  "children": [
+                    {
+                      "name": "Agents",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "The Professor",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Simulates untested programmatic changes to assess system impacts."
+                        },
+                        {
+                          "name": "The Visionary",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Suggests structural updates and feature builds based on telemetry."
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Bots",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "Beaker-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Handles lightweight, isolated experiment runtimes to test novel ideas."
+                        },
+                        {
+                          "name": "Bunsen-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Runs performance limits tests, checking system thresholds."
+                        },
+                        {
+                          "name": "Pipette-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Collects minute execution metrics from experiment test runs."
+                        },
+                        {
+                          "name": "Petri-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Grows mock datasets to support testing operations."
+                        }
+                      ]
                     }
                   ]
                 }
@@ -12985,6 +13175,118 @@
                       "kind": "bot",
                       "source": "src/entities/platform.py",
                       "detail": "Applies file-system metadata to register the exact creation details."
+                    }
+                  ]
+                },
+                {
+                  "name": "Serving The Warp Tunnel",
+                  "kind": "branch",
+                  "children": [
+                    {
+                      "name": "Agents",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "The Warden",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Oversees integrity scans for mutated or corrupted system files."
+                        },
+                        {
+                          "name": "The Inspector",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Compares active database hashes against secure Lighthouse standards."
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Bots",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "Scan-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Performs background sweeps on directories, reading cryptographic stamps."
+                        },
+                        {
+                          "name": "Sniffer-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Analyzes transport packets for corrupted signatures/manipulations."
+                        },
+                        {
+                          "name": "Beam-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Isolates threatened memory spaces, cutting off surrounding connections."
+                        },
+                        {
+                          "name": "Portal-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Safely moves compromised file layers directly into the secure Ice Box."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Serving Warp Radio",
+                  "kind": "branch",
+                  "children": [
+                    {
+                      "name": "Agents",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "The DJ",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Curates spatial music playlists/soundscapes to match user activities."
+                        },
+                        {
+                          "name": "The Maestro",
+                          "kind": "agent",
+                          "source": "src/entities/platform.py",
+                          "detail": "Dynamically balances system alert volumes with external platforms."
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Bots",
+                      "kind": "branch",
+                      "source": "src/entities/platform.py",
+                      "children": [
+                        {
+                          "name": "Play-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Connects/streams music data directly from Spotify, Apple, and Amazon."
+                        },
+                        {
+                          "name": "Pause-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Holds audio states and syncs current track metrics across devices."
+                        },
+                        {
+                          "name": "Skip-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Fetches adjacent track metadata, pre-buffering streams to stop latency."
+                        },
+                        {
+                          "name": "Volume-Bot",
+                          "kind": "bot",
+                          "source": "src/entities/platform.py",
+                          "detail": "Adjusts volume properties, executing smooth fades across node transitions."
+                        }
+                      ]
                     }
                   ]
                 }
