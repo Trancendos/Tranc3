@@ -99,8 +99,15 @@ class Container:
             # Shared jurisdiction, per the owner's model.
             "jurisdiction": self.jurisdiction or "_unrouted_",
             "custodian": CUSTODIAN,
-            "runs_as": self.runs_as or "root (no USER directive)",
-            "runs_as_root": self.runs_as_root,
+            # No Dockerfile inspected means the user is UNKNOWN, not root and
+            # not non-root. For pulled images nothing is ever inspected, so
+            # both of the old answers were unsupported: `runs_as` read "root
+            # (no USER directive)" while `runs_as_root` said false -- two
+            # contradictory claims about the same container, on 86 of them.
+            "runs_as": (
+                self.runs_as or ("root (no USER directive)" if self.dockerfile else "unknown")
+            ),
+            "runs_as_root": (self.runs_as_root if self.dockerfile else None),
             "ports": self.ports,
             "volumes": self.volumes,
             "networks": self.networks,
@@ -312,9 +319,18 @@ def discover() -> List[Container]:
         build_context, dockerfile = "", ""
         if isinstance(build, dict):
             build_context = str(build.get("context", "") or "")
-            dockerfile = str(build.get("dockerfile", "") or "")
+            # Compose defaults `dockerfile:` to `Dockerfile` under the context
+            # when the key is omitted, and omitting it is a normal shape --
+            # `ffmpeg-worker` uses exactly that. Leaving the name empty meant
+            # no Dockerfile was inspected, so the register reported no base
+            # image, no jurisdiction, and `runs_as_root: true` for a container
+            # whose Dockerfile ends `USER worker`. A CMDB asserting a service
+            # runs as root when it demonstrably drops privileges is worse than
+            # one that says nothing. Found by `chatgpt-codex-connector` on #1249.
+            dockerfile = str(build.get("dockerfile", "") or "") or "Dockerfile"
         elif isinstance(build, str):
             build_context = build
+            dockerfile = "Dockerfile"
 
         # Compose resolves `dockerfile:` RELATIVE TO `context:`, and this code
         # treated it as repo-relative. For the estate's commonest shape --

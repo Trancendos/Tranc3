@@ -639,3 +639,67 @@ class TestEngineAttribution:
         assert not self_sourced, (
             f"datastores discovered from the scanner's own package: {self_sourced}"
         )
+
+
+class TestContainerFactsAreSupported:
+    """Three more findings `chatgpt-codex-connector` raised on #1249."""
+
+    def test_every_sbom_serial_number_is_a_real_uuid(self) -> None:
+        """CycloneDX requires `serialNumber` in RFC 4122 form.
+
+        It was `urn:uuid:` followed by 32 unhyphenated sha256 characters, so a
+        schema-validating consumer could reject every SBOM in the estate.
+        Measured before the fix: 174 of 174 non-conforming. `uuid5` keeps the
+        determinism the hash was there for.
+        """
+        import re as _re
+
+        rfc4122 = _re.compile(
+            r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}"
+            r"-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        )
+        sboms = sorted((REPO / "docs/architecture/sbom").glob("*.cdx.json"))
+        assert sboms, "no SBOMs found -- this test would pass vacuously"
+        bad = [
+            p.name
+            for p in sboms
+            if not rfc4122.match(json.loads(p.read_text()).get("serialNumber", ""))
+        ]
+        assert not bad, f"{len(bad)} of {len(sboms)} SBOMs have a non-RFC-4122 serial: {bad[:3]}"
+
+    def test_a_build_without_an_explicit_dockerfile_still_resolves_one(self) -> None:
+        """Compose defaults `dockerfile:` to `Dockerfile` under the context.
+
+        `ffmpeg-worker` omits the key. Treating that as "no Dockerfile" meant
+        no base image, no user, and `runs_as_root: true` for a container whose
+        Dockerfile ends `USER worker` -- a CMDB asserting a service runs as
+        root when it demonstrably drops privileges.
+        """
+        from src.cmdb import containers
+
+        by_service = {c.service: c for c in containers.discover()}
+        worker = by_service.get("ffmpeg-worker")
+        assert worker is not None, "ffmpeg-worker is not in the compose file any more"
+        assert worker.dockerfile, "a build with a context but no dockerfile key resolved nothing"
+        assert worker.base_images, "no base image was read from the resolved Dockerfile"
+        assert worker.runs_as == "worker"
+        assert worker.runs_as_root is False
+
+    def test_a_pulled_image_does_not_claim_to_know_its_user(self) -> None:
+        """No Dockerfile inspected means unknown, not a claim either way.
+
+        Pulled images never have one inspected, yet each carried BOTH
+        `runs_as: "root (no USER directive)"` and `runs_as_root: false` -- two
+        contradictory statements about the same container, on 86 of them.
+        """
+        from src.cmdb import containers
+
+        wrong = [
+            c.service
+            for c in containers.discover()
+            if not c.dockerfile and c.as_ci().get("runs_as_root") is not None
+        ]
+        assert not wrong, (
+            f"{len(wrong)} container(s) with no inspected Dockerfile still assert a "
+            f"root answer: {wrong[:3]}"
+        )

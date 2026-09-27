@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:2d85b7facc29f91e1aac8141d0a88bcb",
+  "serialNumber": "urn:uuid:4082854d-156a-5e12-8b09-2df9ddeed532",
   "version": 1,
   "metadata": {
     "component": {
@@ -34,6 +34,10 @@
       {
         "name": "trancendos:ci-id",
         "value": "CI-CT-ffmpeg-worker"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "python:3.12-slim-bookworm@sha256:0f5b26b9518d002b6173fd61daad821fa340635ebfec5bba471013f9ca114579"
       },
       {
         "name": "trancendos:manifest",

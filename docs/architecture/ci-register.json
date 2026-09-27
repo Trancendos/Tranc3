@@ -1819,8 +1819,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8089:8089"
       ],
@@ -1847,8 +1847,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9093:9093"
       ],
@@ -1991,8 +1991,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "authentik-db-data:/var/lib/postgresql/data"
@@ -2016,8 +2016,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "authentik-redis-data:/data"
@@ -2041,8 +2041,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9300:9000",
         "9443:9443"
@@ -2070,8 +2070,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "authentik-media:/media",
@@ -2156,8 +2156,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9115:9115"
       ],
@@ -2214,8 +2214,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "bookstack-data:/config"
@@ -2239,8 +2239,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "bookstack-db-data:/var/lib/mysql"
@@ -2323,8 +2323,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "18088:8080"
       ],
@@ -2354,8 +2354,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3010:3000"
       ],
@@ -2381,8 +2381,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "calcom-db-data:/var/lib/postgresql/data"
@@ -2590,8 +2590,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8107:8090"
       ],
@@ -2617,8 +2617,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3003:3003"
       ],
@@ -2673,8 +2673,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8083:8080"
       ],
@@ -2700,8 +2700,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8084:8080"
       ],
@@ -2756,8 +2756,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8108:8080"
       ],
@@ -2841,8 +2841,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3800:80"
       ],
@@ -2895,8 +2895,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "/var/run/docker.sock:/var/run/docker.sock:ro",
@@ -2918,13 +2918,15 @@
       "container_name": "trancendos-ffmpeg-worker",
       "image": "",
       "provenance": "built",
-      "base_images": [],
+      "base_images": [
+        "python:3.12-slim-bookworm@sha256:0f5b26b9518d002b6173fd61daad821fa340635ebfec5bba471013f9ca114579"
+      ],
       "build_context": "./workers/ffmpeg-worker",
-      "dockerfile": "",
+      "dockerfile": "workers/ffmpeg-worker/Dockerfile",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": true,
+      "runs_as": "worker",
+      "runs_as_root": false,
       "ports": [
         "8052:8052"
       ],
@@ -2983,8 +2985,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "2222:22"
       ],
@@ -3012,8 +3014,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "forgejo-runner-data:/data",
@@ -3096,8 +3098,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3000:3000"
       ],
@@ -3121,8 +3123,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3001:3000"
       ],
@@ -3629,8 +3631,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "4001:4001",
         "5001:5001",
@@ -3658,8 +3660,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9290:9290"
       ],
@@ -3685,8 +3687,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "16686:16686",
         "34317:4317",
@@ -3717,8 +3719,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8102:8080",
         "8103:8081"
@@ -3746,8 +3748,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8099:8080",
         "8105:8090"
@@ -3834,8 +3836,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3002:3000"
       ],
@@ -3859,8 +3861,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "langfuse-db-data:/var/lib/postgresql/data"
@@ -3944,8 +3946,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "4000:4000"
       ],
@@ -4001,8 +4003,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8091:8091"
       ],
@@ -4057,8 +4059,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3100:3100"
       ],
@@ -4085,8 +4087,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "mattermost-data:/mattermost/data",
@@ -4113,8 +4115,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "mattermost-db-data:/var/lib/postgresql/data"
@@ -4138,8 +4140,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "7700:7700"
       ],
@@ -4165,8 +4167,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9000:9000",
         "9001:9001"
@@ -4193,8 +4195,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8106:80"
       ],
@@ -4220,8 +4222,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "misp-db-data:/var/lib/mysql"
@@ -4245,8 +4247,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "misp-redis-data:/data"
@@ -4359,8 +4361,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "5678:5678"
       ],
@@ -4386,8 +4388,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "4222:4222",
         "8222:8222",
@@ -4415,8 +4417,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "19999:19999"
       ],
@@ -4482,8 +4484,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9100:9100"
       ],
@@ -4573,8 +4575,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "11434:11434"
       ],
@@ -4600,8 +4602,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8201:8201"
       ],
@@ -4627,8 +4629,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8082:8082"
       ],
@@ -4654,8 +4656,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "openbas-db-data:/var/lib/postgresql/data"
@@ -4679,8 +4681,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9392:9392"
       ],
@@ -4737,8 +4739,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "4317:4317",
         "4318:4318",
@@ -4766,8 +4768,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3011:3000"
       ],
@@ -4793,8 +4795,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "outline-db-data:/var/lib/postgresql/data"
@@ -4818,8 +4820,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "outline-redis-data:/data"
@@ -4843,8 +4845,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8104:8000"
       ],
@@ -4873,8 +4875,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "paperless-db-data:/var/lib/postgresql/data"
@@ -4898,8 +4900,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [],
       "networks": [
@@ -4952,8 +4954,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "penpot-data:/opt/data"
@@ -4977,8 +4979,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "penpot-db-data:/var/lib/postgresql/data"
@@ -5002,8 +5004,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [],
       "networks": [
@@ -5025,8 +5027,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9002:80"
       ],
@@ -5050,8 +5052,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "4200:4200"
       ],
@@ -5108,8 +5110,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9091:9090"
       ],
@@ -5137,8 +5139,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "./monitoring/promtail.yml:/etc/promtail/config.yml:ro",
@@ -5164,8 +5166,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "6333:6333",
         "6334:6334"
@@ -5307,8 +5309,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "renovate-cache:/tmp/renovate"
@@ -5450,8 +5452,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "signoz-clickhouse-data:/var/lib/clickhouse",
@@ -5476,8 +5478,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3301:3301"
       ],
@@ -5501,8 +5503,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "24317:4317",
         "24318:4318"
@@ -5529,8 +5531,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "signoz-query-data:/root/data",
@@ -5613,8 +5615,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8086:8080"
       ],
@@ -5765,8 +5767,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "3200:3200",
         "14317:4317",
@@ -5795,8 +5797,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "7233:7233",
         "8088:8088"
@@ -5974,8 +5976,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "9998:9998"
       ],
@@ -6028,8 +6030,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "80:80",
         "443:443",
@@ -6281,8 +6283,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "6379:6379"
       ],
@@ -6308,8 +6310,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8200:8200"
       ],
@@ -6399,8 +6401,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8428:8428"
       ],
@@ -6427,8 +6429,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8090:8090"
       ],
@@ -6543,8 +6545,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -6568,8 +6570,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "5601:5601"
       ],
@@ -6593,8 +6595,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "wazuh-indexer-data:/var/lib/wazuh-indexer"
@@ -6618,8 +6620,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "1514:1514/udp",
         "1515:1515",
@@ -6649,8 +6651,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8181:8080",
         "50052:50051"
@@ -6675,8 +6677,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [],
       "volumes": [
         "/var/run/docker.sock:/var/run/docker.sock"
@@ -6700,8 +6702,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "8100:8000"
       ],
@@ -6756,8 +6758,8 @@
       "dockerfile": "",
       "jurisdiction": "_unrouted_",
       "custodian": "The Ice Box",
-      "runs_as": "root (no USER directive)",
-      "runs_as_root": false,
+      "runs_as": "unknown",
+      "runs_as_root": null,
       "ports": [
         "5000:5000"
       ],

@@ -33,10 +33,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
+import uuid
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -50,6 +50,10 @@ from src.cmdb.containers import (  # noqa: E402
 )
 
 CYCLONEDX_VERSION = "1.6"
+
+#: Fixed namespace for the deterministic SBOM serial numbers. Any constant UUID
+#: works; it must simply never change, or every serial changes with it.
+SBOM_NAMESPACE = uuid.UUID("6ba7b811-9dad-11d1-80b4-00c04fd430c8")
 
 # PEP 508-ish: name, optional extras, optional pinned version. Deliberately
 # conservative -- a line it cannot parse is recorded as unparsed rather than
@@ -205,9 +209,16 @@ def build_sbom(container) -> dict:
     return {
         "bomFormat": "CycloneDX",
         "specVersion": CYCLONEDX_VERSION,
-        # Deterministic serial: a content hash, so regenerating an unchanged
-        # container does not produce a diff and --check stays meaningful.
-        "serialNumber": "urn:uuid:" + hashlib.sha256(container.ci_id.encode()).hexdigest()[:32],
+        # Deterministic serial, so regenerating an unchanged container produces
+        # no diff and --check stays meaningful -- but a REAL UUID.
+        #
+        # This was `urn:uuid:` + 32 unhyphenated sha256 characters, which is
+        # not the RFC 4122 form CycloneDX requires of `serialNumber`, so a
+        # schema-validating consumer could reject every SBOM here. Measured
+        # before the fix: 174 of 174 non-conforming. `uuid5` keeps the
+        # determinism (same ci_id, same UUID) and is canonical by
+        # construction. Found by `chatgpt-codex-connector` on PR #1249.
+        "serialNumber": f"urn:uuid:{uuid.uuid5(SBOM_NAMESPACE, container.ci_id)}",
         "version": 1,
         "metadata": {
             "component": {
