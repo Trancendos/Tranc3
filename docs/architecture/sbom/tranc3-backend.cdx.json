@@ -54,6 +54,10 @@
       {
         "name": "trancendos:manifest",
         "value": "requirements.txt"
+      },
+      {
+        "name": "trancendos:manifest",
+        "value": "package.json"
       }
     ]
   },
@@ -582,6 +586,60 @@
       "bom-ref": "pkg:pypi/msgpack@1.2.2",
       "purl": "pkg:pypi/msgpack@1.2.2",
       "version": "1.2.2"
+    },
+    {
+      "type": "library",
+      "name": "undici",
+      "bom-ref": "pkg:npm/undici@8.10.2",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "8.10.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ],
+      "version": "8.10.2",
+      "purl": "pkg:npm/undici@8.10.2"
+    },
+    {
+      "type": "library",
+      "name": "vite",
+      "bom-ref": "pkg:npm/vite@7.3.5",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "7.3.5"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ],
+      "version": "7.3.5",
+      "purl": "pkg:npm/vite@7.3.5"
+    },
+    {
+      "type": "library",
+      "name": "ws",
+      "bom-ref": "pkg:npm/ws@8.21.3",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "8.21.3"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ],
+      "version": "8.21.3",
+      "purl": "pkg:npm/ws@8.21.3"
     }
   ]
 }

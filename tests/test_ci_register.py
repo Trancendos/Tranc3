@@ -703,3 +703,74 @@ class TestContainerFactsAreSupported:
             f"{len(wrong)} container(s) with no inspected Dockerfile still assert a "
             f"root answer: {wrong[:3]}"
         )
+
+
+class TestManifestsThatWereRecordedButNeverRead:
+    """Two findings Sourcery and Codex both raised on #1249."""
+
+    def test_a_container_shipping_package_json_gets_its_npm_dependencies(self) -> None:
+        """Recorded as a manifest, parsed by nothing.
+
+        The first loop skips every non-.txt file and the second handles only
+        Cargo.lock, so `bullmq-queue-service`, `cranbania` and
+        `remotion-render-service` -- whose only manifest this is -- had SBOMs
+        with zero components stating no manifest was found, while --check
+        called them current.
+
+        An SBOM empty because nobody read the manifest looks exactly like one
+        empty because there is nothing to declare. That is what makes this
+        worth a test rather than a glance.
+        """
+        from src.cmdb import containers
+
+        for container in containers.discover():
+            if not any(str(r).endswith("package.json") for r in (container.requirements or [])):
+                continue
+            sbom = json.loads((REPO / container.sbom_ref).read_text(encoding="utf-8"))
+            npm = [
+                c
+                for c in (sbom.get("components") or [])
+                if str(c.get("bom-ref", "")).startswith("pkg:npm/")
+            ]
+            assert npm, (
+                f"{container.service} ships a package.json and its SBOM carries no npm components"
+            )
+
+    def test_a_declared_range_is_not_published_as_a_resolved_version(self) -> None:
+        """`^4.1.0` is a constraint; calling it the installed version is wrong.
+
+        It would point vulnerability matching at the lower bound. Ranges are
+        kept verbatim as a property instead, and only a version that is
+        already exact populates `version`/`purl`.
+        """
+        for path in sorted((REPO / "docs/architecture/sbom").glob("*.cdx.json")):
+            for component in json.loads(path.read_text(encoding="utf-8")).get("components") or []:
+                version = component.get("version")
+                if version and version[0] in "^~><= ":
+                    raise AssertionError(
+                        f"{path.name}: {component.get('name')} publishes the range "
+                        f"{version!r} as a resolved version"
+                    )
+
+    def test_an_sbom_for_a_deleted_container_is_reported(self) -> None:
+        """The directory is one document per CURRENT container.
+
+        Comparing only what `discover()` returns can never see a leftover:
+        delete a compose service and --check still exits 0 while its
+        .cdx.json sits there reading as live inventory.
+        """
+        import subprocess
+
+        orphan = REPO / "docs/architecture/sbom/zzz-not-a-container.cdx.json"
+        orphan.write_text('{"bomFormat":"CycloneDX"}\n', encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, "scripts/build_container_sboms.py", "--check"],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+            )
+            assert result.returncode != 0, "--check passed with an orphaned SBOM present"
+            assert "ORPHAN" in result.stderr, "the orphan was not named in the output"
+        finally:
+            orphan.unlink(missing_ok=True)

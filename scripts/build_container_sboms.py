@@ -140,6 +140,60 @@ def _parse_cargo_lock(path: Path) -> list[dict]:
     return components
 
 
+def _parse_package_json(path: Path) -> tuple[list[dict], list[str]]:
+    """Components from a package.json's dependency maps.
+
+    `_requirements_near()` deliberately records package.json as a manifest,
+    but nothing parsed it: the first loop skips every non-.txt file and the
+    second handles only Cargo.lock. So `bullmq-queue-service`, `cranbania`
+    and `remotion-render-service` -- whose only manifest this is -- got SBOMs
+    with zero components that stated no manifest was found, while --check
+    called them current. An SBOM that is empty because nobody read the
+    manifest looks exactly like one that is empty because there is nothing
+    to declare. Found by Sourcery and `chatgpt-codex-connector` on PR #1249.
+
+    Runtime `dependencies` and `devDependencies` are both recorded, with
+    scope marking which. The declared range is kept verbatim rather than
+    being read as a resolved version: `^4.1.0` is a constraint, and calling
+    it the installed version is the mistake this file already avoids for
+    Python requirements.
+    """
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [], [f"{path.relative_to(REPO).as_posix()}: unreadable ({exc.__class__.__name__})"]
+
+    components: list[dict] = []
+    unparsed: list[str] = []
+    for field, scope in (("dependencies", "required"), ("devDependencies", "optional")):
+        block = document.get(field)
+        if not isinstance(block, dict):
+            continue
+        for name, declared in sorted(block.items()):
+            if not isinstance(declared, str):
+                unparsed.append(f"{name}: non-string version in {field}")
+                continue
+            exact = declared.lstrip("=") if declared[:1] in "=" else None
+            if declared and declared[0].isdigit():
+                exact = declared
+            entry = {
+                "type": "library",
+                "name": name,
+                "bom-ref": f"pkg:npm/{name}",
+                "scope": scope,
+                "properties": [
+                    {"name": "tranc3:declared-range", "value": declared},
+                    {"name": "tranc3:manifest-field", "value": field},
+                ],
+            }
+            if exact:
+                entry["version"] = exact
+                entry["purl"] = f"pkg:npm/{name}@{exact}"
+                entry["bom-ref"] = f"pkg:npm/{name}@{exact}"
+            components.append(entry)
+    return components, unparsed
+
+
 def build_sbom(container) -> dict:
     components: list[dict] = []
     unparsed: list[str] = []
@@ -158,6 +212,15 @@ def build_sbom(container) -> dict:
         if path.name != "Cargo.lock" or not path.is_file():
             continue
         components.extend(_parse_cargo_lock(path))
+        sources.append(manifest)
+
+    for manifest in container.requirements:
+        path = REPO / manifest
+        if path.name != "package.json" or not path.is_file():
+            continue
+        parsed, bad = _parse_package_json(path)
+        components.extend(parsed)
+        unparsed.extend(bad)
         sources.append(manifest)
 
     # De-duplicate on bom-ref, keeping first occurrence.
@@ -294,7 +357,20 @@ def main(argv: list[str] | None = None) -> int:
         target.write_text(payload, encoding="utf-8")
         written += 1
 
+    # An SBOM for a container that no longer exists is worse than a missing
+    # one: the directory is presented as one document per container in the
+    # CURRENT estate, so a leftover file reads as live inventory. Comparing
+    # only the containers `discover()` returns can never see it -- delete a
+    # compose service and --check still exits 0 while its .cdx.json sits
+    # there. Found by Sourcery and `chatgpt-codex-connector` on PR #1249.
+    expected = {container.sbom_ref for container in containers}
+    present = {path.relative_to(REPO).as_posix() for path in SBOM_DIR.glob("*.cdx.json")}
+    orphans = sorted(present - expected)
+
     if args.check:
+        for ref in orphans:
+            print(f"ORPHAN (no such container): {ref}", file=sys.stderr)
+        stale.extend(orphans)
         if stale:
             for ref in stale[:20]:
                 print(f"STALE: {ref}", file=sys.stderr)

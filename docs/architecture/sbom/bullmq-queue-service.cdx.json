@@ -44,10 +44,131 @@
         "value": "node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
       },
       {
-        "name": "trancendos:no-manifest",
-        "value": "No requirements manifest ships with this container. For a pulled third-party image this is expected and an image SBOM is the only way to know its contents."
+        "name": "trancendos:manifest",
+        "value": "workers/bullmq-queue-service/package.json"
       }
     ]
   },
-  "components": []
+  "components": [
+    {
+      "type": "library",
+      "name": "bullmq",
+      "bom-ref": "pkg:npm/bullmq",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^5.21.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "bom-ref": "pkg:npm/express",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^5.0.0"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "helmet",
+      "bom-ref": "pkg:npm/helmet",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^8.3.0"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/express",
+      "bom-ref": "pkg:npm/@types/express@5.0.6",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "5.0.6"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "5.0.6",
+      "purl": "pkg:npm/@types/express@5.0.6"
+    },
+    {
+      "type": "library",
+      "name": "@types/node",
+      "bom-ref": "pkg:npm/@types/node@24.13.3",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "24.13.3"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "24.13.3",
+      "purl": "pkg:npm/@types/node@24.13.3"
+    },
+    {
+      "type": "library",
+      "name": "ts-node",
+      "bom-ref": "pkg:npm/ts-node@10.9.2",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "10.9.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "10.9.2",
+      "purl": "pkg:npm/ts-node@10.9.2"
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "bom-ref": "pkg:npm/typescript@7.0.2",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "7.0.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "7.0.2",
+      "purl": "pkg:npm/typescript@7.0.2"
+    }
+  ]
 }
