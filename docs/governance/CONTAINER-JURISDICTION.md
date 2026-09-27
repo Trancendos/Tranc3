@@ -93,6 +93,31 @@ those inventories has looked inside a base image. `.github/workflows/anchore-syf
 on push to main against a single build — it is not per-container coverage, and it should not be
 read as such.
 
+### Three things the register does not yet know
+
+Recording these here rather than leaving them to be discovered, because a register that does not
+state its own blind spots is the failure this document exists to avoid. Each was raised in review
+of the change that produced this register and is a real limit, not a defect awaiting a quick fix.
+
+**Datastore discovery reads Python only.** `src/cmdb/datastores.py` walks `*.py`. The estate's
+Node and Rust services are therefore invisible to it: `workers/bullmq-queue-service/src/server.ts`
+creates a BullMQ client backed by the `valkey` service and produces no datastore CI and no
+evidence entry. The register's datastore counts are counts *of Python usage*, and should be read
+that way until a second language's discovery exists.
+
+**File-backed stores are keyed by engine and basename.** Two Locations that each hold a
+`studio.db` merge into one CI naming both — correct when they genuinely share storage, wrong when
+they do not, and Sashas Photo Studio and The Studio do not: The Studio mounts its own
+`the-studio-data` volume. Keying by Location instead would split stores that really are shared,
+which `tests/test_ci_register.py` asserts must stay merged. Telling the two cases apart needs the
+deployed volume identity, not the path, so this is a modelling decision rather than a bug fix.
+
+**A locator may be unresolved.** Where a module reaches a networked store without reading a
+connection variable in that same file, its locator reads
+`env://unresolved (<engine>; no connection variable read here)`. 21 of 31 networked stores say
+this today. It is deliberately not a guess: the previous behaviour invented `env://{ENGINE}_URL`,
+which sent operators to configuration nobody had set.
+
 ## 4. The Ice Box as management centre
 
 `workers/ice-box-service/` is 247 lines offering `/scan`, `/quarantine` and `/stats`. The owner's
