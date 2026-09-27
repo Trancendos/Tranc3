@@ -1,7 +1,7 @@
 # Repository-Derived CMDB: Automated Datastore and Container Discovery
 
 > **PR:** [feat: derive the datastore and container CMDB, with container SBOMs (split 5/5 of #1207)](https://github.com/Trancendos/Tranc3/pull/1249) [[1]](https://github.com/Trancendos/Tranc3/pull/1249)
-> 
+>
 > **What is in this document.** How datastores and containers are automatically discovered from the repository and registered as Configuration Items, how their SBOMs are generated, and how the currency checks that keep the register honest work. For the container jurisdiction policy and the SBOM semantics, see [`docs/governance/CONTAINER-JURISDICTION.md`](https://github.com/Trancendos/Tranc3/pull/1249).
 
 ## Overview
