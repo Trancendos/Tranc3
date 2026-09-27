@@ -13,8 +13,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 pyo3 = { version = "0.29", features = ["extension-module"], optional = true }
 ndarray = "0.17"
-ndarray-rand = "0.15"
-rand = "0.8"
+ndarray-rand = "0.16"
+rand = "0.9"
 num-complex = "0.4"
 serde = { version = "1", features = ["derive"] }
 rayon = "1.10"
@@ -22,6 +22,14 @@ thiserror = "2"
 tracing = "0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+# rand 0.9 pulls getrandom 0.3, which ships NO backend for
+# wasm32-unknown-unknown unless one is named. Without this the crate does not
+# compile for that target at all -- measured, rc=101. (main did not compile for
+# it either: getrandom 0.2 needed its `js` feature, equally absent. The gap is
+# older than the bump; only the mechanism for closing it changed.) The matching
+# `--cfg getrandom_backend="wasm_js"` lives in .cargo/config.toml, scoped to
+# this target so host builds are untouched.
+getrandom = { version = "0.3", features = ["wasm_js"] }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["console"] }
 serde-wasm-bindgen = "0.6"
