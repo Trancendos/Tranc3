@@ -63,11 +63,11 @@ updates:
       # read renovate.json, so without this the policy holds on one path and
       # not the other. Minor and patch still arrive; only major is held.
       - dependency-name: "torch"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "transformers"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "sentence-transformers"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "pip"
     directory: "/tranc3-bots"
@@ -113,11 +113,11 @@ updates:
       # read renovate.json, so without this the policy holds on one path and
       # not the other. Minor and patch still arrive; only major is held.
       - dependency-name: "torch"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "transformers"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "sentence-transformers"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "pip"
     directory: "/workers"
@@ -163,11 +163,11 @@ updates:
       # read renovate.json, so without this the policy holds on one path and
       # not the other. Minor and patch still arrive; only major is held.
       - dependency-name: "torch"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "transformers"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "sentence-transformers"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -276,7 +276,7 @@ updates:
       # above: one policy, two bots, and only one of them reads renovate.json.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse"
+      - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
@@ -323,7 +323,7 @@ updates:
       # above: one policy, two bots, and only one of them reads renovate.json.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse"
+      - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
@@ -370,7 +370,7 @@ updates:
       # above: one policy, two bots, and only one of them reads renovate.json.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse"
+      - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
@@ -417,7 +417,7 @@ updates:
       # above: one policy, two bots, and only one of them reads renovate.json.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse"
+      - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
@@ -464,7 +464,7 @@ updates:
       # above: one policy, two bots, and only one of them reads renovate.json.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse"
+      - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
@@ -511,7 +511,7 @@ updates:
       # above: one policy, two bots, and only one of them reads renovate.json.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse"
+      - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
