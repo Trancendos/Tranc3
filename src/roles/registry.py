@@ -173,7 +173,14 @@ class RoleRegistry:
     #: `chatgpt-codex-connector` on PR #1244 -- in a change whose diff contains
     #: no behaviour at all, which is the point: a rename is only free when
     #: nothing has persisted the old name.
-    RENAMED_ROLE_IDS = {"Dimension" + "al": "Dimension" + "als"}
+    #: Built by concatenation, not written out: `scripts/migrate_to_dimensionals.py`
+    #: rewrites the literal old name wherever it appears, and rewriting the key of
+    #: the table that migrates away from it would erase the migration. The new id is
+    #: derived from the old rather than spelled as its own fragment, because the
+    #: tail fragment that spelling it out would produce reads to the `typos`
+    #: hook as a misspelling of "also", which failed pre-commit.ci on PR #1244.
+    _RETIRED_DIMENSIONAL_ID = "Dimension" + "al"
+    RENAMED_ROLE_IDS = {_RETIRED_DIMENSIONAL_ID: _RETIRED_DIMENSIONAL_ID + "s"}
 
     def _migrate_renamed_role_ids(self) -> None:
         """Carry assignments and history from a retired role id to its new one.
