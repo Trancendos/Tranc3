@@ -70,7 +70,11 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins \
     && docker buildx version
 
 # ── Node.js 20 (via NodeSource) ───────────────────────────────────────────────
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ARG NODESOURCE_SETUP_SHA256=2c4c6683a17b6f4128898a7b521e3c8bb725a99ffaf1b5e32ac97c6fa7d381be
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh \
+    && echo "${NODESOURCE_SETUP_SHA256}  /tmp/nodesource_setup.sh" | sha256sum -c - \
+    && bash /tmp/nodesource_setup.sh \
+    && rm /tmp/nodesource_setup.sh \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/* \
     && node --version && npm --version
@@ -79,7 +83,11 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 RUN npm install -g wrangler@latest && wrangler --version
 
 # ── flyctl (Fly.io CLI) ───────────────────────────────────────────────────────
-RUN curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh \
+ARG FLYCTL_INSTALL_SHA256=a031272948eaca6c064a0756e4f43b0b3ee687716eeed2ab858fe0bdb0f029f5
+RUN curl -fsSL https://fly.io/install.sh -o /tmp/flyctl_install.sh \
+    && echo "${FLYCTL_INSTALL_SHA256}  /tmp/flyctl_install.sh" | sha256sum -c - \
+    && FLYCTL_INSTALL=/usr/local sh /tmp/flyctl_install.sh \
+    && rm /tmp/flyctl_install.sh \
     && flyctl version
 
 # ── Python security tools ─────────────────────────────────────────────────────

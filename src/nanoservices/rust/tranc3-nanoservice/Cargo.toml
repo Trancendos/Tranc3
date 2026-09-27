@@ -14,8 +14,15 @@ path = "src/main.rs"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
-# HTTP client
-reqwest = { version = "0.13", features = ["json", "rustls-tls"], default-features = false }
+# HTTP client.
+# The feature is `rustls`, not `rustls-tls`. reqwest renamed it in 0.13, and
+# this manifest kept the 0.12 spelling, so `cargo generate-lockfile` here fails
+# outright: "depends on reqwest with feature rustls-tls but reqwest does not
+# have that feature". The crate has not been buildable. Nothing caught it
+# because .github/workflows/rust.yml is scoped to `aeonmind/rust/**` and runs
+# with working-directory aeonmind/rust — it has never looked at this crate,
+# which is the only Rust that ships in the product. (#1228)
+reqwest = { version = "0.13", features = ["json", "rustls"], default-features = false }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

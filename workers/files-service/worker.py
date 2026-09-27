@@ -21,6 +21,7 @@ import logging
 import mimetypes
 import os
 import sqlite3
+import stat
 import threading
 import uuid
 from contextlib import contextmanager
@@ -605,8 +606,45 @@ def download_document(doc_id: str):
     if not path.exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
 
+    # Validate path to prevent directory traversal
+    base_real = os.path.realpath(UPLOAD_DIR)
+    target_real = os.path.realpath(path)
+    if os.path.commonpath([base_real, target_real]) != base_real:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    # Open now, under the containment check, rather than inside the generator.
+    # StreamingResponse iterates _iter() after this function returns, so the
+    # original code validated one path and opened it some time later: anything
+    # that could replace the file with a symlink in between got the read it
+    # wanted, outside UPLOAD_DIR. Binding a descriptor here closes that window
+    # -- the bytes streamed are from the inode that passed the check, whatever
+    # the name points at afterwards. O_NOFOLLOW refuses a final component that
+    # is already a symlink, and the fstat confirms a regular file rather than a
+    # fifo or device that would block or misbehave on read.
+    # (codeant-ai, Critical, on #1239)
+    try:
+        fd = os.open(target_real, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError:
+        raise HTTPException(status_code=404, detail="File not found on disk") from None
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            raise HTTPException(status_code=400, detail="Invalid file path")
+    except OSError:
+        os.close(fd)
+        raise HTTPException(status_code=404, detail="File not found on disk") from None
+
+    # Wrap the descriptor now, not inside `_iter`. `fd` is a raw int, and
+    # `_iter` runs only on the first read -- if the client disconnects before
+    # then, the generator is collected without ever entering the `with`, and
+    # garbage collection does not close a raw int. Repeated aborted downloads
+    # would leak descriptors until the worker hit its limit. Binding here means
+    # the generator closes it on completion, and CPython closes it on collection
+    # if the stream never starts. (coderabbitai on #1239)
+    handle = os.fdopen(fd, "rb")
+
     def _iter():
-        with open(path, "rb") as f:
+        with handle as f:
             while chunk := f.read(65536):
                 yield chunk
 

@@ -28,6 +28,29 @@ class PathTraversalError(ValueError):
     """Raised when a path escapes its allowed base directory."""
 
 
+def has_parent_traversal(path: Union[str, Path]) -> bool:
+    """True when *path* contains a `..` SEGMENT or a null byte.
+
+    For callers with no base directory to contain a path against -- a CLI that
+    scans whatever file it is given, a library that loads a dataset by
+    path -- this is the honest check. Where a base directory does exist,
+    `validate_path` or `safe_join` is the stronger answer, because they resolve
+    and then prove containment rather than pattern-matching the input.
+
+    The distinction that matters here is segment versus substring. Four callers
+    in the 2026-09-26 security cluster used `".." in path`, which rejects
+    `release..candidate.py`, `eval..set.jsonl` and any directory whose name
+    happens to contain two dots -- and in `SecurityScanner.scan_path` one such
+    filename aborted the whole directory scan. Traversal is a path SEGMENT
+    equal to `..`; two dots inside a name is just a name.
+    (CodeRabbit, chatgpt-codex-connector on #1239)
+    """
+    raw = str(path)
+    if "\x00" in raw:
+        return True
+    return any(segment == ".." for segment in re.split(r"[\\/]", raw))
+
+
 def validate_path(
     path: Union[str, Path],
     base_dir: Union[str, Path],

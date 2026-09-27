@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from Dimensional.path_validation import has_parent_traversal
 from Dimensional.security_automation.scanner import (
     Category,
     Violation,
@@ -635,6 +636,16 @@ class AutoRemediatorV2:
         session: RemediationSession,
     ) -> FixResult:
         """Process all violations in a single file with atomic semantics."""
+        # `..` as a path SEGMENT, not two dots anywhere in the string; the
+        # substring form rejected names like `release..candidate.py`.
+        # (CodeRabbit, chatgpt-codex-connector on #1239)
+        if has_parent_traversal(filepath):
+            return FixResult(
+                file=filepath,
+                violations_addressed=[],
+                success=False,
+                error="Invalid file path",
+            )
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 source = f.read()

@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `551970bf`. Regenerate with
+Generated from repo state at `02763be`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -129,7 +129,7 @@ that none of them import.
 
 ### `files-service`
 - **imports_resolve** — 1 unguarded, 0 guarded, 0 vendored
-  - `workers/files-service/worker.py:37 Dimensional.service_auth_fastapi`
+  - `workers/files-service/worker.py:38 Dimensional.service_auth_fastapi`
 
 ### `gbrain-bridge`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored

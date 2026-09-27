@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "551970bf",
+  "commit": "02763be",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-11T02:37:01.912848+00:00",
+  "generated_at": "2026-09-26T05:33:03.096104+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -1278,7 +1278,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/files-service/worker.py:37 Dimensional.service_auth_fastapi"
+            "workers/files-service/worker.py:38 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
