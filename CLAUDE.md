@@ -217,6 +217,15 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `docs/governance/ACTION-BACKLOG.md` — generated sweep of every outstanding item across 44
   registers, routed to Locations and linked to their solution packs
 - `docs/governance/DVMS-COMPETITIVE-ANALYSIS.md` — DVMS measured against comparable platforms
+- `docs/governance/CONTAINER-JURISDICTION.md` — why a container Configuration
+  Item and its SBOM are separate records, and who owns each. Every SBOM here is
+  **source-scope** and says so in its own document: it is built from the
+  manifests in the build context, so base-image and transitive contents are
+  named as excluded rather than quietly absent. Jurisdiction is the Location or
+  AI the container serves; custody is The Ice Box in every case, which is the
+  one part that is not derived. Measured: 144 datastore and 174 container CIs,
+  derived by `src/cmdb/{containers,datastores}.py` and checked in CI, because a
+  register nobody regenerates describes the estate it was written for
 - `docs/governance/CI-ESTATE-CONSOLIDATION.md` — why 84 pull requests were blocked
   by one cause rather than 84, the 48→27 workflow consolidation that followed, and
   the four Forgejo queue-hygiene audits that were built for exactly this problem and

@@ -1,0 +1,174 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:84ae63e4-17ba-5fcb-8443-6a5414993253",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "bullmq-queue-service",
+      "bom-ref": "CI-CT-bullmq-queue-service",
+      "version": "built-from-source"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "built"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-bullmq-queue-service"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
+      },
+      {
+        "name": "trancendos:manifest",
+        "value": "workers/bullmq-queue-service/package.json"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "bullmq",
+      "bom-ref": "pkg:npm/bullmq",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^5.21.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "bom-ref": "pkg:npm/express",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^5.0.0"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "helmet",
+      "bom-ref": "pkg:npm/helmet",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^8.3.0"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/express",
+      "bom-ref": "pkg:npm/@types/express@5.0.6",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "5.0.6"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "5.0.6",
+      "purl": "pkg:npm/@types/express@5.0.6"
+    },
+    {
+      "type": "library",
+      "name": "@types/node",
+      "bom-ref": "pkg:npm/@types/node@24.13.3",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "24.13.3"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "24.13.3",
+      "purl": "pkg:npm/@types/node@24.13.3"
+    },
+    {
+      "type": "library",
+      "name": "ts-node",
+      "bom-ref": "pkg:npm/ts-node@10.9.2",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "10.9.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "10.9.2",
+      "purl": "pkg:npm/ts-node@10.9.2"
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "bom-ref": "pkg:npm/typescript@7.0.2",
+      "scope": "optional",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "7.0.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "devDependencies"
+        }
+      ],
+      "version": "7.0.2",
+      "purl": "pkg:npm/typescript@7.0.2"
+    }
+  ]
+}
