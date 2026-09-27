@@ -94,10 +94,9 @@ Each entity gets an **Alpha agent** (primary) and **Beta agent** (shadow/backup)
 
 ---
 
-## Dimensional — Shared-Core Services
+## Dimensionals — Shared-Core Services
 
-> `shared_core/` and `Dimensionals/` are the **same thing** — canonical name is **Dimensional**.
-> All `shared_core` references should resolve to `Dimensional`.
+> The platform taxonomy formalizes **Dimensionals** (plural) as the canonical name for the shared-core services layer. The package is `Dimensionals/`, and the taxonomy structure is **Locations / AIs / Dimensionals**. Both singular and plural forms may appear in the codebase, but the taxonomy uses the plural form as canonical.
 
 | Module | Path | Role |
 |--------|------|------|
