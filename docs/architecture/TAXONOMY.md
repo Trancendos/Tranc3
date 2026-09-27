@@ -14,7 +14,7 @@ never been assembled:
 |---|---|
 | **Locations** | `PLATFORM_ENTITIES` — 43 entities, their abilities, code paths and ports |
 | **AIs** | `get_orchestration_tier()` for the tier, `src/personality/profiles/` for profile and personality, `agent_teams` / `bot_01..04` for agents and bots |
-| **Dimensionals (Shared-Core)** | the `Dimensionals/` package, classified into Services, Middleware, Databases, Mesh and Routers |
+| **Dimensionals (Shared-Core)** | the `Dimensionals/`, `src/mesh/` and `shared_core/` trees, classified into Services, Middleware, Databases, Mesh and Routers |
 
 ## Measured totals
 

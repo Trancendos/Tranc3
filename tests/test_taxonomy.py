@@ -508,3 +508,29 @@ class TestFourFindingsCodexRaised:
         assert re.search(r"\d+\s+entities", row) is None, (
             f"the entity count is written as a literal rather than derived: {row.strip()}"
         )
+
+
+def test_the_dimensionals_row_names_every_tree_the_branch_publishes() -> None:
+    """The document must not contradict its own tree.
+
+    The row named only `Dimensionals/` after the branch grew to publish
+    `src/mesh/` and `shared_core/` as well -- and `--check` could not catch
+    it, because a literal regenerates unchanged. Replacing it with a longer
+    literal would go stale the same way the next time a source tree is added,
+    so the row is derived from the branch and this asserts the derivation
+    covers every tree actually published.
+    """
+    published = (REPO / "docs/architecture/TAXONOMY.md").read_text(encoding="utf-8")
+    row = next(
+        (ln for ln in published.splitlines() if ln.startswith("| **Dimensionals (Shared-Core)**")),
+        None,
+    )
+    assert row is not None, "the Dimensionals summary row is gone"
+
+    branch = build_tree().root.find("Dimensionals (Shared-Core)")
+    assert branch is not None
+    sources = {branch.source} | {
+        c.source for c in branch.children if c.kind == "branch" and c.source
+    }
+    missing = sorted(s for s in sources if s and f"`{s}/`" not in row)
+    assert not missing, f"the row does not name {missing}, which the branch publishes"

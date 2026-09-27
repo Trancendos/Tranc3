@@ -37,6 +37,28 @@ MD_OUT = REPO / "docs" / "architecture" / "TAXONOMY.md"
 MD_MAX_DEPTH = 3
 
 
+def _dimensionals_sources(tree) -> str:
+    """The source trees the Dimensionals branch actually published, as prose.
+
+    Read from the branch rather than described, so the row cannot drift from
+    what the tree holds.
+    """
+    branch = tree.root.find("Dimensionals (Shared-Core)")
+    if branch is None:
+        return "the `Dimensionals/` package"
+
+    roots: list[str] = []
+    if branch.source:
+        roots.append(f"`{branch.source}/`")
+    for child in branch.children:
+        if child.kind == "branch" and child.source and child.source not in branch.source:
+            roots.append(f"`{child.source}/`")
+
+    if len(roots) == 1:
+        return f"the {roots[0]} package"
+    return "the " + ", ".join(roots[:-1]) + f" and {roots[-1]} trees"
+
+
 def render_markdown(tree) -> str:
     root = tree.root
     counts = {
@@ -81,7 +103,14 @@ def render_markdown(tree) -> str:
         f"| **Locations** | `PLATFORM_ENTITIES` — {tree.count('location')} entities, "
         "their abilities, code paths and ports |",
         "| **AIs** | `get_orchestration_tier()` for the tier, `src/personality/profiles/` for profile and personality, `agent_teams` / `bot_01..04` for agents and bots |",
-        "| **Dimensionals (Shared-Core)** | the `Dimensionals/` package, classified into Services, Middleware, Databases, Mesh and Routers |",
+        # Derived for the same reason as the entity count above. This row named
+        # only `Dimensionals/` after the branch grew to publish `src/mesh/` and
+        # `shared_core/` too, so the document contradicted its own tree -- and
+        # --check could not see it, because a literal regenerates unchanged.
+        # A longer literal would go stale the same way the next time a source
+        # tree is added. Found by CodeRabbit on PR #1248.
+        f"| **Dimensionals (Shared-Core)** | {_dimensionals_sources(tree)}, "
+        "classified into Services, Middleware, Databases, Mesh and Routers |",
         "",
         "## Measured totals",
         "",
