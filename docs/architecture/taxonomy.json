@@ -6709,7 +6709,7 @@
         },
         {
           "name": "_unrouted_",
-          "kind": "location",
+          "kind": "unrouted",
           "source": "config/estate/registry.yaml::TRC-P0-006",
           "detail": "60 nano-services with no owning Location (registry records lead_ai: null)",
           "meta": {
@@ -7144,14 +7144,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Synapse', description='Monitors global activity; triggers alerts for offline nodes.', sid='SID-LUM-01')",
+                      "name": "Synapse",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Monitors global activity; triggers alerts for offline nodes."
                     },
                     {
-                      "name": "Agent(code_name='Cortex', description='Translates objectives into workflow blueprints.', sid='SID-LUM-02')",
+                      "name": "Cortex",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates objectives into workflow blueprints."
                     }
                   ]
                 },
@@ -7161,24 +7163,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Neuron-1-Bot', description='Listens for emergency signals for immediate attention.', nid='NID-LUM-01')",
+                      "name": "Neuron-1-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Listens for emergency signals for immediate attention."
                     },
                     {
-                      "name": "Bot(code_name='Neuron-2-Bot', description='Holds transient conversational state metrics.', nid='NID-LUM-02')",
+                      "name": "Neuron-2-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Holds transient conversational state metrics."
                     },
                     {
-                      "name": "Bot(code_name='Dendrite-Bot', description='Collects performance metrics from peripheral nodes.', nid='NID-LUM-03')",
+                      "name": "Dendrite-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Collects performance metrics from peripheral nodes."
                     },
                     {
-                      "name": "Bot(code_name='Axon-Bot', description='Transmits executive commands to Agents/Bots.', nid='NID-LUM-04')",
+                      "name": "Axon-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Transmits executive commands to Agents/Bots."
                     }
                   ]
                 }
@@ -7290,14 +7296,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Swarm-Leader', description='Manages massive data streams and loads.', sid='SID-HVE-01')",
+                      "name": "Swarm-Leader",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages massive data streams and loads."
                     },
                     {
-                      "name": "Agent(code_name='Hive-Mind', description='Uses telemetry to optimize the routing matrix.', sid='SID-HVE-02')",
+                      "name": "Hive-Mind",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Uses telemetry to optimize the routing matrix."
                     }
                   ]
                 },
@@ -7307,24 +7315,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Worker-Bee-Bot', description='Carries small payload updates between nodes.', nid='NID-HVE-01')",
+                      "name": "Worker-Bee-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Carries small payload updates between nodes."
                     },
                     {
-                      "name": "Bot(code_name='Drone-7-Bot', description='Sweeps transport lanes to prune stuck packets.', nid='NID-HVE-02')",
+                      "name": "Drone-7-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sweeps transport lanes to prune stuck packets."
                     },
                     {
-                      "name": "Bot(code_name='Nectar-Fetch-Bot', description='Pulls system-state configuration updates.', nid='NID-HVE-03')",
+                      "name": "Nectar-Fetch-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Pulls system-state configuration updates."
                     },
                     {
-                      "name": "Bot(code_name='Comb-Builder-Bot', description='Creates dynamic memory blocks for spikes.', nid='NID-HVE-04')",
+                      "name": "Comb-Builder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Creates dynamic memory blocks for spikes."
                     }
                   ]
                 }
@@ -7436,14 +7448,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Shadow', description='Mirrors daily habits to anticipate system and scheduling preferences.', sid='SID-TMR-01')",
+                      "name": "The Shadow",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Mirrors daily habits to anticipate system and scheduling preferences."
                     },
                     {
-                      "name": "Agent(code_name='The Scheduler', description='Adjusts calendar priorities proactively to carve out required rest breaks.', sid='SID-TMR-02')",
+                      "name": "The Scheduler",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adjusts calendar priorities proactively to carve out required rest breaks."
                     }
                   ]
                 },
@@ -7453,24 +7467,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Sync-Bot', description='Pulls data securely from health platforms, applying strict HIPAA encryption.', nid='NID-TMR-01')",
+                      "name": "Sync-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Pulls data securely from health platforms, applying strict HIPAA encryption."
                     },
                     {
-                      "name": "Bot(code_name='Fetch-Bot', description='Parses upcoming tasks to flag heavy scheduling days early for the user.', nid='NID-TMR-02')",
+                      "name": "Fetch-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Parses upcoming tasks to flag heavy scheduling days early for the user."
                     },
                     {
-                      "name": "Bot(code_name='Nudge-Bot', description='Sends gentle notifications suggesting stretches, hydration, or posture breaks.', nid='NID-TMR-03')",
+                      "name": "Nudge-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sends gentle notifications suggesting stretches, hydration, or posture breaks."
                     },
                     {
-                      "name": "Bot(code_name='Alert-Bot', description='Warns users of upcoming tasks, giving them buffer time to finish current work.', nid='NID-TMR-04')",
+                      "name": "Alert-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Warns users of upcoming tasks, giving them buffer time to finish current work."
                     }
                   ]
                 }
@@ -7592,14 +7610,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Alchemist', description='Translates product plans into multi-app design sequences.', sid='SID-IMG-01')",
+                      "name": "The Alchemist",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates product plans into multi-app design sequences."
                     },
                     {
-                      "name": "Agent(code_name='The Architect', description='Bridges visual layouts with structural code bindings.', sid='SID-IMG-02')",
+                      "name": "The Architect",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Bridges visual layouts with structural code bindings."
                     }
                   ]
                 },
@@ -7609,24 +7629,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Mixer-Bot', description='Groups images, media, and 3D files into unified folders.', nid='NID-IMG-01')",
+                      "name": "Mixer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Groups images, media, and 3D files into unified folders."
                     },
                     {
-                      "name": "Bot(code_name='Blender-Bot', description='Resolves layer conflicts when combining 2D, 3D, and UI.', nid='NID-IMG-02')",
+                      "name": "Blender-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Resolves layer conflicts when combining 2D, 3D, and UI."
                     },
                     {
-                      "name": "Bot(code_name='Welder-Bot', description='Links user input triggers in the UI directly to backend functions.', nid='NID-IMG-03')",
+                      "name": "Welder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Links user input triggers in the UI directly to backend functions."
                     },
                     {
-                      "name": "Bot(code_name='Polisher-Bot', description='Runs final visual sweeps on lighting, styling, and alignment.', nid='NID-IMG-04')",
+                      "name": "Polisher-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs final visual sweeps on lighting, styling, and alignment."
                     }
                   ]
                 }
@@ -7738,14 +7762,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Gatekeeper', description='Checks incoming user logins, issuing secure, temporary keys.', sid='SID-INF-01')",
+                      "name": "The Gatekeeper",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Checks incoming user logins, issuing secure, temporary keys."
                     },
                     {
-                      "name": "Agent(code_name='The Bouncer', description='Monitors login origins and activities, blocking suspicious IPs.', sid='SID-INF-02')",
+                      "name": "The Bouncer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Monitors login origins and activities, blocking suspicious IPs."
                     }
                   ]
                 },
@@ -7755,24 +7781,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Token-Minter-Bot', description='Generates secure, time-limited tokens for node-crossing users.', nid='NID-INF-01')",
+                      "name": "Token-Minter-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates secure, time-limited tokens for node-crossing users."
                     },
                     {
-                      "name": "Bot(code_name='Auth-Check-Bot', description='Verifies active user permissions before unlocking private features.', nid='NID-INF-02')",
+                      "name": "Auth-Check-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Verifies active user permissions before unlocking private features."
                     },
                     {
-                      "name": "Bot(code_name='Key-Gen-Bot', description='Handles local encryption keys to authorize offline applications.', nid='NID-INF-03')",
+                      "name": "Key-Gen-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Handles local encryption keys to authorize offline applications."
                     },
                     {
-                      "name": "Bot(code_name='Sentry-Bot', description='Logs security events, highlighting failed login attempts.', nid='NID-INF-04')",
+                      "name": "Sentry-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Logs security events, highlighting failed login attempts."
                     }
                   ]
                 }
@@ -7884,14 +7914,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Treasurer', description='Monitors resource usage, scaling idle services to approach zero-cost.', sid='SID-RBA-01')",
+                      "name": "The Treasurer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Monitors resource usage, scaling idle services to approach zero-cost."
                     },
                     {
-                      "name": "Agent(code_name='The Actuary', description='Evaluates system runtime efficiency, mapping ROI metrics.', sid='SID-RBA-02')",
+                      "name": "The Actuary",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Evaluates system runtime efficiency, mapping ROI metrics."
                     }
                   ]
                 },
@@ -7901,24 +7933,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Ledger-Bot', description='Logs system financial variables, compute costs, and usage logs.', nid='NID-RBA-01')",
+                      "name": "Ledger-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Logs system financial variables, compute costs, and usage logs."
                     },
                     {
-                      "name": "Bot(code_name='Coin-Bot', description='Manages system credits and tracks processing priority tokens.', nid='NID-RBA-02')",
+                      "name": "Coin-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages system credits and tracks processing priority tokens."
                     },
                     {
-                      "name": "Bot(code_name='Ticker-Bot', description='Tracks cloud rates to buy server space during off-peak hours.', nid='NID-RBA-03')",
+                      "name": "Ticker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Tracks cloud rates to buy server space during off-peak hours."
                     },
                     {
-                      "name": "Bot(code_name='Receipt-Bot', description='Generates transaction recaps, usage invoices, and expense charts.', nid='NID-RBA-04')",
+                      "name": "Receipt-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates transaction recaps, usage invoices, and expense charts."
                     }
                   ]
                 }
@@ -8033,14 +8069,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The General', description='Directs high-level development priorities, adjusting assignments.', sid='SID-CTL-01')",
+                      "name": "The General",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Directs high-level development priorities, adjusting assignments."
                     },
                     {
-                      "name": "Agent(code_name='The Tactician', description='Re-allocates team structures to meet immediate design objectives.', sid='SID-CTL-02')",
+                      "name": "The Tactician",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Re-allocates team structures to meet immediate design objectives."
                     }
                   ]
                 },
@@ -8050,24 +8088,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Map-Bot', description='Projects system metrics on command dashboards, visualizing node relations.', nid='NID-CTL-01')",
+                      "name": "Map-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Projects system metrics on command dashboards, visualizing node relations."
                     },
                     {
-                      "name": "Bot(code_name='Compass-Bot', description='Highlights project priorities, guiding developmental focuses.', nid='NID-CTL-02')",
+                      "name": "Compass-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Highlights project priorities, guiding developmental focuses."
                     },
                     {
-                      "name": "Bot(code_name='Clock-Bot', description='Coordinates cross-node releases to ensure aligned rollouts.', nid='NID-CTL-03')",
+                      "name": "Clock-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Coordinates cross-node releases to ensure aligned rollouts."
                     },
                     {
-                      "name": "Bot(code_name='Radio-Bot', description='Broadcasts executive platform priorities directly to low-tier Agents.', nid='NID-CTL-04')",
+                      "name": "Radio-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Broadcasts executive platform priorities directly to low-tier Agents."
                     }
                   ]
                 }
@@ -8179,14 +8221,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Hounds', description='Searches sandbox code for syntax errors and memory leaks.', sid='SID-LAB-01')",
+                      "name": "The Hounds",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Searches sandbox code for syntax errors and memory leaks."
                     },
                     {
-                      "name": "Agent(code_name='Syntax-Sage', description='Reads active scripts, suggesting code optimization patterns.', sid='SID-LAB-02')",
+                      "name": "Syntax-Sage",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Reads active scripts, suggesting code optimization patterns."
                     }
                   ]
                 },
@@ -8196,24 +8240,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Lint-Bot', description='Formats and styles code to match company guidelines.', nid='NID-LAB-01')",
+                      "name": "Lint-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Formats and styles code to match company guidelines."
                     },
                     {
-                      "name": "Bot(code_name='Compile-Bot', description='Runs rapid, isolated builds to verify code compilation.', nid='NID-LAB-02')",
+                      "name": "Compile-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs rapid, isolated builds to verify code compilation."
                     },
                     {
-                      "name": "Bot(code_name='Debug-Bot', description='Inspects runtime stacks, pinpointing errors to the exact line.', nid='NID-LAB-03')",
+                      "name": "Debug-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Inspects runtime stacks, pinpointing errors to the exact line."
                     },
                     {
-                      "name": "Bot(code_name='Test-Bot', description='Runs automated code tests, reporting pass/fail ratios.', nid='NID-LAB-04')",
+                      "name": "Test-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs automated code tests, reporting pass/fail ratios."
                     }
                   ]
                 }
@@ -8325,14 +8373,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Watcher', description='Scans monitoring logs in real-time for unusual anomalies/spikes.', sid='SID-OBS-01')",
+                      "name": "The Watcher",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Scans monitoring logs in real-time for unusual anomalies/spikes."
                     },
                     {
-                      "name": "Agent(code_name='The Scribe', description='Compresses long log files into searchable summary journals.', sid='SID-OBS-02')",
+                      "name": "The Scribe",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Compresses long log files into searchable summary journals."
                     }
                   ]
                 },
@@ -8342,24 +8392,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Log-Alpha-Bot', description='Captures UI interactions, button clicks, and front-end errors.', nid='NID-OBS-01')",
+                      "name": "Log-Alpha-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Captures UI interactions, button clicks, and front-end errors."
                     },
                     {
-                      "name": "Bot(code_name='Log-Beta-Bot', description='Gathers background server signals, database calls, and backend tasks.', nid='NID-OBS-02')",
+                      "name": "Log-Beta-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Gathers background server signals, database calls, and backend tasks."
                     },
                     {
-                      "name": "Bot(code_name='Tracer-Bot', description='Tracks data paths across multiple servers to isolate bottlenecks.', nid='NID-OBS-03')",
+                      "name": "Tracer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Tracks data paths across multiple servers to isolate bottlenecks."
                     },
                     {
-                      "name": "Bot(code_name='Timestamp-Bot', description='Applies high-precision UTC marks to every event for accuracy.', nid='NID-OBS-04')",
+                      "name": "Timestamp-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Applies high-precision UTC marks to every event for accuracy."
                     }
                   ]
                 }
@@ -8471,14 +8525,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Guide', description='Screens user stress metrics, suggesting wellbeing sub-nodes for relief.', sid='SID-TRQ-01')",
+                      "name": "The Guide",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Screens user stress metrics, suggesting wellbeing sub-nodes for relief."
                     },
                     {
-                      "name": "Agent(code_name='The Healer', description='Directs relaxation routines, helping users reset focus after intense sessions.', sid='SID-TRQ-02')",
+                      "name": "The Healer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Directs relaxation routines, helping users reset focus after intense sessions."
                     }
                   ]
                 },
@@ -8488,24 +8544,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Breath-Bot', description='Plays pacing animations to guide calm, measured breathing patterns.', nid='NID-TRQ-01')",
+                      "name": "Breath-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Plays pacing animations to guide calm, measured breathing patterns."
                     },
                     {
-                      "name": "Bot(code_name='Pulse-Bot', description='Evaluates user inputs to suggest targeted relaxation periods throughout the day.', nid='NID-TRQ-02')",
+                      "name": "Pulse-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Evaluates user inputs to suggest targeted relaxation periods throughout the day."
                     },
                     {
-                      "name": "Bot(code_name='Calm-Bot', description='Decreases interface noise, dimming displays and silencing non-critical alerts.', nid='NID-TRQ-03')",
+                      "name": "Calm-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Decreases interface noise, dimming displays and silencing non-critical alerts."
                     },
                     {
-                      "name": "Bot(code_name='Aura-Bot', description='Adjusts ambient color backlighting across platforms to support user relaxation.', nid='NID-TRQ-04')",
+                      "name": "Aura-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adjusts ambient color backlighting across platforms to support user relaxation."
                     }
                   ]
                 }
@@ -8624,14 +8684,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Broker', description='Standardizes input/output formats for different APIs.', sid='SID-APM-01')",
+                      "name": "The Broker",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Standardizes input/output formats for different APIs."
                     },
                     {
-                      "name": "Agent(code_name='The Diplomat', description='Handles external handshakes, authentications, and secure keys.', sid='SID-APM-02')",
+                      "name": "The Diplomat",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Handles external handshakes, authentications, and secure keys."
                     }
                   ]
                 },
@@ -8641,24 +8703,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='GET-Bot', description='Processes read calls, returning requested information quickly.', nid='NID-APM-01')",
+                      "name": "GET-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Processes read calls, returning requested information quickly."
                     },
                     {
-                      "name": "Bot(code_name='POST-Bot', description='Validates incoming datasets, routing them to write actions.', nid='NID-APM-02')",
+                      "name": "POST-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Validates incoming datasets, routing them to write actions."
                     },
                     {
-                      "name": "Bot(code_name='PUT-Bot', description='Identifies target files, running structured content updates.', nid='NID-APM-03')",
+                      "name": "PUT-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies target files, running structured content updates."
                     },
                     {
-                      "name": "Bot(code_name='DELETE-Bot', description='Removes connections/references while keeping linkages clean.', nid='NID-APM-04')",
+                      "name": "DELETE-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Removes connections/references while keeping linkages clean."
                     }
                   ]
                 }
@@ -8770,14 +8836,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Forum-Mod', description='Scans threads to flag policy issues/announcements.', sid='SID-ARC-01')",
+                      "name": "Forum-Mod",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Scans threads to flag policy issues/announcements."
                     },
                     {
-                      "name": "Agent(code_name='Campaign-Mgr', description='Drafts automated system emails/notifications.', sid='SID-ARC-02')",
+                      "name": "Campaign-Mgr",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Drafts automated system emails/notifications."
                     }
                   ]
                 },
@@ -8787,24 +8855,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Mail-Sorter-Bot', description='Categorizes and dispatches inbound emails.', nid='NID-ARC-01')",
+                      "name": "Mail-Sorter-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Categorizes and dispatches inbound emails."
                     },
                     {
-                      "name": "Bot(code_name='Thread-Pumper-Bot', description='Injects live forum updates into the UI.', nid='NID-ARC-02')",
+                      "name": "Thread-Pumper-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Injects live forum updates into the UI."
                     },
                     {
-                      "name": "Bot(code_name='UI-Renderer-Bot', description='Translates local templates into responsive UI.', nid='NID-ARC-03')",
+                      "name": "UI-Renderer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates local templates into responsive UI."
                     },
                     {
-                      "name": "Bot(code_name='Cache-Fetch-Bot', description='Grabs local media/templates to speed up loads.', nid='NID-ARC-04')",
+                      "name": "Cache-Fetch-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Grabs local media/templates to speed up loads."
                     }
                   ]
                 }
@@ -8916,14 +8988,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Speculator-C', description='Assesses server cost trends to buy bulk compute resources.', sid='SID-AEX-01')",
+                      "name": "The Speculator-C",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Assesses server cost trends to buy bulk compute resources."
                     },
                     {
-                      "name": "Agent(code_name='The Trader-C', description='Automates bidding on open compute marketplaces for affordability.', sid='SID-AEX-02')",
+                      "name": "The Trader-C",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automates bidding on open compute marketplaces for affordability."
                     }
                   ]
                 },
@@ -8933,24 +9007,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Bidder-Bot', description='Submits buy requests on real-time server auctions for processes.', nid='NID-AEX-01')",
+                      "name": "Bidder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Submits buy requests on real-time server auctions for processes."
                     },
                     {
-                      "name": "Bot(code_name='Asker-Bot', description='Sets pricing rules for when external platforms buy Arcadian power.', nid='NID-AEX-02')",
+                      "name": "Asker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sets pricing rules for when external platforms buy Arcadian power."
                     },
                     {
-                      "name": "Bot(code_name='Miner-Bot', description='Utilizes idle GPU capacity to run calculations or generate assets.', nid='NID-AEX-03')",
+                      "name": "Miner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Utilizes idle GPU capacity to run calculations or generate assets."
                     },
                     {
-                      "name": "Bot(code_name='Harvester-Bot', description='Identifies and frees up neglected storage blocks across servers.', nid='NID-AEX-04')",
+                      "name": "Harvester-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies and frees up neglected storage blocks across servers."
                     }
                   ]
                 }
@@ -9062,14 +9140,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Speculator-A', description='Assesses storage cost trends across providers to secure bulk capacity.', sid='SID-AEX-03')",
+                      "name": "The Speculator-A",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Assesses storage cost trends across providers to secure bulk capacity."
                     },
                     {
-                      "name": "Agent(code_name='The Trader-A', description='Automates bidding on storage marketplaces for the best rates.', sid='SID-AEX-04')",
+                      "name": "The Trader-A",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automates bidding on storage marketplaces for the best rates."
                     }
                   ]
                 },
@@ -9079,24 +9159,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Bidder-Bot', description='Submits buy requests on real-time server auctions for processes.', nid='NID-AEX-01')",
+                      "name": "Bidder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Submits buy requests on real-time server auctions for processes."
                     },
                     {
-                      "name": "Bot(code_name='Asker-Bot', description='Sets pricing rules for when external platforms buy Arcadian power.', nid='NID-AEX-02')",
+                      "name": "Asker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sets pricing rules for when external platforms buy Arcadian power."
                     },
                     {
-                      "name": "Bot(code_name='Miner-Bot', description='Utilizes idle GPU capacity to run calculations or generate assets.', nid='NID-AEX-03')",
+                      "name": "Miner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Utilizes idle GPU capacity to run calculations or generate assets."
                     },
                     {
-                      "name": "Bot(code_name='Harvester-Bot', description='Identifies and frees up neglected storage blocks across servers.', nid='NID-AEX-04')",
+                      "name": "Harvester-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies and frees up neglected storage blocks across servers."
                     }
                   ]
                 }
@@ -9208,14 +9292,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Speculator-G', description='Assesses AI model licensing and inference cost trends.', sid='SID-AEX-05')",
+                      "name": "The Speculator-G",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Assesses AI model licensing and inference cost trends."
                     },
                     {
-                      "name": "Agent(code_name='The Trader-G', description='Automates bidding on model marketplaces for compute-efficient access.', sid='SID-AEX-06')",
+                      "name": "The Trader-G",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automates bidding on model marketplaces for compute-efficient access."
                     }
                   ]
                 },
@@ -9225,24 +9311,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Bidder-Bot', description='Submits buy requests on real-time server auctions for processes.', nid='NID-AEX-01')",
+                      "name": "Bidder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Submits buy requests on real-time server auctions for processes."
                     },
                     {
-                      "name": "Bot(code_name='Asker-Bot', description='Sets pricing rules for when external platforms buy Arcadian power.', nid='NID-AEX-02')",
+                      "name": "Asker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sets pricing rules for when external platforms buy Arcadian power."
                     },
                     {
-                      "name": "Bot(code_name='Miner-Bot', description='Utilizes idle GPU capacity to run calculations or generate assets.', nid='NID-AEX-03')",
+                      "name": "Miner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Utilizes idle GPU capacity to run calculations or generate assets."
                     },
                     {
-                      "name": "Bot(code_name='Harvester-Bot', description='Identifies and frees up neglected storage blocks across servers.', nid='NID-AEX-04')",
+                      "name": "Harvester-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies and frees up neglected storage blocks across servers."
                     }
                   ]
                 }
@@ -9354,14 +9444,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Speculator-E', description='Assesses workflow and orchestration tooling costs.', sid='SID-AEX-07')",
+                      "name": "The Speculator-E",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Assesses workflow and orchestration tooling costs."
                     },
                     {
-                      "name": "Agent(code_name='The Trader-E', description='Automates bidding on workflow-automation marketplaces.', sid='SID-AEX-08')",
+                      "name": "The Trader-E",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automates bidding on workflow-automation marketplaces."
                     }
                   ]
                 },
@@ -9371,24 +9463,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Bidder-Bot', description='Submits buy requests on real-time server auctions for processes.', nid='NID-AEX-01')",
+                      "name": "Bidder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Submits buy requests on real-time server auctions for processes."
                     },
                     {
-                      "name": "Bot(code_name='Asker-Bot', description='Sets pricing rules for when external platforms buy Arcadian power.', nid='NID-AEX-02')",
+                      "name": "Asker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sets pricing rules for when external platforms buy Arcadian power."
                     },
                     {
-                      "name": "Bot(code_name='Miner-Bot', description='Utilizes idle GPU capacity to run calculations or generate assets.', nid='NID-AEX-03')",
+                      "name": "Miner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Utilizes idle GPU capacity to run calculations or generate assets."
                     },
                     {
-                      "name": "Bot(code_name='Harvester-Bot', description='Identifies and frees up neglected storage blocks across servers.', nid='NID-AEX-04')",
+                      "name": "Harvester-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies and frees up neglected storage blocks across servers."
                     }
                   ]
                 }
@@ -9500,14 +9596,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Speculator-J', description='Assesses API credit pricing trends across providers.', sid='SID-AEX-09')",
+                      "name": "The Speculator-J",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Assesses API credit pricing trends across providers."
                     },
                     {
-                      "name": "Agent(code_name='The Trader-J', description='Automates bidding on API-credit marketplaces for cost efficiency.', sid='SID-AEX-10')",
+                      "name": "The Trader-J",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automates bidding on API-credit marketplaces for cost efficiency."
                     }
                   ]
                 },
@@ -9517,24 +9615,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Bidder-Bot', description='Submits buy requests on real-time server auctions for processes.', nid='NID-AEX-01')",
+                      "name": "Bidder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Submits buy requests on real-time server auctions for processes."
                     },
                     {
-                      "name": "Bot(code_name='Asker-Bot', description='Sets pricing rules for when external platforms buy Arcadian power.', nid='NID-AEX-02')",
+                      "name": "Asker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sets pricing rules for when external platforms buy Arcadian power."
                     },
                     {
-                      "name": "Bot(code_name='Miner-Bot', description='Utilizes idle GPU capacity to run calculations or generate assets.', nid='NID-AEX-03')",
+                      "name": "Miner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Utilizes idle GPU capacity to run calculations or generate assets."
                     },
                     {
-                      "name": "Bot(code_name='Harvester-Bot', description='Identifies and frees up neglected storage blocks across servers.', nid='NID-AEX-04')",
+                      "name": "Harvester-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies and frees up neglected storage blocks across servers."
                     }
                   ]
                 }
@@ -9646,14 +9748,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Timekeeper', description='Rearranges task backlogs and priorities to prevent bottlenecks.', sid='SID-CHR-01')",
+                      "name": "The Timekeeper",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Rearranges task backlogs and priorities to prevent bottlenecks."
                     },
                     {
-                      "name": "Agent(code_name='The Time-Weaver', description='Translates timeline parameters into interactive visual Gantt views.', sid='SID-CHR-02')",
+                      "name": "The Time-Weaver",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates timeline parameters into interactive visual Gantt views."
                     }
                   ]
                 },
@@ -9663,24 +9767,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Tick-Bot', description='Triggers routine cron jobs and automated calendar actions across platforms.', nid='NID-CHR-01')",
+                      "name": "Tick-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Triggers routine cron jobs and automated calendar actions across platforms."
                     },
                     {
-                      "name": "Bot(code_name='Tock-Bot', description='Evaluates run times, flagging processes that run over temporal parameters.', nid='NID-CHR-02')",
+                      "name": "Tock-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Evaluates run times, flagging processes that run over temporal parameters."
                     },
                     {
-                      "name": "Bot(code_name='Pendulum-Bot', description='Manages state changes, supporting task rollbacks during troubleshooting.', nid='NID-CHR-03')",
+                      "name": "Pendulum-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages state changes, supporting task rollbacks during troubleshooting."
                     },
                     {
-                      "name": "Bot(code_name='Sandglass-Bot', description='Monitors deadlines, safely shutting down operations that exceed time limits.', nid='NID-CHR-04')",
+                      "name": "Sandglass-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Monitors deadlines, safely shutting down operations that exceed time limits."
                     }
                   ]
                 }
@@ -9792,14 +9900,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Shield', description='Configures dynamic firewall rules, blocking network threats live.', sid='SID-CRX-01')",
+                      "name": "The Shield",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Configures dynamic firewall rules, blocking network threats live."
                     },
                     {
-                      "name": "Agent(code_name='The Spear', description='Automatically performs pen-testing against internal defenses.', sid='SID-CRX-02')",
+                      "name": "The Spear",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automatically performs pen-testing against internal defenses."
                     }
                   ]
                 },
@@ -9809,24 +9919,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Blocker-Bot', description='Blacklists malicious IP ranges, halting DDoS attacks at the gateway.', nid='NID-CRX-01')",
+                      "name": "Blocker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Blacklists malicious IP ranges, halting DDoS attacks at the gateway."
                     },
                     {
-                      "name": "Bot(code_name='Trace-Bot', description='Traces malicious attacks back to origin networks for reporting.', nid='NID-CRX-02')",
+                      "name": "Trace-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Traces malicious attacks back to origin networks for reporting."
                     },
                     {
-                      "name": "Bot(code_name='Patcher-Bot', description='Applies emergency system patches to vulnerable software layers.', nid='NID-CRX-03')",
+                      "name": "Patcher-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Applies emergency system patches to vulnerable software layers."
                     },
                     {
-                      "name": "Bot(code_name='Honeypot-Bot', description='Spins up virtual servers with decoy data to distract/evaluate attackers.', nid='NID-CRX-04')",
+                      "name": "Honeypot-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Spins up virtual servers with decoy data to distract/evaluate attackers."
                     }
                   ]
                 }
@@ -9938,14 +10052,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Foreman', description='Coordinates deployment pipelines, checking safety metrics before pushes.', sid='SID-DEV-01')",
+                      "name": "The Foreman",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Coordinates deployment pipelines, checking safety metrics before pushes."
                     },
                     {
-                      "name": "Agent(code_name='The Dispatcher', description='Launches automated server scaling, optimizing system allocations.', sid='SID-DEV-02')",
+                      "name": "The Dispatcher",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Launches automated server scaling, optimizing system allocations."
                     }
                   ]
                 },
@@ -9955,24 +10071,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Crane-Bot', description='Deploys container setups seamlessly across cloud server hosts.', nid='NID-DEV-01')",
+                      "name": "Crane-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Deploys container setups seamlessly across cloud server hosts."
                     },
                     {
-                      "name": "Bot(code_name='Wrench-Bot', description='Automatically fixes common connection or database issues during deployment.', nid='NID-DEV-02')",
+                      "name": "Wrench-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Automatically fixes common connection or database issues during deployment."
                     },
                     {
-                      "name": "Bot(code_name='Gear-Bot', description='Synchronizes container nodes to keep system speeds and instances consistent.', nid='NID-DEV-03')",
+                      "name": "Gear-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Synchronizes container nodes to keep system speeds and instances consistent."
                     },
                     {
-                      "name": "Bot(code_name='Belt-Bot', description='Manages continuous compilation pipelines, guiding code from start to finish.', nid='NID-DEV-04')",
+                      "name": "Belt-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages continuous compilation pipelines, guiding code from start to finish."
                     }
                   ]
                 }
@@ -10084,14 +10204,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Filer', description='Places files in structured folders, ensuring quick retrieval.', sid='SID-DOC-01')",
+                      "name": "The Filer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Places files in structured folders, ensuring quick retrieval."
                     },
                     {
-                      "name": "Agent(code_name='The Tagger', description='Scans text documents to add descriptive, searchable tags.', sid='SID-DOC-02')",
+                      "name": "The Tagger",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Scans text documents to add descriptive, searchable tags."
                     }
                   ]
                 },
@@ -10101,24 +10223,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Scanner-Bot', description='Performs OCR on image uploads to extract readable text.', nid='NID-DOC-01')",
+                      "name": "Scanner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Performs OCR on image uploads to extract readable text."
                     },
                     {
-                      "name": "Bot(code_name='Stapler-Bot', description='Bundles related drafts, spreadsheets, and pictures into packets.', nid='NID-DOC-02')",
+                      "name": "Stapler-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Bundles related drafts, spreadsheets, and pictures into packets."
                     },
                     {
-                      "name": "Bot(code_name='Folder-Bot', description='Handles privacy and permission rules on individual files/directories.', nid='NID-DOC-03')",
+                      "name": "Folder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Handles privacy and permission rules on individual files/directories."
                     },
                     {
-                      "name": "Bot(code_name='Shredder-Bot', description='Overwrites deleted files with random characters for secure destruction.', nid='NID-DOC-04')",
+                      "name": "Shredder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Overwrites deleted files with random characters for secure destruction."
                     }
                   ]
                 }
@@ -10230,14 +10356,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Tailor', description='Adapts interface layouts/fonts based on user profiles.', sid='SID-FAB-01')",
+                      "name": "The Tailor",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adapts interface layouts/fonts based on user profiles."
                     },
                     {
-                      "name": "Agent(code_name='The Weaver', description='Converts visual mockups into clean HTML/CSS/components.', sid='SID-FAB-02')",
+                      "name": "The Weaver",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Converts visual mockups into clean HTML/CSS/components."
                     }
                   ]
                 },
@@ -10247,24 +10375,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Pixel-Pusher-Bot', description='Adjusts components to the pixel for visual alignment.', nid='NID-FAB-01')",
+                      "name": "Pixel-Pusher-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adjusts components to the pixel for visual alignment."
                     },
                     {
-                      "name": "Bot(code_name='Hex-Code-Bot', description='Verifies color accuracy and dynamic CSS themes.', nid='NID-FAB-02')",
+                      "name": "Hex-Code-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Verifies color accuracy and dynamic CSS themes."
                     },
                     {
-                      "name": "Bot(code_name='Font-Fetcher-Bot', description='Loads and handles web typography assets/fallbacks.', nid='NID-FAB-03')",
+                      "name": "Font-Fetcher-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Loads and handles web typography assets/fallbacks."
                     },
                     {
-                      "name": "Bot(code_name='Padding-Bot', description='Calculates margins and responsive flex properties.', nid='NID-FAB-04')",
+                      "name": "Padding-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Calculates margins and responsive flex properties."
                     }
                   ]
                 }
@@ -10376,14 +10508,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Counselor', description='Leads reflection sessions, parsing input to measure emotional fatigue.', sid='SID-IMD-01')",
+                      "name": "The Counselor",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Leads reflection sessions, parsing input to measure emotional fatigue."
                     },
                     {
-                      "name": "Agent(code_name='The Listener', description='Passively monitors workspace text patterns for high stress or frustration.', sid='SID-IMD-02')",
+                      "name": "The Listener",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Passively monitors workspace text patterns for high stress or frustration."
                     }
                   ]
                 },
@@ -10393,24 +10527,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Journal-Bot', description='Encrypts, parses, and securely logs thoughts to track personal emotional patterns.', nid='NID-IMD-01')",
+                      "name": "Journal-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Encrypts, parses, and securely logs thoughts to track personal emotional patterns."
                     },
                     {
-                      "name": "Bot(code_name='Mood-Bot', description='Translates sentiment patterns into precise emotional sensitivity metrics on the UI.', nid='NID-IMD-02')",
+                      "name": "Mood-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates sentiment patterns into precise emotional sensitivity metrics on the UI."
                     },
                     {
-                      "name": "Bot(code_name='Reflect-Bot', description='Retrieves past successful milestones to encourage the user during high-strain events.', nid='NID-IMD-03')",
+                      "name": "Reflect-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Retrieves past successful milestones to encourage the user during high-strain events."
                     },
                     {
-                      "name": "Bot(code_name='Soothe-Bot', description='Triggers local cognitive decompression, offering prompts when distress peaks.', nid='NID-IMD-04')",
+                      "name": "Soothe-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Triggers local cognitive decompression, offering prompts when distress peaks."
                     }
                   ]
                 }
@@ -10522,14 +10660,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Seer', description='Projects how current architectural decisions will scale or strain months ahead.', sid='SID-INF-03')",
+                      "name": "The Seer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Projects how current architectural decisions will scale or strain months ahead."
                     },
                     {
-                      "name": "Agent(code_name='The Cartographer', description='Maps dependency and growth trends into a forward-looking architecture roadmap.', sid='SID-INF-04')",
+                      "name": "The Cartographer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Maps dependency and growth trends into a forward-looking architecture roadmap."
                     }
                   ]
                 },
@@ -10539,24 +10679,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Token-Minter-Bot', description='Generates secure, time-limited tokens for node-crossing users.', nid='NID-INF-01')",
+                      "name": "Token-Minter-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates secure, time-limited tokens for node-crossing users."
                     },
                     {
-                      "name": "Bot(code_name='Auth-Check-Bot', description='Verifies active user permissions before unlocking private features.', nid='NID-INF-02')",
+                      "name": "Auth-Check-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Verifies active user permissions before unlocking private features."
                     },
                     {
-                      "name": "Bot(code_name='Key-Gen-Bot', description='Handles local encryption keys to authorize offline applications.', nid='NID-INF-03')",
+                      "name": "Key-Gen-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Handles local encryption keys to authorize offline applications."
                     },
                     {
-                      "name": "Bot(code_name='Sentry-Bot', description='Logs security events, highlighting failed login attempts.', nid='NID-INF-04')",
+                      "name": "Sentry-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Logs security events, highlighting failed login attempts."
                     }
                   ]
                 }
@@ -10668,14 +10812,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Tuner', description='Translates emotional telemetry into micro-acoustic shifts matching baselines.', sid='SID-RES-01')",
+                      "name": "The Tuner",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates emotional telemetry into micro-acoustic shifts matching baselines."
                     },
                     {
-                      "name": "Agent(code_name='The Balancer', description='Screens system audio spikes, softening visual/auditory elements for comfort.', sid='SID-RES-02')",
+                      "name": "The Balancer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Screens system audio spikes, softening visual/auditory elements for comfort."
                     }
                   ]
                 },
@@ -10685,24 +10831,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Frequency-Bot', description='Generates custom sound waves (pink/white/brown) to isolate sensory distractions.', nid='NID-RES-01')",
+                      "name": "Frequency-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates custom sound waves (pink/white/brown) to isolate sensory distractions."
                     },
                     {
-                      "name": "Bot(code_name='Wave-Bot', description='Modulates therapeutic binaural beats to transition brainwaves to deep relaxation.', nid='NID-RES-02')",
+                      "name": "Wave-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Modulates therapeutic binaural beats to transition brainwaves to deep relaxation."
                     },
                     {
-                      "name": "Bot(code_name='Pitch-Bot', description='Regulates overall application tones, avoiding sharp frequencies that trigger anxiety.', nid='NID-RES-03')",
+                      "name": "Pitch-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Regulates overall application tones, avoiding sharp frequencies that trigger anxiety."
                     },
                     {
-                      "name": "Bot(code_name='Harmonic-Bot', description='Smoothly blends external audio playlists with active calming sounds securely.', nid='NID-RES-04')",
+                      "name": "Harmonic-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Smoothly blends external audio playlists with active calming sounds securely."
                     }
                   ]
                 }
@@ -10814,14 +10964,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Retoucher', description='Directs neural filters to enhance/sharpen pictures.', sid='SID-SPS-01')",
+                      "name": "The Retoucher",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Directs neural filters to enhance/sharpen pictures."
                     },
                     {
-                      "name": "Agent(code_name='Prompt-Smith', description='Optimizes prompts into tags for generation engines.', sid='SID-SPS-02')",
+                      "name": "Prompt-Smith",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Optimizes prompts into tags for generation engines."
                     }
                   ]
                 },
@@ -10831,24 +10983,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Aperture-Bot', description='Adjusts focus matrices, blur, and depth of field.', nid='NID-SPS-01')",
+                      "name": "Aperture-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adjusts focus matrices, blur, and depth of field."
                     },
                     {
-                      "name": "Bot(code_name='Shutter-Bot', description='Triggers high-speed renders to output flat image layers.', nid='NID-SPS-02')",
+                      "name": "Shutter-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Triggers high-speed renders to output flat image layers."
                     },
                     {
-                      "name": "Bot(code_name='Flash-Bot', description='Regulates light direction, balance, and HDR variables.', nid='NID-SPS-03')",
+                      "name": "Flash-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Regulates light direction, balance, and HDR variables."
                     },
                     {
-                      "name": "Bot(code_name='Lens-Bot', description='Fixes perspective distortions and lens anomalies.', nid='NID-SPS-04')",
+                      "name": "Lens-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Fixes perspective distortions and lens anomalies."
                     }
                   ]
                 }
@@ -10960,14 +11116,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Spy', description='Gathers sentiment data from public channels to gauge market trends.', sid='SID-DUT-01')",
+                      "name": "The Spy",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Gathers sentiment data from public channels to gauge market trends."
                     },
                     {
-                      "name": "Agent(code_name='The Oracle', description='Converts intelligence records into structured development blueprints.', sid='SID-DUT-02')",
+                      "name": "The Oracle",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Converts intelligence records into structured development blueprints."
                     }
                   ]
                 },
@@ -10977,24 +11135,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Scraper-Bot', description='Pulls text data from developer channels, social spaces, and trackers.', nid='NID-DUT-01')",
+                      "name": "Scraper-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Pulls text data from developer channels, social spaces, and trackers."
                     },
                     {
-                      "name": "Bot(code_name='Parser-Bot', description='Sanitizes and categorizes scraped data, cleaning up format issues.', nid='NID-DUT-02')",
+                      "name": "Parser-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sanitizes and categorizes scraped data, cleaning up format issues."
                     },
                     {
-                      "name": "Bot(code_name='Crawler-Bot', description='Dispatches web agents to identify relevant API and tech changes.', nid='NID-DUT-03')",
+                      "name": "Crawler-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Dispatches web agents to identify relevant API and tech changes."
                     },
                     {
-                      "name": "Bot(code_name='Whisper-Bot', description='Delivers summarized threat and trend alerts directly to strategic hubs.', nid='NID-DUT-04')",
+                      "name": "Whisper-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Delivers summarized threat and trend alerts directly to strategic hubs."
                     }
                   ]
                 }
@@ -11106,14 +11268,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Director-B', description='Coordinates timeline-as-code scripting from video data.', sid='SID-TKG-01')",
+                      "name": "The Director-B",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Coordinates timeline-as-code scripting from video data."
                     },
                     {
-                      "name": "Agent(code_name='The Editor-B', description='Suggests cuts, music shifts, and scene transitions.', sid='SID-TKG-02')",
+                      "name": "The Editor-B",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Suggests cuts, music shifts, and scene transitions."
                     }
                   ]
                 },
@@ -11123,24 +11287,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Cutter-Bot', description='Slices video and audio tracks at precise timestamps.', nid='NID-TKG-01')",
+                      "name": "Cutter-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Slices video and audio tracks at precise timestamps."
                     },
                     {
-                      "name": "Bot(code_name='Splicer-Bot', description='Joins video clips and audio tracks into unified tracks.', nid='NID-TKG-02')",
+                      "name": "Splicer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Joins video clips and audio tracks into unified tracks."
                     },
                     {
-                      "name": "Bot(code_name='Renderer-Bot', description='Compresses/outputs video files into target formats.', nid='NID-TKG-03')",
+                      "name": "Renderer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Compresses/outputs video files into target formats."
                     },
                     {
-                      "name": "Bot(code_name='Scrubber-Bot', description='Generates fast, low-res preview frames for the timeline.', nid='NID-TKG-04')",
+                      "name": "Scrubber-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates fast, low-res preview frames for the timeline."
                     }
                   ]
                 }
@@ -11252,14 +11420,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Director-S', description='Oversees production logistics, scheduling, and resource coordination across video projects.', sid='SID-TKG-03')",
+                      "name": "The Director-S",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Oversees production logistics, scheduling, and resource coordination across video projects."
                     },
                     {
-                      "name": "Agent(code_name='The Editor-S', description='Manages asset delivery pipelines, versioning, and platform-specific format finishing.', sid='SID-TKG-04')",
+                      "name": "The Editor-S",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages asset delivery pipelines, versioning, and platform-specific format finishing."
                     }
                   ]
                 },
@@ -11269,24 +11439,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Cutter-Bot', description='Slices video and audio tracks at precise timestamps.', nid='NID-TKG-01')",
+                      "name": "Cutter-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Slices video and audio tracks at precise timestamps."
                     },
                     {
-                      "name": "Bot(code_name='Splicer-Bot', description='Joins video clips and audio tracks into unified tracks.', nid='NID-TKG-02')",
+                      "name": "Splicer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Joins video clips and audio tracks into unified tracks."
                     },
                     {
-                      "name": "Bot(code_name='Renderer-Bot', description='Compresses/outputs video files into target formats.', nid='NID-TKG-03')",
+                      "name": "Renderer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Compresses/outputs video files into target formats."
                     },
                     {
-                      "name": "Bot(code_name='Scrubber-Bot', description='Generates fast, low-res preview frames for the timeline.', nid='NID-TKG-04')",
+                      "name": "Scrubber-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates fast, low-res preview frames for the timeline."
                     }
                   ]
                 }
@@ -11398,14 +11572,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Tutor', description='Modifies materials and guides to match user progress/skill.', sid='SID-ACA-01')",
+                      "name": "The Tutor",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Modifies materials and guides to match user progress/skill."
                     },
                     {
-                      "name": "Agent(code_name='The Proctor', description='Evaluates practice coding exercises and logs test scores.', sid='SID-ACA-02')",
+                      "name": "The Proctor",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Evaluates practice coding exercises and logs test scores."
                     }
                   ]
                 },
@@ -11415,24 +11591,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Chalk-Bot', description='Projects visual charts and interactive terminal sandboxes in the UI.', nid='NID-ACA-01')",
+                      "name": "Chalk-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Projects visual charts and interactive terminal sandboxes in the UI."
                     },
                     {
-                      "name": "Bot(code_name='Board-Bot', description='Manages course paths, student lists, and syllabus structures.', nid='NID-ACA-02')",
+                      "name": "Board-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages course paths, student lists, and syllabus structures."
                     },
                     {
-                      "name": "Bot(code_name='Eraser-Bot', description='Resets coding sandboxes, removing trial code for the next lesson.', nid='NID-ACA-03')",
+                      "name": "Eraser-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Resets coding sandboxes, removing trial code for the next lesson."
                     },
                     {
-                      "name": "Bot(code_name='Bell-Bot', description='Sends notifications for class dates, live sessions, or deadlines.', nid='NID-ACA-04')",
+                      "name": "Bell-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sends notifications for class dates, live sessions, or deadlines."
                     }
                   ]
                 }
@@ -11544,14 +11724,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Librarian', description='Catalogs compiled code assets, container images, and packages.', sid='SID-ART-01')",
+                      "name": "The Librarian",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Catalogs compiled code assets, container images, and packages."
                     },
                     {
-                      "name": "Agent(code_name='The Archivist', description='Packages ecosystem snapshots into safe, deployable restore files.', sid='SID-ART-02')",
+                      "name": "The Archivist",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Packages ecosystem snapshots into safe, deployable restore files."
                     }
                   ]
                 },
@@ -11561,24 +11743,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Packer-Bot', description='Compiles software libraries and environments into container images.', nid='NID-ART-01')",
+                      "name": "Packer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Compiles software libraries and environments into container images."
                     },
                     {
-                      "name": "Bot(code_name='Unpacker-Bot', description='Extracts container assets, mounting them in active servers.', nid='NID-ART-02')",
+                      "name": "Unpacker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Extracts container assets, mounting them in active servers."
                     },
                     {
-                      "name": "Bot(code_name='Checksum-Bot', description='Generates secure hashes to verify downloaded files are unmodified.', nid='NID-ART-03')",
+                      "name": "Checksum-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates secure hashes to verify downloaded files are unmodified."
                     },
                     {
-                      "name": "Bot(code_name='Versioner-Bot', description='Manages software version tags and deprecation warnings.', nid='NID-ART-04')",
+                      "name": "Versioner-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages software version tags and deprecation warnings."
                     }
                   ]
                 }
@@ -11690,14 +11876,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Undertaker', description='Finds stale databases, archiving them in cold storage.', sid='SID-BSM-01')",
+                      "name": "The Undertaker",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Finds stale databases, archiving them in cold storage."
                     },
                     {
-                      "name": "Agent(code_name='The Miner', description='Searches deep archive catalogs, pulling up requested documents.', sid='SID-BSM-02')",
+                      "name": "The Miner",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Searches deep archive catalogs, pulling up requested documents."
                     }
                   ]
                 },
@@ -11707,24 +11895,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Compressor-Bot', description='Runs file compression routines to keep cold storage costs low.', nid='NID-BSM-01')",
+                      "name": "Compressor-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs file compression routines to keep cold storage costs low."
                     },
                     {
-                      "name": "Bot(code_name='Extractor-Bot', description='Unpacks old archives without data corruption.', nid='NID-BSM-02')",
+                      "name": "Extractor-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Unpacks old archives without data corruption."
                     },
                     {
-                      "name": "Bot(code_name='Dust-Bunny-Bot', description='Identifies and deletes empty files and corrupted folders.', nid='NID-BSM-03')",
+                      "name": "Dust-Bunny-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies and deletes empty files and corrupted folders."
                     },
                     {
-                      "name": "Bot(code_name='Mothball-Bot', description='Encrypts and locks retired legacy versions of platform software.', nid='NID-BSM-04')",
+                      "name": "Mothball-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Encrypts and locks retired legacy versions of platform software."
                     }
                   ]
                 }
@@ -11836,14 +12028,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The March Hare', description='Sends rapid mock inputs and payloads to stress-test systems.', sid='SID-TCP-01')",
+                      "name": "The March Hare",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sends rapid mock inputs and payloads to stress-test systems."
                     },
                     {
-                      "name": "Agent(code_name='The Dormouse', description='Sits silently in tests, measuring memory leaks/performance dips.', sid='SID-TCP-02')",
+                      "name": "The Dormouse",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sits silently in tests, measuring memory leaks/performance dips."
                     }
                   ]
                 },
@@ -11853,24 +12047,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Teapot-Bot', description='Spams server endpoints with massive requests to test load limits.', nid='NID-TCP-01')",
+                      "name": "Teapot-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Spams server endpoints with massive requests to test load limits."
                     },
                     {
-                      "name": "Bot(code_name='Pocket-Watch-Bot', description='Tracks API response times during load spikes for latency alerts.', nid='NID-TCP-02')",
+                      "name": "Pocket-Watch-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Tracks API response times during load spikes for latency alerts."
                     },
                     {
-                      "name": "Bot(code_name='Sugar-Cube-Bot', description='Generates messy mockup databases to test bad dataset handling.', nid='NID-TCP-03')",
+                      "name": "Sugar-Cube-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates messy mockup databases to test bad dataset handling."
                     },
                     {
-                      "name": "Bot(code_name='Jam-Tart-Bot', description='Shuts down minor random services mid-test to check recovery.', nid='NID-TCP-04')",
+                      "name": "Jam-Tart-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Shuts down minor random services mid-test to check recovery."
                     }
                   ]
                 }
@@ -11982,14 +12180,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The White Rabbit', description='Runs deterministic, schedule-bound suites — acceptance, regression and smoke — where a repeatable result is the whole point.', sid='SID-TCP-03')",
+                      "name": "The White Rabbit",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs deterministic, schedule-bound suites — acceptance, regression and smoke — where a repeatable result is the whole point."
                     },
                     {
-                      "name": "Agent(code_name='The Looking-Glass', description='Reflects actual behaviour against expected, producing the pass/fail assertions and diffs the Observatory trends on.', sid='SID-TCP-04')",
+                      "name": "The Looking-Glass",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Reflects actual behaviour against expected, producing the pass/fail assertions and diffs the Observatory trends on."
                     }
                   ]
                 },
@@ -11999,24 +12199,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Teapot-Bot', description='Spams server endpoints with massive requests to test load limits.', nid='NID-TCP-01')",
+                      "name": "Teapot-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Spams server endpoints with massive requests to test load limits."
                     },
                     {
-                      "name": "Bot(code_name='Pocket-Watch-Bot', description='Tracks API response times during load spikes for latency alerts.', nid='NID-TCP-02')",
+                      "name": "Pocket-Watch-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Tracks API response times during load spikes for latency alerts."
                     },
                     {
-                      "name": "Bot(code_name='Sugar-Cube-Bot', description='Generates messy mockup databases to test bad dataset handling.', nid='NID-TCP-03')",
+                      "name": "Sugar-Cube-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates messy mockup databases to test bad dataset handling."
                     },
                     {
-                      "name": "Bot(code_name='Jam-Tart-Bot', description='Shuts down minor random services mid-test to check recovery.', nid='NID-TCP-04')",
+                      "name": "Jam-Tart-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Shuts down minor random services mid-test to check recovery."
                     }
                   ]
                 }
@@ -12128,14 +12332,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Flow-Weaver', description='Weaves APIs, webhooks, and scripts into execution steps.', sid='SID-DGR-01')",
+                      "name": "The Flow-Weaver",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Weaves APIs, webhooks, and scripts into execution steps."
                     },
                     {
-                      "name": "Agent(code_name='Event-Broker', description='Monitors webhooks, sending signals for automated triggers.', sid='SID-DGR-02')",
+                      "name": "Event-Broker",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Monitors webhooks, sending signals for automated triggers."
                     }
                   ]
                 },
@@ -12145,24 +12351,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Trigger-Bot', description='Detects events and instantly launches the automation sequence.', nid='NID-DGR-01')",
+                      "name": "Trigger-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Detects events and instantly launches the automation sequence."
                     },
                     {
-                      "name": "Bot(code_name='Action-Bot', description='Runs data changes, logs updates, or makes API calls.', nid='NID-DGR-02')",
+                      "name": "Action-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs data changes, logs updates, or makes API calls."
                     },
                     {
-                      "name": "Bot(code_name='Condition-Bot', description='Evaluates true/false logic, directing workflow paths.', nid='NID-DGR-03')",
+                      "name": "Condition-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Evaluates true/false logic, directing workflow paths."
                     },
                     {
-                      "name": "Bot(code_name='Loop-Bot', description='Runs batch processing tasks over lists to prevent freezes.', nid='NID-DGR-04')",
+                      "name": "Loop-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs batch processing tasks over lists to prevent freezes."
                     }
                   ]
                 }
@@ -12274,14 +12484,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Jailer', description='Manages secure quarantine zones, keeping malicious payloads isolated.', sid='SID-ICB-01')",
+                      "name": "The Jailer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages secure quarantine zones, keeping malicious payloads isolated."
                     },
                     {
-                      "name": "Agent(code_name='The Interrogator', description='Triggers/monitors quarantine code execution to document behaviors.', sid='SID-ICB-02')",
+                      "name": "The Interrogator",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Triggers/monitors quarantine code execution to document behaviors."
                     }
                   ]
                 },
@@ -12291,24 +12503,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Frostbite-Bot', description='Halts execution threads when sandbox boundaries are breached.', nid='NID-ICB-01')",
+                      "name": "Frostbite-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Halts execution threads when sandbox boundaries are breached."
                     },
                     {
-                      "name": "Bot(code_name='Icicle-Bot', description='Freezes dynamic processes to snapshot active RAM and memory spaces.', nid='NID-ICB-02')",
+                      "name": "Icicle-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Freezes dynamic processes to snapshot active RAM and memory spaces."
                     },
                     {
-                      "name": "Bot(code_name='Glacier-Bot', description='Packs dangerous binaries into heavily restricted, un-executable archives.', nid='NID-ICB-03')",
+                      "name": "Glacier-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Packs dangerous binaries into heavily restricted, un-executable archives."
                     },
                     {
-                      "name": "Bot(code_name='Permafrost-Bot', description='Isolates local offline storage caches until secure networks reconnect.', nid='NID-ICB-04')",
+                      "name": "Permafrost-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Isolates local offline storage caches until secure networks reconnect."
                     }
                   ]
                 }
@@ -12420,14 +12636,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Root-Causer', description='Traces failing tests and stack traces back to their originating commit or logic error.', sid='SID-LAB-03')",
+                      "name": "The Root-Causer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Traces failing tests and stack traces back to their originating commit or logic error."
                     },
                     {
-                      "name": "Agent(code_name='The Patch-Weaver', description='Drafts targeted fixes and re-runs the failing case to confirm the regression is resolved.', sid='SID-LAB-04')",
+                      "name": "The Patch-Weaver",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Drafts targeted fixes and re-runs the failing case to confirm the regression is resolved."
                     }
                   ]
                 },
@@ -12437,24 +12655,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Lint-Bot', description='Formats and styles code to match company guidelines.', nid='NID-LAB-01')",
+                      "name": "Lint-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Formats and styles code to match company guidelines."
                     },
                     {
-                      "name": "Bot(code_name='Compile-Bot', description='Runs rapid, isolated builds to verify code compilation.', nid='NID-LAB-02')",
+                      "name": "Compile-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs rapid, isolated builds to verify code compilation."
                     },
                     {
-                      "name": "Bot(code_name='Debug-Bot', description='Inspects runtime stacks, pinpointing errors to the exact line.', nid='NID-LAB-03')",
+                      "name": "Debug-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Inspects runtime stacks, pinpointing errors to the exact line."
                     },
                     {
-                      "name": "Bot(code_name='Test-Bot', description='Runs automated code tests, reporting pass/fail ratios.', nid='NID-LAB-04')",
+                      "name": "Test-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs automated code tests, reporting pass/fail ratios."
                     }
                   ]
                 }
@@ -12566,14 +12788,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Curator', description='Identifies duplicated wiki pages and flags outdated articles.', sid='SID-LIB-01')",
+                      "name": "The Curator",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Identifies duplicated wiki pages and flags outdated articles."
                     },
                     {
-                      "name": "Agent(code_name='The Indexer', description='Adds searchable tags and conceptual links to wiki pages.', sid='SID-LIB-02')",
+                      "name": "The Indexer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adds searchable tags and conceptual links to wiki pages."
                     }
                   ]
                 },
@@ -12583,24 +12807,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Page-Bot', description='Processes text inputs, rendering clean wiki documents in markdown.', nid='NID-LIB-01')",
+                      "name": "Page-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Processes text inputs, rendering clean wiki documents in markdown."
                     },
                     {
-                      "name": "Bot(code_name='Bookmark-Bot', description='Logs user favourite files and recent reading history.', nid='NID-LIB-02')",
+                      "name": "Bookmark-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Logs user favourite files and recent reading history."
                     },
                     {
-                      "name": "Bot(code_name='Spine-Bot', description='Ensures all internal page links work, keeping documents connected.', nid='NID-LIB-03')",
+                      "name": "Spine-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Ensures all internal page links work, keeping documents connected."
                     },
                     {
-                      "name": "Bot(code_name='Dust-Jacket-Bot', description='Generates quick summaries of newly updated documentation.', nid='NID-LIB-04')",
+                      "name": "Dust-Jacket-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates quick summaries of newly updated documentation."
                     }
                   ]
                 }
@@ -12716,14 +12944,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Minter', description='Mints unique cryptographic identifier tokens for all new content.', sid='SID-LTH-01')",
+                      "name": "The Minter",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Mints unique cryptographic identifier tokens for all new content."
                     },
                     {
-                      "name": "Agent(code_name='The Stamper', description='Attaches verified, tamper-evident digital metadata to packets.', sid='SID-LTH-02')",
+                      "name": "The Stamper",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Attaches verified, tamper-evident digital metadata to packets."
                     }
                   ]
                 },
@@ -12733,24 +12963,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Seal-Bot', description='Locks system-state snapshots, preventing unauthorized modifications.', nid='NID-LTH-01')",
+                      "name": "Seal-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Locks system-state snapshots, preventing unauthorized modifications."
                     },
                     {
-                      "name": "Bot(code_name='Wax-Bot', description='Generates temporary, single-use visual watermarks for digital assets.', nid='NID-LTH-02')",
+                      "name": "Wax-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates temporary, single-use visual watermarks for digital assets."
                     },
                     {
-                      "name": "Bot(code_name='Signet-Bot', description='Validates credentials, signing certificates for structural operations.', nid='NID-LTH-03')",
+                      "name": "Signet-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Validates credentials, signing certificates for structural operations."
                     },
                     {
-                      "name": "Bot(code_name='Seal-Stamp-Bot', description='Applies file-system metadata to register the exact creation details.', nid='NID-LTH-04')",
+                      "name": "Seal-Stamp-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Applies file-system metadata to register the exact creation details."
                     }
                   ]
                 }
@@ -12862,14 +13096,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Pathfinder', description='Maps fast system data communication routes.', sid='SID-NXS-01')",
+                      "name": "Pathfinder",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Maps fast system data communication routes."
                     },
                     {
-                      "name": "Agent(code_name='Omni-Router', description='Routes user prompts to the correct AI/Bot.', sid='SID-NXS-02')",
+                      "name": "Omni-Router",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Routes user prompts to the correct AI/Bot."
                     }
                   ]
                 },
@@ -12879,24 +13115,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Ping-Bot', description='Measures connection network latency.', nid='NID-NXS-01')",
+                      "name": "Ping-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Measures connection network latency."
                     },
                     {
-                      "name": "Bot(code_name='Ack-Bot', description='Confirms data transitions and logs stamps.', nid='NID-NXS-02')",
+                      "name": "Ack-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Confirms data transitions and logs stamps."
                     },
                     {
-                      "name": "Bot(code_name='Syn-Bot', description='Harmonizes offline caches with cloud data.', nid='NID-NXS-03')",
+                      "name": "Syn-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Harmonizes offline caches with cloud data."
                     },
                     {
-                      "name": "Bot(code_name='Fin-Bot', description='Closes data channels and flushes memory.', nid='NID-NXS-04')",
+                      "name": "Fin-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Closes data channels and flushes memory."
                     }
                   ]
                 }
@@ -13008,14 +13248,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Matchmaker', description='Matches multi-node requests with the correct skilled AI/Agent.', sid='SID-SPK-01')",
+                      "name": "The Matchmaker",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Matches multi-node requests with the correct skilled AI/Agent."
                     },
                     {
-                      "name": "Agent(code_name='The Router', description='Re-routes service queries if a designated AI has high-load delays.', sid='SID-SPK-02')",
+                      "name": "The Router",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Re-routes service queries if a designated AI has high-load delays."
                     }
                   ]
                 },
@@ -13025,24 +13267,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Spark-1-Bot', description='Emits active status signals to keep track of ready Agents.', nid='NID-SPK-01')",
+                      "name": "Spark-1-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Emits active status signals to keep track of ready Agents."
                     },
                     {
-                      "name": "Bot(code_name='Spark-2-Bot', description='Collects processing load updates to support routing decisions.', nid='NID-SPK-02')",
+                      "name": "Spark-2-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Collects processing load updates to support routing decisions."
                     },
                     {
-                      "name": "Bot(code_name='Linker-Bot', description='Establishes secure channels between seeking and assisting nodes.', nid='NID-SPK-03')",
+                      "name": "Linker-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Establishes secure channels between seeking and assisting nodes."
                     },
                     {
-                      "name": "Bot(code_name='Pinger-Bot', description='Evaluates responsiveness of specific skills, flagging missing capabilities.', nid='NID-SPK-04')",
+                      "name": "Pinger-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Evaluates responsiveness of specific skills, flagging missing capabilities."
                     }
                   ]
                 }
@@ -13154,14 +13400,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Auditor', description='Compares operations against ITIL/Agile frameworks.', sid='SID-TWH-01')",
+                      "name": "The Auditor",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Compares operations against ITIL/Agile frameworks."
                     },
                     {
-                      "name": "Agent(code_name='The Bailiff', description='Flags non-compliant accounts, placing holds.', sid='SID-TWH-02')",
+                      "name": "The Bailiff",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Flags non-compliant accounts, placing holds."
                     }
                   ]
                 },
@@ -13171,24 +13419,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Gavel-Bot', description='Halts operations in sandboxes for security violations.', nid='NID-TWH-01')",
+                      "name": "Gavel-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Halts operations in sandboxes for security violations."
                     },
                     {
-                      "name": "Bot(code_name='Scroll-Bot', description='Writes unalterable logs of compliance actions.', nid='NID-TWH-02')",
+                      "name": "Scroll-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Writes unalterable logs of compliance actions."
                     },
                     {
-                      "name": "Bot(code_name='Red-Tape-Bot', description='Auto-generates compliance paperwork and checklists.', nid='NID-TWH-03')",
+                      "name": "Red-Tape-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Auto-generates compliance paperwork and checklists."
                     },
                     {
-                      "name": "Bot(code_name='Stamp-Bot', description='Signs certificates for approved system tools.', nid='NID-TWH-04')",
+                      "name": "Stamp-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Signs certificates for approved system tools."
                     }
                   ]
                 }
@@ -13300,14 +13552,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Crypt-Keeper', description='Coordinates zero-knowledge DB access; splits/protects keys.', sid='SID-VOI-01')",
+                      "name": "Crypt-Keeper",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Coordinates zero-knowledge DB access; splits/protects keys."
                     },
                     {
-                      "name": "Agent(code_name='The Silencer', description='Sanitizes outbound streams so sensitive data avoids general logs.', sid='SID-VOI-02')",
+                      "name": "The Silencer",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Sanitizes outbound streams so sensitive data avoids general logs."
                     }
                   ]
                 },
@@ -13317,24 +13571,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Hash-Bot', description='Converts passwords and secrets into secure cryptographic strings.', nid='NID-VOI-01')",
+                      "name": "Hash-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Converts passwords and secrets into secure cryptographic strings."
                     },
                     {
-                      "name": "Bot(code_name='Salt-Bot', description='Adds randomized padding to password strings to prevent dictionary attacks.', nid='NID-VOI-02')",
+                      "name": "Salt-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adds randomized padding to password strings to prevent dictionary attacks."
                     },
                     {
-                      "name": "Bot(code_name='Cipher-Bot', description='Runs real-time encryption and decryption on active secure files.', nid='NID-VOI-03')",
+                      "name": "Cipher-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Runs real-time encryption and decryption on active secure files."
                     },
                     {
-                      "name": "Bot(code_name='Padlock-Bot', description='Instantly locks sensitive structures if a local breach is suspected.', nid='NID-VOI-04')",
+                      "name": "Padlock-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Instantly locks sensitive structures if a local breach is suspected."
                     }
                   ]
                 }
@@ -13446,14 +13704,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Branch-Manager', description='Tracks active code branches, conflicts, and pull requests.', sid='SID-WRK-01')",
+                      "name": "Branch-Manager",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Tracks active code branches, conflicts, and pull requests."
                     },
                     {
-                      "name": "Agent(code_name='Merge-Master', description='Safely merges code branches, guiding users through conflicts.', sid='SID-WRK-02')",
+                      "name": "Merge-Master",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Safely merges code branches, guiding users through conflicts."
                     }
                   ]
                 },
@@ -13463,24 +13723,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Commit-Bot', description='Packages file revisions with clear, automated descriptions.', nid='NID-WRK-01')",
+                      "name": "Commit-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Packages file revisions with clear, automated descriptions."
                     },
                     {
-                      "name": "Bot(code_name='Push-Bot', description='Uploads locally saved code changes to the central Forgejo system.', nid='NID-WRK-02')",
+                      "name": "Push-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Uploads locally saved code changes to the central Forgejo system."
                     },
                     {
-                      "name": "Bot(code_name='Pull-Bot', description='Fetches and updates local folders with the latest repo commits.', nid='NID-WRK-03')",
+                      "name": "Pull-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Fetches and updates local folders with the latest repo commits."
                     },
                     {
-                      "name": "Bot(code_name='Clone-Bot', description='Replicates repositories, setting up fresh workspace folders.', nid='NID-WRK-04')",
+                      "name": "Clone-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Replicates repositories, setting up fresh workspace folders."
                     }
                   ]
                 }
@@ -13592,14 +13856,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='Mesh-Weaver', description='Synthesizes wireframes and converts data to meshes.', sid='SID-TFL-01')",
+                      "name": "Mesh-Weaver",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Synthesizes wireframes and converts data to meshes."
                     },
                     {
-                      "name": "Agent(code_name='The Physicist', description='Calculates rigid body dynamics and object collision.', sid='SID-TFL-02')",
+                      "name": "The Physicist",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Calculates rigid body dynamics and object collision."
                     }
                   ]
                 },
@@ -13609,24 +13875,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Voxel-1-Bot', description='Generates grid-based blocks and terrain geometries.', nid='NID-TFL-01')",
+                      "name": "Voxel-1-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Generates grid-based blocks and terrain geometries."
                     },
                     {
-                      "name": "Bot(code_name='Collider-Bot', description='Monitors boundary boxes for collision scripts.', nid='NID-TFL-02')",
+                      "name": "Collider-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Monitors boundary boxes for collision scripts."
                     },
                     {
-                      "name": "Bot(code_name='Ray-Tracer-Bot', description='Handles lighting paths, reflections, and shadows.', nid='NID-TFL-03')",
+                      "name": "Ray-Tracer-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Handles lighting paths, reflections, and shadows."
                     },
                     {
-                      "name": "Bot(code_name='Sprite-Bot', description='Renders fast 2D graphics and UIs over 3D spaces.', nid='NID-TFL-04')",
+                      "name": "Sprite-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Renders fast 2D graphics and UIs over 3D spaces."
                     }
                   ]
                 }
@@ -13738,14 +14008,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='The Sculptor', description='Designs and rigs detailed 3D virtual avatars and physical assets.', sid='SID-THB-01')",
+                      "name": "The Sculptor",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Designs and rigs detailed 3D virtual avatars and physical assets."
                     },
                     {
-                      "name": "Agent(code_name='The Geneticist', description='Outlines AI profiles, mapping personality metrics, skills, and tiers.', sid='SID-THB-02')",
+                      "name": "The Geneticist",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Outlines AI profiles, mapping personality metrics, skills, and tiers."
                     }
                   ]
                 },
@@ -13755,24 +14027,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Wireframe-Bot', description='Builds raw skeleton rigs to support fluid avatar movements.', nid='NID-THB-01')",
+                      "name": "Wireframe-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Builds raw skeleton rigs to support fluid avatar movements."
                     },
                     {
-                      "name": "Bot(code_name='Texture-Bot', description='Maps high-fidelity styles and graphic materials onto 3D assets.', nid='NID-THB-02')",
+                      "name": "Texture-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Maps high-fidelity styles and graphic materials onto 3D assets."
                     },
                     {
-                      "name": "Bot(code_name='Vocoder-Bot', description='Synthesizes natural, human-sounding speech patterns for virtual avatars.', nid='NID-THB-03')",
+                      "name": "Vocoder-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Synthesizes natural, human-sounding speech patterns for virtual avatars."
                     },
                     {
-                      "name": "Bot(code_name='Optic-Bot', description='Handles spatial recognition cameras to let avatars look and navigate correctly.', nid='NID-THB-04')",
+                      "name": "Optic-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Handles spatial recognition cameras to let avatars look and navigate correctly."
                     }
                   ]
                 }
@@ -13884,14 +14160,16 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Agent(code_name='World-Builder', description='Renders calming, expansive three-dimensional therapeutic environments.', sid='SID-VR3-01')",
+                      "name": "World-Builder",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Renders calming, expansive three-dimensional therapeutic environments."
                     },
                     {
-                      "name": "Agent(code_name='The VR-Guide', description='Leads users through structured spatial tasks within virtual relaxation areas.', sid='SID-VR3-02')",
+                      "name": "The VR-Guide",
                       "kind": "agent",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Leads users through structured spatial tasks within virtual relaxation areas."
                     }
                   ]
                 },
@@ -13901,24 +14179,28 @@
                   "source": "src/entities/platform.py",
                   "children": [
                     {
-                      "name": "Bot(code_name='Render-Bot', description='Manages display performance, keeping spatial environments smooth and fluid.', nid='NID-VR3-01')",
+                      "name": "Render-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Manages display performance, keeping spatial environments smooth and fluid."
                     },
                     {
-                      "name": "Bot(code_name='Track-Bot', description='Translates head and hand actions into virtual movement inside scenes.', nid='NID-VR3-02')",
+                      "name": "Track-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Translates head and hand actions into virtual movement inside scenes."
                     },
                     {
-                      "name": "Bot(code_name='Haptic-Bot', description='Controls controller rumble patterns to match virtual therapeutic activities.', nid='NID-VR3-03')",
+                      "name": "Haptic-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Controls controller rumble patterns to match virtual therapeutic activities."
                     },
                     {
-                      "name": "Bot(code_name='VR-Lens-Bot', description='Adjusts focal dimensions, scaling imagery dynamically to reduce eye strain.', nid='NID-VR3-04')",
+                      "name": "VR-Lens-Bot",
                       "kind": "bot",
-                      "source": "src/entities/platform.py"
+                      "source": "src/entities/platform.py",
+                      "detail": "Adjusts focal dimensions, scaling imagery dynamically to reduce eye strain."
                     }
                   ]
                 }

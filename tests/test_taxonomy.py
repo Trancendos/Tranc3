@@ -310,3 +310,60 @@ def test_the_legacy_fallback_survives_a_migration_rerun() -> None:
         f"a migration re-run would rewrite {count} reference(s) in "
         "src/taxonomy/build.py -- the legacy fallback would stop falling back"
     )
+
+
+# ── Two findings CodeAnt raised on #1248 ─────────────────────────────────────
+
+
+def test_no_node_name_is_a_dataclass_repr() -> None:
+    """Agents and bots expose `code_name`/`description`, not `name`/`role`.
+
+    The first version read them with `getattr(agent, "name", str(agent))`, a
+    defaulting accessor that cannot fail: the attribute was absent, so every
+    agent and bot node was named with the dataclass repr and carried an empty
+    detail. Measured on the published tree before the fix: **282** such nodes.
+
+    A defaulting accessor over an attribute that does not exist is the same
+    shape as a check that cannot fail -- it reports a populated tree either
+    way. Reading the real attribute means a rename breaks loudly instead.
+    """
+    tree = build_tree()
+    offenders = [
+        n.name
+        for n in tree.root.walk()
+        if isinstance(n.name, str) and ("Agent(" in n.name or "Bot(" in n.name)
+    ]
+    assert not offenders, (
+        f"{len(offenders)} node(s) are named with a dataclass repr rather than "
+        f"a code_name: {offenders[:3]}"
+    )
+
+
+def test_every_agent_and_bot_carries_its_description() -> None:
+    """The other half: the name resolving is not enough if detail stays empty."""
+    tree = build_tree()
+    bare = [n.name for n in tree.root.walk() if n.kind in {"agent", "bot"} and not n.detail]
+    assert not bare, f"{len(bare)} agent/bot node(s) carry no detail: {bare[:3]}"
+
+
+def test_the_unrouted_holder_is_not_counted_as_a_location() -> None:
+    """`_unrouted_` is a holder for work with no Location decision, not a Location.
+
+    Counting it made the estate read 44 against the canonical 43 platform
+    entities -- a register misstating the size of the thing it describes. It
+    must stay in the tree, because the Town Hall owes those nano-services an
+    answer and the taxonomy's job is to stop them being hidden; it must simply
+    not be tallied as an entity.
+    """
+    tree = build_tree()
+    locations = [n for n in tree.root.walk() if n.kind == "location"]
+    assert len(locations) == 43, (
+        f"expected the 43 canonical platform entities, counted {len(locations)}"
+    )
+    assert not any(n.name == "_unrouted_" for n in locations), (
+        "the synthetic unrouted holder must not carry the 'location' kind"
+    )
+    assert any(n.name == "_unrouted_" for n in tree.root.walk()), (
+        "it must still appear in the tree -- hiding unrouted work is the "
+        "failure this node exists to prevent"
+    )

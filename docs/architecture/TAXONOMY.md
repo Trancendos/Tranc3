@@ -20,7 +20,7 @@ never been assembled:
 
 | Node kind | Count |
 |---|---:|
-| Location | 44 |
+| Location | 43 |
 | Ability | 180 |
 | Component | 173 |
 | Module | 213 |

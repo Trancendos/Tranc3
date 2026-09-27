@@ -250,7 +250,13 @@ def _locations_branch() -> Node:
         unrouted = branch.add(
             Node(
                 "_unrouted_",
-                "location",
+                # Not "location": it is a holder for work with no Location
+                # decision, and counting it as one makes the estate read 44
+                # against the canonical 43 entities. It stays in the tree --
+                # the Town Hall owes these an answer and the taxonomy must not
+                # hide them -- but it is not an entity and must not be tallied
+                # as one.
+                "unrouted",
                 source="config/estate/registry.yaml::TRC-P0-006",
                 detail=(
                     f"{len(orphans)} nano-services with no owning Location "
@@ -366,23 +372,27 @@ def _ais_branch() -> Node:
             alpha = pair.alpha if pair else entity.agent_alpha
             beta = pair.beta if pair else entity.agent_beta
             for agent in (alpha, beta):
+                if agent is None:
+                    continue
                 agents.add(
                     Node(
-                        getattr(agent, "name", str(agent)),
+                        agent.code_name,
                         "agent",
                         source="src/entities/platform.py",
-                        detail=getattr(agent, "role", ""),
+                        detail=agent.description,
                     )
                 )
 
             bots = node.add(Node("Bots", "branch", source="src/entities/platform.py"))
             for bot in (entity.bot_01, entity.bot_02, entity.bot_03, entity.bot_04):
+                if bot is None:
+                    continue
                 bots.add(
                     Node(
-                        getattr(bot, "name", str(bot)),
+                        bot.code_name,
                         "bot",
                         source="src/entities/platform.py",
-                        detail=getattr(bot, "function", ""),
+                        detail=bot.description,
                     )
                 )
 
