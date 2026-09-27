@@ -663,7 +663,7 @@ class TestContainerFactsAreSupported:
         bad = [
             p.name
             for p in sboms
-            if not rfc4122.match(json.loads(p.read_text()).get("serialNumber", ""))
+            if not rfc4122.fullmatch(json.loads(p.read_text()).get("serialNumber", ""))
         ]
         assert not bad, f"{len(bad)} of {len(sboms)} SBOMs have a non-RFC-4122 serial: {bad[:3]}"
 
