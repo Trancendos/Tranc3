@@ -76,7 +76,15 @@ def _parse_requirements(path: Path) -> tuple[list[dict], list[str]]:
             unparsed.append(line)
             continue
         name = match.group("name")
-        version = match.group("version") or ""
+        declared = match.group("version") or ""
+        operator = match.group("op") or ""
+        # Only `==` states a version. The operator was captured and then
+        # discarded, so `open3d>=0.19.0` published version 0.19.0 and the purl
+        # pkg:pypi/open3d@0.19.0 -- naming the LOWER BOUND as the installed
+        # version, which points vulnerability matching at a release the image
+        # may not contain. A range is a constraint; the npm parser below
+        # already treats it as one. Found by `chatgpt-codex-connector` on #1249.
+        version = declared if operator in ("==", "===") else ""
         component = {
             "type": "library",
             "name": name,
@@ -93,6 +101,10 @@ def _parse_requirements(path: Path) -> tuple[list[dict], list[str]]:
                 {"name": "trancendos:pinned", "value": "false"},
                 {"name": "trancendos:constraint", "value": line},
             ]
+            if declared:
+                component["properties"].append(
+                    {"name": "trancendos:declared-range", "value": f"{operator}{declared}"}
+                )
         components.append(component)
     return components, unparsed
 

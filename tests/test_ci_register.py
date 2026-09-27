@@ -805,3 +805,26 @@ def test_an_env_locator_names_a_variable_the_source_actually_reads() -> None:
             f"{store.name} points operators at {name}, which none of its "
             f"evidence files read: {store.evidence[:2]}"
         )
+
+
+def test_only_an_exact_pin_publishes_a_python_version() -> None:
+    """A range is a constraint, not the installed version.
+
+    The operator was captured by the regex and then discarded, so
+    `open3d>=0.19.0` published version `0.19.0` and the purl
+    `pkg:pypi/open3d@0.19.0` -- naming the LOWER BOUND as the version
+    present, which points vulnerability matching at a release the image may
+    not contain. Only `==`/`===` states a version; everything else keeps the
+    range as `trancendos:declared-range`.
+    """
+    for path in sorted((REPO / "docs/architecture/sbom").glob("*.cdx.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        for component in document.get("components") or []:
+            if not str(component.get("bom-ref", "")).startswith("pkg:pypi/"):
+                continue
+            properties = {p["name"]: p["value"] for p in component.get("properties") or []}
+            declared = properties.get("trancendos:declared-range", "")
+            assert not (component.get("version") and declared), (
+                f"{path.name}: {component.get('name')} publishes version "
+                f"{component['version']!r} while its declaration was {declared!r}"
+            )
