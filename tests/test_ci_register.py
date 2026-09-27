@@ -544,3 +544,52 @@ class TestTheRegisterDoesNotDependOnWalkOrder:
             ci for ci in register["configuration_items"] if len(ci.get("locators") or []) > 1
         ]
         assert disclosed, "merged stores are not disclosing their alternate locators"
+
+
+def test_every_sbom_the_register_names_is_committed() -> None:
+    """A generated file the register names must actually be in the repository.
+
+    `.gitignore` carried an unanchored `nexus-*` (for Nexus test artefacts),
+    which also matched `docs/architecture/sbom/nexus-ws-rs.cdx.json`. `git add
+    -A` skipped it in silence, so the committed register recorded 174
+    containers with an SBOM while only 173 files existed in the tree, and
+    `--check` failed in CI on a file the author could see on disk.
+
+    The register comparing against a regenerated copy of itself cannot catch
+    that -- both sides are computed from the same working tree. This asks git
+    instead, which is the only thing that knows what was actually committed.
+    """
+    import subprocess
+
+    register = json.loads((REPO / "docs/architecture/ci-register.json").read_text())
+
+    expected: set[str] = set()
+
+    def collect(node: object) -> None:
+        if isinstance(node, dict):
+            ref = node.get("sbom_ref")
+            if isinstance(ref, str):
+                expected.add(ref)
+            for value in node.values():
+                collect(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect(value)
+
+    collect(register)
+
+    tracked = set(
+        subprocess.run(
+            ["git", "ls-files", "docs/architecture/sbom/"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            check=True,
+        ).stdout.split()
+    )
+
+    missing = sorted(expected - tracked)
+    assert not missing, (
+        f"the register names {len(expected)} SBOMs but {len(missing)} are not "
+        f"tracked by git (check .gitignore for an unanchored pattern): {missing}"
+    )
