@@ -34,9 +34,9 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 ### CVE-2026-1525 — undici (CVSS 9.8)
 - **Package:** undici (npm) — MIT
 - **Impact:** HTTP request smuggling vulnerability
-- **Remediation:** Upgraded to undici==8.10.2 in package.json (via 8.10.0 → 8.10.2)
-- **Verification:** Version 8.10.2 resolves request smuggling patterns and includes high-severity security fixes
-- **Additional Security Fixes (v8.10.2):** GHSA-vp8m-p9jh-q5pm (cache/deduplication interceptor cross-origin vulnerability), plus 9 other security advisories
+- **Remediation:** Upgraded to undici==8.11.2 in package.json (via 8.10.0 → 8.11.2)
+- **Verification:** Version 8.11.2 resolves request smuggling patterns and includes high-severity security fixes
+- **Additional Security Fixes (v8.11.2):** GHSA-vp8m-p9jh-q5pm (cache/deduplication interceptor cross-origin vulnerability), plus 9 other security advisories
 
 ### CVE-2025-32434 — torch (CVSS 9.8 / CVSS4 9.3)
 - **Package:** torch (PyPI) — BSD-3-Clause
@@ -117,7 +117,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2026-22036 — undici (CVSS 7.5)
 - **Impact:** HTTP header injection
-- **Fix:** undici==8.10.2
+- **Fix:** undici==8.11.2
 
 ### CVE-2025-6921 — transformers (CVSS 7.5)
 - **Impact:** Arbitrary file write via model download
@@ -125,7 +125,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2026-2229 — undici (CVSS 7.5)
 - **Impact:** CRLF injection in HTTP headers
-- **Fix:** undici==8.10.2
+- **Fix:** undici==8.11.2
 
 ### CVE-2024-12720 — transformers (CVSS 7.5)
 - **Impact:** Tokenization buffer overflow
@@ -133,7 +133,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2026-1526 — undici (CVSS 7.5)
 - **Impact:** HTTP/2 rapid reset attack
-- **Fix:** undici==8.10.2
+- **Fix:** undici==8.11.2
 
 ### CVE-2026-42561 — python-multipart (CVSS 7.5)
 - **Impact:** Memory corruption in multipart parser
@@ -188,7 +188,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 
 ### CVE-2026-1527 — undici (CVSS 4.6)
 - **Impact:** Insufficient header validation
-- **Fix:** undici==8.10.2
+- **Fix:** undici==8.11.2
 
 ### CVE-2026-45736 — ws (CVSS 4.4)
 - **Impact:** WebSocket frame processing vulnerability
@@ -255,7 +255,7 @@ This report documents the remediation of **67 CVE vulnerabilities** identified a
 | Package | Previous | Updated | CVEs Resolved |
 |---------|----------|---------|---------------|
 | next | 15.5.23 | 15.5.25 | 1 |
-| undici | 8.10.0 | 8.10.2 | 5 |
+| undici | 8.10.0 | 8.11.2 | 5 |
 | vite | (new dep) | 7.1.3 | 1 |
 | ws | (new dep) | 8.18.3 | 1 |
 | esbuild | (new dep) | 0.25.9 | 2 |
