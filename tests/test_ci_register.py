@@ -774,3 +774,34 @@ class TestManifestsThatWereRecordedButNeverRead:
             assert "ORPHAN" in result.stderr, "the orphan was not named in the output"
         finally:
             orphan.unlink(missing_ok=True)
+
+
+def test_an_env_locator_names_a_variable_the_source_actually_reads() -> None:
+    """A locator is an instruction about where to look.
+
+    It was built from the engine name -- `env://{ENGINE}_URL` -- regardless of
+    what the module read. Measured before the fix: 21 CIs carried a fabricated
+    locator, and `src/platform/layer_rotator.py`, which plainly reads
+    DATABASE_URL, was recorded as `env://POSTGRESQL_URL`. An operator
+    following that reaches configuration nobody set.
+
+    The value is resolved at runtime; the NAME is in the source. Where the
+    source names none, the locator says unresolved rather than asserting one.
+    """
+    from src.cmdb import datastores
+
+    for store in datastores.discover():
+        if store.file_backed or not store.locator.startswith("env://"):
+            continue
+        name = store.locator.removeprefix("env://")
+        if name.startswith("unresolved"):
+            continue
+        read_somewhere = any(
+            name in (REPO / evidence).read_text(encoding="utf-8", errors="ignore")
+            for evidence in store.evidence
+            if (REPO / evidence).is_file()
+        )
+        assert read_somewhere, (
+            f"{store.name} points operators at {name}, which none of its "
+            f"evidence files read: {store.evidence[:2]}"
+        )

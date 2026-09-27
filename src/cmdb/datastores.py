@@ -228,6 +228,40 @@ def _file_engine_at(text: str, position: int) -> Optional[str]:
     return best
 
 
+#: Environment variables that name a connection string, as read from source.
+ENV_READ_RE = re.compile(
+    r"""(?:os\.getenv|os\.environ\.get)\(\s*["']([A-Z][A-Z0-9_]*)["']"""
+    r"""|os\.environ\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]"""
+)
+
+#: Which env-var names look like a connection string rather than a flag.
+CONNECTION_SUFFIXES = ("_URL", "_URI", "_DSN")
+
+
+def _env_locator(text: str, engine: str) -> str:
+    """The env var this module actually reads, not one built from the engine.
+
+    Prefers a name that mentions the engine (REDIS_URL for redis), then any
+    connection-shaped name in the file (DATABASE_URL, VALKEY_URL). When the
+    source names none, the locator says so rather than asserting a variable
+    nobody set: an operator following `env://POSTGRESQL_URL` to configuration
+    that does not exist is worse served than one told the name is unresolved.
+    """
+    names: list[str] = []
+    for match in ENV_READ_RE.finditer(text):
+        name = match.group(1) or match.group(2)
+        if name and name.endswith(CONNECTION_SUFFIXES) and name not in names:
+            names.append(name)
+
+    if not names:
+        return f"env://unresolved ({engine}; no connection variable read here)"
+
+    for name in names:
+        if engine.upper()[:5] in name:
+            return f"env://{name}"
+    return f"env://{names[0]}"
+
+
 def discover() -> List[Datastore]:
     """Walk the repository and return one Datastore per distinct store."""
     stores: Dict[str, Datastore] = {}
@@ -273,16 +307,22 @@ def discover() -> List[Datastore]:
                 store.record_location(location)
                 store.evidence.append(rel)
         elif engine in NETWORKED:
-            # A networked store with no file literal — named by its engine and the
-            # module that reaches it, because the connection string is an env var
-            # resolved at runtime and is not knowable from source.
+            # A networked store with no file literal — named by its engine and
+            # the module that reaches it. The connection string's VALUE is an
+            # env var resolved at runtime, but its NAME is right there in the
+            # source, and this used to invent one from the engine instead:
+            # `src/platform/layer_rotator.py` reads DATABASE_URL and its CI
+            # said `env://POSTGRESQL_URL`. A locator is an instruction to an
+            # operator about where to look, so a fabricated one sends them to
+            # configuration that does not exist. Found by
+            # `chatgpt-codex-connector` on PR #1249.
             key = f"{engine}:{rel}"
             store = stores.setdefault(
                 key,
                 Datastore(
                     name=f"{engine}@{Path(rel).stem}",
                     engine=engine,
-                    locator=f"env://{engine.upper()}_URL",
+                    locator=_env_locator(text, engine),
                     file_backed=False,
                     # The module path, so two `pool.py` files are two CIs.
                     qualifier=rel.replace("/", "-").removesuffix(".py"),
