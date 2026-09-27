@@ -313,26 +313,95 @@ def _duckdb_query_events(
 # ── Polars backend ────────────────────────────────────────────────────────────
 
 
+# Every metric statement below is written out in full at the point it runs, and
+# the time window is always present rather than assembled from a list of
+# clauses. The first version built `WHERE ...` by joining clauses and
+# interpolated it with an f-string. It was not injectable -- the clauses were
+# literals and the values were bound -- but neither a SAST reader nor the next
+# person to edit it can see that from the call site, and Sourcery/opengrep
+# rightly would not take it on trust. Replacing the f-string with a module
+# constant did not help either: the rule reads any non-literal statement the
+# same way, and it is right to. So each `execute()` takes a literal, and
+# `tests/test_analytics_time_window.py` asserts that the `WHERE` clause is
+# character-for-character identical across all of them -- comparing the
+# statements with each other rather than against a constant that could itself
+# be edited. (An earlier revision kept that predicate as a module constant used
+# only by the tests, which CodeQL correctly flagged as an unused global.)
+#
+# `_EPOCH_FLOOR`/`_EPOCH_CEIL` stand in for an absent bound; they are far
+# outside any real epoch timestamp.
+_EPOCH_FLOOR = -1e308
+_EPOCH_CEIL = 1e308
+
+
+def _window(since: Optional[float], until: Optional[float]) -> tuple[float, float]:
+    """Resolve an open-ended window to explicit bounds.
+
+    Every metric query below binds both bounds unconditionally, which is what
+    lets every statement stay a literal (see the note above
+    `_EPOCH_FLOOR`).
+    `is not None` rather than a truthiness test: `since=0.0` is a valid epoch
+    timestamp, and a falsy check silently drops the filter for it.
+    """
+    return (
+        since if since is not None else _EPOCH_FLOOR,
+        until if until is not None else _EPOCH_CEIL,
+    )
+
+
 def _polars_aggregate(
     name: str, agg: str, since: Optional[float], until: Optional[float]
-) -> Optional[float]:
+) -> Optional[tuple[Optional[float], int]]:
+    """Aggregate one metric over the same window, and report the same shape.
+
+    Returns `(result, samples)`, or `None` when polars is unavailable or the
+    query failed -- which is the only case `get_metric` should treat as a
+    backend fault.
+
+    Two defects fixed here, both raised on PR #1207:
+
+    `since` and `until` were accepted and then ignored: the query was
+    `SELECT value FROM metrics WHERE name=?` with no time predicate. Because
+    `get_metric` tries this backend FIRST and returns whatever it produces, a
+    request like `/metrics/foo?since=X&until=Y` silently aggregated every
+    timestamp on record whenever polars was selected and succeeded -- the same
+    request answered differently depending on which backend won, with no error
+    either way. It now runs the same statement as the SQL path.
+
+    And the two paths returned different *shapes*: the SQL branch has always
+    carried `samples`, and this one did not, so a caller reading `samples` saw
+    it appear and disappear with whichever backend happened to win. Returning
+    the count alongside the result is what makes the two responses
+    interchangeable, which is the whole point of the fix above. Raised by
+    CodeAnt, who noticed that returning 0 for an empty `count` window made this
+    branch win in a case where it previously fell through.
+    """
     try:
         import polars as pl  # type: ignore[import-untyped]
 
+        low, high = _window(since, until)
         with _db_conn() as c:
-            rows = c.execute("SELECT value FROM metrics WHERE name=?", (name,)).fetchall()
+            rows = c.execute(
+                "SELECT value FROM metrics WHERE name = ? AND timestamp >= ? AND timestamp <= ?",
+                (name, low, high),
+            ).fetchall()
+        samples = len(rows)
         if not rows:
-            return None
+            # `count` of an empty window is 0; every other aggregation of an
+            # empty window is genuinely unknown -- which is exactly what
+            # SQLite returns, `COUNT(value)` being 0 and `AVG(value)` NULL over
+            # zero rows. Matching that is what keeps the two answers identical.
+            return (0.0 if agg == "count" else None, 0)
         df = pl.DataFrame({"value": [r["value"] for r in rows]})
         if agg == "avg":
-            return df["value"].mean()
+            return (df["value"].mean(), samples)
         if agg == "sum":
-            return df["value"].sum()
+            return (df["value"].sum(), samples)
         if agg == "min":
-            return df["value"].min()
+            return (df["value"].min(), samples)
         if agg == "max":
-            return df["value"].max()
-        return float(len(df))
+            return (df["value"].max(), samples)
+        return (float(samples), samples)
     except Exception:  # Polars not installed or failure
         return None
 
@@ -583,26 +652,41 @@ def get_metric(
     backend = _select_backend()
 
     if backend == "polars":
-        result = _polars_aggregate(name, agg, since, until)
-        if result is not None:
+        aggregated = _polars_aggregate(name, agg, since, until)
+        if aggregated is not None:
+            result, samples = aggregated
             _GUARDS[backend].reinforce()
-            return {"name": name, "aggregation": agg, "result": result, "backend": backend}
+            return {
+                "name": name,
+                "aggregation": agg,
+                "result": result,
+                "samples": samples,
+                "backend": backend,
+            }
+        # Only a genuine backend fault reaches here now. An empty window used to
+        # look identical to polars being broken, so an honest "no rows in that
+        # range" decayed the backend's health score.
         _GUARDS[backend].decay()
 
-    clauses, params = ["name = ?"], [name]
-    if since:
-        clauses.append("timestamp >= ?")
-        params.append(since)
-    if until:
-        clauses.append("timestamp <= ?")
-        params.append(until)
-    where = "WHERE " + " AND ".join(clauses)
-    agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
+    low, high = _window(since, until)
+    # One statement for all five aggregations rather than one per `agg`. It
+    # keeps the SQL a literal (see the note above `_EPOCH_FLOOR`), costs
+    # one round trip instead of one per request, and makes it impossible for
+    # two aggregations of the same request to be computed over different rows.
     with _db_conn() as c:
         row = c.execute(
-            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}", params
+            "SELECT AVG(value) AS avg, SUM(value) AS sum, MIN(value) AS min, "
+            "MAX(value) AS max, COUNT(value) AS count, COUNT(*) AS samples "
+            "FROM metrics WHERE name = ? AND timestamp >= ? AND timestamp <= ?",
+            (name, low, high),
         ).fetchone()
-    return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
+    return {
+        "name": name,
+        "aggregation": agg,
+        "result": row[agg],
+        "samples": row["samples"],
+        "backend": "sqlite",
+    }
 
 
 @_router.get("/metrics/{name}/timeseries")
@@ -613,21 +697,27 @@ def metric_timeseries(
     until: Optional[float] = None,
     limit: int = Query(90, le=365),
 ) -> Dict[str, Any]:
-    fmt = "%Y-%m-%dT%H" if bucket == "hour" else "%Y-%m-%d"
-    clauses, params = ["name = ?"], [name]
-    if since:
-        clauses.append("timestamp >= ?")
-        params.append(since)
-    if until:
-        clauses.append("timestamp <= ?")
-        params.append(until)
-    where = "WHERE " + " AND ".join(clauses)
+    low, high = _window(since, until)
+    # Two literal statements rather than one with the strftime format
+    # interpolated: `bucket` is already constrained to hour|day by the Query
+    # pattern, but a literal is the only form a reader does not have to verify.
     with _db_conn() as c:
-        rows = c.execute(
-            f"SELECT strftime('{fmt}', timestamp, 'unixepoch') as bucket, AVG(value) as avg, COUNT(*) as samples "
-            f"FROM metrics {where} GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
-            params + [limit],
-        ).fetchall()
+        if bucket == "hour":
+            rows = c.execute(
+                "SELECT strftime('%Y-%m-%dT%H', timestamp, 'unixepoch') AS bucket, "
+                "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
+                "WHERE name = ? AND timestamp >= ? AND timestamp <= ? "
+                "GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
+                (name, low, high, limit),
+            ).fetchall()
+        else:
+            rows = c.execute(
+                "SELECT strftime('%Y-%m-%d', timestamp, 'unixepoch') AS bucket, "
+                "AVG(value) AS avg, COUNT(*) AS samples FROM metrics "
+                "WHERE name = ? AND timestamp >= ? AND timestamp <= ? "
+                "GROUP BY bucket ORDER BY bucket DESC LIMIT ?",
+                (name, low, high, limit),
+            ).fetchall()
     return {"name": name, "bucket": bucket, "series": [dict(r) for r in rows]}
 
 
