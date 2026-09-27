@@ -58,6 +58,16 @@ updates:
       - dependency-name: "pydantic"
       - dependency-name: "uvicorn"
       - dependency-name: "redis"
+      # ML libraries whose majors renovate.json blocks: "Block ML library
+      # upgrades -- require manual compatibility testing." Dependabot does not
+      # read renovate.json, so without this the policy holds on one path and
+      # not the other. Minor and patch still arrive; only major is held.
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "sentence-transformers"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "pip"
     directory: "/tranc3-bots"
@@ -98,6 +108,16 @@ updates:
       - dependency-name: "pydantic"
       - dependency-name: "uvicorn"
       - dependency-name: "redis"
+      # ML libraries whose majors renovate.json blocks: "Block ML library
+      # upgrades -- require manual compatibility testing." Dependabot does not
+      # read renovate.json, so without this the policy holds on one path and
+      # not the other. Minor and patch still arrive; only major is held.
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "sentence-transformers"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "pip"
     directory: "/workers"
@@ -138,6 +158,16 @@ updates:
       - dependency-name: "pydantic"
       - dependency-name: "uvicorn"
       - dependency-name: "redis"
+      # ML libraries whose majors renovate.json blocks: "Block ML library
+      # upgrades -- require manual compatibility testing." Dependabot does not
+      # read renovate.json, so without this the policy holds on one path and
+      # not the other. Minor and patch still arrive; only major is held.
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "sentence-transformers"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -172,6 +202,33 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # The React-ecosystem majors renovate.json already blocks. Both bots
+      # propose into this same directory, and dependabot does not read
+      # renovate.json, so the policy merged in #1242 covered one path and left
+      # the other open -- #1203 ("Bump react, react-dom and @types/react in
+      # /web") is that gap arriving as a pull request.
+      #
+      # The reason is unchanged: these are peer-coupled to the React version
+      # web/ actually runs, and a bot cannot see that. #1119 merged
+      # react-router v8 into a React 18.3.1 app; v8 peers on react >=19.2.7, so
+      # `npm ci` could not resolve and Frontend Build & Deploy went red on main
+      # -- a deploy that stops, not a test that fails. Raising these means
+      # migrating React first, which is a decision rather than an update.
+      #
+      # Minor and patch updates still arrive; only major is held.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-router"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-router-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
     labels:
       - "dependencies"
 
@@ -214,6 +271,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # Database images whose majors renovate.json blocks: "Block database
+      # major version upgrades -- require migration planning." Same reason as
+      # above: one policy, two bots, and only one of them reads renovate.json.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clickhouse/clickhouse-server"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/docker"
@@ -254,6 +318,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # Database images whose majors renovate.json blocks: "Block database
+      # major version upgrades -- require migration planning." Same reason as
+      # above: one policy, two bots, and only one of them reads renovate.json.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clickhouse/clickhouse-server"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/tranc3-bots"
@@ -294,6 +365,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # Database images whose majors renovate.json blocks: "Block database
+      # major version upgrades -- require migration planning." Same reason as
+      # above: one policy, two bots, and only one of them reads renovate.json.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clickhouse/clickhouse-server"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/web"
@@ -334,6 +412,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # Database images whose majors renovate.json blocks: "Block database
+      # major version upgrades -- require migration planning." Same reason as
+      # above: one policy, two bots, and only one of them reads renovate.json.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clickhouse/clickhouse-server"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/workers"
@@ -374,6 +459,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # Database images whose majors renovate.json blocks: "Block database
+      # major version upgrades -- require migration planning." Same reason as
+      # above: one policy, two bots, and only one of them reads renovate.json.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clickhouse/clickhouse-server"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/deploy"
@@ -414,6 +506,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # Database images whose majors renovate.json blocks: "Block database
+      # major version upgrades -- require migration planning." Same reason as
+      # above: one policy, two bots, and only one of them reads renovate.json.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clickhouse/clickhouse-server"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

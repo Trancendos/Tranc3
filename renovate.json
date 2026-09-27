@@ -125,7 +125,7 @@
       "description": "Block database major version upgrades \u2014 require migration planning. minimumReleaseAge is null, not absent. Two separate things want it written down: semgrep's registry rule renovate-missing-minimum-release-age, pulled by the pre-commit hook's --config auto rather than any rule in this repo, blocks a packageRules entry that states no release-age posture (observed: removing these keys failed the hook); and scripts/check_canonical_pin_governance.py::_bad_release_ages rejects any value that is neither a duration string nor null \u2014 it does not require the key to be present. null is the schema-valid way to say 'no cooldown'; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04.",
       "matchPackageNames": [
         "/^postgres$/",
-        "/^clickhouse$/"
+        "/^clickhouse/clickhouse-server$/"
       ],
       "minimumReleaseAge": null
     },
