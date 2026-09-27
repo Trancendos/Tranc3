@@ -13,7 +13,7 @@ from qiskit import transpile as qiskit_transpile  # noqa: E402
 from qiskit.circuit.library import QFT  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 
-from Dimensional.sanitize import sanitize_for_log  # noqa: E402
+from Dimensionals.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import (  # noqa: E402
     AlwaysEnabledFeatureManager,
     FeatureFlag,

@@ -220,7 +220,7 @@ in-house precedent, not a hypothetical fix.
 `src/entities/lifecycle.py`, `src/cloud/federation_controller.py`,
 `src/core/adaptive_fabric.py`, `src/security/security_framework.py`, `deploy/cuckoo/init.py`,
 `shared_core/security.py`, `api.py`, `docs/reference/security-framework.py`,
-`Dimensional/security.py`.
+`Dimensionals/security.py`.
 
 **No `uvloop` dependency anywhere** in `requirements.txt`, any worker `requirements*.txt`, or
 `tranc3-bots` — confirmed by repo-wide grep. This removes one commonly-cited asyncio-adjacent

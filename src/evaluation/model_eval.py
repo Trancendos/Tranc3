@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from Dimensional.path_validation import has_parent_traversal
+from Dimensionals.path_validation import has_parent_traversal
 
 logger = logging.getLogger("tranc3.evaluation")
 

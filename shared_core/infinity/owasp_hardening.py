@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.owasp_hardening"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.owasp_hardening"""
 
-from Dimensional.infinity.owasp_hardening import *  # noqa: F401, F403
+from Dimensionals.infinity.owasp_hardening import *  # noqa: F401, F403

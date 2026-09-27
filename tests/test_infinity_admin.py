@@ -15,14 +15,14 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-admin-000001")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from Dimensional.infinity.nomenclature import (
+from Dimensionals.infinity.nomenclature import (
     GATE_ROUTING,
     INFINITY_LOCATIONS,
     SENTINEL_CHANNELS,
     InfinityLocation,
     SentinelChannel,
 )
-from Dimensional.infinity.rbac import Permission, RBACEngine
+from Dimensionals.infinity.rbac import Permission, RBACEngine
 
 
 # ---------------------------------------------------------------------------

@@ -61,7 +61,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # The reason is not decoration. Without it, a reader six months from now cannot
 # tell a considered suppression from somebody silencing a red build.
 ADJUDICATED: dict[str, dict[str, str]] = {
-    "Dimensional/path_validation.py": {
+    "Dimensionals/path_validation.py": {
         "path-injection": (
             "the module IS the path validator — CodeQL flags the very code that "
             "performs the containment check it is asking for"
@@ -71,7 +71,7 @@ ADJUDICATED: dict[str, dict[str, str]] = {
             "is itself the code being flagged"
         ),
     },
-    "Dimensional/orchestration/heartbeat_aggregator.py": {
+    "Dimensionals/orchestration/heartbeat_aggregator.py": {
         "path-injection": (
             "paths here are built from an internal service registry, never from request data"
         ),

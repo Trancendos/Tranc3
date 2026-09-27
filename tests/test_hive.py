@@ -23,7 +23,7 @@ import pytest
 # Ensure the project root is on sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from Dimensional.hive.hive_core import (
+from Dimensionals.hive.hive_core import (
     DataChunk,
     DataPriority,
     FlowMonitor,
@@ -485,7 +485,7 @@ class TestHiveSingleton:
     def test_get_hive_returns_hive_instance(self):
         """get_hive returns a Hive instance."""
         # Reset singleton
-        import Dimensional.hive.hive_core as _hc
+        import Dimensionals.hive.hive_core as _hc
 
         _hc._hive_instance = None
         hive = get_hive()
@@ -494,7 +494,7 @@ class TestHiveSingleton:
 
     def test_get_hive_singleton(self):
         """get_hive returns the same instance on repeated calls."""
-        import Dimensional.hive.hive_core as _hc
+        import Dimensionals.hive.hive_core as _hc
 
         _hc._hive_instance = None
         h1 = get_hive()

@@ -86,7 +86,7 @@ requirements:
         path: src/validation/loop_validator.py
         description: "Loop and cascade-failure validation"
       - type: code
-        path: Dimensional/sanitize.py
+        path: Dimensionals/sanitize.py
         description: "Input sanitisation utilities used across all modules"
       - type: test
         path: tests/test_penetration.py

@@ -3,16 +3,16 @@ FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877f
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
-# Copy vendored Dimensional.nexus + its transitive deps (Dimensional.infinity.nomenclature/
+# Copy vendored Dimensionals.nexus + its transitive deps (Dimensionals.infinity.nomenclature/
 # abac/rbac) — vendored locally under this build context because the compose build context
-# is ./workers/dimensional-nexus-service, isolated from the repo-root Dimensional/ package
-# worker.py used to import unconditionally. Keep in sync with Dimensional/nexus/,
-# Dimensional/infinity/{nomenclature,abac,rbac}.py.
+# is ./workers/dimensional-nexus-service, isolated from the repo-root Dimensionals/ package
+# worker.py used to import unconditionally. Keep in sync with Dimensionals/nexus/,
+# Dimensionals/infinity/{nomenclature,abac,rbac}.py.
 COPY --chown=worker:worker requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 
 COPY --chown=worker:worker worker.py .
-COPY --chown=worker:worker Dimensional/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 
 # Security: drop to non-root user
 USER worker

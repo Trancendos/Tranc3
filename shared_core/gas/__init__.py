@@ -1,3 +1,3 @@
-"""shared_core.gas — backward-compatibility shim. Use Dimensional.gas instead."""
+"""shared_core.gas — backward-compatibility shim. Use Dimensionals.gas instead."""
 
-from Dimensional.gas import *  # noqa: F401, F403
+from Dimensionals.gas import *  # noqa: F401, F403

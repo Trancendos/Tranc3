@@ -155,7 +155,7 @@ Tranc3/
 │
 ├── scripts/                          # Utility scripts
 │
-├── Dimensional/                      # ═══ Dimensional Libraries ═══
+├── Dimensionals/                      # ═══ Dimensional Libraries ═══
 │   ├── __init__.py
 │   ├── architecture/                # Architecture patterns
 │   ├── dimensionals/                # Dimensional service abstractions
@@ -504,7 +504,7 @@ Tranc3/
 | `dashboard/` | HTML/CSS/JS | — | Standalone dashboard |
 | `deploy/terraform/` | HCL | Shell | Infrastructure-as-Code |
 | `cloudflare/` | JavaScript | — | Edge workers |
-| `Dimensional/` | Python | — | Shared libraries |
+| `Dimensionals/` | Python | — | Shared libraries |
 | `tests/` | Python (67 files) | — | Platform test suite |
 | `tranc3-bots/` | Python | — | Bot framework |
 

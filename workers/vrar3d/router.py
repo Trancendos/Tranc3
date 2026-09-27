@@ -10,7 +10,7 @@ from service import VRARRouter
 
 import config
 from database import VRARDatabase
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import (
     AssetProcessRequest,
     AssetProcessResponse,
