@@ -339,7 +339,23 @@ def test_every_docker_ignore_names_an_image_the_tree_declares() -> None:
     )
 
 
-def test_every_docker_block_has_a_dockerfile_in_its_own_directory() -> None:
+def _looks_like_kubernetes(path: Path) -> bool:
+    """Whether a YAML file is a Kubernetes manifest dependabot's docker ecosystem reads.
+
+    Judged on the two fields every manifest carries rather than on the
+    filename, and tolerant of multi-document files. A parse failure reads as
+    "not a manifest" rather than raising: this helper decides whether a
+    directory has something to scan, and an unreadable file is not something
+    dependabot could scan either.
+    """
+    try:
+        documents = list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
+    except (yaml.YAMLError, OSError):
+        return False
+    return any(isinstance(d, dict) and "apiVersion" in d and "kind" in d for d in documents)
+
+
+def test_every_docker_block_can_find_something_to_scan() -> None:
     """A dependabot block pointing at a directory with nothing to read is dead.
 
     `.github/dependabot.yml` carried docker blocks for `/workers` and
@@ -368,12 +384,22 @@ def test_every_docker_block_has_a_dockerfile_in_its_own_directory() -> None:
         root = REPO / block["directory"].lstrip("/")
         if not root.is_dir():
             missing.append(f"{block['directory']} (no such directory)")
-        elif not any(root.glob("Dockerfile*")):
-            deeper = len(list(root.rglob("Dockerfile*")))
-            missing.append(
-                f"{block['directory']} (no Dockerfile directly here"
-                + (f"; {deeper} one or more levels down)" if deeper else ")")
-            )
+            continue
+        # is_file(), because a *directory* called `Dockerfile.d` would
+        # otherwise satisfy a glob that only ever meant to find a file.
+        if any(p.is_file() for p in root.glob("Dockerfile*")):
+            continue
+        # Kubernetes manifests count too. dependabot's own failure names both
+        # -- "No Dockerfiles nor Kubernetes YAML found" -- so a block resting
+        # on k8s YAML is legitimate, and flagging it would make this guard
+        # reject a configuration that works.
+        if any(_looks_like_kubernetes(p) for p in root.glob("*.y*ml")):
+            continue
+        deeper = len([p for p in root.rglob("Dockerfile*") if p.is_file()])
+        missing.append(
+            f"{block['directory']} (no Dockerfile or Kubernetes manifest directly here"
+            + (f"; {deeper} Dockerfile(s) one or more levels down)" if deeper else ")")
+        )
 
     assert not missing, (
         "these dependabot docker blocks point at directories holding no "
