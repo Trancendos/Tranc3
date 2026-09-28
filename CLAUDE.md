@@ -540,14 +540,26 @@ EMBED_MODEL              # all-MiniLM-L6-v2 (sentence-transformers)
 
 **Forgejo (The Workshop) is the *intended* primary CI/CD system for deployment and heavier
 pipelines — but it is dormant, so today GitHub Actions is the only CI that actually runs.**
-`.forgejo/workflows/` holds 32 files and 57 of their 83 jobs pin `runs-on: self-hosted`, against
+`.forgejo/workflows/` holds 33 files and 57 of their 83 jobs pin `runs-on: self-hosted`, against
 an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
 execute. Describe them as the target state, not as a system currently gating anything.
 
-`.github/workflows/` has **19** files (this said 12 until 2026-08-28 and 20 until 2026-09-03,
-when `codecov.yml` was retired). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint,
-Service Topology and Pytest jobs, `codeql.yml`, `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`,
-`production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`).
+`.github/workflows/` has **28** files (this said 12 until 2026-08-28, 20 until 2026-09-03 when
+`codecov.yml` was retired, and **19 until 2026-09-28, against 28 on disk**). Several gate this
+repo's PRs directly (`ci.yml`'s Ruff/lint, Service Topology and Pytest jobs, `codeql.yml`,
+`trivy.yml`, `python.yml`, `rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`,
+`perf-smoke.yml`).
+
+**These counts are now derived, not remembered.** `scripts/check_workflow_inventory.py` measures
+both trees, compares them with the figures stated here, and fails when a GitHub workflow is named
+nowhere in this file. The nine-file gap is what a hand-maintained register looks like after the
+hand stops: the history above shows someone tending this number three times and then not again,
+while eleven workflows — most of them vendor security scanners — arrived unrecorded. The Forgejo
+figure had drifted by one in the same paragraph (32 against 33) while its job counts stayed right,
+which is the worse failure: a number that is right three times and wrong twice cannot be used.
+
+This matters beyond tidiness. `docs/governance/IMMUNE-SYSTEM.md` says to read it before adding any
+scanner to this estate, and that instruction only binds if adding one is visible.
 
 **`codecov.yml` was retired on 2026-09-03**, not dropped: coverage is now produced by `ci.yml`'s
 Pytest job, which already ran the same suite. The retired workflow existed only to run that suite
@@ -565,7 +577,7 @@ pytest output was `....E`. The suppression was not "run everything and ignore fa
 `tests/test_backup_service.py` executing during collection; `scripts/check_test_env_isolation.py`
 now fails CI on that pattern.
 
-Two of the 19 are deliberate, narrow exceptions for GitHub-native features with no Forgejo
+Two of the 28 are deliberate, narrow exceptions for GitHub-native features with no Forgejo
 equivalent — `publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
 deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
@@ -581,6 +593,42 @@ the platform's gate enforced materially different things. Forgejo's dormancy is 
 the weaker gate is the one that takes over the day The Workshop returns. Legitimate divergences
 now have to be listed with a written reason in that script's `ACCEPTED_DIVERGENCES`; an
 unexplained one fails CI.
+
+### The eleven that were running unrecorded
+
+Named here because `scripts/check_workflow_inventory.py` now requires it, and because a
+contributor could not previously learn from this file that four vendor security scanners were
+installed. Grouped by what they actually do, measured from each file rather than its title.
+
+**Vendor scanners, installed but dormant pending credentials.** Each detects that its
+credentials are unset and emits a GitHub *notice* saying it was skipped — it does not report a
+clean scan it never ran, which is exactly what `IMMUNE-SYSTEM.md` demands of a sensor that cannot
+see. That behaviour was verified in each file, not assumed from its name:
+- `black-duck-security-scan-ci.yml` — Black Duck / Coverity / Polaris / SRM. Skips unless one of
+  `BLACKDUCKSCA_URL`, `COVERITY_URL`, `POLARIS_SERVER_URL` or `SRM_URL` is set with its token
+- `zscaler-iac-scan.yml` — Zscaler IaC. Skips unless `ZSCANNER_CLIENT_ID` / `_SECRET` are set
+- `endorlabs.yml` — Endor Labs. Skips unless the `ENDOR_NAMESPACE` variable is set
+- `scorecard.yml` — OpenSSF Scorecard, on `branch_protection_rule` and a schedule
+
+**Scanners that do run:**
+- `anchore-syft.yml` — builds the root image and submits an SPDX SBOM to the Dependency
+  submission API, on pushes to `main` only. **Currently failing on `main`**, and not for a
+  security reason: the scan completes and the upload is rejected with `The artifact name
+  image.spdx.json is not valid`. It has been red across at least `05885b06`, `13cc5649` and
+  `ba69489c`, so it is a standing failure rather than a regression
+
+**Repository hygiene and housekeeping:**
+- `action-version-audit.yml` — audits pinned action versions, scheduled + manual
+- `rust-nanoservice.yml` — Rust nanoservice CI, on push and pull request
+- `stale.yml` — marks stale issues and pull requests, scheduled
+- `stale-branch-report.yml` — reports stale branches, scheduled + manual
+- `summary.yml` — summarises newly opened issues
+- `label.yml` — `actions/labeler`, on `pull_request_target`. Note the trigger: it runs with a
+  write-capable token in the base repository's context
+
+Four of these — the dormant vendor scanners — are worth a decision rather than inheritance. Each
+is a standing third-party integration that will begin sending this repository's source to an
+external service the moment someone sets a secret, and none was recorded here until now.
 
 Workflow files in `.forgejo/workflows/`:
 - `deploy-fly.yml` — tranc3-backend + trancendos-bots to Fly.io

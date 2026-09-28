@@ -435,6 +435,18 @@ jobs:
       - name: Pre-commit hooks are documented as configured
         run: python scripts/check_precommit_documented.py
 
+      # The same failure one register over. CLAUDE.md's `.github/workflows/`
+      # count was maintained by hand -- it records being corrected in August
+      # and again in September -- and then was not, reading 19 against 28 files
+      # while eleven workflows, four of them vendor security scanners, ran
+      # unrecorded. The Forgejo figure beside it had drifted by one while its
+      # job counts stayed right, which is worse: a number right three times and
+      # wrong twice cannot be used. Both are derived here now, and a workflow
+      # added without a line in CLAUDE.md fails -- IMMUNE-SYSTEM.md says to read
+      # it before adding any scanner, and that only binds if adding one is seen.
+      - name: Workflow inventory matches CLAUDE.md
+        run: python scripts/check_workflow_inventory.py
+
       # tests/test_immune.py is deliberately NOT run here. It was, for one
       # commit, and failed with "No module named pytest": this job installs the
       # handful of packages its static checks need, not the test stack. The
