@@ -35,11 +35,11 @@ GITHUB_DIR = REPO / ".github/workflows"
 FORGEJO_DIR = REPO / ".forgejo/workflows"
 
 #: The sentence in CLAUDE.md that states how many GitHub workflow files exist.
-_GITHUB_COUNT = re.compile(r"`\.github/workflows/` has \*\*(\d+)\*\* files")
+_GITHUB_COUNT = re.compile(r"`\.github/workflows/`\s+has\s+\*\*(\d+)\*\*\s+files")
 
 #: The sentence that states the Forgejo file, job and self-hosted-job counts.
 _FORGEJO_COUNTS = re.compile(
-    r"`\.forgejo/workflows/` holds (\d+) files and (\d+) of their (\d+) jobs"
+    r"`\.forgejo/workflows/`\s+holds\s+(\d+)\s+files\s+and\s+(\d+)\s+of\s+their\s+(\d+)\s+jobs"
 )
 
 #: Other documents state the Forgejo file count in their own words, and they
@@ -65,13 +65,23 @@ def _workflow_files(directory: Path) -> list[Path]:
     return sorted(p for p in directory.iterdir() if p.suffix in {".yml", ".yaml"})
 
 
-def _job_counts(directory: Path) -> tuple[int, int]:
-    """(total jobs, jobs pinning a self-hosted runner)."""
+def _job_counts(directory: Path) -> tuple[int, int, list[str]]:
+    """(total jobs, jobs pinning a self-hosted runner, files that would not parse).
+
+    An unparsable workflow used to be skipped silently, which made this
+    check capable of passing on wrong figures: the skipped file contributes
+    neither its jobs nor its self-hosted jobs, and if that omission happens
+    to match what CLAUDE.md claims, the drift reads as agreement. The same
+    failure this script exists to stop, one level down. Unparsable files are
+    now returned and reported.
+    """
     total = pinned = 0
+    unparsable: list[str] = []
     for path in _workflow_files(directory):
         try:
             document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
+        except yaml.YAMLError as error:
+            unparsable.append(f"{path.name} ({type(error).__name__})")
             continue
         for job in (document.get("jobs") or {}).values():
             if not isinstance(job, dict):
@@ -81,19 +91,30 @@ def _job_counts(directory: Path) -> tuple[int, int]:
             text = runs_on if isinstance(runs_on, str) else " ".join(runs_on or [])
             if "self-hosted" in str(text):
                 pinned += 1
-    return total, pinned
+    return total, pinned, unparsable
 
 
 def _undocumented(prose: str) -> list[str]:
     """GitHub workflow files CLAUDE.md never names.
 
-    Matched on the full filename rather than the stem: a bare-stem search
-    reports `ci.yml`, `go.yml` and `test.yml` as documented from any prose
-    containing those letters, and reports `label.yml` as documented because
-    the file discusses `actions/labeler`. Both directions were wrong when
-    this was first measured by hand.
+    Matched as a delimited token, and it took three review bots to get this
+    right. The first version matched the stem, which reported `ci.yml`,
+    `go.yml` and `test.yml` as documented from any prose containing those
+    letters, and `label.yml` as documented because the file discusses
+    `actions/labeler`. The second matched the full filename as a plain
+    substring, which looks correct and is not: remove all seven standalone
+    mentions of `ci.yml` from CLAUDE.md and it still reads as documented,
+    because `black-duck-security-scan-ci.yml` contains those characters.
+
+    That is this check failing in exactly the way it exists to prevent, so
+    the boundary is explicit: a filename counts only when the characters
+    around it are not themselves filename characters.
     """
-    return [p.name for p in _workflow_files(GITHUB_DIR) if p.name not in prose]
+    return [
+        path.name
+        for path in _workflow_files(GITHUB_DIR)
+        if not re.search(rf"(?<![\w.-]){re.escape(path.name)}(?![\w.-])", prose)
+    ]
 
 
 def main() -> int:
@@ -101,7 +122,7 @@ def main() -> int:
 
     github_files = _workflow_files(GITHUB_DIR)
     forgejo_files = _workflow_files(FORGEJO_DIR)
-    forgejo_jobs, forgejo_pinned = _job_counts(FORGEJO_DIR)
+    forgejo_jobs, forgejo_pinned, unparsable = _job_counts(FORGEJO_DIR)
     undocumented = _undocumented(prose)
 
     if "--list" in sys.argv:
@@ -116,6 +137,12 @@ def main() -> int:
         return 0
 
     problems: list[str] = []
+
+    if unparsable:
+        problems.append(
+            "these Forgejo workflows would not parse, so their jobs are missing "
+            f"from every figure this check compares: {unparsable}"
+        )
 
     stated = _GITHUB_COUNT.search(prose)
     if not stated:

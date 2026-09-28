@@ -604,13 +604,22 @@ installed. Grouped by what they actually do, measured from each file rather than
 credentials are unset and emits a GitHub *notice* saying it was skipped — it does not report a
 clean scan it never ran, which is exactly what `IMMUNE-SYSTEM.md` demands of a sensor that cannot
 see. That behaviour was verified in each file, not assumed from its name:
-- `black-duck-security-scan-ci.yml` — Black Duck / Coverity / Polaris / SRM. Skips unless one of
-  `BLACKDUCKSCA_URL`, `COVERITY_URL`, `POLARIS_SERVER_URL` or `SRM_URL` is set with its token
+- `black-duck-security-scan-ci.yml` — Black Duck / Coverity / Polaris / SRM. Its probe tests
+  **only** the four URL variables (`BLACKDUCKSCA_URL`, `COVERITY_URL`, `POLARIS_SERVER_URL`,
+  `SRM_URL`) and never the matching token secrets, so setting a URL without its token marks the
+  scanner configured and invokes the action with an empty credential rather than emitting the
+  skip notice. The notice's own wording ("with its matching token secret") describes an intent
+  the probe does not implement
 - `zscaler-iac-scan.yml` — Zscaler IaC. Skips unless `ZSCANNER_CLIENT_ID` / `_SECRET` are set
 - `endorlabs.yml` — Endor Labs. Skips unless the `ENDOR_NAMESPACE` variable is set
-- `scorecard.yml` — OpenSSF Scorecard, on `branch_protection_rule` and a schedule
 
 **Scanners that do run:**
+- `scorecard.yml` — OpenSSF Scorecard. Listed as dormant here until 2026-09-28 and that was
+  wrong: it has **no credential guard at all**. `SCORECARD_TOKEN` is commented out, the job's
+  only condition is a default-branch-or-pull-request check, and it sets `publish_results: true`
+  — so it runs on pushes, pull requests, schedules and `branch_protection_rule` events, and
+  publishes to the public OpenSSF API. A governance inventory that called it dormant understated
+  what this repository already sends outward
 - `anchore-syft.yml` — builds the root image and submits an SPDX SBOM to the Dependency
   submission API, on pushes to `main` only. **Currently failing on `main`**, and not for a
   security reason: the scan completes and the upload is rejected with `The artifact name
@@ -626,9 +635,10 @@ see. That behaviour was verified in each file, not assumed from its name:
 - `label.yml` — `actions/labeler`, on `pull_request_target`. Note the trigger: it runs with a
   write-capable token in the base repository's context
 
-Four of these — the dormant vendor scanners — are worth a decision rather than inheritance. Each
-is a standing third-party integration that will begin sending this repository's source to an
-external service the moment someone sets a secret, and none was recorded here until now.
+Three of these — Black Duck, Zscaler and Endor Labs — are worth a decision rather than
+inheritance: each is a standing third-party integration that begins sending this repository's
+source to an external service the moment someone sets a variable, and none was recorded here
+until now. Scorecard needs no such moment; it already publishes.
 
 Workflow files in `.forgejo/workflows/`:
 - `deploy-fly.yml` — tranc3-backend + trancendos-bots to Fly.io
