@@ -1,0 +1,1424 @@
+{
+  "modules": [
+    "The Citadel",
+    "The Ice Box",
+    "The Town Hall"
+  ],
+  "module_roles": {
+    "API Marketplace": [
+      "Head of API Integrations"
+    ],
+    "Arcadia": [
+      "Chief Community & Front-End Officer"
+    ],
+    "Arcadian Exchange": [
+      "Chief Procurement Officer",
+      "Chief Revenue Officer",
+      "Head of API Credit Procurement",
+      "Head of Capacity & Asset Monetisation",
+      "Head of Data, Knowledge & Audience Products",
+      "Head of Expert & Managed Services",
+      "Head of Market & Treasury Operations",
+      "Head of Model & Inference Procurement",
+      "Head of Storage Procurement",
+      "Head of Workflow Tooling Procurement"
+    ],
+    "ChronosSphere / ArcStream": [
+      "Head of Scheduling & Task Management"
+    ],
+    "Cryptex": [
+      "Chief Information Security Officer"
+    ],
+    "DevOcity": [
+      "Head of DevOps"
+    ],
+    "DocUtari": [
+      "Head of Document Management"
+    ],
+    "Fabulousa": [
+      "Chief Design Officer"
+    ],
+    "I-Mind": [
+      "Head of Emotional Intelligence"
+    ],
+    "Imaginarium": [
+      "Chief Creative Orchestration Officer"
+    ],
+    "Infinity": [
+      "Chief Identity & Access Officer",
+      "Head of Architectural Foresight"
+    ],
+    "Luminous": [
+      "Chief Technology Officer"
+    ],
+    "Resonate": [
+      "Head of Empathy Engineering"
+    ],
+    "Royal Bank of Arcadia": [
+      "Chief Financial Officer"
+    ],
+    "Sashas Photo Studio": [
+      "Head of Photo & Image Generation"
+    ],
+    "Section 7": [
+      "Chief Intelligence Officer"
+    ],
+    "TateKing": [
+      "Head of Production Operations & Delivery",
+      "Head of Video Production"
+    ],
+    "The Academy": [
+      "Head of Learning & Development"
+    ],
+    "The Artifactory": [
+      "Head of Artifact Management"
+    ],
+    "The Basement": [
+      "Head of Archives"
+    ],
+    "The Chaos Party": [
+      "Head of Deterministic Assurance",
+      "Head of Quality Assurance & Testing"
+    ],
+    "The Citadel": [
+      "Chief Operations Officer"
+    ],
+    "The Digital Grid": [
+      "Head of Workflow Engineering"
+    ],
+    "The HIVE": [
+      "Head of Data Transport & Swarm Operations"
+    ],
+    "The Ice Box": [
+      "Head of Sandbox Threat Isolation"
+    ],
+    "The Lab": [
+      "Chief Engineering Officer",
+      "Head of Diagnostics & Defect Remediation"
+    ],
+    "The Library": [
+      "Chief Knowledge Officer"
+    ],
+    "The Lighthouse": [
+      "Head of Cryptographic Token Services"
+    ],
+    "The Nexus": [
+      "Chief Communications Officer"
+    ],
+    "The Observatory": [
+      "Chief Audit & Monitoring Officer"
+    ],
+    "The Spark": [
+      "Head of AI Tooling"
+    ],
+    "The Studio": [
+      "Chief Creative Officer"
+    ],
+    "The Town Hall": [
+      "Chief Governance Officer"
+    ],
+    "The Void": [
+      "Chief Secrets & Vault Officer"
+    ],
+    "The Warp Tunnel": [
+      "Head of Threat Scanning & Quarantine"
+    ],
+    "The Workshop": [
+      "Head of Source Control & CI/CD"
+    ],
+    "Think Tank": [
+      "Head of Research & Development"
+    ],
+    "TranceFlow": [
+      "Head of 3D & Game Development"
+    ],
+    "Tranquility": [
+      "Chief Wellbeing Officer"
+    ],
+    "Turing's Hub": [
+      "Head of AI Entity Creation"
+    ],
+    "VRAR3D": [
+      "Head of Immersive Technology"
+    ],
+    "Warp Radio": [
+      "Head of Audio & Streaming"
+    ],
+    "tAimra": [
+      "Head of Digital Twin Services"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Location",
+      "module": "The Citadel",
+      "schema": "the_citadel",
+      "table": "location",
+      "persistable": true,
+      "description": "One of the platform's named Locations.",
+      "source": "src/entities/platform.py::PLATFORM_ENTITIES",
+      "attributes": [
+        {
+          "name": "pid",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "pid",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": "PID-XXX"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "name",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "pillar",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "pillar",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "primaryFunction",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "primary_function",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "onlineMode",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "online_mode",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "offlineMode",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "offline_mode",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "workerPath",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "worker_path",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "workerPort",
+          "type": "Integer",
+          "sql_type": "BIGINT",
+          "column": "worker_port",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "status",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        }
+      ],
+      "access_rules": [
+        {
+          "role": "*",
+          "members": [
+            "*"
+          ],
+          "access": "Read",
+          "constraint": "",
+          "description": "The Location register is readable platform-wide."
+        },
+        {
+          "role": "Location seat",
+          "members": [
+            "primaryFunction",
+            "onlineMode",
+            "offlineMode",
+            "status"
+          ],
+          "access": "ReadWrite",
+          "constraint": "name = current_setting('trancendos.location', true)",
+          "description": "A Location's own seats may edit its operational fields."
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "module": "The Citadel",
+      "schema": "the_citadel",
+      "table": "ai",
+      "persistable": true,
+      "description": "A named AI, at one of the three orchestration tiers.",
+      "source": "src/entities/platform.py + src/personality/profiles/",
+      "attributes": [
+        {
+          "name": "aid",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "aid",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": "AID-XXX-NN"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "name",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "tier",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "tier",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": "Trance-One / T2ance / Tranc3"
+        },
+        {
+          "name": "baseModel",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "base_model",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "profileRef",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "profile_ref",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": "personality profile path"
+        },
+        {
+          "name": "seatCount",
+          "type": "Integer",
+          "sql_type": "BIGINT",
+          "column": "seat_count",
+          "stored": false,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": "calculated"
+        }
+      ],
+      "access_rules": [
+        {
+          "role": "*",
+          "members": [
+            "*"
+          ],
+          "access": "Read",
+          "constraint": "",
+          "description": ""
+        },
+        {
+          "role": "Turing's Hub seat",
+          "members": [
+            "profileRef",
+            "baseModel"
+          ],
+          "access": "ReadWrite",
+          "constraint": "",
+          "description": "Turing's Hub is the AI creation centre and owns personality assignment."
+        }
+      ]
+    },
+    {
+      "name": "RoleSeat",
+      "module": "The Town Hall",
+      "schema": "the_town_hall",
+      "table": "role_seat",
+      "persistable": true,
+      "description": "One Job Description at one Location — the platform's module role.",
+      "source": "src/entities/platform.py::get_seats",
+      "attributes": [
+        {
+          "name": "seatId",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "seat_id",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "location",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "location",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "jobDescription",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "job_description",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "designedFor",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "designed_for",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "isPrimary",
+          "type": "Boolean",
+          "sql_type": "BOOLEAN",
+          "column": "is_primary",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "mandate",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "mandate",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": "internal | external"
+        }
+      ],
+      "access_rules": [
+        {
+          "role": "*",
+          "members": [
+            "*"
+          ],
+          "access": "Read",
+          "constraint": "",
+          "description": ""
+        },
+        {
+          "role": "The Town Hall seat",
+          "members": [
+            "*"
+          ],
+          "access": "ReadWrite",
+          "constraint": "",
+          "description": "Assignment is a governance decision and belongs to the Town Hall."
+        }
+      ]
+    },
+    {
+      "name": "Container",
+      "module": "The Ice Box",
+      "schema": "the_ice_box",
+      "table": "container",
+      "persistable": true,
+      "description": "A containerised unit. Jurisdiction may be unknown; custody may not.",
+      "source": "src/cmdb/containers.py",
+      "attributes": [
+        {
+          "name": "ciId",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "ci_id",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "service",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "service",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "image",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "image",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "provenance",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "provenance",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": "built | pulled"
+        },
+        {
+          "name": "runsAsRoot",
+          "type": "Boolean",
+          "sql_type": "BOOLEAN",
+          "column": "runs_as_root",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "sbomRef",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "sbom_ref",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "sbomScope",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "sbom_scope",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": "source | image"
+        },
+        {
+          "name": "ports",
+          "type": "JSON",
+          "sql_type": "JSONB",
+          "column": "ports",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "volumes",
+          "type": "JSON",
+          "sql_type": "JSONB",
+          "column": "volumes",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        }
+      ],
+      "access_rules": [
+        {
+          "role": "*",
+          "members": [
+            "service",
+            "image",
+            "provenance"
+          ],
+          "access": "Read",
+          "constraint": "",
+          "description": ""
+        },
+        {
+          "role": "The Ice Box seat",
+          "members": [
+            "*"
+          ],
+          "access": "ReadWrite",
+          "constraint": "",
+          "description": "The custodian of containment may edit every container record."
+        },
+        {
+          "role": "Location seat",
+          "members": [
+            "service",
+            "image",
+            "sbomRef",
+            "ports"
+          ],
+          "access": "Read",
+          "constraint": "jurisdiction = current_setting('trancendos.location', true)",
+          "description": "A Location sees its own containers in full detail."
+        }
+      ]
+    },
+    {
+      "name": "Datastore",
+      "module": "The Citadel",
+      "schema": "the_citadel",
+      "table": "datastore",
+      "persistable": true,
+      "description": "A database or cache the estate opens.",
+      "source": "src/cmdb/datastores.py",
+      "attributes": [
+        {
+          "name": "ciId",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "ci_id",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "name",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "engine",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "engine",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "locator",
+          "type": "String",
+          "sql_type": "TEXT",
+          "column": "locator",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "fileBacked",
+          "type": "Boolean",
+          "sql_type": "BOOLEAN",
+          "column": "file_backed",
+          "stored": true,
+          "required": true,
+          "sensitive": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "disposition",
+          "type": "Enumeration",
+          "sql_type": "TEXT",
+          "column": "disposition",
+          "stored": true,
+          "required": false,
+          "sensitive": false,
+          "default": null,
+          "description": "migrate | keep | delete"
+        }
+      ],
+      "access_rules": [
+        {
+          "role": "*",
+          "members": [
+            "name",
+            "engine",
+            "fileBacked"
+          ],
+          "access": "Read",
+          "constraint": "",
+          "description": ""
+        },
+        {
+          "role": "The Citadel seat",
+          "members": [
+            "*"
+          ],
+          "access": "ReadWrite",
+          "constraint": "",
+          "description": ""
+        }
+      ]
+    }
+  ],
+  "associations": [
+    {
+      "name": "LocationHasSeats",
+      "owner": "Location",
+      "target": "RoleSeat",
+      "multiplicity": "1-*",
+      "required": true,
+      "description": "Each Location defines the seats that are its module roles."
+    },
+    {
+      "name": "SeatHeldByAI",
+      "owner": "RoleSeat",
+      "target": "AI",
+      "multiplicity": "1-1",
+      "required": false,
+      "description": "Mutable at runtime via the Role Assignment Registry."
+    },
+    {
+      "name": "ContainerCustodiedBy",
+      "owner": "Container",
+      "target": "Location",
+      "multiplicity": "1-*",
+      "required": true,
+      "description": "Always The Ice Box. Required: a container with no custodian is the one case the shared-jurisdiction model exists to prevent."
+    },
+    {
+      "name": "ContainerUnderJurisdictionOf",
+      "owner": "Container",
+      "target": "Location",
+      "multiplicity": "1-*",
+      "required": false,
+      "description": "Whose code runs inside. Optional on purpose: 86 containers are third-party images running nobody's code here."
+    },
+    {
+      "name": "DatastoreOwnedBy",
+      "owner": "Datastore",
+      "target": "Location",
+      "multiplicity": "1-*",
+      "required": false,
+      "description": "114 are currently unrouted and await a Town Hall decision."
+    },
+    {
+      "name": "ContainerRunsDatastore",
+      "owner": "Container",
+      "target": "Datastore",
+      "multiplicity": "1-*",
+      "required": false,
+      "description": "A file-backed store inside a container's writable layer dies with the container unless a volume is mounted. This edge is what makes that answerable per store rather than per service."
+    },
+    {
+      "name": "LocationDependsOnLocation",
+      "owner": "Location",
+      "target": "Location",
+      "multiplicity": "*-*",
+      "required": false,
+      "description": "The dependency graph blast radius is computed over."
+    }
+  ],
+  "routes": [
+    {
+      "path": "/airflow",
+      "module": "_unrouted_",
+      "port": 8089,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/api/",
+      "module": "_unrouted_",
+      "port": 8003,
+      "host_rule": "api.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/artifactory",
+      "module": "The Artifactory",
+      "port": 8047,
+      "host_rule": "artifactory-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 9300,
+      "host_rule": "sso.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/backup",
+      "module": "_unrouted_",
+      "port": 8078,
+      "host_rule": "backup-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/basement",
+      "module": "The Basement",
+      "port": 8068,
+      "host_rule": "basement.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/bullmq-queue-service",
+      "module": "_unrouted_",
+      "port": 8092,
+      "host_rule": "bullmq-queue-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 3010,
+      "host_rule": "scheduling.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/chaos-party",
+      "module": "The Chaos Party",
+      "port": 8079,
+      "host_rule": "chaos-party.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/townhall",
+      "module": "_unrouted_",
+      "port": 8071,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/cryptex",
+      "module": "Cryptex",
+      "port": 8053,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/icebox",
+      "module": "_unrouted_",
+      "port": 8107,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/dagster",
+      "module": "_unrouted_",
+      "port": 3003,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/deepagents-orchestrator",
+      "module": "_unrouted_",
+      "port": 8037,
+      "host_rule": "deepagents-orchestrator-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 8084,
+      "host_rule": "sbom.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/devocity",
+      "module": "DevOcity",
+      "port": 8110,
+      "host_rule": "devocity.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 8108,
+      "host_rule": "logs.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/dspy",
+      "module": "_unrouted_",
+      "port": 8098,
+      "host_rule": "dspy.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 3800,
+      "host_rule": "draw.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/fabulousa",
+      "module": "Fabulousa",
+      "port": 8048,
+      "host_rule": "fabulousa-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/the-workshop",
+      "module": "_unrouted_",
+      "port": 2222,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/haystack",
+      "module": "_unrouted_",
+      "port": 8097,
+      "host_rule": "haystack.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/hive",
+      "module": "_unrouted_",
+      "port": 8051,
+      "host_rule": "hive-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/ice-box",
+      "module": "The Ice Box",
+      "port": 8046,
+      "host_rule": "ice-box-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/imaginarium",
+      "module": "Imaginarium",
+      "port": 8064,
+      "host_rule": "imaginarium.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/imind",
+      "module": "I-Mind",
+      "port": 8075,
+      "host_rule": "imind.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/auth/",
+      "module": "Infinity",
+      "port": 8005,
+      "host_rule": "api.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/identity",
+      "module": "_unrouted_",
+      "port": 8043,
+      "host_rule": "infinity-one.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/portal",
+      "module": "_unrouted_",
+      "port": 8042,
+      "host_rule": "infinity-portal.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/api/void",
+      "module": "The Void",
+      "port": 8002,
+      "host_rule": "api.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/ws",
+      "module": "The Nexus",
+      "port": 8004,
+      "host_rule": "api.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/jaeger",
+      "module": "_unrouted_",
+      "port": 16686,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/kestra",
+      "module": "_unrouted_",
+      "port": 8102,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/langchain-integration",
+      "module": "_unrouted_",
+      "port": 8036,
+      "host_rule": "langchain-integration-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/library",
+      "module": "The Library",
+      "port": 8067,
+      "host_rule": "",
+      "exposes": [],
+      "public": false
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 4000,
+      "host_rule": "ai.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/litellm",
+      "module": "_unrouted_",
+      "port": 8049,
+      "host_rule": "litellm-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/llamaindex",
+      "module": "_unrouted_",
+      "port": 8096,
+      "host_rule": "llamaindex.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": null,
+      "host_rule": "chat.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 7700,
+      "host_rule": "search.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 9000,
+      "host_rule": "s3.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/misp",
+      "module": "_unrouted_",
+      "port": 8106,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/mlflow",
+      "module": "_unrouted_",
+      "port": 8039,
+      "host_rule": "mlflow-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/n8n",
+      "module": "_unrouted_",
+      "port": 5678,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/netdata",
+      "module": "_unrouted_",
+      "port": 19999,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/nexus-rs",
+      "module": "The Nexus",
+      "port": 8100,
+      "host_rule": "nexus-ws-rs.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/observatory",
+      "module": "_unrouted_",
+      "port": 8065,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/openbas",
+      "module": "_unrouted_",
+      "port": 8082,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/openvas",
+      "module": "_unrouted_",
+      "port": 9392,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 3011,
+      "host_rule": "wiki.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/docutari",
+      "module": "_unrouted_",
+      "port": 8104,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 9002,
+      "host_rule": "design.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/prefect",
+      "module": "_unrouted_",
+      "port": 4200,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/rate-limit-rs",
+      "module": "_unrouted_",
+      "port": null,
+      "host_rule": "rate-limit-service-rs.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/resonate",
+      "module": "Resonate",
+      "port": 8076,
+      "host_rule": "resonate.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/sashas-photo-studio",
+      "module": "Sashas Photo Studio",
+      "port": 8062,
+      "host_rule": "sashas-photo-studio.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/sentinel-station",
+      "module": "_unrouted_",
+      "port": 8041,
+      "host_rule": "sentinel-station-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 3301,
+      "host_rule": "apm.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/docutari/pdf",
+      "module": "_unrouted_",
+      "port": 8086,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/swarm-coordinator",
+      "module": "_unrouted_",
+      "port": 8109,
+      "host_rule": "swarm-coordinator-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/taimra",
+      "module": "tAimra",
+      "port": 8074,
+      "host_rule": "taimra.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/tateking",
+      "module": "TateKing",
+      "port": 8061,
+      "host_rule": "tateking.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/temporal",
+      "module": "_unrouted_",
+      "port": 7233,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/the-academy",
+      "module": "The Academy",
+      "port": 8056,
+      "host_rule": "the-academy.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/the-dutchy",
+      "module": "Section 7",
+      "port": 8057,
+      "host_rule": "the-dutchy.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/the-lab",
+      "module": "The Lab",
+      "port": 8055,
+      "host_rule": "the-lab.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/the-studio",
+      "module": "The Studio",
+      "port": 8069,
+      "host_rule": "the-studio.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 80,
+      "host_rule": "traefik.trancendos.local",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/api/ai",
+      "module": "_unrouted_",
+      "port": 8001,
+      "host_rule": "api.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/api/backend",
+      "module": "_unrouted_",
+      "port": 8000,
+      "host_rule": "api.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/tranceflow",
+      "module": "TranceFlow",
+      "port": 8059,
+      "host_rule": "tranceflow.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/tranquility",
+      "module": "Tranquility",
+      "port": 8077,
+      "host_rule": "tranquility.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/turings-hub",
+      "module": "_unrouted_",
+      "port": 8058,
+      "host_rule": "turings-hub-service.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/vault-rs",
+      "module": "_unrouted_",
+      "port": 8094,
+      "host_rule": "vault-service-rs.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/vrar3d",
+      "module": "VRAR3D",
+      "port": 8060,
+      "host_rule": "vrar3d.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/warp-radio",
+      "module": "Warp Radio",
+      "port": 8073,
+      "host_rule": "warp-radio.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/warp-tunnel",
+      "module": "The Warp Tunnel",
+      "port": 8072,
+      "host_rule": "warp-tunnel.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/wazuh",
+      "module": "_unrouted_",
+      "port": 5601,
+      "host_rule": "trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 8181,
+      "host_rule": "weaviate.trancendos.com",
+      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 8100,
+      "host_rule": "ci.trancendos.com",
+      "exposes": [],
+      "public": true
+    }
+  ]
+}
