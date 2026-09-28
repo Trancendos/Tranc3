@@ -42,6 +42,22 @@ _FORGEJO_COUNTS = re.compile(
     r"`\.forgejo/workflows/` holds (\d+) files and (\d+) of their (\d+) jobs"
 )
 
+#: Other documents state the Forgejo file count in their own words, and they
+#: disagreed: CLAUDE.md said 32, SWOT-FORENSIC-ASSESSMENT said 32,
+#: CODE-COMPLIANCE-MATRIX said 30, and there are 33. Four registers, three
+#: numbers, one estate. Each live claim is matched by an exact pattern rather
+#: than a general search, because several documents state *historical* counts
+#: on purpose -- CI-ESTATE-CONSOLIDATION's "48 -> 27" is a record of what was
+#: done, and a check that flagged it would be teaching people to ignore it.
+_ALSO_CLAIM_FORGEJO_FILES = {
+    "docs/governance/SWOT-FORENSIC-ASSESSMENT.md": re.compile(
+        r"dormant\.\*\* (\d+) workflow files"
+    ),
+    "docs/governance/CODE-COMPLIANCE-MATRIX.md": re.compile(
+        r"^(\d+) Forgejo workflow files", re.MULTILINE
+    ),
+}
+
 
 def _workflow_files(directory: Path) -> list[Path]:
     if not directory.is_dir():
@@ -137,6 +153,23 @@ def main() -> int:
             problems.append(
                 f"CLAUDE.md says {claimed_pinned} Forgejo jobs pin self-hosted; "
                 f"{forgejo_pinned} do."
+            )
+
+    for relative, pattern in sorted(_ALSO_CLAIM_FORGEJO_FILES.items()):
+        path = REPO / relative
+        if not path.is_file():
+            problems.append(f"{relative} is gone; update this script's claim table.")
+            continue
+        found = pattern.search(path.read_text(encoding="utf-8"))
+        if not found:
+            problems.append(
+                f"{relative} no longer states a Forgejo workflow file count where "
+                "this check reads it. Restore the sentence or update the script."
+            )
+        elif int(found.group(1)) != len(forgejo_files):
+            problems.append(
+                f"{relative} says there are {found.group(1)} Forgejo workflow "
+                f"files; there are {len(forgejo_files)}."
             )
 
     if undocumented:
