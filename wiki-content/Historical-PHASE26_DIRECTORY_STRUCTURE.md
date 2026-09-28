@@ -36,7 +36,7 @@ Tranc3/
 │
 ├── .github/                          # GitHub configuration
 │   └── workflows/
-│       ├── rust.yml                  # Rust CI/CD (check, test, maturin-build)
+│       ├── rust.yml                  # Rust CI/CD (check, crates, maturin-build, test)
 │       ├── go.yml                    # Go CI/CD (lint, build, test)
 │       └── python.yml                # Python CI/CD (ruff, mypy, test matrix)
 │
@@ -107,6 +107,10 @@ Tranc3/
 │   └── trancendos-api-gateway/
 │       └── src/
 │
+├── config/                           # Configuration files
+│   └── estate/
+│       └── rust_crate_status.yaml   # Rust crate compilation status ledger
+│
 ├── dashboard/                        # Platform Dashboard (Vanilla HTML/CSS/JS)
 │   ├── index.html                   # Cosmic dark theme dashboard
 │   ├── styles.css                   # CSS custom properties + animations
@@ -137,6 +141,8 @@ Tranc3/
 │
 ├── docs/                             # ═══ Documentation ═══
 │   ├── architecture/                # Architecture documentation
+│   ├── governance/                  # Governance documentation
+│   │   └── RUST-CRATE-COMPILE-GATE.md  # Rust crate compile gate workflow
 │   ├── reference/                   # API reference docs
 │   ├── PHASE25_REPO_REVIEW.md       # Trancendos org repo analysis (51 repos)
 │   ├── PHASE25_ZERO_COST_ASSESSMENT.md  # Container/Podman vs Terraform/GitHub
@@ -154,6 +160,7 @@ Tranc3/
 │       └── provisioning/
 │
 ├── scripts/                          # Utility scripts
+│   └── check_rust_crates.py         # Rust crate compilation checker
 │
 ├── Dimensionals/                      # ═══ Dimensional Libraries ═══
 │   ├── __init__.py
