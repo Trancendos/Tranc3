@@ -11,6 +11,15 @@ on:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
       - '**/*.rs'
+      # Cargo configuration sets compiler flags and targets -- aeonmind/rust's
+      # .cargo/config.toml supplies the getrandom_backend cfg the WASM build
+      # needs -- so a configuration-only change can break a build the gate is
+      # then not run for. The old 'aeonmind/rust/**' filter covered it; the
+      # first version of this widened filter did not.
+      - '**/.cargo/config'
+      - '**/.cargo/config.toml'
+      - '**/rust-toolchain'
+      - '**/rust-toolchain.toml'
       - 'config/estate/rust_crate_status.yaml'
       - 'scripts/check_rust_crates.py'
       - '.github/workflows/rust.yml'
@@ -20,6 +29,15 @@ on:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
       - '**/*.rs'
+      # Cargo configuration sets compiler flags and targets -- aeonmind/rust's
+      # .cargo/config.toml supplies the getrandom_backend cfg the WASM build
+      # needs -- so a configuration-only change can break a build the gate is
+      # then not run for. The old 'aeonmind/rust/**' filter covered it; the
+      # first version of this widened filter did not.
+      - '**/.cargo/config'
+      - '**/.cargo/config.toml'
+      - '**/rust-toolchain'
+      - '**/rust-toolchain.toml'
       - 'config/estate/rust_crate_status.yaml'
       - 'scripts/check_rust_crates.py'
       - '.github/workflows/rust.yml'
@@ -135,5 +153,14 @@ jobs:
         run: pip install "pyyaml==6.0.3"
       - name: Compile every crate and compare against the ledger
         run: python3 scripts/check_rust_crates.py
+
+      # Every crate has a committed Cargo.lock, so the run above reuses the
+      # locked graph and cannot see a caret range resolving to a newer release
+      # -- which is the whole reason the weekly schedule exists, and is exactly
+      # what the three worker Dockerfiles do, since none of them copies
+      # Cargo.lock into the image.
+      - name: Resolve fresh, as the images do (scheduled runs)
+        if: github.event_name == 'schedule'
+        run: python3 scripts/check_rust_crates.py --unlocked
       - name: The gate must not have changed the tree it measured
         run: git diff --exit-code

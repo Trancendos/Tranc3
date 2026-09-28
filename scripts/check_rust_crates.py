@@ -78,22 +78,74 @@ The third is the one that makes this different from the workflow it replaces:
 a crate added tomorrow is covered tomorrow, without anyone remembering to add
 a job for it.
 
+Six ways this gate could have reported green without seeing anything
+--------------------------------------------------------------------
+Codex and CodeAnt found these on the first version, and each is real:
+
+1. **A broken crate getting worse still passed.** The comparison read only
+   `status`, so a crate already recorded `broken` could acquire new errors and
+   neither branch fired -- on a gate whose stated purpose is making Rust
+   dependency upgrades verifiable. The measured first error is now compared
+   against the recorded one.
+2. **The weekly run could not see the drift it exists for.** Every crate has a
+   committed `Cargo.lock`, so plain `cargo check` reuses the locked graph and
+   never resolves the newer releases a caret range allows. `--unlocked` copies
+   the manifest and sources to a temporary directory WITHOUT the lock and
+   compiles there -- which is also exactly what the `workers/nexus-ws-rs`,
+   `vault-service-rs` and `rate-limit-service-rs` Dockerfiles do, since none of
+   them copies `Cargo.lock` into the image.
+3. **A cargo failure that was not a compile failure read as `broken`.** A
+   registry outage, a missing toolchain or a timeout produced the same verdict
+   as a type error, so an estate-wide network problem would have been recorded
+   as "these crates do not compile". A run that could not compile now reports
+   `blocked` and fails, because a gate that cannot see must not report what a
+   healthy estate reports.
+4. **An unknown, misspelled or null ledger status was accepted silently**, so a
+   typo could disable regression checking while the gate said PASSED. The
+   vocabulary is now closed and `broken` must carry a reason.
+5. **Restoring `Cargo.lock` hid lockfile drift.** If a manifest change requires
+   a lock update, cargo rewrites the lock, compiles against the new resolution,
+   and the restore put the stale bytes back where `git diff --exit-code` could
+   not see them. The rewrite is now reported as its own finding -- and the file
+   is still restored, because the gate must not change what it measures.
+6. **A crate nested under another crate's directory was dropped from
+   discovery**, so the `[UNRECORDED]` protection passed without compiling it.
+   Membership is now established with `cargo metadata` rather than assumed from
+   directory nesting.
+
+What is still not checked, said rather than implied
+---------------------------------------------------
+Each crate is compiled for the host target, plus any target the ledger records
+for it (`wasm32-unknown-unknown` for the WASM crates). When a recorded target
+is not installed the crate is reported `blocked`, never quietly passed on the
+host alone.
+
 Usage:
     python3 scripts/check_rust_crates.py
+    python3 scripts/check_rust_crates.py --unlocked      # what the images build
     python3 scripts/check_rust_crates.py --write-ledger
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import shutil
 import subprocess  # noqa: S404 - invoking cargo is the entire point of this check
 import sys
+import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import List, Optional
 
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 LEDGER = REPO / "config" / "estate" / "rust_crate_status.yaml"
+
+#: The closed status vocabulary. Anything else in the ledger is a defect in the
+#: ledger, not an unknown state to shrug at.
+OK, BROKEN, BLOCKED = "ok", "broken", "blocked"
 
 #: Directories that never hold a crate worth compiling: build output, vendored
 #: JavaScript, and git internals. `target/` matters most -- a built crate keeps
@@ -101,155 +153,331 @@ LEDGER = REPO / "config" / "estate" / "rust_crate_status.yaml"
 #: this check to compile the whole of crates.io.
 _SKIP = {"target", "node_modules", ".git", ".venv", "venv", "__pycache__"}
 
+#: Cargo's own failures, as distinct from the compiler's. These mean the gate
+#: could not see, which is a different report from "this does not compile".
+_BLOCKED_MARKERS = (
+    "failed to get",
+    "failed to load source",
+    "failed to download",
+    "failed to fetch",
+    "no matching package",
+    "network failure",
+    "certificate",
+    "is not installed",
+    "timed out",
+)
 
-def _crate_dirs() -> list[str]:
-    """Every crate root in the tree, as repo-relative posix paths.
 
-    A crate root is a directory holding a `Cargo.toml` that is not itself
-    inside another crate's sources. Nested manifests are left out rather than
-    compiled twice: cargo builds a workspace or a path dependency from its
-    root, so checking the root already covers them.
-    """
-    found: list[Path] = []
+@dataclass
+class Measurement:
+    """What one crate's compile actually showed."""
+
+    status: str
+    reason: str = ""
+    lock_rewritten: bool = False
+    targets: List[str] = field(default_factory=list)
+
+
+def _manifests() -> List[Path]:
+    found = []
     for manifest in REPO.rglob("Cargo.toml"):
-        relative = manifest.relative_to(REPO)
-        if _SKIP & set(relative.parts):
+        if _SKIP & set(manifest.relative_to(REPO).parts):
             continue
-        found.append(manifest.parent)
-
-    roots: list[Path] = []
-    for candidate in sorted(found):
-        if any(candidate != other and other in candidate.parents for other in found):
-            continue
-        roots.append(candidate)
-    return [path.relative_to(REPO).as_posix() for path in roots]
+        found.append(manifest)
+    return sorted(found)
 
 
-def _compile(directory: str) -> tuple[bool, str]:
-    """Run `cargo check` in one crate. Returns (compiled, first error line).
+def _crate_roots() -> List[str]:
+    """Every crate root, with membership established rather than assumed.
 
-    `--message-format short` keeps the recorded reason to one line, which is
-    what a ledger entry can carry without going stale on every rustc release
-    that rewords a note.
+    Dropping any manifest that merely sits below another crate's directory is
+    wrong: a crate placed there that the ancestor neither declares as a
+    workspace member nor references as a path dependency gets no measurement
+    and no ledger entry, so the [UNRECORDED] protection passes without ever
+    compiling it. cargo metadata is asked which manifests each root covers.
     """
-    root = REPO / directory
-    lock = root / "Cargo.lock"
-    # A gate must not change the thing it measures. `cargo check` rewrites
-    # Cargo.lock whenever a transitive dependency has a newer compatible
-    # release, which would leave the working tree dirty after a run that is
-    # supposed to be read-only. `--locked` is not the answer: it would fail a
-    # crate for lockfile drift and report that as a compile failure, which is
-    # a different defect wearing this one's error message.
-    saved = lock.read_bytes() if lock.is_file() else None
+    covered: set = set()
+    roots: List[Path] = []
 
+    for manifest in _manifests():
+        if manifest in covered:
+            continue
+        try:
+            completed = subprocess.run(  # noqa: S603
+                ["cargo", "metadata", "--no-deps", "--format-version", "1"],  # noqa: S607
+                cwd=manifest.parent,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            roots.append(manifest.parent)
+            continue
+        if completed.returncode != 0:
+            roots.append(manifest.parent)
+            continue
+        document = json.loads(completed.stdout)
+        roots.append(Path(document["workspace_root"]))
+        for package in document.get("packages", []):
+            covered.add(Path(package["manifest_path"]))
+
+    return sorted({root.relative_to(REPO).as_posix() for root in roots})
+
+
+def _classify(stderr: str, returncode: int) -> tuple:
+    """A compile failure and a failure to compile at all are not the same thing."""
+    # `--message-format short` prints a compiler diagnostic as
+    # `src/main.rs:290:44: error[E0308]: ...` -- starting with the PATH, not
+    # with "error". Filtering on startswith("error") alone therefore missed
+    # every real diagnostic and left only cargo's "could not compile" summary,
+    # which is the same line for every failure and so cannot tell one from
+    # another. That would have defeated the [CHANGED] branch below on the day
+    # it was added.
+    diagnostics = [
+        line.strip()
+        for line in stderr.splitlines()
+        if line.strip().startswith("error") or "error[" in line
+    ]
+    for line in diagnostics:
+        if "error[" in line:
+            return BROKEN, line
+    for line in diagnostics:
+        if any(marker in line.lower() for marker in _BLOCKED_MARKERS):
+            return BLOCKED, line
+    if diagnostics:
+        return BROKEN, diagnostics[0]
+    return BLOCKED, f"cargo exited {returncode} with no diagnostic"
+
+
+def _run_check(root: Path, target: Optional[str]) -> tuple:
+    command = ["cargo", "check", "--message-format", "short"]
+    if target:
+        command += ["--target", target]
     try:
-        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            ["cargo", "check", "--message-format", "short"],  # noqa: S607
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=1800,
-            check=False,
+        completed = subprocess.run(  # noqa: S603
+            command, cwd=root, capture_output=True, text=True, timeout=1800, check=False
         )
     except FileNotFoundError:
         raise SystemExit("cargo is not installed, so this check cannot see anything") from None
     except subprocess.TimeoutExpired:
-        return False, "cargo check timed out after 1800s"
+        return 1, "error: cargo check timed out after 1800s"
+    return completed.returncode, completed.stderr
+
+
+def _installed_targets() -> set:
+    try:
+        completed = subprocess.run(  # noqa: S603
+            ["rustup", "target", "list", "--installed"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return set()
+    return {line.strip() for line in completed.stdout.splitlines() if line.strip()}
+
+
+def _measure_one(directory: str, *, unlocked: bool, targets: List[str]) -> Measurement:
+    """Compile one crate on the host, and on any target the ledger records."""
+    source = REPO / directory
+
+    if targets:
+        installed = _installed_targets()
+        missing = [t for t in targets if t not in installed]
+        if missing:
+            return Measurement(
+                BLOCKED,
+                f"recorded target(s) {missing} are not installed, so this crate "
+                f"was not checked for them",
+                targets=targets,
+            )
+
+    if unlocked:
+        # Exactly the Dockerfiles' inputs -- manifest and sources, no lock -- so
+        # caret ranges resolve fresh. This is the only way a scheduled run can
+        # see the dependency drift it was added for.
+        with tempfile.TemporaryDirectory() as scratch:
+            work = Path(scratch) / source.name
+            shutil.copytree(
+                source, work, ignore=shutil.ignore_patterns("target", "Cargo.lock", ".git")
+            )
+            for target in [None, *targets]:
+                code, stderr = _run_check(work, target)
+                if code != 0:
+                    status, reason = _classify(stderr, code)
+                    return Measurement(status, reason, targets=targets)
+        return Measurement(OK, targets=targets)
+
+    lock = source / "Cargo.lock"
+    saved = lock.read_bytes() if lock.is_file() else None
+    try:
+        for target in [None, *targets]:
+            code, stderr = _run_check(source, target)
+            if code != 0:
+                status, reason = _classify(stderr, code)
+                rewritten = saved is not None and lock.is_file() and lock.read_bytes() != saved
+                return Measurement(status, reason, lock_rewritten=rewritten, targets=targets)
+        rewritten = saved is not None and lock.is_file() and lock.read_bytes() != saved
+        return Measurement(OK, lock_rewritten=rewritten, targets=targets)
     finally:
+        # A gate must not change the thing it measures.
         if saved is not None:
             lock.write_bytes(saved)
         elif lock.is_file():
             lock.unlink()
 
-    if completed.returncode == 0:
-        return True, ""
 
-    for line in completed.stderr.splitlines():
-        if "error[" in line or line.startswith("error"):
-            return False, line.strip()
-    return False, f"cargo check exited {completed.returncode} with no error line"
-
-
-def _measure() -> dict[str, dict[str, str]]:
-    """Compile every crate and return its measured status, keyed by directory."""
-    measured: dict[str, dict[str, str]] = {}
-    for directory in _crate_dirs():
-        compiled, reason = _compile(directory)
-        measured[directory] = (
-            {"status": "ok"} if compiled else {"status": "broken", "reason": reason}
-        )
-    return measured
-
-
-def _load_ledger() -> dict[str, dict[str, str]]:
+def _load_ledger() -> dict:
     if not LEDGER.is_file():
         return {}
     document = yaml.safe_load(LEDGER.read_text(encoding="utf-8")) or {}
     return document.get("crates") or {}
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--write-ledger", action="store_true", help="record the measured status of every crate"
-    )
-    args = parser.parse_args()
+def _ledger_problems(ledger: dict) -> List[str]:
+    """A malformed entry must not read as a satisfied one."""
+    problems = []
+    for directory, entry in sorted(ledger.items()):
+        if not isinstance(entry, dict):
+            problems.append(f"  [LEDGER] {directory}: entry is not a mapping")
+            continue
+        status = entry.get("status")
+        if status not in (OK, BROKEN):
+            problems.append(
+                f"  [LEDGER] {directory}: status {status!r} is neither {OK!r} nor "
+                f"{BROKEN!r}.\n        An unrecognised status silently disabled "
+                f"regression checking\n        for this crate while the gate reported PASSED."
+            )
+        elif status == BROKEN and not str(entry.get("reason") or "").strip():
+            problems.append(
+                f"  [LEDGER] {directory}: recorded broken with no reason, so a new\n"
+                f"        or worse failure here could never be distinguished from it."
+            )
+    return problems
 
-    measured = _measure()
 
-    if args.write_ledger:
-        LEDGER.parent.mkdir(parents=True, exist_ok=True)
-        LEDGER.write_text(
-            "# Generated by scripts/check_rust_crates.py --write-ledger.\n"
-            "# Every Cargo crate in the tree, and whether it compiles. See the\n"
-            "# script's docstring for why a crate may be recorded as broken.\n"
-            + yaml.safe_dump({"crates": measured}, sort_keys=True, default_flow_style=False),
-            encoding="utf-8",
-        )
-        broken = sorted(k for k, v in measured.items() if v["status"] == "broken")
-        print(f"Recorded {len(measured)} crates, {len(broken)} broken: {broken}")
-        return 0
+def _as_entry(measurement: Measurement) -> dict:
+    entry: dict = {"status": measurement.status}
+    if measurement.reason:
+        entry["reason"] = measurement.reason
+    if measurement.targets:
+        entry["targets"] = measurement.targets
+    return entry
 
-    ledger = _load_ledger()
-    failures: list[str] = []
+
+def _measure(*, unlocked: bool, ledger: dict) -> dict:
+    measured = {}
+    for directory in _crate_roots():
+        entry = ledger.get(directory)
+        targets = list(entry.get("targets") or []) if isinstance(entry, dict) else []
+        measured[directory] = _measure_one(directory, unlocked=unlocked, targets=targets)
+    return measured
+
+
+def _compare(measured: dict, ledger: dict) -> List[str]:
+    failures = _ledger_problems(ledger)
 
     for directory, result in sorted(measured.items()):
         recorded = ledger.get(directory)
         if recorded is None:
             failures.append(
                 f"  [UNRECORDED] {directory}\n"
-                f"        This crate is in the tree and not in the ledger, so nothing\n"
-                f"        has decided whether it is expected to compile. It currently\n"
-                f"        {'compiles' if result['status'] == 'ok' else 'does NOT compile'}."
+                f"        In the tree and not in the ledger, so nothing has decided\n"
+                f"        whether it is expected to compile. Measured: {result.status}."
             )
             continue
-        if recorded.get("status") == "ok" and result["status"] == "broken":
+        if not isinstance(recorded, dict) or recorded.get("status") not in (OK, BROKEN):
+            continue  # already reported by _ledger_problems
+
+        if result.status == BLOCKED:
+            failures.append(
+                f"  [BLOCKED] {directory}\n"
+                f"        cargo could not compile this crate for a reason that is not\n"
+                f"        the code, so this run saw nothing. Reported rather than\n"
+                f"        recorded as broken: a gate that cannot see must not report\n"
+                f"        what a healthy estate reports.\n        {result.reason}"
+            )
+        elif recorded["status"] == OK and result.status == BROKEN:
             failures.append(
                 f"  [REGRESSED] {directory}\n"
-                f"        Recorded as compiling; it no longer does.\n"
-                f"        {result['reason']}"
+                f"        Recorded as compiling; it no longer does.\n        {result.reason}"
             )
-        elif recorded.get("status") == "broken" and result["status"] == "ok":
+        elif recorded["status"] == BROKEN and result.status == OK:
             failures.append(
                 f"  [FIXED, UNRECORDED] {directory}\n"
                 f"        Recorded as broken; it now compiles. Refresh the ledger\n"
                 f"        (--write-ledger) so the next regression cannot hide under\n"
                 f"        a stale entry."
             )
+        elif recorded["status"] == BROKEN and result.reason != recorded.get("reason"):
+            failures.append(
+                f"  [CHANGED] {directory}\n"
+                f"        Still broken, but failing differently. Without this a crate\n"
+                f"        already recorded broken could get materially worse and pass.\n"
+                f"        recorded: {recorded.get('reason')}\n"
+                f"        measured: {result.reason}"
+            )
+
+        if result.lock_rewritten:
+            failures.append(
+                f"  [LOCKFILE STALE] {directory}\n"
+                f"        cargo rewrote Cargo.lock to compile, so the committed lock no\n"
+                f"        longer matches the manifest. The lock was restored (this gate\n"
+                f"        is read-only), which is exactly why the drift has to be\n"
+                f"        reported here rather than left to `git diff` to notice."
+            )
 
     for directory in sorted(set(ledger) - set(measured)):
-        failures.append(
-            f"  [GONE] {directory}\n        In the ledger, not in the tree. Remove the entry."
-        )
+        failures.append(f"  [GONE] {directory}\n        In the ledger, not in the tree.")
+    return failures
 
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Compile every Rust crate in the tree.")
+    parser.add_argument("--write-ledger", action="store_true", help="record what is measured")
+    parser.add_argument(
+        "--unlocked",
+        action="store_true",
+        help="resolve dependencies fresh, as the Dockerfiles and a caret range do",
+    )
+    args = parser.parse_args()
+
+    ledger = _load_ledger()
+    measured = _measure(unlocked=args.unlocked, ledger=ledger)
+    mode = "unlocked (fresh resolution)" if args.unlocked else "locked (committed Cargo.lock)"
+
+    if args.write_ledger:
+        blocked = sorted(d for d, m in measured.items() if m.status == BLOCKED)
+        if blocked:
+            print(f"Refusing to record a run that could not compile: {blocked}")
+            return 1
+        LEDGER.parent.mkdir(parents=True, exist_ok=True)
+        LEDGER.write_text(
+            "# Generated by scripts/check_rust_crates.py --write-ledger.\n"
+            "# Every Cargo crate in the tree, and whether it compiles. See the\n"
+            "# script's docstring for why a crate may be recorded as broken.\n"
+            + yaml.safe_dump(
+                {"crates": {d: _as_entry(m) for d, m in measured.items()}},
+                sort_keys=True,
+                default_flow_style=False,
+            ),
+            encoding="utf-8",
+        )
+        broken = sorted(d for d, m in measured.items() if m.status == BROKEN)
+        print(f"Recorded {len(measured)} crates, {len(broken)} broken: {broken}")
+        return 0
+
+    failures = _compare(measured, ledger)
     if failures:
-        print("Rust crate compile gate: FAILED")
+        print(f"Rust crate compile gate: FAILED — {mode}")
         print("\n".join(failures))
         return 1
 
-    broken = sorted(k for k, v in measured.items() if v["status"] == "broken")
+    broken = sorted(d for d, m in measured.items() if m.status == BROKEN)
     print(
-        f"Rust crate compile gate: PASSED — {len(measured)} crates, "
+        f"Rust crate compile gate: PASSED — {mode}, {len(measured)} crates, "
         f"{len(measured) - len(broken)} compile, {len(broken)} recorded broken"
     )
     for directory in broken:

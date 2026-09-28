@@ -114,6 +114,68 @@ through. The estate has paid for that outcome once already. So the three are
 recorded with their measured first error, which turns "invisible" into "tracked
 and cannot regress further" without pretending they are fixed.
 
+### Six ways the first version could have reported green anyway
+
+Codex and CodeAnt reviewed it and found these. Each is real, and each is fixed.
+
+1. **A broken crate getting worse still passed.** The comparison read `status`
+   only, so a crate already recorded `broken` could acquire new errors and
+   neither branch fired — on the gate whose stated purpose is making Rust
+   dependency upgrades verifiable. The measured first error is now compared
+   against the recorded one (`[CHANGED]`).
+2. **The weekly run could not see the drift it exists for.** Every crate has a
+   committed `Cargo.lock`, so plain `cargo check` reuses the locked graph and
+   never resolves the newer releases a caret range allows. `--unlocked` copies
+   manifest and sources to a temporary directory without the lock and compiles
+   there — which is also exactly what the three worker Dockerfiles do. The
+   scheduled run uses it.
+3. **A cargo failure that was not a compile failure read as `broken`.** A
+   registry outage, a missing toolchain or a timeout produced the same verdict
+   as a type error, so an estate-wide network problem would have been recorded
+   as "these crates do not compile". Such a run now reports `[BLOCKED]` and
+   fails: a gate that cannot see must not report what a healthy estate reports.
+4. **An unknown, misspelled or null ledger status was accepted silently**, so a
+   typo could disable regression checking while the gate said PASSED. The
+   vocabulary is closed and `broken` must carry a reason.
+5. **Restoring `Cargo.lock` hid lockfile drift** where `git diff --exit-code`
+   could not see it. Now reported as `[LOCKFILE STALE]` — and still restored,
+   because the gate must not change what it measures.
+6. **A crate nested under another crate's directory was dropped from
+   discovery.** Membership is established with `cargo metadata` rather than
+   assumed from nesting.
+
+Fixing (1) exposed a seventh, in the fix itself: `--message-format short`
+prints a diagnostic as `src/main.rs:290:44: error[E0308]: …`, starting with the
+*path*. Filtering on `startswith("error")` therefore matched only cargo's
+"could not compile" summary — the same line for every failure, and so unable to
+tell one from another. `[CHANGED]` would have been defeated on the day it was
+added.
+
+### What (5) found on `main`
+
+`src/nanoservices/rust/tranc3-nanoservice`'s committed `Cargo.lock` did not
+satisfy its manifest. Corroborated independently:
+
+```
+$ cargo check --locked
+error: cannot update the lock file … because --locked was passed to prevent this
+```
+
+Any reproducible or release build using `--locked` failed on that crate, and
+nothing reported it. The lock is refreshed here and `--locked` now exits 0.
+
+### What is still not checked, said rather than implied
+
+Each crate is compiled for the host, plus any target the ledger records for it.
+`aeonmind/wasm` carries `wasm32-unknown-unknown`, because it is the WASM
+artifact and nothing compiled it for that target. `aeonmind/rust` deliberately
+does not: its default features pull `pyo3-ffi`, whose build script needs a
+Python interpreter for the target, so a plain `--target` check fails for a
+reason that is not the code — measured, not assumed. Its WASM path is
+feature-gated and is covered by this workflow's existing `check` job
+(`cargo build --features wasm`). A recorded target that is not installed makes
+the crate `[BLOCKED]`, never quietly passed on the host alone.
+
 ### Mutation testing
 
 Every branch of the comparison was made to fail before it was trusted:
@@ -125,8 +187,15 @@ Every branch of the comparison was made to fail before it was trusted:
 | Record a compiling crate as `broken` | `[FIXED, UNRECORDED]`, rc=1 |
 | Add a crate to the ledger that is not in the tree | `[GONE]`, rc=1 |
 | Plant a real type error in `workers/vault-service-rs` | `[REGRESSED]` naming `error[E0308]` at the planted line, rc=1 |
+| Change a recorded `broken` crate's reason | `[CHANGED]`, rc=1 |
+| Misspell a ledger status (`okay`) | `[LEDGER]`, rc=1 |
+| Record `broken` with no reason | `[LEDGER]`, rc=1 |
+| Record a target that is not installed | `[BLOCKED]`, rc=1 |
+| Restore the stale `Cargo.lock` | `[LOCKFILE STALE]`, rc=1 |
 
-Baseline restores to rc=0 in every case, with a clean working tree.
+Baseline restores to rc=0 in every case, with a clean working tree. Both modes
+pass today and report the same first errors: `locked` and `unlocked` agree,
+which is the state the weekly run exists to notice a departure from.
 
 ## 6. What is not fixed here
 
