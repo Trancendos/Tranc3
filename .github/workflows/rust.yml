@@ -128,7 +128,11 @@ jobs:
           key: ${{ runner.os }}-cargo-crates-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-crates-
       - name: Install PyYAML
-        run: pip install pyyaml
+        # Pinned to the version requirements.txt already carries. Scorecard's
+        # Pinned-Dependencies rule asks for a hash, which no workflow in this
+        # repository does; version-pinning is the estate's convention
+        # (publish-matrix-site.yml, ci.yml's ruff) and is what this matches.
+        run: pip install "pyyaml==6.0.3"
       - name: Compile every crate and compare against the ledger
         run: python3 scripts/check_rust_crates.py
       - name: The gate must not have changed the tree it measured
