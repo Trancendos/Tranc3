@@ -616,7 +616,7 @@
             "ports"
           ],
           "access": "Read",
-          "constraint": "jurisdiction = current_setting('trancendos.location', true)",
+          "constraint": "container_under_jurisdiction_of_id IN (SELECT id FROM the_citadel.location WHERE name = current_setting('trancendos.location', true))",
           "description": "A Location sees its own containers in full detail."
         }
       ]
@@ -734,7 +734,7 @@
       "name": "SeatHeldByAI",
       "owner": "RoleSeat",
       "target": "AI",
-      "multiplicity": "1-1",
+      "multiplicity": "*-1",
       "required": false,
       "description": "Mutable at runtime via the Role Assignment Registry."
     },
@@ -742,7 +742,7 @@
       "name": "ContainerCustodiedBy",
       "owner": "Container",
       "target": "Location",
-      "multiplicity": "1-*",
+      "multiplicity": "*-1",
       "required": true,
       "description": "Always The Ice Box. Required: a container with no custodian is the one case the shared-jurisdiction model exists to prevent."
     },
@@ -750,7 +750,7 @@
       "name": "ContainerUnderJurisdictionOf",
       "owner": "Container",
       "target": "Location",
-      "multiplicity": "1-*",
+      "multiplicity": "*-1",
       "required": false,
       "description": "Whose code runs inside. Optional on purpose: 86 containers are third-party images running nobody's code here."
     },
@@ -758,7 +758,7 @@
       "name": "DatastoreOwnedBy",
       "owner": "Datastore",
       "target": "Location",
-      "multiplicity": "1-*",
+      "multiplicity": "*-1",
       "required": false,
       "description": "114 are currently unrouted and await a Town Hall decision."
     },
@@ -785,7 +785,6 @@
       "module": "_unrouted_",
       "port": 8089,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -793,7 +792,6 @@
       "module": "_unrouted_",
       "port": 8003,
       "host_rule": "api.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -801,15 +799,13 @@
       "module": "The Artifactory",
       "port": 8047,
       "host_rule": "artifactory-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": 9300,
+      "port": 9000,
       "host_rule": "sso.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -817,7 +813,6 @@
       "module": "_unrouted_",
       "port": 8078,
       "host_rule": "backup-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -825,7 +820,6 @@
       "module": "The Basement",
       "port": 8068,
       "host_rule": "basement.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -833,15 +827,13 @@
       "module": "_unrouted_",
       "port": 8092,
       "host_rule": "bullmq-queue-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": 3010,
+      "port": 3000,
       "host_rule": "scheduling.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -849,7 +841,6 @@
       "module": "The Chaos Party",
       "port": 8079,
       "host_rule": "chaos-party.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -857,7 +848,6 @@
       "module": "_unrouted_",
       "port": 8071,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -865,15 +855,13 @@
       "module": "Cryptex",
       "port": 8053,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/icebox",
       "module": "_unrouted_",
-      "port": 8107,
+      "port": 8090,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -881,7 +869,6 @@
       "module": "_unrouted_",
       "port": 3003,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -889,7 +876,6 @@
       "module": "_unrouted_",
       "port": 8037,
       "host_rule": "deepagents-orchestrator-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -897,7 +883,6 @@
       "module": "_unrouted_",
       "port": 8084,
       "host_rule": "sbom.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -905,15 +890,13 @@
       "module": "DevOcity",
       "port": 8110,
       "host_rule": "devocity.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": 8108,
+      "port": 8080,
       "host_rule": "logs.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -921,15 +904,13 @@
       "module": "_unrouted_",
       "port": 8098,
       "host_rule": "dspy.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": 3800,
+      "port": 80,
       "host_rule": "draw.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -937,15 +918,20 @@
       "module": "Fabulousa",
       "port": 8048,
       "host_rule": "fabulousa-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/the-workshop",
       "module": "_unrouted_",
-      "port": 2222,
+      "port": 3000,
       "host_rule": "trancendos.com",
-      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/the-workshop",
+      "module": "_unrouted_",
+      "port": 3000,
+      "host_rule": "the-workshop.trancendos.com",
       "public": true
     },
     {
@@ -953,7 +939,6 @@
       "module": "_unrouted_",
       "port": 8097,
       "host_rule": "haystack.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -961,7 +946,6 @@
       "module": "_unrouted_",
       "port": 8051,
       "host_rule": "hive-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -969,7 +953,6 @@
       "module": "The Ice Box",
       "port": 8046,
       "host_rule": "ice-box-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -977,7 +960,6 @@
       "module": "Imaginarium",
       "port": 8064,
       "host_rule": "imaginarium.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -985,7 +967,6 @@
       "module": "I-Mind",
       "port": 8075,
       "host_rule": "imind.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -993,7 +974,6 @@
       "module": "Infinity",
       "port": 8005,
       "host_rule": "api.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1001,7 +981,6 @@
       "module": "_unrouted_",
       "port": 8043,
       "host_rule": "infinity-one.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1009,7 +988,6 @@
       "module": "_unrouted_",
       "port": 8042,
       "host_rule": "infinity-portal.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1017,7 +995,6 @@
       "module": "The Void",
       "port": 8002,
       "host_rule": "api.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1025,7 +1002,6 @@
       "module": "The Nexus",
       "port": 8004,
       "host_rule": "api.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1033,15 +1009,13 @@
       "module": "_unrouted_",
       "port": 16686,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/kestra",
       "module": "_unrouted_",
-      "port": 8102,
+      "port": 8080,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1049,7 +1023,6 @@
       "module": "_unrouted_",
       "port": 8036,
       "host_rule": "langchain-integration-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1057,7 +1030,6 @@
       "module": "The Library",
       "port": 8067,
       "host_rule": "",
-      "exposes": [],
       "public": false
     },
     {
@@ -1065,7 +1037,6 @@
       "module": "_unrouted_",
       "port": 4000,
       "host_rule": "ai.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1073,7 +1044,6 @@
       "module": "_unrouted_",
       "port": 8049,
       "host_rule": "litellm-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1081,15 +1051,13 @@
       "module": "_unrouted_",
       "port": 8096,
       "host_rule": "llamaindex.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": null,
+      "port": 8065,
       "host_rule": "chat.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1097,7 +1065,6 @@
       "module": "_unrouted_",
       "port": 7700,
       "host_rule": "search.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1105,15 +1072,20 @@
       "module": "_unrouted_",
       "port": 9000,
       "host_rule": "s3.trancendos.com",
-      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/",
+      "module": "_unrouted_",
+      "port": 9000,
+      "host_rule": "s3-console.trancendos.com",
       "public": true
     },
     {
       "path": "/misp",
       "module": "_unrouted_",
-      "port": 8106,
+      "port": 80,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1121,7 +1093,6 @@
       "module": "_unrouted_",
       "port": 8039,
       "host_rule": "mlflow-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1129,7 +1100,6 @@
       "module": "_unrouted_",
       "port": 5678,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1137,15 +1107,13 @@
       "module": "_unrouted_",
       "port": 19999,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/nexus-rs",
       "module": "The Nexus",
-      "port": 8100,
+      "port": 8004,
       "host_rule": "nexus-ws-rs.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1153,7 +1121,6 @@
       "module": "_unrouted_",
       "port": 8065,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1161,7 +1128,6 @@
       "module": "_unrouted_",
       "port": 8082,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1169,23 +1135,20 @@
       "module": "_unrouted_",
       "port": 9392,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": 3011,
+      "port": 3000,
       "host_rule": "wiki.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/docutari",
       "module": "_unrouted_",
-      "port": 8104,
+      "port": 8000,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1193,7 +1156,6 @@
       "module": "_unrouted_",
       "port": 9002,
       "host_rule": "design.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1201,15 +1163,13 @@
       "module": "_unrouted_",
       "port": 4200,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/rate-limit-rs",
       "module": "_unrouted_",
-      "port": null,
+      "port": 8099,
       "host_rule": "rate-limit-service-rs.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1217,7 +1177,6 @@
       "module": "Resonate",
       "port": 8076,
       "host_rule": "resonate.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1225,7 +1184,6 @@
       "module": "Sashas Photo Studio",
       "port": 8062,
       "host_rule": "sashas-photo-studio.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1233,7 +1191,6 @@
       "module": "_unrouted_",
       "port": 8041,
       "host_rule": "sentinel-station-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1241,15 +1198,13 @@
       "module": "_unrouted_",
       "port": 3301,
       "host_rule": "apm.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/docutari/pdf",
       "module": "_unrouted_",
-      "port": 8086,
+      "port": 8080,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1257,7 +1212,6 @@
       "module": "_unrouted_",
       "port": 8109,
       "host_rule": "swarm-coordinator-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1265,7 +1219,6 @@
       "module": "tAimra",
       "port": 8074,
       "host_rule": "taimra.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1273,15 +1226,13 @@
       "module": "TateKing",
       "port": 8061,
       "host_rule": "tateking.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/temporal",
       "module": "_unrouted_",
-      "port": 7233,
+      "port": 8088,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1289,7 +1240,6 @@
       "module": "The Academy",
       "port": 8056,
       "host_rule": "the-academy.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1297,7 +1247,6 @@
       "module": "Section 7",
       "port": 8057,
       "host_rule": "the-dutchy.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1305,7 +1254,6 @@
       "module": "The Lab",
       "port": 8055,
       "host_rule": "the-lab.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1313,7 +1261,6 @@
       "module": "The Studio",
       "port": 8069,
       "host_rule": "the-studio.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1321,7 +1268,6 @@
       "module": "_unrouted_",
       "port": 80,
       "host_rule": "traefik.trancendos.local",
-      "exposes": [],
       "public": true
     },
     {
@@ -1329,7 +1275,6 @@
       "module": "_unrouted_",
       "port": 8001,
       "host_rule": "api.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1337,7 +1282,13 @@
       "module": "_unrouted_",
       "port": 8000,
       "host_rule": "api.trancendos.com",
-      "exposes": [],
+      "public": true
+    },
+    {
+      "path": "/mcp",
+      "module": "_unrouted_",
+      "port": 8000,
+      "host_rule": "api.trancendos.com",
       "public": true
     },
     {
@@ -1345,7 +1296,6 @@
       "module": "TranceFlow",
       "port": 8059,
       "host_rule": "tranceflow.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1353,7 +1303,6 @@
       "module": "Tranquility",
       "port": 8077,
       "host_rule": "tranquility.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1361,7 +1310,6 @@
       "module": "_unrouted_",
       "port": 8058,
       "host_rule": "turings-hub-service.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1369,7 +1317,6 @@
       "module": "_unrouted_",
       "port": 8094,
       "host_rule": "vault-service-rs.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1377,7 +1324,6 @@
       "module": "VRAR3D",
       "port": 8060,
       "host_rule": "vrar3d.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1385,7 +1331,6 @@
       "module": "Warp Radio",
       "port": 8073,
       "host_rule": "warp-radio.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1393,7 +1338,6 @@
       "module": "The Warp Tunnel",
       "port": 8072,
       "host_rule": "warp-tunnel.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1401,15 +1345,13 @@
       "module": "_unrouted_",
       "port": 5601,
       "host_rule": "trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
       "path": "/",
       "module": "_unrouted_",
-      "port": 8181,
+      "port": 8080,
       "host_rule": "weaviate.trancendos.com",
-      "exposes": [],
       "public": true
     },
     {
@@ -1417,7 +1359,6 @@
       "module": "_unrouted_",
       "port": 8100,
       "host_rule": "ci.trancendos.com",
-      "exposes": [],
       "public": true
     }
   ]

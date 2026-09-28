@@ -18,6 +18,7 @@ artifacts are trustworthy, which means two properties in particular:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -164,15 +165,78 @@ def test_session_settings_are_documented_in_the_ddl(sql):
 
 
 def test_unchecked_is_distinguishable_from_passing():
+    """An unchecked property must be visible AND must not count as passing.
+
+    The first version of this test asserted
+
+        UNCHECKED in statuses or all(s != UNCHECKED for s in statuses)
+
+    which is `A or not A`: true when the value is present and true when it is
+    absent. It passed without ever establishing that the report produces an
+    unchecked state at all -- a test that cannot fail, in the file whose subject
+    is checks that cannot fail. Sourcery caught it.
+
+    It now demands the state exist, since this estate has Locations whose
+    environment cannot be scanned, and a report that stopped producing
+    `unchecked` would mean the distinction had been lost rather than earned.
+    """
     rows = assess()
-    statuses = {r.env_status for r in rows} | {r.dependency_status for r in rows}
-    assert UNCHECKED in statuses or all(s != UNCHECKED for s in statuses)
-    for row in rows:
-        if row.env_status == UNCHECKED:
-            assert not row.complete, (
-                f"{row.location} is marked complete while its env vars were never "
-                "checked. Unchecked is not passed."
-            )
+    unchecked = [r for r in rows if UNCHECKED in (r.env_status, r.dependency_status)]
+    assert unchecked, (
+        "no Location reports an unchecked property. Either every Location became "
+        "scannable -- refresh this expectation deliberately -- or 'could not "
+        "check' is now rendering as a pass, which is the failure this file exists "
+        "to prevent."
+    )
+    for row in unchecked:
+        assert not row.complete, (
+            f"{row.location} is marked complete while a property was never "
+            "checked. Unchecked is not passed."
+        )
+
+
+def test_the_summary_key_names_the_number_of_properties_it_counts():
+    """The count's name and the predicate behind it must agree.
+
+    They did not. The key read `complete_on_all_six` while `complete` was the
+    conjunction of five properties, and `DOMAIN-MODEL.md` printed a five-row
+    table under a "Complete on all six" total. The sixth, `in_domain_model`,
+    compared a Location name against the model's module names -- of which there
+    are three -- so it could be true for at most three of 43 Locations while six
+    were reported complete.
+
+    Nothing asserted the relationship, so nothing caught it. This does.
+    """
+    from src.domain.conformance import LocationConformance, summary
+
+    spelled = {"five": 5, "six": 6, "seven": 7, "four": 4, "three": 3}
+    keys = [k for k in summary() if k.startswith("complete_on_all_")]
+    assert len(keys) == 1, f"expected exactly one completeness key, found {keys}"
+    word = keys[0].rsplit("_", 1)[-1]
+    assert word in spelled, f"completeness key {keys[0]!r} does not name a number"
+    assert spelled[word] == len(LocationConformance.PROPERTIES), (
+        f"{keys[0]!r} claims {spelled[word]} properties; complete() is the "
+        f"conjunction of {len(LocationConformance.PROPERTIES)}: "
+        f"{list(LocationConformance.PROPERTIES)}"
+    )
+
+
+def test_a_withdrawn_observation_is_not_counted_as_conformance():
+    """`names_a_model_module` is reported and must stay out of completeness.
+
+    It is kept because it is a true measurement, and excluded because it is a
+    category error as a conformance property: three of 43 Locations share a name
+    with a model module, and that says nothing about whether the Location
+    conforms to anything.
+    """
+    from src.domain.conformance import LocationConformance, summary
+
+    assert "names_a_model_module" not in LocationConformance.PROPERTIES
+    totals = summary()
+    assert totals["names_a_model_module"] < totals["locations"], (
+        "every Location names a model module, which would make this observation "
+        "vacuous rather than merely non-conformance"
+    )
 
 
 def test_registry_lookup_actually_finds_entries():
@@ -251,3 +315,106 @@ class TestTheGuardsWouldCatchIt:
 
         assert _sensitive("apiKey") and _sensitive("secret_token") and _sensitive("password")
         assert not _sensitive("sort_order") and not _sensitive("primary_function")
+
+
+# ── The generated schema must be valid SQL, not merely current ───────────────
+
+
+def _create_tables(sql: str) -> dict[str, list[str]]:
+    """table name -> the column names its CREATE TABLE declares."""
+    tables: dict[str, list[str]] = {}
+    for block in re.finditer(
+        r"CREATE TABLE IF NOT EXISTS\s+([\w.]+)\s*\((.*?)\n\);", sql, re.DOTALL
+    ):
+        name, body = block.group(1), block.group(2)
+        columns = []
+        for line in body.splitlines():
+            line = line.strip().rstrip(",")
+            if not line or line.upper().startswith(("PRIMARY KEY", "UNIQUE", "CONSTRAINT")):
+                continue
+            columns.append(line.split()[0])
+        tables[name] = columns
+    return tables
+
+
+def test_no_generated_table_declares_a_column_twice():
+    """PostgreSQL refuses the file, not the statement.
+
+    `LocationDependsOnLocation` is Location -> Location, and the generator
+    derived the join column name from each side's table, producing
+
+        location_id BIGINT ... ,
+        location_id BIGINT ... ,
+        PRIMARY KEY (location_id, location_id)
+
+    Applying the committed schema to PostgreSQL 16 stopped there with
+    `column "location_id" appears twice in primary key constraint`, so every
+    statement after it -- the whole row-level-security section -- was never
+    created. The artifact was regenerated and current, and could not be applied;
+    "current" was the only property anything checked.
+    """
+    sql = (REPO / "docs/architecture/domain-model.sql").read_text(encoding="utf-8")
+    tables = _create_tables(sql)
+    assert tables, "no CREATE TABLE statements found -- has the generator changed shape?"
+
+    duplicated = {
+        name: [c for c in columns if columns.count(c) > 1]
+        for name, columns in tables.items()
+        if len(set(columns)) != len(columns)
+    }
+    assert not duplicated, f"these tables declare a column more than once: {duplicated}"
+
+    for key in re.finditer(r"PRIMARY KEY \(([^)]+)\)", sql):
+        parts = [p.strip() for p in key.group(1).split(",")]
+        assert len(set(parts)) == len(parts), f"PRIMARY KEY ({key.group(1)}) names a column twice"
+
+
+def test_every_policy_predicate_names_a_column_its_table_has():
+    """A policy on a column that does not exist is refused at CREATE time.
+
+    The container rule for a Location seat was written against `jurisdiction`.
+    The generated column is `container_under_jurisdiction_of_id`, so PostgreSQL
+    rejected the policy -- and because the file had already failed earlier, the
+    rejection was never even reached.
+
+    Bare identifiers compared against `current_setting(...)` are the shape the
+    access rules use, and are checkable without a database.
+    """
+    sql = (REPO / "docs/architecture/domain-model.sql").read_text(encoding="utf-8")
+    tables = _create_tables(sql)
+    for alter in re.finditer(r"ALTER TABLE ([\w.]+) ADD COLUMN IF NOT EXISTS\s+(\w+)", sql):
+        tables.setdefault(alter.group(1), []).append(alter.group(2))
+
+    unknown: list[str] = []
+    for policy in re.finditer(
+        r"CREATE POLICY (\w+) ON ([\w.]+) FOR \w+ USING \((.*?)\)(?:;| WITH CHECK)",
+        sql,
+        re.DOTALL,
+    ):
+        name, table, predicate = policy.group(1), policy.group(2), policy.group(3)
+
+        # A subquery's WHERE clause names ITS table's columns, not the policy
+        # table's. The first version of this check flagged
+        # `WHERE name = current_setting(...)` inside a lookup against
+        # the_citadel.location as a missing column on the_ice_box.container --
+        # a guard that rejects a correct schema, which is the failure mode one
+        # step removed from a guard that cannot fail. Each subquery is checked
+        # against its own FROM table, then removed before the outer scan.
+        scopes = [(table, predicate)]
+        for sub in re.finditer(r"SELECT\s+\w+\s+FROM\s+([\w.]+)\s+WHERE\s+([^)]+)", predicate):
+            scopes.append((sub.group(1), sub.group(2)))
+        outer = re.sub(r"SELECT\s+\w+\s+FROM\s+[\w.]+\s+WHERE\s+[^)]+", "", predicate)
+        scopes[0] = (table, outer)
+
+        for scope_table, clause in scopes:
+            columns = set(tables.get(scope_table, []))
+            for identifier in re.findall(r"(?<![\w.'])([a-z_][a-z0-9_]*)\s*(?:=|IN)\s", clause):
+                if identifier in {"true", "false", "current_setting"}:
+                    continue
+                if identifier not in columns:
+                    unknown.append(f"{name} on {scope_table} tests {identifier!r}")
+
+    assert not unknown, (
+        "these policies test a column their table does not declare, so "
+        f"CREATE POLICY fails: {unknown}"
+    )

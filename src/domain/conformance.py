@@ -48,7 +48,10 @@ class LocationConformance:
     env_status: str = UNCHECKED
     depends_on: List[str] = field(default_factory=list)
     dependency_status: str = UNCHECKED
-    in_domain_model: bool = False
+    #: True when this Location's NAME is also the name of a module in the domain
+    #: model. That is an observation, not a conformance property, and it is
+    #: deliberately excluded from `complete` -- see the `complete` docstring.
+    names_a_model_module: bool = False
 
     def as_row(self) -> Dict[str, object]:
         return {
@@ -61,11 +64,43 @@ class LocationConformance:
             "env_undeclared": self.env_undeclared,
             "dependency_status": self.dependency_status,
             "depends_on": self.depends_on,
-            "in_domain_model": self.in_domain_model,
+            "names_a_model_module": self.names_a_model_module,
         }
+
+    #: The properties `complete` is the conjunction of. Named here rather than
+    #: only implied by the expression below, so `test_domain_model.py` can assert
+    #: that the summary key and the predicate agree -- which is the check that
+    #: was missing when the key said six and the predicate checked five.
+    PROPERTIES = (
+        "in_cmdb",
+        "documentation",
+        "registry_ref",
+        "env_status",
+        "dependency_status",
+    )
 
     @property
     def complete(self) -> bool:
+        """True when all FIVE conformance properties pass.
+
+        The summary key read `complete_on_all_six` until 2026-09-28 while this
+        predicate checked five, and `DOMAIN-MODEL.md`'s own table listed five
+        properties and then a row labelled "Complete on all six". The sixth was
+        `in_domain_model`, computed as `location name in model.modules()`.
+
+        That comparison is a category error, and a measurable one: the model has
+        three modules (The Citadel, The Ice Box, The Town Hall), so at most three
+        of 43 Locations could ever satisfy it, while six were being reported
+        complete. The reverse reading -- "the model holds a row for this
+        Location" -- is true for all 43 by construction, so it cannot fail
+        either. A property that can only be true for three, or can never be
+        false, is not a conformance property in either direction.
+
+        So it is withdrawn rather than repaired, and kept as a reported
+        observation under a name that says what it measures. The count itself
+        does not change: six Locations pass all five, which is what was always
+        being counted.
+        """
         return (
             self.in_cmdb
             and bool(self.documentation)
@@ -211,7 +246,7 @@ def assess() -> List[LocationConformance]:
         row.in_cmdb = name in mapped_locations
         row.documentation = _documentation_for(name)
         row.registry_ref = refs.get(name)
-        row.in_domain_model = name in modelled_modules
+        row.names_a_model_module = name in modelled_modules
 
         consumed = _consumed_env(entity.worker_path)
         if consumed is None:
@@ -244,5 +279,6 @@ def summary() -> Dict[str, object]:
         "env_unchecked": sum(1 for r in rows if r.env_status == UNCHECKED),
         "dependencies_declared": sum(1 for r in rows if r.dependency_status == "ok"),
         "dependencies_unchecked": sum(1 for r in rows if r.dependency_status == UNCHECKED),
-        "complete_on_all_six": sum(1 for r in rows if r.complete),
+        "complete_on_all_five": sum(1 for r in rows if r.complete),
+        "names_a_model_module": sum(1 for r in rows if r.names_a_model_module),
     }

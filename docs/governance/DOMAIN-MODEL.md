@@ -21,7 +21,7 @@ Trancendos rather than merely resembling it:
 
 | Mendix | Trancendos | Why it lands |
 |---|---|---|
-| Module | **Location** | Each of the 43 already owns its code, its port and its docs pack |
+| Module | **Location** | Each of the 43 owns its code and its port; **34 have a docs pack** — the conformance table below counts the rest |
 | Module role | **Job Description seat** | 56 seats already exist, with named holders |
 | Entity | **CI class** | The CMDB already has classes; they lacked attributes and associations |
 | Attribute | CI field | Typed, so it generates a column |
@@ -92,7 +92,8 @@ policy covered it.
 
 ## 4. Conformance — where the estate does not yet meet this
 
-`docs/architecture/conformance.json`, regenerated on every run. Six properties per Location:
+`docs/architecture/conformance.json`, regenerated on every run. **Five** properties per
+Location:
 
 | Property | Locations passing (of 43) |
 |---|---:|
@@ -101,11 +102,23 @@ policy covered it.
 | Has a registry value | 43 |
 | Environment variables all declared | 8 |
 | Dependency associations declared | 40 |
-| **Complete on all six** | **6** |
+| **Complete on all five** | **6** |
 
 The governing rule: **an unchecked property is reported as unchecked, never as passing.** Two
 Locations' environment variables could not be scanned; they are reported as "not checked" and
 cannot count as complete.
+
+**This table said "Complete on all six" over five rows, and the summary key read
+`complete_on_all_six`, while `complete()` was the conjunction of the five above.** The missing
+sixth was `in_domain_model`, computed as *this Location's name is also a module name in the
+model*. The model has three modules — The Citadel, The Ice Box, The Town Hall — so the property
+could be true for at most 3 of 43 while 6 were being reported complete; read the other way
+round ("the model holds a row for this Location") it is true for all 43 by construction. A
+property that can be true for three, or can never be false, is not a conformance property in
+either direction, so it is withdrawn and kept as a reported observation named
+`names_a_model_module` (3 of 43). The count of 6 does not change: it was always a count over
+five properties. `tests/test_domain_model.py` now asserts that the summary key's name and the
+number of properties in `complete()` agree, which is the check whose absence let this ship.
 
 ### The largest finding: `ALLOWED_ORIGINS`
 

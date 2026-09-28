@@ -9,7 +9,8 @@
     "env_unchecked": 2,
     "dependencies_declared": 40,
     "dependencies_unchecked": 3,
-    "complete_on_all_six": 6
+    "complete_on_all_five": 6,
+    "names_a_model_module": 3
   },
   "locations": [
     {
@@ -22,7 +23,7 @@
       "env_undeclared": [],
       "dependency_status": "not checked",
       "depends_on": [],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Arcadia",
@@ -36,7 +37,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Arcadian Exchange",
@@ -50,7 +51,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "ChronosSphere / ArcStream",
@@ -67,7 +68,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Cryptex",
@@ -88,7 +89,7 @@
         "SRV-INF-001",
         "SRV-RATELIMIT-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "DevOcity",
@@ -104,7 +105,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "DocUtari",
@@ -121,7 +122,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Fabulousa",
@@ -139,7 +140,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "I-Mind",
@@ -155,7 +156,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Imaginarium",
@@ -171,7 +172,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Infinity",
@@ -190,7 +191,7 @@
         "SRV-INF-001",
         "SRV-VOID-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Luminous",
@@ -212,7 +213,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Resonate",
@@ -229,7 +230,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Royal Bank of Arcadia",
@@ -243,7 +244,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Sashas Photo Studio",
@@ -261,7 +262,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Section 7",
@@ -277,7 +278,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "TateKing",
@@ -297,7 +298,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Academy",
@@ -313,7 +314,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Artifactory",
@@ -330,7 +331,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Basement",
@@ -347,7 +348,7 @@
         "SRV-INF-001",
         "SRV-OBS-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Chaos Party",
@@ -367,7 +368,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Citadel",
@@ -382,7 +383,7 @@
       ],
       "dependency_status": "not checked",
       "depends_on": [],
-      "in_domain_model": true
+      "names_a_model_module": true
     },
     {
       "location": "The Digital Grid",
@@ -401,7 +402,7 @@
         "SRV-SPARK-001",
         "SRV-VOID-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The HIVE",
@@ -419,7 +420,7 @@
         "SRV-INF-001",
         "SRV-QUEUE-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Ice Box",
@@ -437,7 +438,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": true
+      "names_a_model_module": true
     },
     {
       "location": "The Lab",
@@ -455,7 +456,7 @@
         "SRV-INF-001",
         "SRV-LAB-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Library",
@@ -477,7 +478,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Lighthouse",
@@ -491,7 +492,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Nexus",
@@ -507,7 +508,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Observatory",
@@ -525,7 +526,7 @@
         "SRV-MONDASH-001",
         "SRV-OBS-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Spark",
@@ -540,7 +541,7 @@
         "SRV-INF-001",
         "SRV-VOID-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Studio",
@@ -556,7 +557,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Town Hall",
@@ -571,7 +572,7 @@
         "SRV-SPARK-001",
         "SRV-WORKSHOP-001"
       ],
-      "in_domain_model": true
+      "names_a_model_module": true
     },
     {
       "location": "The Void",
@@ -585,7 +586,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Warp Tunnel",
@@ -602,7 +603,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "The Workshop",
@@ -617,7 +618,7 @@
         "SRV-INF-001",
         "SRV-VOID-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Think Tank",
@@ -629,7 +630,7 @@
       "env_undeclared": [],
       "dependency_status": "not checked",
       "depends_on": [],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "TranceFlow",
@@ -647,7 +648,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Tranquility",
@@ -663,7 +664,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Turing's Hub",
@@ -679,7 +680,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "VRAR3D",
@@ -697,7 +698,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "Warp Radio",
@@ -714,7 +715,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     },
     {
       "location": "tAimra",
@@ -730,7 +731,7 @@
       "depends_on": [
         "SRV-INF-001"
       ],
-      "in_domain_model": false
+      "names_a_model_module": false
     }
   ]
 }

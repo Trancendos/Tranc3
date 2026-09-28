@@ -199,7 +199,16 @@ def _container_entity() -> Entity:
             role="Location seat",
             members=["service", "image", "sbomRef", "ports"],
             access=Access.READ,
-            constraint="jurisdiction = current_setting('trancendos.location', true)",
+            constraint=(
+                # The generated column is container_under_jurisdiction_of_id, a
+                # BIGINT key; `jurisdiction` is not a column on this table and
+                # PostgreSQL rejected the policy outright. The session setting
+                # carries a Location NAME, so the predicate has to resolve it
+                # rather than compare a name to an id.
+                "container_under_jurisdiction_of_id IN ("
+                "SELECT id FROM the_citadel.location "
+                "WHERE name = current_setting('trancendos.location', true))"
+            ),
             description="A Location sees its own containers in full detail.",
         ),
     ]
@@ -268,6 +277,9 @@ def _associations() -> List[Association]:
             name="LocationHasSeats",
             owner="Location",
             target="RoleSeat",
+            # One Location, many RoleSeats: the key belongs on role_seat. This
+            # read ONE_TO_MANY when ONE_TO_MANY meant "key on the owner", which
+            # put a single location_has_seats_id on `location`.
             multiplicity=Multiplicity.ONE_TO_MANY,
             required=True,
             description="Each Location defines the seats that are its module roles.",
@@ -276,14 +288,19 @@ def _associations() -> List[Association]:
             name="SeatHeldByAI",
             owner="RoleSeat",
             target="AI",
-            multiplicity=Multiplicity.ONE_TO_ONE,
+            # Declared ONE_TO_ONE until 2026-09-28, which this estate disproves:
+            # Rocking Ricki is the Lead AI of The Lighthouse, The Warp Tunnel and
+            # Warp Radio, and Voxx of The Studio and Imaginarium. A UNIQUE on the
+            # AI key -- which is what 1-1 generates -- would have made the schema
+            # reject the register it is built from.
+            multiplicity=Multiplicity.MANY_TO_ONE,
             description="Mutable at runtime via the Role Assignment Registry.",
         ),
         Association(
             name="ContainerCustodiedBy",
             owner="Container",
             target="Location",
-            multiplicity=Multiplicity.ONE_TO_MANY,
+            multiplicity=Multiplicity.MANY_TO_ONE,
             required=True,
             description=(
                 "Always The Ice Box. Required: a container with no custodian is the "
@@ -294,7 +311,7 @@ def _associations() -> List[Association]:
             name="ContainerUnderJurisdictionOf",
             owner="Container",
             target="Location",
-            multiplicity=Multiplicity.ONE_TO_MANY,
+            multiplicity=Multiplicity.MANY_TO_ONE,
             required=False,
             description=(
                 "Whose code runs inside. Optional on purpose: 86 containers are "
@@ -305,13 +322,15 @@ def _associations() -> List[Association]:
             name="DatastoreOwnedBy",
             owner="Datastore",
             target="Location",
-            multiplicity=Multiplicity.ONE_TO_MANY,
+            multiplicity=Multiplicity.MANY_TO_ONE,
             description="114 are currently unrouted and await a Town Hall decision.",
         ),
         Association(
             name="ContainerRunsDatastore",
             owner="Container",
             target="Datastore",
+            # A Datastore lives inside one Container; a Container may hold
+            # several. The key belongs on datastore, not on container.
             multiplicity=Multiplicity.ONE_TO_MANY,
             description=(
                 "A file-backed store inside a container's writable layer dies with "
@@ -333,6 +352,7 @@ def _associations() -> List[Association]:
 
 _HOST_RE = re.compile(r"Host\(`([^`]+)`\)")
 _PREFIX_RE = re.compile(r"PathPrefix\(`([^`]+)`\)")
+_LB_PORT_RE = re.compile(r"loadbalancer\.server\.port\s*[=:]\s*\"?(\d+)")
 
 
 def _routes() -> List[Route]:
@@ -364,28 +384,46 @@ def _routes() -> List[Route]:
             continue
 
         container = by_service.get(name)
-        port = None
-        for mapping in container.ports if container else []:
-            for part in str(mapping).split(":"):
-                if part.isdigit():
-                    port = int(part)
-                    break
-            if port:
-                break
 
-        routes.append(
-            Route(
-                path=prefixes[0] if prefixes else "/",
-                module=(container.jurisdiction if container else "") or "_unrouted_",
-                port=port,
-                host_rule=hosts[0] if hosts else "",
-                exposes=[],
-                # A route reachable on a public host rule with no auth middleware
-                # is the network-security question this model exists to make
-                # answerable; recorded, not judged, here.
-                public=bool(hosts),
-            )
-        )
+        # Traefik's own loadbalancer.server.port is the port the router forwards
+        # to. Taking the first numeric segment of the first published mapping
+        # instead gave Forgejo port 2222, because its SSH mapping is listed
+        # before its HTTP one -- a route table recording the host-side SSH port
+        # as the HTTP entry point. The published mapping stays as the fallback
+        # for services that set no label.
+        port = None
+        labelled = _LB_PORT_RE.search(blob)
+        if labelled:
+            port = int(labelled.group(1))
+        else:
+            for mapping in container.ports if container else []:
+                for part in str(mapping).split(":"):
+                    if part.isdigit():
+                        port = int(part)
+                        break
+                if port:
+                    break
+
+        module = (container.jurisdiction if container else "") or "_unrouted_"
+        # One Route per entry point, not per service. A single rule can carry
+        # several PathPrefixes -- tranc3-backend's carries `/api/backend` AND
+        # `/mcp` -- and a service can declare several routers with different
+        # hosts. Keeping only prefixes[0] and hosts[0] dropped every entry point
+        # after the first from a table whose purpose is to be authoritative.
+        for host in hosts or [""]:
+            for prefix in prefixes or ["/"]:
+                routes.append(
+                    Route(
+                        path=prefix,
+                        module=module,
+                        port=port,
+                        host_rule=host,
+                        # A route reachable on a public host rule with no auth
+                        # middleware is the network-security question this model
+                        # exists to make answerable; recorded, not judged, here.
+                        public=bool(host),
+                    )
+                )
     return routes
 
 

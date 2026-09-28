@@ -69,7 +69,28 @@ class AttributeType(str, Enum):
 
 
 class Multiplicity(str, Enum):
+    """Which side is the many side, and therefore which table carries the key.
+
+    `ONE_TO_MANY` alone was ambiguous, and the ambiguity reached the generated
+    schema. It said "one to many" without saying which end the *owner* was, and
+    the generator resolved that by always putting the foreign key on the owner.
+    That is right for `ContainerCustodiedBy` (many Containers, one Location) and
+    wrong for `LocationHasSeats` (one Location, many RoleSeats): the committed
+    DDL gave `location` a single `location_has_seats_id`, so the schema could
+    hold one seat per Location and the declared relationship could not be
+    represented at all.
+
+    The direction is now part of the value rather than of the association's
+    name:
+
+    * ``MANY_TO_ONE`` — many owners to one target; the key goes on the OWNER.
+    * ``ONE_TO_MANY`` — one owner to many targets; the key goes on the TARGET.
+    * ``ONE_TO_ONE``  — key on the owner, with a UNIQUE constraint.
+    * ``MANY_TO_MANY`` — a join table.
+    """
+
     ONE_TO_ONE = "1-1"
+    MANY_TO_ONE = "*-1"
     ONE_TO_MANY = "1-*"
     MANY_TO_MANY = "*-*"
 
@@ -176,15 +197,25 @@ class Route:
 
     Held alongside entities rather than apart from them because the owner's point
     stands -- ports, network and security structure follow from the same model.
-    A route names the entity it exposes, so "which routes can reach the table
-    holding secrets" is a query, not an investigation.
+
+    This carried an `exposes: List[str]` field, documented as naming the entity a
+    route reaches so that "which routes can reach the table holding secrets"
+    would be a query. The builder set it to `[]` on every one of the 80 routes,
+    because a compose Traefik label says nothing about which entity a service's
+    handlers read. So the query returned nothing, always, and the field
+    documented a capability the model did not have. It is removed rather than
+    left empty: a field that can never be populated is the same defect as a check
+    that can never fail, and an empty list is indistinguishable from "this route
+    reaches nothing".
+
+    Route-to-entity reachability needs the handlers, not the routing labels; when
+    something derives it, the field comes back with a source.
     """
 
     path: str
     module: str
     port: Optional[int] = None
     host_rule: str = ""
-    exposes: List[str] = field(default_factory=list)
     public: bool = False
 
 
@@ -259,7 +290,6 @@ class DomainModel:
                     "module": r.module,
                     "port": r.port,
                     "host_rule": r.host_rule,
-                    "exposes": r.exposes,
                     "public": r.public,
                 }
                 for r in self.routes

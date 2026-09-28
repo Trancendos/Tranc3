@@ -8,7 +8,14 @@
 -- set per request, after authenticating:
 --
 --   SET LOCAL trancendos.location = '<Location name>';
---   SET LOCAL trancendos.role     = '<Job Description>';
+--   SET LOCAL trancendos.role     = '<role class>';
+--
+--   The role is a CLASS, not one of the 56 Job Description titles in
+--   module_roles(). 'Location seat' and 'The Ice Box seat' are generic over
+--   every Location, which is what lets one rule cover all 43; no Job
+--   Description string will ever equal them. This header said
+--   '<Job Description>' until 2026-09-28, which made every non-wildcard
+--   policy read as unsatisfiable to anyone setting a real seat title.
 --
 -- LOCAL, so the setting dies with the transaction rather than leaking into the
 -- next request that borrows the same pooled connection. A policy that reads an
@@ -102,7 +109,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS datastore_ci_id_key ON the_citadel.datastore (
 
 -- ── Associations ────────────────────────────────────────
 -- Each Location defines the seats that are its module roles.
-ALTER TABLE the_citadel.location ADD COLUMN IF NOT EXISTS location_has_seats_id BIGINT NOT NULL REFERENCES the_town_hall.role_seat(id);
+ALTER TABLE the_town_hall.role_seat ADD COLUMN IF NOT EXISTS location_has_seats_id BIGINT NOT NULL REFERENCES the_citadel.location(id);
 
 -- Mutable at runtime via the Role Assignment Registry.
 ALTER TABLE the_town_hall.role_seat ADD COLUMN IF NOT EXISTS seat_held_by_ai_id BIGINT REFERENCES the_citadel.ai(id);
@@ -117,24 +124,30 @@ ALTER TABLE the_ice_box.container ADD COLUMN IF NOT EXISTS container_under_juris
 ALTER TABLE the_citadel.datastore ADD COLUMN IF NOT EXISTS datastore_owned_by_id BIGINT REFERENCES the_citadel.location(id);
 
 -- A file-backed store inside a container's writable layer dies with the container unless a volume is mounted. This edge is what makes that answerable per store rather than per service.
-ALTER TABLE the_ice_box.container ADD COLUMN IF NOT EXISTS container_runs_datastore_id BIGINT REFERENCES the_citadel.datastore(id);
+ALTER TABLE the_citadel.datastore ADD COLUMN IF NOT EXISTS container_runs_datastore_id BIGINT REFERENCES the_ice_box.container(id);
 
 -- The dependency graph blast radius is computed over.
 CREATE TABLE IF NOT EXISTS the_citadel.location_location (
-    location_id BIGINT NOT NULL REFERENCES the_citadel.location(id) ON DELETE CASCADE,
-    location_id BIGINT NOT NULL REFERENCES the_citadel.location(id) ON DELETE CASCADE,
-    PRIMARY KEY (location_id, location_id)
+    source_location_id BIGINT NOT NULL REFERENCES the_citadel.location(id) ON DELETE CASCADE,
+    target_location_id BIGINT NOT NULL REFERENCES the_citadel.location(id) ON DELETE CASCADE,
+    PRIMARY KEY (source_location_id, target_location_id)
 );
+ALTER TABLE the_citadel.location_location ENABLE ROW LEVEL SECURITY;
+ALTER TABLE the_citadel.location_location FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS location_location_read ON the_citadel.location_location;
+CREATE POLICY location_location_read ON the_citadel.location_location FOR SELECT USING (true);  -- the graph itself is not sensitive; its endpoints carry their own policies
 
 -- ── Row-level security ──────────────────────────────────
 ALTER TABLE the_citadel.location ENABLE ROW LEVEL SECURITY;
 ALTER TABLE the_citadel.location FORCE ROW LEVEL SECURITY;
 -- The Location register is readable platform-wide.
 -- members: *
+DROP POLICY IF EXISTS location_p0_all ON the_citadel.location;
 CREATE POLICY location_p0_all ON the_citadel.location FOR SELECT USING ((true) AND (true));
 
 -- A Location's own seats may edit its operational fields.
 -- members: primaryFunction, onlineMode, offlineMode, status
+DROP POLICY IF EXISTS location_p1_location_seat ON the_citadel.location;
 CREATE POLICY location_p1_location_seat ON the_citadel.location FOR ALL USING ((current_setting('trancendos.role', true) = 'Location seat') AND (name = current_setting('trancendos.location', true))) WITH CHECK ((current_setting('trancendos.role', true) = 'Location seat') AND (name = current_setting('trancendos.location', true)));
 -- column-level grant (RLS filters rows, not columns):
 -- GRANT SELECT, UPDATE (primary_function, online_mode, offline_mode, status) ON the_citadel.location TO <role>;
@@ -142,10 +155,12 @@ CREATE POLICY location_p1_location_seat ON the_citadel.location FOR ALL USING ((
 ALTER TABLE the_citadel.ai ENABLE ROW LEVEL SECURITY;
 ALTER TABLE the_citadel.ai FORCE ROW LEVEL SECURITY;
 -- members: *
+DROP POLICY IF EXISTS ai_p0_all ON the_citadel.ai;
 CREATE POLICY ai_p0_all ON the_citadel.ai FOR SELECT USING ((true) AND (true));
 
 -- Turing's Hub is the AI creation centre and owns personality assignment.
 -- members: profileRef, baseModel
+DROP POLICY IF EXISTS ai_p1_turing_s_hub_seat ON the_citadel.ai;
 CREATE POLICY ai_p1_turing_s_hub_seat ON the_citadel.ai FOR ALL USING ((current_setting('trancendos.role', true) = 'Turing''s Hub seat') AND (true)) WITH CHECK ((current_setting('trancendos.role', true) = 'Turing''s Hub seat') AND (true));
 -- column-level grant (RLS filters rows, not columns):
 -- GRANT SELECT, UPDATE (profile_ref, base_model) ON the_citadel.ai TO <role>;
@@ -153,35 +168,42 @@ CREATE POLICY ai_p1_turing_s_hub_seat ON the_citadel.ai FOR ALL USING ((current_
 ALTER TABLE the_town_hall.role_seat ENABLE ROW LEVEL SECURITY;
 ALTER TABLE the_town_hall.role_seat FORCE ROW LEVEL SECURITY;
 -- members: *
+DROP POLICY IF EXISTS role_seat_p0_all ON the_town_hall.role_seat;
 CREATE POLICY role_seat_p0_all ON the_town_hall.role_seat FOR SELECT USING ((true) AND (true));
 
 -- Assignment is a governance decision and belongs to the Town Hall.
 -- members: *
+DROP POLICY IF EXISTS role_seat_p1_the_town_hall_seat ON the_town_hall.role_seat;
 CREATE POLICY role_seat_p1_the_town_hall_seat ON the_town_hall.role_seat FOR ALL USING ((current_setting('trancendos.role', true) = 'The Town Hall seat') AND (true)) WITH CHECK ((current_setting('trancendos.role', true) = 'The Town Hall seat') AND (true));
 
 ALTER TABLE the_ice_box.container ENABLE ROW LEVEL SECURITY;
 ALTER TABLE the_ice_box.container FORCE ROW LEVEL SECURITY;
 -- members: service, image, provenance
+DROP POLICY IF EXISTS container_p0_all ON the_ice_box.container;
 CREATE POLICY container_p0_all ON the_ice_box.container FOR SELECT USING ((true) AND (true));
 -- column-level grant (RLS filters rows, not columns):
 -- GRANT SELECT (service, image, provenance) ON the_ice_box.container TO <role>;
 
 -- The custodian of containment may edit every container record.
 -- members: *
+DROP POLICY IF EXISTS container_p1_the_ice_box_seat ON the_ice_box.container;
 CREATE POLICY container_p1_the_ice_box_seat ON the_ice_box.container FOR ALL USING ((current_setting('trancendos.role', true) = 'The Ice Box seat') AND (true)) WITH CHECK ((current_setting('trancendos.role', true) = 'The Ice Box seat') AND (true));
 
 -- A Location sees its own containers in full detail.
 -- members: service, image, sbomRef, ports
-CREATE POLICY container_p2_location_seat ON the_ice_box.container FOR SELECT USING ((current_setting('trancendos.role', true) = 'Location seat') AND (jurisdiction = current_setting('trancendos.location', true)));
+DROP POLICY IF EXISTS container_p2_location_seat ON the_ice_box.container;
+CREATE POLICY container_p2_location_seat ON the_ice_box.container FOR SELECT USING ((current_setting('trancendos.role', true) = 'Location seat') AND (container_under_jurisdiction_of_id IN (SELECT id FROM the_citadel.location WHERE name = current_setting('trancendos.location', true))));
 -- column-level grant (RLS filters rows, not columns):
 -- GRANT SELECT (service, image, sbom_ref, ports) ON the_ice_box.container TO <role>;
 
 ALTER TABLE the_citadel.datastore ENABLE ROW LEVEL SECURITY;
 ALTER TABLE the_citadel.datastore FORCE ROW LEVEL SECURITY;
 -- members: name, engine, fileBacked
+DROP POLICY IF EXISTS datastore_p0_all ON the_citadel.datastore;
 CREATE POLICY datastore_p0_all ON the_citadel.datastore FOR SELECT USING ((true) AND (true));
 -- column-level grant (RLS filters rows, not columns):
 -- GRANT SELECT (name, engine, file_backed) ON the_citadel.datastore TO <role>;
 
 -- members: *
+DROP POLICY IF EXISTS datastore_p1_the_citadel_seat ON the_citadel.datastore;
 CREATE POLICY datastore_p1_the_citadel_seat ON the_citadel.datastore FOR ALL USING ((current_setting('trancendos.role', true) = 'The Citadel seat') AND (true)) WITH CHECK ((current_setting('trancendos.role', true) = 'The Citadel seat') AND (true));
