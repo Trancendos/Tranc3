@@ -133,6 +133,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          # The ledger records wasm32-unknown-unknown for aeonmind/wasm, and the
+          # gate reports a crate BLOCKED when a recorded target is not installed
+          # rather than quietly passing it on the host alone. This action
+          # installs no extra targets by default, so without this the gate would
+          # have been correct and the workflow wrong -- the job would fail for a
+          # missing target rather than for anything about the code.
+          targets: wasm32-unknown-unknown
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
