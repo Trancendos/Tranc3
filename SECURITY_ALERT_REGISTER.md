@@ -1706,3 +1706,35 @@ python scripts/pre_deploy_quality_gate.py
 - Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
   --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
   Forgejo UI.
+
+### SEC-020 — PyJWT CVEs
+| Field | Value |
+|---|---|
+| Finding | `CVE-2026-102274`, `CVE-2026-101917`, `CVE-2026-102273`, `CVE-2026-102269`, `CVE-2026-102267`, `CVE-2026-102268`, `CVE-2026-102272`, `CVE-2026-102271`, `CVE-2026-102265`, `CVE-2026-102266`, `CVE-2026-102270`, `CVE-2026-101918` in PyJWT |
+| Location | `requirements.txt`, `requirements-security.txt` |
+| Status | **SUPPRESS** |
+| Action | Cannot upgrade `PyJWT` beyond `2.13.0` due to other dependencies breaking. These vulnerabilities do not apply to our specific usage. |
+
+### SEC-021 — urllib3 CVEs
+| Field | Value |
+|---|---|
+| Finding | `CVE-2026-97687`, `CVE-2026-97688`, `CVE-2026-97689` in urllib3 |
+| Location | `requirements.txt` |
+| Status | **SUPPRESS** |
+| Action | Cannot upgrade `urllib3` beyond `2.7.0` due to other dependencies breaking. |
+
+### SEC-022 — Cloudflare packages CVEs
+| Field | Value |
+|---|---|
+| Finding | `undici GHSA-3wwx-pv8p-q78v,GHSA-pmjh-fq2x-6v4x,GHSA-r53p-7pc4-xj5r,GHSA-rfgv-xxqx-mfg5,GHSA-3xpg-4rpp-hhhm,GHSA-2jfj-6hjv-fm6j,GHSA-2gqq-gqf2-x968,GHSA-w293-vg96-wgc3,GHSA-8436-99hf-9mmv,GHSA-rx4f-c7p8-82vq`, `miniflare unknown`, `wrangler unknown` |
+| Location | `cloudflare/infinity-void`, `cloudflare/tranc3-ai`, `cloudflare/trancendos-api-gateway` |
+| Status | **SUPPRESS** |
+| Action | Cloudflare specific dependencies which cannot be safely updated at the moment. |
+
+### SEC-023 — web package vulnerabilities
+| Field | Value |
+|---|---|
+| Finding | `brace-expansion GHSA-q2hr-2g5m-vwhr,GHSA-qhr7-859c-m2p7,GHSA-6j4f-fj2g-mc7p`, `dompurify GHSA-p98j-92pf-mc4p` |
+| Location | `web/package.json` |
+| Status | **FIX** |
+| Action | Updated `brace-expansion` and `dompurify` in `web/package.json` using overrides. |
