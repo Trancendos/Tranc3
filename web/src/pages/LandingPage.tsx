@@ -145,7 +145,7 @@ export default function LandingPage() {
               }}
             >
               <span className="relative z-10">Get Started →</span>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity"
                 style={{ background: 'linear-gradient(135deg, #2563eb, #8b5cf6)' }} />
             </button>
             <button
