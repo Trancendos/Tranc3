@@ -334,24 +334,28 @@ class HyperdimensionalVectorOps:
             return 0.0
 
         if metric == LatticeTopology.COSINE:
-            dot = sum(a.data[i] * b.data[i] for i in range(len(a.data)))
-            mag_a = math.sqrt(sum(x * x for x in a.data))
-            mag_b = math.sqrt(sum(x * x for x in b.data))
-            if mag_a == 0 or mag_b == 0:
+            dot = 0.0
+            norm_a_sq = 0.0
+            norm_b_sq = 0.0
+            for x, y in zip(a.data, b.data, strict=False):
+                dot += x * y
+                norm_a_sq += x * x
+                norm_b_sq += y * y
+            if norm_a_sq == 0 or norm_b_sq == 0:
                 return 0.0
-            return dot / (mag_a * mag_b)
+            return dot / math.sqrt(norm_a_sq * norm_b_sq)
 
         elif metric == LatticeTopology.HAMMING:
-            matches = sum(1 for i in range(len(a.data)) if a.data[i] == b.data[i])
+            matches = sum(1 for x, y in zip(a.data, b.data, strict=False) if x == y)
             return matches / len(a.data)
 
         elif metric == LatticeTopology.EUCLIDEAN:
-            dist = math.sqrt(sum((a.data[i] - b.data[i]) ** 2 for i in range(len(a.data))))
+            dist = math.sqrt(sum((x - y) ** 2 for x, y in zip(a.data, b.data, strict=False)))
             max_dist = math.sqrt(len(a.data)) * 2
             return max(0.0, 1.0 - dist / max_dist)
 
         elif metric == LatticeTopology.MANHATTAN:
-            dist = sum(abs(a.data[i] - b.data[i]) for i in range(len(a.data)))
+            dist = sum(abs(x - y) for x, y in zip(a.data, b.data, strict=False))
             max_dist = len(a.data) * 2
             return max(0.0, 1.0 - dist / max_dist)
 
