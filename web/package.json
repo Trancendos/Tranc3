@@ -12,7 +12,7 @@
     },
     "dependencies": {
         "lucide-react": "^1.48.0",
-        "posthog-js": "^1.434.12",
+        "posthog-js": "^1.434.15",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "zustand": "^5.0.15"
@@ -40,7 +40,7 @@
         "@storybook/addon-vitest": "10.6.0",
         "@storybook/react-vite": "10.6.0",
         "@tailwindcss/postcss": "4.3.3",
-        "@types/node": "26.6.2",
+        "@types/node": "26.6.3",
         "@types/react": "18.3.29",
         "@types/react-dom": "18.3.7",
         "@vitejs/plugin-react": "6.1.1",
