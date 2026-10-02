@@ -60,9 +60,19 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
-        run: npm install -g pnpm && pnpm install
+        # --ignore-scripts blocks package lifecycle hooks, the step the recent
+        # npm supply-chain worms (Shai-Hulud, PhantomRaven) moved their payload
+        # into. Verified safe for this tree: the only install scripts in
+        # web/package-lock.json are core-js (a funding banner), fsevents
+        # (macOS-only, inert on Linux runners) and esbuild -- whose platform
+        # binary arrives via optionalDependencies (@esbuild/linux-x64), not via
+        # its install script, so the production build is unaffected. Playwright's
+        # browser download is the explicit step below.
+        run: npm ci --ignore-scripts
 
       - name: TypeScript type check
         run: npx tsc --noEmit
@@ -71,10 +81,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Storybook component + a11y tests
-        run: pnpm run test
+        run: npm run test
 
       - name: Build production bundle
-        run: pnpm run build
+        run: npm run build
         env:
           VITE_API_URL: 'https://api.trancendos.com'
           VITE_ECOSYSTEM_API_URL: 'https://api.trancendos.com'

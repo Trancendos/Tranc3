@@ -24,6 +24,3 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
-## 2024-08-25 - Decorative Elements in Interactive Parents
-**Learning:** When using `group-hover:opacity-100` to hide decorative child elements (like gradients or external link icons) inside naturally focusable parents (like `<button>` or `<a>`), keyboard users cannot see the element when they tab to the parent because the `group-hover` state is not triggered by keyboard focus.
-**Action:** Always pair `group-hover:opacity-100` with `group-focus:opacity-100` on decorative child elements so they are revealed when their naturally focusable parent receives keyboard focus.
