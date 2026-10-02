@@ -7,3 +7,7 @@
 ## 2024-05-27 - [Fast Mean Squared Error Optimization]
 **Learning:** `sum(map(operator.mul, diffs, diffs))` after `diffs = list(map(operator.sub, a, b))` is ~30% faster than `sum((p - t) ** 2 for p, t in zip(a, b))` for computing squared errors in pure Python due to eliminating generator expression overhead.
 **Action:** When calculating sum of squared differences or MSE in pure Python without `numpy`, use `map(operator.sub, ...)` combined with `sum(map(operator.mul, ...))` instead of generator expressions with `zip` and `**2`.
+
+## 2023-10-25 - Mathematical Vector Fused Loop Performance
+**Learning:** For multi-pass mathematical calculations on pure Python lists (like Cosine Similarity computing dot product, norm a, and norm b), a single fused loop using `zip(a, b, strict=False)` significantly outperforms using multiple fast C-optimized `map(operator.mul)` passes because it avoids redundant memory access and iterations over the vectors.
+**Action:** When calculating statistics or distances that require multiple derived values from identical arrays, combine the calculations into a single `zip` loop iteration instead of applying sequential `sum(map(...))` functions.
