@@ -1570,7 +1570,7 @@ services:
       traefik.http.routers.penpot.tls.certresolver: "letsencrypt"
 
   penpot-backend:
-    image: penpotapp/backend:latest@sha256:770b55f6e51bfcee49152b30858ca6a47143256de8d43953a50b952b5c60bb55
+    image: penpotapp/backend:latest@sha256:3b7df71db88d7c478b6a10103acb4108fa86a17a47277de81437de3899959e9e
     container_name: trancendos-penpot-backend
     restart: unless-stopped
     environment:
