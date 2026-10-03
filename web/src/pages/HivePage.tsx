@@ -244,12 +244,12 @@ export default function HivePage() {
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {p.status !== 'active' ? (
-                              <button onClick={() => pipelineAction(p.pipeline_id, 'start')} className="text-emerald-400 hover:text-emerald-300 transition-colors" title="Start">
-                                <Play size={13} />
+                              <button aria-label="Start pipeline" onClick={() => pipelineAction(p.pipeline_id, 'start')} className="text-emerald-400 hover:text-emerald-300 transition-colors" title="Start">
+                                <Play aria-hidden="true" size={13} />
                               </button>
                             ) : (
-                              <button onClick={() => pipelineAction(p.pipeline_id, 'pause')} className="text-amber-400 hover:text-amber-300 transition-colors" title="Pause">
-                                <Pause size={13} />
+                              <button aria-label="Pause pipeline" onClick={() => pipelineAction(p.pipeline_id, 'pause')} className="text-amber-400 hover:text-amber-300 transition-colors" title="Pause">
+                                <Pause aria-hidden="true" size={13} />
                               </button>
                             )}
                           </div>
@@ -282,11 +282,12 @@ export default function HivePage() {
                     <p className="text-xs text-slate-500 mt-0.5">{s.purpose}</p>
                   </div>
                   <button
+                    aria-label="Dissolve swarm"
                     onClick={() => dissolveSwarm(s.swarm_id)}
                     className="text-red-400/60 hover:text-red-400 transition-colors"
                     title="Dissolve swarm"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 aria-hidden="true" size={13} />
                   </button>
                 </div>
                 {s.nodes.length > 0 && (
