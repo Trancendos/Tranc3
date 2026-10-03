@@ -21,7 +21,6 @@ import asyncio
 import json
 import logging
 import math
-import operator
 import os
 import re
 import time
@@ -531,10 +530,16 @@ class EvalSuite:
     @staticmethod
     def _cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
         """Cosine similarity between two float vectors."""
-        # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
-        dot = sum(map(operator.mul, vec_a, vec_b))
-        norm_a = math.sqrt(sum(a * a for a in vec_a))
-        norm_b = math.sqrt(sum(b * b for b in vec_b))
+        # Optimization: fused zip loop avoids redundant iteration over vectors
+        dot = 0.0
+        sq_a = 0.0
+        sq_b = 0.0
+        for x, y in zip(vec_a, vec_b, strict=False):
+            dot += x * y
+            sq_a += x * x
+            sq_b += y * y
+        norm_a = math.sqrt(sq_a)
+        norm_b = math.sqrt(sq_b)
         if norm_a == 0 or norm_b == 0:
             return 0.0
         return dot / (norm_a * norm_b)
