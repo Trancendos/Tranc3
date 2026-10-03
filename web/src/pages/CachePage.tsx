@@ -118,14 +118,14 @@ export default function CachePage() {
             title="Flush all cache"
             className="flex items-center gap-1.5 rounded-lg border border-red-700/50 bg-red-900/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-900/40 transition-colors"
           >
-            <Trash2 size={12} /> Flush All
+            <Trash2 size={12} aria-hidden="true" /> Flush All
           </button>
           <button
             onClick={loadData}
             disabled={loading}
             className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
           >
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} aria-hidden="true" /> Refresh
           </button>
         </div>
       </div>
@@ -169,6 +169,7 @@ export default function CachePage() {
         <input
           type="text"
           placeholder="Filter by prefix…"
+          aria-label="Filter keys by prefix"
           value={pattern}
           onChange={e => setPattern(e.target.value)}
           className="rounded border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-500 w-48"
@@ -219,9 +220,10 @@ export default function CachePage() {
                 <button
                   onClick={() => deleteKey(selectedKey)}
                   title="Delete key"
+                  aria-label="Delete key"
                   className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
                 >
-                  <Trash2 size={11} /> Delete
+                  <Trash2 size={11} aria-hidden="true" /> Delete
                 </button>
               </div>
             )}
