@@ -236,7 +236,7 @@ def collect_dependency_scan(output_dir: Path, dry_run: bool, manifest: dict) -> 
 
     try:
         r = subprocess.run(
-            ["pip-audit", "--format=json", "--no-deps"],
+            [sys.executable, "-m", "pip_audit", "--format=json", "--no-deps"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -249,7 +249,7 @@ def collect_dependency_scan(output_dir: Path, dry_run: bool, manifest: dict) -> 
 
     try:
         r = subprocess.run(
-            ["bandit", "-r", "src/", "workers/", "-f", "json", "-ll"],
+            [sys.executable, "-m", "bandit", "-r", "src/", "workers/", "-f", "json", "-ll"],
             capture_output=True,
             text=True,
             timeout=120,
