@@ -72,7 +72,7 @@ jobs:
         # binary arrives via optionalDependencies (@esbuild/linux-x64), not via
         # its install script, so the production build is unaffected. Playwright's
         # browser download is the explicit step below.
-        run: npm ci --ignore-scripts
+        run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: TypeScript type check
         run: npx tsc --noEmit
