@@ -57,7 +57,7 @@ services:
   # ── Traefik — Reverse Proxy & Load Balancer ──────────────────────────
   # Replaces: Cloudflare routing, CF Load Balancing
   traefik:
-    image: traefik:v3.0@sha256:a208c74fd80a566d4ea376053bff73d31616d7af3f1465a7747b8b89ee34d97e
+    image: traefik:v3.7@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0
     container_name: tranc3-traefik
     <<: *common
     command:
@@ -99,7 +99,7 @@ services:
   # ── Vault — Secrets Management ───────────────────────────────────────
   # Replaces: Cloudflare environment variables, CF Secrets
   vault:
-    image: hashicorp/vault:2.0@sha256:5be49781ecf78bfe775c5309c6a4d9f4e9e040b6c885c99eb2b12fb69855e1a2
+    image: hashicorp/vault:2.1@sha256:47f14a6acb98f48d798a07df7c83f23a6e636e1cf724c5f8ff165cb32667a1e2
     container_name: tranc3-vault
     <<: *common
     command: server -config=/vault/config/vault.hcl
@@ -119,7 +119,7 @@ services:
   # ── Prometheus — Metrics Collection ──────────────────────────────────
   # Replaces: Cloudflare Analytics, CF Worker Analytics
   prometheus:
-    image: prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7
+    image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
     container_name: tranc3-prometheus
     <<: *common
     ports:
@@ -140,7 +140,7 @@ services:
 
   # ── Alertmanager — Alert Routing & Notifications ──────────────────────
   alertmanager:
-    image: prom/alertmanager:v0.27.0@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
+    image: prom/alertmanager:v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
     container_name: tranc3-alertmanager
     <<: *common
     ports:
@@ -160,7 +160,7 @@ services:
 
   # ── OpenTelemetry Collector — Unified Telemetry Pipeline ──────────────
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.96.0@sha256:7ef2a2ff46b9e432321fdd63df104bfeedaf7b4e276950f42c634d0f23521fc4
+    image: otel/opentelemetry-collector-contrib:0.161.0@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
     container_name: tranc3-otel-collector
     <<: *common
     ports:
@@ -179,7 +179,7 @@ services:
   # ── Grafana — Observability Dashboard ────────────────────────────────
   # Replaces: Cloudflare Dashboard, CF Analytics
   grafana:
-    image: grafana/grafana:13.1.6@sha256:d8276d620291d3aaae3e31dde6d63e6807afee49825f04e8aa7392bbe024216f
+    image: grafana/grafana:13.2.2@sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0
     container_name: tranc3-grafana
     <<: *common
     environment:
@@ -295,7 +295,7 @@ services:
   # ── IPFS — Distributed Storage ───────────────────────────────────────
   # Replaces: Cloudflare R2, CF IPFS Gateway
   ipfs:
-    image: ipfs/kubo:v0.28.0@sha256:1f6e4f870bc3d5b90563a9d29fc399c53a16ef9cf6580e1491b7914a6c8e510e
+    image: ipfs/kubo:v0.43.1@sha256:b293923d66e490e70ced64df42ea7a6cf7eac2740e3fb29101df18070fa7be48
     container_name: tranc3-ipfs
     <<: *common
     ports:
@@ -332,7 +332,7 @@ services:
   # JetStream enabled for durable queues (replaces SQLite queue for >1k msg/s).
   # 15MB binary, 1M+ msg/s throughput.
   nats:
-    image: nats:2.10-alpine@sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927
+    image: nats:2.15-alpine@sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4
     container_name: tranc3-nats
     restart: unless-stopped
     command: ["-js", "-sd", "/data", "--http_port", "8222"]
@@ -1948,7 +1948,7 @@ services:
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
   signoz-clickhouse:
-    image: clickhouse/clickhouse-server:26.5.7-alpine@sha256:35b419db86eed71ab1c41c03b4fd1f39be26f41eb38b0866268e2ca162445105
+    image: clickhouse/clickhouse-server:26.9.3-alpine@sha256:7ad5e1f369d243e3d5d3bb1fe926147b251bb14c08cdb833bd421d191d476b9f
     container_name: trancendos-signoz-clickhouse
     environment:
       CLICKHOUSE_DB: signoz_traces
@@ -2588,7 +2588,7 @@ services:
 # Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
 # ═══════════════════════════════════════════════════════════════════════════
   wazuh-manager:
-    image: wazuh/wazuh-manager:4.8.2@sha256:ae4bef121658fe2868914fe20a8ebd25ee6a4378df56b3e59e6e40ec5976e0a0
+    image: wazuh/wazuh-manager:4.14.7@sha256:5883343edf44eaa53450b96bbbfdee5120d668d0abd3ae19e8f3f08625d374d4
     container_name: trancendos-wazuh-manager
     restart: unless-stopped
     environment:
@@ -2607,7 +2607,7 @@ services:
       - tranc3-net
 
   wazuh-dashboard:
-    image: wazuh/wazuh-dashboard:4.8.2@sha256:38891174e822a459e3b21c16ddd633dea68dedcd892241410b5f6bd7a9cecf8a
+    image: wazuh/wazuh-dashboard:4.14.7@sha256:5e0b6016697c5a6cd548b86cec32cd84e9426e69ac73066d033a3e21862e8e38
     container_name: trancendos-wazuh-dashboard
     restart: unless-stopped
     depends_on:
@@ -2630,7 +2630,7 @@ services:
       - "traefik.http.services.wazuh.loadbalancer.server.port=5601"
 
   wazuh-indexer:
-    image: wazuh/wazuh-indexer:4.8.2@sha256:9e9ae4157d71e3f0b6120a93eb6c21aac247a0e962c24732e4f37652276af23b
+    image: wazuh/wazuh-indexer:4.14.7@sha256:855e6f84eb92b0097f190f31dc5390c914ef9ad273a1f6a8adeaeae5e5391c4d
     container_name: trancendos-wazuh-indexer
     restart: unless-stopped
     environment:
@@ -2996,7 +2996,7 @@ services:
   # UI: http://trancendos.com/jaeger  OTLP gRPC: 4317 (internal)
   # Badger local storage, 72h retention. Zero cost.
   jaeger:
-    image: jaegertracing/all-in-one:1.55@sha256:f6b5d09073f14f76873d300f565a6691d815e81bea8e07e1dc3ff67e0596dd4e
+    image: jaegertracing/all-in-one:1.60@sha256:4fd2d70fa347d6a47e79fcb06b1c177e6079f92cba88b083153d56263082135e
     container_name: tranc3-jaeger
     restart: unless-stopped
     environment:
@@ -3084,7 +3084,7 @@ services:
   # ── Blackbox Exporter — HTTP/HTTPS/TCP endpoint probing ──────────────────
   # Prometheus community, Apache 2.0. Probes /health endpoints for all workers.
   blackbox-exporter:
-    image: prom/blackbox-exporter:v0.25.0@sha256:b04a9fef4fa086a02fc7fcd8dcdbc4b7b35cc30cdee860fdc6a19dd8b208d63e
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
     container_name: tranc3-blackbox
     restart: unless-stopped
     command:
@@ -3133,7 +3133,7 @@ services:
   # ── node-exporter — Host OS metrics → Prometheus ─────────────────────────
   # Prometheus community, Apache 2.0. CPU/RAM/disk/network at OS level.
   node-exporter:
-    image: prom/node-exporter:v1.7.0@sha256:4cb2b9019f1757be8482419002cb7afe028fdba35d47958829e4cfeaf6246d80
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
     container_name: tranc3-node-exporter
     restart: unless-stopped
     pid: host
@@ -3180,7 +3180,7 @@ services:
   # published through the Cloudflare tunnel. This container reaches it over the
   # LAN; nothing here exposes it.
   ipmi-exporter:
-    image: prometheuscommunity/ipmi-exporter:v1.9.0@sha256:3e9f80832dee163d77e872934915ddb58b81bbafb4875c25663cfdf8a846e737
+    image: prometheuscommunity/ipmi-exporter:v1.10.1@sha256:0662cadaf268b6718f0f66429047cb23566ab3e4c175f25eaf588416a7b035e8
     container_name: tranc3-ipmi-exporter
     restart: unless-stopped
     command:
