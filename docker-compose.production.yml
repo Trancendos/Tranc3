@@ -237,7 +237,7 @@ services:
   # Scrapes same targets as Prometheus; Grafana talks to both.
   # Query API: http://victoriametrics:8428  (Prometheus-compatible PromQL)
   victoriametrics:
-    image: victoriametrics/victoria-metrics:latest@sha256:6d164540a04f49ba4e696cbdb70f9fee78be1e94b8f2a1292743a0b1ab8275bd
+    image: victoriametrics/victoria-metrics:latest@sha256:5eff7af5341e401471002f58d106d399e614a62f3d240f2dbc21901e49eed5dd
     container_name: tranc3-victoriametrics
     <<: *common
     command:
