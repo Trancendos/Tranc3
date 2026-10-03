@@ -119,7 +119,7 @@ services:
   # ── Prometheus — Metrics Collection ──────────────────────────────────
   # Replaces: Cloudflare Analytics, CF Worker Analytics
   prometheus:
-    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
+    image: prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7
     container_name: tranc3-prometheus
     <<: *common
     ports:
@@ -179,7 +179,7 @@ services:
   # ── Grafana — Observability Dashboard ────────────────────────────────
   # Replaces: Cloudflare Dashboard, CF Analytics
   grafana:
-    image: grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043
+    image: grafana/grafana:13.1.6@sha256:d8276d620291d3aaae3e31dde6d63e6807afee49825f04e8aa7392bbe024216f
     container_name: tranc3-grafana
     <<: *common
     environment:
@@ -203,7 +203,7 @@ services:
   # ── Loki — Log Aggregation ───────────────────────────────────────────
   # Replaces: Cloudflare Logs, CF Logpush
   loki:
-    image: grafana/loki:3.7.7@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500
+    image: grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
     container_name: tranc3-loki
     <<: *common
     ports:
@@ -2492,7 +2492,7 @@ services:
 # Default creds: admin/admin — override via AIRFLOW_USER / AIRFLOW_PASS
 # ═══════════════════════════════════════════════════════════════════════════
   airflow:
-    image: apache/airflow:3.3.1@sha256:0c4bcc0370e526de1b7892a3bf4343d260c6c82359c66f77155b53cd773d6339
+    image: apache/airflow:3.3.2@sha256:e9982ad3f49a60418622e1baf80c34b0daf3fa5091a336cb5ee61f0cdd189371
     container_name: trancendos-airflow
     restart: unless-stopped
     entrypoint: >
