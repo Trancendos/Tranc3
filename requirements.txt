@@ -114,7 +114,7 @@ PyJWT==2.13.0
 idna==3.19
 # urllib3: fixes PYSEC-2026-141 (header injection), PYSEC-2026-142 (proxy auth bypass)
 # Transitive via requests, httpx — pinned explicitly to prevent downgrade.
-urllib3==2.7.0
+urllib3==2.8.0
 
 # === Testing ===
 # Fixes: CVE-2025-71176 (tempfile race condition)
