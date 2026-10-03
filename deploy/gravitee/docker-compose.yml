@@ -5,7 +5,7 @@ version: "3.8"
 
 services:
   gravitee-gateway:
-    image: graviteeio/apim-gateway:4@sha256:eba91265410e36a7a952ab583c0722458c869e4f8aa50d196e849447a10ce52b
+    image: graviteeio/apim-gateway:4@sha256:b3e807fc7869b40627226dee717130623d73cbb3b4ae9f07b0d674bd5b2874c6
     container_name: api-marketplace-gateway
     restart: unless-stopped
     ports:
