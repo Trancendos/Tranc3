@@ -26,7 +26,7 @@ services:
       - "traefik.http.services.gravitee-gw.loadbalancer.server.port=8082"
 
   gravitee-management-api:
-    image: graviteeio/apim-management-api:4@sha256:3f915bf04eea3b9ddd32abb481624f8adc4ce51f30843a95597b1038955d740e
+    image: graviteeio/apim-management-api:4@sha256:d46f47c419c9ceab1a6d39a999aa788cde49b46add35deab3faf7b9f3bfd2933
     container_name: api-marketplace-mgmt
     restart: unless-stopped
     ports:
