@@ -226,13 +226,23 @@ class WorkerIntelligence:
             return 50.0, 0.0, 0.0, 0.0, 1.0
 
         total = len(samples)
-        errors = sum(1 for s in samples if s.is_error)
-        unavail = sum(1 for s in samples if not s.is_available)
+        errors = 0
+        unavail = 0
+        sum_lat = 0.0
+        latencies = []
+        for s in samples:
+            if s.is_error:
+                errors += 1
+            if not s.is_available:
+                unavail += 1
+            lat = s.response_time_ms
+            sum_lat += lat
+            latencies.append(lat)
+
         error_rate = errors / total
         availability = 1.0 - (unavail / total)
-        latencies = [s.response_time_ms for s in samples]
-        avg_ms = sum(latencies) / len(latencies)
-        p95_ms = sorted(latencies)[int(len(latencies) * 0.95)]
+        avg_ms = sum_lat / total
+        p95_ms = sorted(latencies)[int(total * 0.95)]
 
         # Latency score: 1.0 at target, approaches 0 at ceiling
         if avg_ms <= self._target_ms:
@@ -285,12 +295,23 @@ class WorkerIntelligence:
         n = len(points)
         if n < 2:
             return 0.0
-        xs = [p[0] for p in points]
-        ys = [p[1] for p in points]
-        mx = sum(xs) / n
-        my = sum(ys) / n
-        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
-        den = sum((x - mx) ** 2 for x in xs)
+
+        sum_x = 0.0
+        sum_y = 0.0
+        for x, y in points:
+            sum_x += x
+            sum_y += y
+
+        mx = sum_x / n
+        my = sum_y / n
+
+        num = 0.0
+        den = 0.0
+        for x, y in points:
+            x_diff = x - mx
+            num += x_diff * (y - my)
+            den += x_diff * x_diff
+
         return num / den if den != 0 else 0.0
 
     def _get_cb_state(self, state: _WorkerState) -> str:

@@ -235,8 +235,8 @@ def collect_dependency_scan(output_dir: Path, dry_run: bool, manifest: dict) -> 
     bandit_result: dict = {"skipped": True, "reason": "bandit not available"}
 
     try:
-        r = subprocess.run(
-            ["pip-audit", "--format=json", "--no-deps"],
+        r = subprocess.run(  # nosec B603 - sys.executable is safe
+            [sys.executable, "-m", "pip_audit", "--format=json", "--no-deps"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -248,8 +248,8 @@ def collect_dependency_scan(output_dir: Path, dry_run: bool, manifest: dict) -> 
         pip_result = {"skipped": True, "reason": str(exc)}
 
     try:
-        r = subprocess.run(
-            ["bandit", "-r", "src/", "workers/", "-f", "json", "-ll"],
+        r = subprocess.run(  # nosec B603 - sys.executable is safe
+            [sys.executable, "-m", "bandit", "-r", "src/", "workers/", "-f", "json", "-ll"],
             capture_output=True,
             text=True,
             timeout=120,
