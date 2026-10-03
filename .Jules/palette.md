@@ -24,3 +24,7 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
+
+## 2024-05-19 - Safeguarding Destructive Actions
+**Learning:** Found a pattern across multiple shared UI components (`document-card.tsx`, `workflow-card.tsx`, `DigitalGridPage.tsx`) where destructive actions (like delete and cancel) lacked confirmation dialogs, risking accidental data loss for users.
+**Action:** Consistently enforce `window.confirm` wrappers on all destructive `onClick` handlers across the application's components to prevent accidents and improve overall user confidence. Also, ensure focus-visible styles are applied for a11y.
