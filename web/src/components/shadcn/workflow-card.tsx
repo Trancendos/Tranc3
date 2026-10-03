@@ -115,7 +115,7 @@ export function WorkflowCard({
         )}
         {onDelete && (
           <button
-            onClick={() => onDelete(workflowId)}
+            onClick={() => { if (window.confirm(`Are you sure you want to delete ${name}?`)) onDelete(workflowId) }}
             className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 focus-visible:ring-offset-card"
             aria-label={`Delete ${name}`}
           >
