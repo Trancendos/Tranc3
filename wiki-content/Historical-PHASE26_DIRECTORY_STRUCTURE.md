@@ -45,6 +45,8 @@ Tranc3/
 │   │   └── AI_DEFINITIONS_DICTIONARY.md  # Canonical AI/Agent/Bot hierarchy
 │   │
 │   ├── rust/                         # Rust Core Crate (PyO3)
+│   │   ├── .cargo/
+│   │   │   └── config.toml          # Cargo config: wasm32 getrandom backend
 │   │   ├── Cargo.toml               # Crate config: aeonmind-core v0.1.0
 │   │   └── src/
 │   │       ├── lib.rs               # Tier enum, SentinelChannel, EntityType
