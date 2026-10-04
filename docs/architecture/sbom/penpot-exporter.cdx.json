@@ -8,7 +8,7 @@
       "type": "container",
       "name": "penpot-exporter",
       "bom-ref": "CI-CT-penpot-exporter",
-      "version": "penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8"
+      "version": "penpotapp/exporter:latest@sha256:3b6f9d808c777908e4f4e290e91458ec747678a7994e39125e4f3af4ef70ba9f"
     },
     "properties": [
       {
