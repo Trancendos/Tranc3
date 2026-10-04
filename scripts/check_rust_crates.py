@@ -286,14 +286,27 @@ def _identity(diagnostic) -> str:
 
 
 def _fingerprint(diagnostics) -> List[str]:
-    """Every diagnostic's identity, not just the first one's.
+    """The distinct error identities a crate emits -- a set, not a multiset.
 
-    Fingerprinting only the first error let a recorded-broken crate acquire new
-    errors and still pass, because its first one had not moved -- a gate that
-    reports a crate as unchanged while it gets materially worse. Sorted so the
-    comparison does not depend on the order cargo happens to emit them, and a
-    list rather than a set so gaining a second instance of the same error still
-    registers.
+    Fingerprinting only the first error let a recorded-broken crate acquire
+    new errors and still pass. But counting them does not work either, and CI
+    demonstrated that rather than my reasoning: `nsa_broker` reported
+    [CHANGED] between rustc 1.94.1 locally and the runner's newer stable, with
+    the same primary E0433 at the same line. rustc's error *recovery* differs
+    between releases, so the number of consequent errors a single root cause
+    produces is a property of the compiler, not of the code.
+
+    So the assertion is the set of distinct identities. A crate that acquires
+    a new KIND of failure is reported; one whose existing failure cascades
+    into a different number of follow-on errors is not.
+
+    What this deliberately does not catch, stated rather than left implicit:
+    a crate gaining another instance of an error code it already has. That is
+    a real gap. It is the narrower one, because the alternative fails this
+    gate on nine crates at once on every rustc release -- and a gate that
+    fails for reasons unrelated to what it measures is the one that gets
+    `|| true` attached to it, which is the defect this whole file exists to
+    stop repeating.
     """
     if diagnostics is None:
         return []
@@ -304,7 +317,7 @@ def _fingerprint(diagnostics) -> List[str]:
         # [LEDGER] finding waiting one function away, not as a TypeError
         # traceback from inside the comparison.
         return [_identity(diagnostics)]
-    return sorted(_identity(d) for d in diagnostics)
+    return sorted({_identity(d) for d in diagnostics})
 
 
 def _classify(stderr: str, returncode: int) -> tuple:

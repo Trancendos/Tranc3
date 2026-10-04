@@ -235,12 +235,33 @@ def test_the_same_error_set_in_a_different_order_is_not_a_change():
     assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
 
 
-def test_a_second_instance_of_the_same_error_is_a_change():
-    """A list, not a set: gaining another E0599 is still getting worse."""
+def test_a_repeated_error_code_is_not_a_change_and_this_is_a_known_gap():
+    """rustc's cascade count is the compiler's behaviour, not the code's.
+
+    This test replaces one I wrote asserting the opposite. CI disproved it:
+    `nsa_broker` reported [CHANGED] between rustc 1.94.1 and the runner's
+    newer stable with the same primary E0433 at the same line, because the
+    number of consequent errors a root cause produces differs by release.
+
+    The gap is real and recorded here rather than left implicit: a crate can
+    gain another instance of a code it already has and pass.
+    """
     one = "src/a.rs:1:1: error[E0599]: no method named `x`"
     recorded = {"status": gate.BROKEN, "reason": one, "errors": gate._fingerprint([one])}
     measured = gate.Measurement(
         status=gate.BROKEN, reason=one, diagnostics=[one, one.replace("1:1", "9:9")]
+    )
+    assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
+
+
+def test_a_new_kind_of_error_alongside_a_repeated_one_is_a_change():
+    """The signal that survives: a code the crate did not emit before."""
+    one = "src/a.rs:1:1: error[E0599]: no method named `x`"
+    recorded = {"status": gate.BROKEN, "reason": one, "errors": gate._fingerprint([one])}
+    measured = gate.Measurement(
+        status=gate.BROKEN,
+        reason=one,
+        diagnostics=[one, one, "src/b.rs:2:2: error[E0432]: unresolved import"],
     )
     failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
     assert len(failures) == 1

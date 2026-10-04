@@ -199,6 +199,30 @@ Baseline restores to rc=0 in every case, with a clean working tree. Both modes
 pass today and report the same first errors: `locked` and `unlocked` agree,
 which is the state the weekly run exists to notice a departure from.
 
+## What this gate does not catch
+
+Stated rather than left implicit, because a control's blind spots are the
+part people most need told.
+
+**A repeated error code.** The comparison asserts the *set* of distinct error
+identities a crate emits, so a recorded-broken crate can gain another instance
+of a code it already has without reporting [CHANGED]. Counting them was tried
+and CI disproved it: `src/nanoservices/nsa_broker` reported [CHANGED] between
+rustc 1.94.1 locally and the runner's newer stable, with the same primary
+E0433 at the same line, because rustc's error *recovery* differs between
+releases — the number of consequent errors one root cause produces is a
+property of the compiler, not of the code. Keying on the count would fail this
+gate on nine crates at once on every rustc release, and a gate that fails for
+reasons unrelated to what it measures is the one that gets `|| true` attached.
+
+**Prose and location.** Neither is compared, for the same reason: rustc
+rewords its messages between releases, and a comment inserted above a failing
+line moves it. Both are still recorded and printed, because a human reading a
+[CHANGED] row needs them to decide which side is right.
+
+**Runtime behaviour.** This gate compiles; it does not run. A crate that
+compiles can still be wrong.
+
 ## 6. What is not fixed here
 
 The three broken crates are recorded, not repaired. Each needs its own change,
