@@ -1,0 +1,3 @@
+🛡️ Sentinel: [CRITICAL] Fix sandbox escape vulnerability in execute_code sandbox
+
+Removed `dir`, `getattr`, and `type` from the `_SAFE_BUILTINS` list in `src/mcp/tools.py` to prevent sandbox escape vulnerabilities and Arbitrary Code Execution (ACE). Also fixed numpy dependency error in tests.
