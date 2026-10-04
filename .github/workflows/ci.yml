@@ -293,6 +293,12 @@ jobs:
       # routine change nobody would think to mirror into a CMDB, and those are
       # exactly the changes that must not go missing from one. A stale register
       # fails here rather than quietly describing an estate that has moved on.
+      # A script a test imports must not exit on import: SystemExit during
+      # collection is an INTERNALERROR, which abandons the whole pytest run.
+      # That is how one missing dependency took `main` red for six days.
+      - name: Scripts imported by tests do not exit on import
+        run: python scripts/check_importable_scripts.py
+
       - name: CI register is current
         run: python scripts/build_ci_register.py --check
 
@@ -560,11 +566,20 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      # No `|| true`. pip resolves a requirements file atomically: one
+      # unsatisfiable pin installs NOTHING from that file. With the
+      # suppression, `numpy==2.5.3` -- which requires Python >=3.12 while
+      # every job here pins 3.11 -- made this step install none of
+      # requirements.txt and still report success. PyYAML's absence then
+      # aborted pytest collection, so the suite below ran zero tests and
+      # `main` went red for six days on a dependency bump nothing reported.
+      # An install that cannot fail is the same defect as a test that cannot
+      # fail, one step earlier in the job.
       - name: Install dependencies
         run: |
-          pip install -r requirements-test.txt || true
-          pip install -r requirements.txt || true
-          pip install pytest pytest-asyncio pytest-cov || true
+          pip install -r requirements-test.txt
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
 
       # Coverage is produced here rather than in a second workflow. `codecov.yml`
       # ran the whole suite again, on every PR and every push to main, purely to
