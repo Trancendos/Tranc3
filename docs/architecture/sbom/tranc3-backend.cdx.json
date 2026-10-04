@@ -492,37 +492,37 @@
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-fastapi",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
-      "version": "0.65b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b0",
+      "version": "0.66b0"
     },
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-httpx",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-httpx@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-httpx@0.65b0",
-      "version": "0.65b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-httpx@0.66b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-httpx@0.66b0",
+      "version": "0.66b0"
     },
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-sqlalchemy",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-sqlalchemy@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-sqlalchemy@0.65b0",
-      "version": "0.65b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-sqlalchemy@0.66b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-sqlalchemy@0.66b0",
+      "version": "0.66b0"
     },
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-redis",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-redis@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-redis@0.65b0",
-      "version": "0.65b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-redis@0.66b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-redis@0.66b0",
+      "version": "0.66b0"
     },
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-aiohttp-client",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-aiohttp-client@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-aiohttp-client@0.65b0",
-      "version": "0.65b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-aiohttp-client@0.66b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-aiohttp-client@0.66b0",
+      "version": "0.66b0"
     },
     {
       "type": "library",
