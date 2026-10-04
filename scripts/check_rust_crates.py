@@ -130,6 +130,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess  # noqa: S404 - invoking cargo is the entire point of this check
 import sys
@@ -225,6 +226,43 @@ def _crate_roots() -> List[str]:
     return sorted({root.relative_to(REPO).as_posix() for root in roots})
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+# `file:line:col: error[CODE]` -- everything up to and including the code.
+_DIAGNOSTIC_IDENTITY = re.compile(r"^(.*?error\[E\d+\])")
+
+
+def _normalise(line: str) -> str:
+    """Strip the colour the workflow asks cargo for before comparing text.
+
+    `rust.yml` sets `CARGO_TERM_COLOR: always`, so on CI every diagnostic
+    arrives wrapped in SGR escapes while the ledger holds plain text. The two
+    then differ on every run for a reason that has nothing to do with whether
+    the crate compiles -- a gate that fails for a reason unrelated to what it
+    measures is noise, and noise is what `|| true` gets attached to.
+    """
+    return _ANSI.sub("", line).strip()
+
+
+def _identity(reason: Optional[str]) -> Optional[str]:
+    """The part of a diagnostic that is the compiler's, not the compiler's prose.
+
+    rustc rewords its own messages between releases: the same unresolved
+    `hyper::util` reads `failed to resolve: could not find util in hyper` on
+    one toolchain and `cannot find util in hyper` on the next. Keying
+    [CHANGED] on that wording would turn every rustc release into a failure of
+    this gate on nine crates at once -- again, a failure unrelated to what is
+    being measured. The location and the error code are the stable identity of
+    a diagnostic, so that is what is compared; the prose is still recorded and
+    still printed, because it is what a human reads, but it is context rather
+    than the assertion.
+    """
+    if not reason:
+        return reason
+    match = _DIAGNOSTIC_IDENTITY.match(reason)
+    return match.group(1) if match else reason
+
+
 def _classify(stderr: str, returncode: int) -> tuple:
     """A compile failure and a failure to compile at all are not the same thing."""
     # `--message-format short` prints a compiler diagnostic as
@@ -235,9 +273,9 @@ def _classify(stderr: str, returncode: int) -> tuple:
     # another. That would have defeated the [CHANGED] branch below on the day
     # it was added.
     diagnostics = [
-        line.strip()
-        for line in stderr.splitlines()
-        if line.strip().startswith("error") or "error[" in line
+        line
+        for line in (_normalise(raw) for raw in stderr.splitlines())
+        if line.startswith("error") or "error[" in line
     ]
     for line in diagnostics:
         if "error[" in line:
@@ -411,7 +449,9 @@ def _compare(measured: dict, ledger: dict) -> List[str]:
                 f"        (--write-ledger) so the next regression cannot hide under\n"
                 f"        a stale entry."
             )
-        elif recorded["status"] == BROKEN and result.reason != recorded.get("reason"):
+        elif recorded["status"] == BROKEN and _identity(result.reason) != _identity(
+            recorded.get("reason")
+        ):
             failures.append(
                 f"  [CHANGED] {directory}\n"
                 f"        Still broken, but failing differently. Without this a crate\n"
