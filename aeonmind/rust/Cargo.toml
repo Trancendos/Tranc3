@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 pyo3 = { version = "0.29", features = ["extension-module"], optional = true }
 ndarray = "0.17"
 ndarray-rand = "0.16"
-rand = "0.9"
+rand = "0.10"
 num-complex = "0.4"
 serde = { version = "1", features = ["derive"] }
 rayon = "1.10"
@@ -29,7 +29,7 @@ tracing = "0.1"
 # older than the bump; only the mechanism for closing it changed.) The matching
 # `--cfg getrandom_backend="wasm_js"` lives in .cargo/config.toml, scoped to
 # this target so host builds are untouched.
-getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["console"] }
 serde-wasm-bindgen = "0.6"
