@@ -74,7 +74,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
- "cpufeatures 0.3.1",
+ "cpufeatures",
  "rand_core",
 ]
 
@@ -445,7 +445,7 @@ dependencies = [
  "base64",
  "hex",
  "hkdf",
- "hmac 0.12.1",
+ "hmac 0.13.0",
  "pbkdf2",
  "pyo3",
  "rand",
