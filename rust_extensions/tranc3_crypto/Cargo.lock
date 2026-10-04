@@ -445,7 +445,7 @@ dependencies = [
  "base64",
  "hex",
  "hkdf",
- "hmac 0.12.1",
+ "hmac 0.13.0",
  "pbkdf2",
  "pyo3",
  "rand",
