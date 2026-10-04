@@ -9,7 +9,6 @@
 //!   Agent = Lower-level autonomous AI (Tier 4)
 //!   Bot   = Stateless service worker/function (Tier 5)
 
-use rand::Rng;
 use wasm_bindgen::prelude::*;
 
 // ── Scoring Weights ─────────────────────────────────────────────────────────
