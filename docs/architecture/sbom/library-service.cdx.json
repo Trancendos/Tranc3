@@ -84,9 +84,9 @@
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-fastapi",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.65b0",
-      "version": "0.65b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b0",
+      "version": "0.66b0"
     },
     {
       "type": "library",
