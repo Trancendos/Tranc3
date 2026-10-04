@@ -129,8 +129,16 @@ jobs:
   crates:
     name: Every Rust crate compiles, or is recorded as not
     runs-on: ubuntu-latest
+    # cargo runs the build scripts of every resolved dependency after
+    # checkout, and this job never pushes. The sibling rust-nanoservice.yml
+    # hardens exactly this scenario and this job had neither half of it:
+    # no permissions block at all, and a checkout that persists credentials.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:

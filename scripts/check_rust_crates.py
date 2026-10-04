@@ -177,6 +177,10 @@ class Measurement:
     reason: str = ""
     lock_rewritten: bool = False
     targets: List[str] = field(default_factory=list)
+    # Every diagnostic, not just the one shown. `reason` is what a human reads;
+    # this is what the comparison asserts, because a crate that gains errors
+    # while its first one holds still has got materially worse.
+    diagnostics: List[str] = field(default_factory=list)
 
 
 def _manifests() -> List[Path]:
@@ -229,7 +233,8 @@ def _crate_roots() -> List[str]:
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 # `file:line:col: error[CODE]` -- everything up to and including the code.
-_DIAGNOSTIC_IDENTITY = re.compile(r"^(.*?error\[E\d+\])")
+_ERROR_CODE = re.compile(r"error\[(E\d+)\]")
+_TYPE_MISMATCH = re.compile(r"\bexpected `([^`]+)`, found `([^`]+)`")
 
 
 def _normalise(line: str) -> str:
@@ -244,23 +249,62 @@ def _normalise(line: str) -> str:
     return _ANSI.sub("", line).strip()
 
 
-def _identity(reason: Optional[str]) -> Optional[str]:
-    """The part of a diagnostic that is the compiler's, not the compiler's prose.
+def _identity(diagnostic) -> str:
+    """One diagnostic's stable identity: its error code, and its types for E0308.
 
-    rustc rewords its own messages between releases: the same unresolved
-    `hyper::util` reads `failed to resolve: could not find util in hyper` on
-    one toolchain and `cannot find util in hyper` on the next. Keying
-    [CHANGED] on that wording would turn every rustc release into a failure of
-    this gate on nine crates at once -- again, a failure unrelated to what is
-    being measured. The location and the error code are the stable identity of
-    a diagnostic, so that is what is compared; the prose is still recorded and
-    still printed, because it is what a human reads, but it is context rather
-    than the assertion.
+    Three things must all be true and they pull against each other.
+
+    rustc rewords its own prose between releases -- the same unresolved
+    `hyper::util` reads `failed to resolve: could not find util in hyper` on one
+    toolchain and `cannot find util in hyper` on the next -- so the prose cannot
+    be the assertion, or every rustc release fails this gate on nine crates at
+    once for a reason unrelated to whether anything compiles.
+
+    The location cannot be the assertion either. Keyed on `file:line:col`, a
+    comment inserted above the first failing line of a recorded-broken crate
+    trips [CHANGED] with character-identical error text, so every PR that so
+    much as touches such a crate demands a ledger refresh.
+
+    But the code alone is not enough: a crate can keep failing at the same place
+    with a different type mismatch. E0308 therefore carries its operands, which
+    are the compiler's own words for what actually differs.
     """
-    if not reason:
-        return reason
-    match = _DIAGNOSTIC_IDENTITY.match(reason)
-    return match.group(1) if match else reason
+    if not isinstance(diagnostic, str):
+        # A ledger `reason:` of the wrong type reached re.match here and raised
+        # an unhandled TypeError, so the gate died with a traceback instead of
+        # reporting the [LEDGER] finding that was waiting one function away.
+        return repr(diagnostic)
+    match = _ERROR_CODE.search(diagnostic)
+    if not match:
+        return diagnostic.strip()
+    code = match.group(1)
+    if code == "E0308":
+        operands = _TYPE_MISMATCH.search(diagnostic)
+        if operands:
+            return f"E0308(expected={operands.group(1)}, found={operands.group(2)})"
+    return code
+
+
+def _fingerprint(diagnostics) -> List[str]:
+    """Every diagnostic's identity, not just the first one's.
+
+    Fingerprinting only the first error let a recorded-broken crate acquire new
+    errors and still pass, because its first one had not moved -- a gate that
+    reports a crate as unchanged while it gets materially worse. Sorted so the
+    comparison does not depend on the order cargo happens to emit them, and a
+    list rather than a set so gaining a second instance of the same error still
+    registers.
+    """
+    if diagnostics is None:
+        return []
+    if isinstance(diagnostics, str):  # a ledger written before this field existed
+        return [_identity(diagnostics)]
+    if not isinstance(diagnostics, (list, tuple)):
+        # A ledger `reason:`/`errors:` of the wrong type must surface as the
+        # [LEDGER] finding waiting one function away, not as a TypeError
+        # traceback from inside the comparison.
+        return [_identity(diagnostics)]
+    return sorted(_identity(d) for d in diagnostics)
 
 
 def _classify(stderr: str, returncode: int) -> tuple:
@@ -277,15 +321,15 @@ def _classify(stderr: str, returncode: int) -> tuple:
         for line in (_normalise(raw) for raw in stderr.splitlines())
         if line.startswith("error") or "error[" in line
     ]
-    for line in diagnostics:
-        if "error[" in line:
-            return BROKEN, line
+    coded = [line for line in diagnostics if "error[" in line]
+    if coded:
+        return BROKEN, coded[0], coded
     for line in diagnostics:
         if any(marker in line.lower() for marker in _BLOCKED_MARKERS):
-            return BLOCKED, line
+            return BLOCKED, line, [line]
     if diagnostics:
-        return BROKEN, diagnostics[0]
-    return BLOCKED, f"cargo exited {returncode} with no diagnostic"
+        return BROKEN, diagnostics[0], diagnostics
+    return BLOCKED, f"cargo exited {returncode} with no diagnostic", []
 
 
 def _run_check(root: Path, target: Optional[str]) -> tuple:
@@ -344,8 +388,8 @@ def _measure_one(directory: str, *, unlocked: bool, targets: List[str]) -> Measu
             for target in [None, *targets]:
                 code, stderr = _run_check(work, target)
                 if code != 0:
-                    status, reason = _classify(stderr, code)
-                    return Measurement(status, reason, targets=targets)
+                    status, reason, diagnostics = _classify(stderr, code)
+                    return Measurement(status, reason, targets=targets, diagnostics=diagnostics)
         return Measurement(OK, targets=targets)
 
     lock = source / "Cargo.lock"
@@ -354,9 +398,15 @@ def _measure_one(directory: str, *, unlocked: bool, targets: List[str]) -> Measu
         for target in [None, *targets]:
             code, stderr = _run_check(source, target)
             if code != 0:
-                status, reason = _classify(stderr, code)
+                status, reason, diagnostics = _classify(stderr, code)
                 rewritten = saved is not None and lock.is_file() and lock.read_bytes() != saved
-                return Measurement(status, reason, lock_rewritten=rewritten, targets=targets)
+                return Measurement(
+                    status,
+                    reason,
+                    lock_rewritten=rewritten,
+                    targets=targets,
+                    diagnostics=diagnostics,
+                )
         rewritten = saved is not None and lock.is_file() and lock.read_bytes() != saved
         return Measurement(OK, lock_rewritten=rewritten, targets=targets)
     finally:
@@ -402,6 +452,8 @@ def _as_entry(measurement: Measurement) -> dict:
         entry["reason"] = measurement.reason
     if measurement.targets:
         entry["targets"] = measurement.targets
+    if measurement.diagnostics:
+        entry["errors"] = _fingerprint(measurement.diagnostics)
     return entry
 
 
@@ -449,9 +501,9 @@ def _compare(measured: dict, ledger: dict) -> List[str]:
                 f"        (--write-ledger) so the next regression cannot hide under\n"
                 f"        a stale entry."
             )
-        elif recorded["status"] == BROKEN and _identity(result.reason) != _identity(
-            recorded.get("reason")
-        ):
+        elif recorded["status"] == BROKEN and _fingerprint(
+            result.diagnostics or result.reason
+        ) != _fingerprint(recorded.get("errors") or recorded.get("reason")):
             failures.append(
                 f"  [CHANGED] {directory}\n"
                 f"        Still broken, but failing differently. Without this a crate\n"
@@ -494,10 +546,31 @@ def main() -> int:
             print(f"Refusing to record a run that could not compile: {blocked}")
             return 1
         LEDGER.parent.mkdir(parents=True, exist_ok=True)
+        # Keep whatever preamble the committed ledger carries. The generated
+        # header used to overwrite it, and the file's hand-written explanation
+        # of why aeonmind/rust must NOT record a wasm target (pyo3-ffi's build
+        # script needs an interpreter for the target) was the context a future
+        # maintainer needs to not walk into an unfixable BLOCKED loop. The
+        # gate's own failure text tells authors to run --write-ledger, so the
+        # first fix would have destroyed it.
+        preamble = ""
+        if LEDGER.is_file():
+            kept = []
+            for line in LEDGER.read_text(encoding="utf-8").splitlines():
+                if not line.startswith("#"):
+                    break
+                kept.append(line)
+            if kept:
+                preamble = "\n".join(kept) + "\n"
+        if not preamble:
+            preamble = (
+                "# Generated by scripts/check_rust_crates.py --write-ledger.\n"
+                "# Every Cargo crate in the tree, and whether it compiles. See the\n"
+                "# script's docstring for why a crate may be recorded as broken.\n"
+            )
+        LEDGER.parent.mkdir(parents=True, exist_ok=True)
         LEDGER.write_text(
-            "# Generated by scripts/check_rust_crates.py --write-ledger.\n"
-            "# Every Cargo crate in the tree, and whether it compiles. See the\n"
-            "# script's docstring for why a crate may be recorded as broken.\n"
+            preamble
             + yaml.safe_dump(
                 {"crates": {d: _as_entry(m) for d, m in measured.items()}},
                 sort_keys=True,

@@ -68,7 +68,7 @@ ambiguous `wrap`) and one `aes_gcm::aead::OsRng` that aes-gcm 0.11 no longer
 re-exports.
 
 The shim catches the import error and falls back to Python `cryptography` with
-a **debug-level** log line. That fallback is why nobody noticed: a component
+an **info-level** log line. That fallback is why nobody noticed: a component
 that cannot be built reads as merely not installed. It is the same pattern as a
 sensor that reports clean because it cannot see — `docs/governance/IMMUNE-SYSTEM.md`
 names it, and this is an instance of it in the crypto path.
@@ -91,8 +91,10 @@ A dependency bot is only as good as the build it feeds. The gate comes first.
 ## 5. The gate
 
 `scripts/check_rust_crates.py` discovers every crate root in the tree —
-excluding `target/`, `node_modules/` and nested manifests — compiles each, and
-compares the result against `config/estate/rust_crate_status.yaml`. It fails on:
+excluding `target/` and `node_modules/`, and excluding a nested manifest only
+when `cargo metadata` shows another root already covers it as a workspace
+member (the membership check described below) — compiles each, and compares
+the result against `config/estate/rust_crate_status.yaml`. It fails on:
 
 - a crate recorded `ok` that no longer compiles,
 - a crate recorded `broken` that now compiles, so a fix cannot land without
@@ -208,7 +210,7 @@ and they are independent:
   errors, which need a reading of what the code meant to do.
 - `rust_extensions/tranc3_crypto` — a pyo3 0.29 migration and one aes-gcm 0.11
   import. Until it lands, `src/security/rust_crypto.py` is always on its Python
-  fallback, and its debug-level log should be raised to a warning so that fact
+  fallback, and its info-level log should be raised to a warning so that fact
   is visible at ordinary log levels.
 
 Landing any of them requires refreshing the ledger in the same change, which is

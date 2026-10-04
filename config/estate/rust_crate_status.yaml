@@ -17,18 +17,54 @@ crates:
     targets:
     - wasm32-unknown-unknown
   rust_extensions/tranc3_crypto:
+    errors:
+    - E0034
+    - E0034
+    - E0034
+    - E0034
+    - E0034
+    - E0425
+    - E0425
+    - E0425
+    - E0425
+    - E0425
+    - E0432
+    - E0432
+    - E0576
+    - E0599
+    - E0599
+    - E0599
+    - E0599
+    - E0599
     reason: 'src/lib.rs:21:27: error[E0432]: unresolved import `aes_gcm::aead::OsRng`:
       no `OsRng` in the root'
     status: broken
   rust_extensions/tranc3_snn:
     status: ok
   src/nanoservices/nsa_broker:
+    errors:
+    - E0282
+    - E0433
+    - E0594
+    - E0594
+    - E0599
+    - E0599
     reason: 'src/main.rs:431:27: error[E0433]: failed to resolve: could not find `util`
       in `hyper`: could not find `util` in `hyper`'
     status: broken
   src/nanoservices/rust/tranc3-nanoservice:
     status: ok
   workers/nexus-ws-rs:
+    errors:
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
+    - E0308(expected=Utf8Bytes, found=String)
     reason: 'src/main.rs:290:44: error[E0308]: mismatched types: expected `Utf8Bytes`,
       found `String`'
     status: broken

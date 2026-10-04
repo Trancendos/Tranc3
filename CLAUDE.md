@@ -574,9 +574,10 @@ This matters beyond tidiness. `docs/governance/IMMUNE-SYSTEM.md` says to read it
 scanner to this estate, and that instruction only binds if adding one is visible.
 
 **`rust.yml` compiled one of nine Cargo crates until 2026-09-28.** Its `paths:` filter and
-every job's `working-directory` were `aeonmind/rust`, so eight crates — including three that
-do not compile — had no compile check anywhere and a PR touching only them never triggered
-the workflow. Its `crates` job now runs `scripts/check_rust_crates.py` across the whole tree
+every job's `working-directory` were `aeonmind/rust`, so eight crates went unchecked by it and
+a PR touching only them never triggered the workflow. **Seven** of those had no compile check
+anywhere: `rust-nanoservice.yml` already ran `cargo check --locked` on
+`src/nanoservices/rust/tranc3-nanoservice`, so that one crate was covered. Its `crates` job now runs `scripts/check_rust_crates.py` across the whole tree
 on any `*.rs`/`Cargo.*` change and weekly, because a crate breaks when a caret range resolves
 to a new dependency release, not when someone edits it. See
 `docs/governance/RUST-CRATE-COMPILE-GATE.md`.

@@ -13,6 +13,7 @@ one that cannot fail.
 """
 
 import importlib.util
+import shutil
 import sys
 from pathlib import Path
 
@@ -83,19 +84,25 @@ def test_rustc_rewording_its_own_prose_is_not_a_change():
             id="different error code",
         ),
         pytest.param(
-            "src/main.rs:412:9: error[E0308]: mismatched types: expected `Utf8Bytes`, found `String`",
-            id="different line",
-        ),
-        pytest.param(
-            "src/lib.rs:290:44: error[E0308]: mismatched types: expected `Utf8Bytes`, found `String`",
-            id="different file",
+            "src/main.rs:290:44: error[E0308]: mismatched types: expected `usize`, found `String`",
+            id="different expected type",
         ),
     ],
 )
 def test_a_materially_different_failure_is_still_reported(measured):
     failures = _compare(
-        {"workers/nexus-ws-rs": _broken(measured)},
-        {"workers/nexus-ws-rs": {"status": gate.BROKEN, "reason": PLAIN}},
+        {
+            "workers/nexus-ws-rs": gate.Measurement(
+                status=gate.BROKEN, reason=measured, diagnostics=[measured]
+            )
+        },
+        {
+            "workers/nexus-ws-rs": {
+                "status": gate.BROKEN,
+                "reason": PLAIN,
+                "errors": gate._fingerprint([PLAIN]),
+            }
+        },
     )
     assert len(failures) == 1
     assert "[CHANGED]" in failures[0]
@@ -178,5 +185,114 @@ def test_the_committed_ledger_passes_its_own_validity_rules():
 
 
 def test_the_committed_ledger_covers_every_crate_in_the_tree():
-    """The defect this gate was built for was a crate nothing checked."""
+    """The defect this gate was built for was a crate nothing checked.
+
+    Skipped rather than passed without cargo. `_crate_roots()` falls back to
+    `manifest.parent` when `cargo metadata` cannot run, and because all nine
+    crates here are single-manifest directories that fallback produces exactly
+    the ledger keys -- so this test reported green without ever exercising the
+    workspace-membership discovery it is about. A test that cannot fail is the
+    failure mode this whole gate was built to catch.
+    """
+    if shutil.which("cargo") is None:
+        pytest.skip("cargo is absent, so crate discovery would take its fallback path")
     assert set(gate._crate_roots()) == set(gate._load_ledger())
+
+
+# --- the full diagnostic set, not just the first error --------------------
+
+
+def test_a_crate_that_gains_an_error_is_reported():
+    """Fingerprinting only the first error let a crate get worse and pass."""
+    recorded = {
+        "status": gate.BROKEN,
+        "reason": PLAIN,
+        "errors": ["E0308(expected=Utf8Bytes, found=String)"],
+    }
+    measured = gate.Measurement(
+        status=gate.BROKEN,
+        reason=PLAIN,
+        diagnostics=[
+            PLAIN,
+            "src/main.rs:401:9: error[E0599]: no method named `send` found",
+        ],
+    )
+    failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
+    assert len(failures) == 1
+    assert "[CHANGED]" in failures[0]
+
+
+def test_the_same_error_set_in_a_different_order_is_not_a_change():
+    """Cargo's emission order is not a property of the breakage."""
+    first = "src/a.rs:1:1: error[E0432]: unresolved import"
+    second = "src/b.rs:2:2: error[E0599]: no method named `x`"
+    recorded = {
+        "status": gate.BROKEN,
+        "reason": first,
+        "errors": gate._fingerprint([first, second]),
+    }
+    measured = gate.Measurement(status=gate.BROKEN, reason=second, diagnostics=[second, first])
+    assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
+
+
+def test_a_second_instance_of_the_same_error_is_a_change():
+    """A list, not a set: gaining another E0599 is still getting worse."""
+    one = "src/a.rs:1:1: error[E0599]: no method named `x`"
+    recorded = {"status": gate.BROKEN, "reason": one, "errors": gate._fingerprint([one])}
+    measured = gate.Measurement(
+        status=gate.BROKEN, reason=one, diagnostics=[one, one.replace("1:1", "9:9")]
+    )
+    failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
+    assert len(failures) == 1
+    assert "[CHANGED]" in failures[0]
+
+
+def test_a_source_edit_that_moves_a_line_is_not_a_change():
+    """Keyed on file:line:col, a new comment above the failure tripped CHANGED."""
+    recorded = {
+        "status": gate.BROKEN,
+        "reason": PLAIN,
+        "errors": gate._fingerprint([PLAIN]),
+    }
+    moved = PLAIN.replace("290:44", "312:44")
+    measured = gate.Measurement(status=gate.BROKEN, reason=moved, diagnostics=[moved])
+    assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
+
+
+def test_a_changed_type_mismatch_at_the_same_place_is_a_change():
+    """E0308 carries its operands, or a new mismatch reads as the old one."""
+    recorded_line = (
+        "src/main.rs:290:44: error[E0308]: mismatched types: expected `String`, found `i32`"
+    )
+    measured_line = (
+        "src/main.rs:290:44: error[E0308]: mismatched types: expected `usize`, found `i32`"
+    )
+    recorded = {
+        "status": gate.BROKEN,
+        "reason": recorded_line,
+        "errors": gate._fingerprint([recorded_line]),
+    }
+    measured = gate.Measurement(
+        status=gate.BROKEN, reason=measured_line, diagnostics=[measured_line]
+    )
+    failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
+    assert len(failures) == 1
+    assert "[CHANGED]" in failures[0]
+
+
+def test_a_non_string_reason_does_not_crash_the_comparison():
+    """`reason: 123` raised TypeError instead of reporting the LEDGER finding."""
+    failures = _compare(
+        {"workers/nexus-ws-rs": _broken(PLAIN)},
+        {"workers/nexus-ws-rs": {"status": gate.BROKEN, "reason": 123}},
+    )
+    assert failures  # reported, not raised
+    assert all(isinstance(f, str) for f in failures)
+
+
+def test_every_broken_crate_in_the_committed_ledger_records_its_error_set():
+    """A single recorded line cannot distinguish one failure from eighteen."""
+    ledger = gate._load_ledger()
+    for directory, entry in ledger.items():
+        if entry.get("status") == gate.BROKEN:
+            assert entry.get("errors"), f"{directory} records no error set"
