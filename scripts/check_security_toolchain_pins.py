@@ -67,7 +67,6 @@ def _required_version() -> str | None:
 
 
 def main() -> int:
-    requirements = ROOT / REQUIREMENTS_NAME
     pre_commit = ROOT / PRE_COMMIT_NAME
     required = _required_version()
     if required is None:
