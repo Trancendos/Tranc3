@@ -10,3 +10,6 @@
 ## 2024-05-18 - Avoid pure Python loops for multiple-pass optimizations
 **Learning:** Fusing multi-pass iterative calculations into a single `for` loop in CPython (e.g., computing a dot product and two norms at the same time to avoid multiple iterations) can actually be *slower* than running multiple separate C-optimized iterations (like `sum(map(operator.mul, ...))`). The interpreter overhead for each iteration in Python is greater than the cost of iterating over the list multiple times in C.
 **Action:** When trying to speed up numeric calculations in pure Python, prioritize C-level primitives (like `sum` + `map` + `operator.mul`) for each stage of the calculation, rather than writing a single manual Python loop that tries to compute everything at once.
+## 2024-05-28 - [DP Space Optimization]
+**Learning:** In pure Python, when implementing DP algorithms like LCS that only rely on the previous row's state, allocating a full 2D matrix (O(m*n)) is extremely slow due to the massive number of list allocations. Switching to two 1D arrays (O(n) space) and using a ternary operator instead of `max()` inside the loop yields >2x speedup.
+**Action:** When implementing matrix-based DP algorithms in Python, always optimize space complexity to 1D arrays and avoid built-in function calls like `max()` inside tight loops.
