@@ -189,7 +189,8 @@ Every branch of the comparison was made to fail before it was trusted:
 | Record a compiling crate as `broken` | `[FIXED, UNRECORDED]`, rc=1 |
 | Add a crate to the ledger that is not in the tree | `[GONE]`, rc=1 |
 | Plant a real type error in `workers/vault-service-rs` | `[REGRESSED]` naming `error[E0308]` at the planted line, rc=1 |
-| Change a recorded `broken` crate's reason | `[CHANGED]`, rc=1 |
+| Change a recorded `broken` crate's `reason` prose | nothing: prose is not compared |
+| Change a recorded `broken` crate's `errors` set | `[changed, not gating]`, **rc=0** |
 | Misspell a ledger status (`okay`) | `[LEDGER]`, rc=1 |
 | Record `broken` with no reason | `[LEDGER]`, rc=1 |
 | Record a target that is not installed | `[BLOCKED]`, rc=1 |
@@ -219,10 +220,13 @@ primary `E0433` at the same line both times:
 
 The diagnostics a compiler emits for broken code are not a stable property of
 that code unless the compiler is pinned, and `rust.yml` uses
-`dtolnay/rust-toolchain@stable`. Gating on it means nine crates go red on
-every rustc release for a reason unrelated to the code, and that is precisely
-the failure mode that gets `|| true` attached — the defect this gate exists to
-stop repeating. **Pinning the toolchain is what would let this be promoted
+`dtolnay/rust-toolchain@stable`. Gating on it means the **three**
+recorded-broken crates go red on every rustc release for a reason unrelated
+to the code — three, not nine, because the comparison only runs for entries
+the ledger records as broken; the six that compile measure no diagnostics at
+all. Three is still every broken crate in the tree, on every release, and
+that is precisely the failure mode that gets `|| true` attached — the defect
+this gate exists to stop repeating. **Pinning the toolchain is what would let this be promoted
 back to an assertion.** Until then the honest claim is narrower than the one
 this document originally made: the gate catches a crate that *stops
 compiling*, not one that breaks *differently*.

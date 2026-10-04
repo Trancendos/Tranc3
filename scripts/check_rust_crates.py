@@ -303,10 +303,12 @@ def _fingerprint(diagnostics) -> List[str]:
     What this deliberately does not catch, stated rather than left implicit:
     a crate gaining another instance of an error code it already has. That is
     a real gap. It is the narrower one, because the alternative fails this
-    gate on nine crates at once on every rustc release -- and a gate that
-    fails for reasons unrelated to what it measures is the one that gets
-    `|| true` attached to it, which is the defect this whole file exists to
-    stop repeating.
+    gate on every recorded-broken crate at once on every rustc release --
+    three of the nine here, since this comparison only runs for entries the
+    ledger records as broken and the six that compile emit no diagnostics at
+    all. A gate that fails for reasons unrelated to what it measures is the
+    one that gets `|| true` attached to it, which is the defect this whole
+    file exists to stop repeating.
     """
     if diagnostics is None:
         return []
@@ -531,8 +533,10 @@ def _compare(measured: dict, ledger: dict) -> tuple:
             # `dtolnay/rust-toolchain@stable`.
             #
             # So it prints and does not gate. Failing on it means nine crates
-            # go red on every rustc release for a reason unrelated to the
-            # code, and that is the failure mode that gets `|| true`
+            # (all three recorded broken; the six that compile emit no
+            # diagnostics) go red on every rustc release for a reason
+            # unrelated to the code, and that is the failure mode that
+            # gets `|| true`
             # attached -- which is the defect this file exists to stop
             # repeating. Pinning the toolchain is what would let this be
             # promoted back to an assertion; until then the honest statement
