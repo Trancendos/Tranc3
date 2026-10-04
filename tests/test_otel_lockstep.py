@@ -111,3 +111,96 @@ def test_the_check_has_something_to_check():
     assert len(files) > 1
     with_both = [p for p in files if all(check._pins(p))]
     assert with_both, "no file pins both series, so main() would have no reference"
+
+
+# --- main(), against synthetic trees ------------------------------------
+#
+# Everything above exercises `_pins`. cubic pointed out that nothing
+# exercised `main()` rejecting anything: the only call was against the real
+# repository, which is consistent, so the gating half of the check was
+# verified by hand once and never encoded. A manual verification is a check
+# that has only ever passed.
+
+
+def _tree(tmp_path, files, monkeypatch):
+    """Point the check at a synthetic requirements tree."""
+    for name, text in files.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(check, "ROOT", tmp_path)
+    return tmp_path
+
+
+CONSISTENT = "opentelemetry-sdk==1.45.0\nopentelemetry-instrumentation-fastapi==0.66b0\n"
+MISMATCHED = "opentelemetry-sdk==1.45.0\nopentelemetry-instrumentation-fastapi==0.65b0\n"
+
+
+def test_main_rejects_a_worker_file_that_mixes_the_series(tmp_path, monkeypatch, capsys):
+    """The defect: four worker files kept the unsatisfiable pair."""
+    _tree(
+        tmp_path,
+        {
+            "requirements.txt": CONSISTENT,
+            "workers/vrar3d/requirements.txt": MISMATCHED,
+        },
+        monkeypatch,
+    )
+    assert check.main() == 1
+    out = capsys.readouterr().out
+    assert "FAILED" in out
+    assert "workers/vrar3d/requirements.txt" in out
+
+
+def test_main_accepts_a_consistent_tree(tmp_path, monkeypatch):
+    _tree(
+        tmp_path,
+        {
+            "requirements.txt": CONSISTENT,
+            "workers/a/requirements.txt": CONSISTENT,
+            "workers/b/requirements-worker.txt": CONSISTENT,
+        },
+        monkeypatch,
+    )
+    assert check.main() == 0
+
+
+def test_main_rejects_a_root_that_pins_two_versions_of_one_series(tmp_path, monkeypatch):
+    """They ship as one release; two is a defect wherever it appears."""
+    _tree(
+        tmp_path,
+        {
+            "requirements.txt": "opentelemetry-sdk==1.45.0\n"
+            "opentelemetry-api==1.44.0\n"
+            "opentelemetry-instrumentation-fastapi==0.66b0\n"
+        },
+        monkeypatch,
+    )
+    assert check.main() == 1
+
+
+def test_main_refuses_when_the_root_gives_no_reference_pair(tmp_path, monkeypatch, capsys):
+    """No reference reports the same PASSED as a consistent estate."""
+    _tree(tmp_path, {"requirements.txt": "fastapi==0.120.0\n"}, monkeypatch)
+    assert check.main() == 1
+    assert "no reference pair" in capsys.readouterr().out
+
+
+def test_main_refuses_when_there_are_no_requirements_files(tmp_path, monkeypatch, capsys):
+    """An empty scope is a defect, not a pass."""
+    monkeypatch.setattr(check, "ROOT", tmp_path)
+    assert check.main() == 1
+    assert "nothing to assert" in capsys.readouterr().out
+
+
+def test_main_ignores_a_file_pinning_only_one_series(tmp_path, monkeypatch):
+    """Half a pair cannot be inconsistent with the root."""
+    _tree(
+        tmp_path,
+        {
+            "requirements.txt": CONSISTENT,
+            "workers/c/requirements.txt": "opentelemetry-sdk==1.45.0\n",
+        },
+        monkeypatch,
+    )
+    assert check.main() == 0
