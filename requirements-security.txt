@@ -23,7 +23,7 @@ semgrep==1.178.0      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
-cyclonedx-bom==7.4.0  # Generate SBOM from requirements/pip environment
+cyclonedx-bom==7.5.0  # Generate SBOM from requirements/pip environment
 
 # === Transitive dependency overrides (security pins) ===
 # filelock: CVE-2025-68146, CVE-2026-22701 (fix: >=3.20.3) — transitive via semgrep
@@ -34,7 +34,7 @@ filelock==3.32.5
 #  AND requires lxml<7 which pins to 6.1.1, fixing PYSEC-2026-87)
 cyclonedx-python-lib==11.12.0
 # lxml: PYSEC-2026-87 (fix: >=6.1.0) — resolved by cyclonedx-python-lib==11.12.0 above
-lxml==6.1.2
+lxml==6.1.3
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks in XML parsing (CWE-611)
