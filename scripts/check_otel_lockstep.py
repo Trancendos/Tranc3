@@ -39,8 +39,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SKIP = {".git", "node_modules", "target", ".venv", "venv"}
 
-_CORE = re.compile(r"^opentelemetry-(?:api|sdk|proto|exporter-[a-z0-9-]+)==(\d+\.\d+\.\d+)")
-_INSTRUMENTATION = re.compile(r"^opentelemetry-instrumentation[a-z0-9-]*==(0\.\d+b\d+)")
+# The whole version token, not a prefix of it. Anchoring on `\d+\.\d+\.\d+`
+# recorded `1.45.0rc1` and `1.45.0.post1` both as `1.45.0`, so a file pinning a
+# pre-release against a release read as consistent with it. Capturing up to the
+# first whitespace, `;` (an environment marker) or `#` (a comment) keeps the
+# token intact and makes the comparison exact: a release and its own release
+# candidate are different pins, and this check exists to notice exactly that
+# kind of near-miss.
+_VERSION = r"([^\s;#]+)"
+_CORE = re.compile(r"^opentelemetry-(?:api|sdk|proto|exporter-[a-z0-9-]+)==" + _VERSION)
+_INSTRUMENTATION = re.compile(r"^opentelemetry-instrumentation[a-z0-9-]*==" + _VERSION)
 
 
 def _requirements_files() -> list:
