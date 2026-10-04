@@ -4,7 +4,7 @@ version: "3.8"
 
 services:
   penpot-frontend:
-    image: penpotapp/frontend:latest@sha256:94fa2864d8fc0cd62245af95c03cca89306a7fd23c206a98a3e9dc9a376ea27e
+    image: penpotapp/frontend:latest@sha256:e1eb4756ec175eb71390f9bf0ddee819468d72f67f12cf3b1532bee8d591217e
     container_name: fabulousa-frontend
     restart: unless-stopped
     ports:
@@ -23,7 +23,7 @@ services:
       - "traefik.http.services.penpot.loadbalancer.server.port=80"
 
   penpot-backend:
-    image: penpotapp/backend:latest@sha256:770b55f6e51bfcee49152b30858ca6a47143256de8d43953a50b952b5c60bb55
+    image: penpotapp/backend:latest@sha256:3b7df71db88d7c478b6a10103acb4108fa86a17a47277de81437de3899959e9e
     container_name: fabulousa-backend
     restart: unless-stopped
     environment:
@@ -48,7 +48,7 @@ services:
       - tranc3-network
 
   penpot-exporter:
-    image: penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8
+    image: penpotapp/exporter:latest@sha256:3b6f9d808c777908e4f4e290e91458ec747678a7994e39125e4f3af4ef70ba9f
     container_name: fabulousa-exporter
     restart: unless-stopped
     environment:
@@ -58,7 +58,7 @@ services:
       - tranc3-network
 
   penpot-db:
-    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     container_name: penpot-db
     restart: unless-stopped
     stop_signal: SIGINT
@@ -78,7 +78,7 @@ services:
       - tranc3-network
 
   penpot-redis:
-    image: redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     container_name: penpot-redis
     restart: unless-stopped
     networks:
