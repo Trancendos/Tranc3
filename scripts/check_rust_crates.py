@@ -479,8 +479,10 @@ def _measure(*, unlocked: bool, ledger: dict) -> dict:
     return measured
 
 
-def _compare(measured: dict, ledger: dict) -> List[str]:
+def _compare(measured: dict, ledger: dict) -> tuple:
+    """Returns (failures, notices). A notice is printed and does not gate."""
     failures = _ledger_problems(ledger)
+    notices: List[str] = []
 
     for directory, result in sorted(measured.items()):
         recorded = ledger.get(directory)
@@ -517,10 +519,30 @@ def _compare(measured: dict, ledger: dict) -> List[str]:
         elif recorded["status"] == BROKEN and _fingerprint(
             result.diagnostics or result.reason
         ) != _fingerprint(recorded.get("errors") or recorded.get("reason")):
-            failures.append(
-                f"  [CHANGED] {directory}\n"
-                f"        Still broken, but failing differently. Without this a crate\n"
-                f"        already recorded broken could get materially worse and pass.\n"
+            # Reported, not failed. Two attempts to make this a gating
+            # assertion were both disproved by CI on `nsa_broker`, which
+            # reported CHANGED with the same primary E0433 at the same line:
+            # first on the multiset (rustc's error-recovery count moves
+            # between releases), then on the set of codes (the *kinds* move
+            # too -- a newer rustc reclassifies and suppresses follow-on
+            # errors from the same root cause). The diagnostics a compiler
+            # emits for broken code are not a stable property of that code
+            # unless the compiler is pinned, and this workflow uses
+            # `dtolnay/rust-toolchain@stable`.
+            #
+            # So it prints and does not gate. Failing on it means nine crates
+            # go red on every rustc release for a reason unrelated to the
+            # code, and that is the failure mode that gets `|| true`
+            # attached -- which is the defect this file exists to stop
+            # repeating. Pinning the toolchain is what would let this be
+            # promoted back to an assertion; until then the honest statement
+            # is that this gate catches a crate that stops compiling, not one
+            # that breaks differently.
+            notices.append(
+                f"  [changed, not gating] {directory}\n"
+                f"        Still broken, and the diagnostics differ from the ledger.\n"
+                f"        This may be a worse failure or just a different rustc;\n"
+                f"        the two are indistinguishable without a pinned toolchain.\n"
                 f"        recorded: {recorded.get('reason')}\n"
                 f"        measured: {result.reason}"
             )
@@ -536,7 +558,7 @@ def _compare(measured: dict, ledger: dict) -> List[str]:
 
     for directory in sorted(set(ledger) - set(measured)):
         failures.append(f"  [GONE] {directory}\n        In the ledger, not in the tree.")
-    return failures
+    return failures, notices
 
 
 def main() -> int:
@@ -595,7 +617,12 @@ def main() -> int:
         print(f"Recorded {len(measured)} crates, {len(broken)} broken: {broken}")
         return 0
 
-    failures = _compare(measured, ledger)
+    failures, notices = _compare(measured, ledger)
+    if notices:
+        # Printed whether or not the gate passes: a reader deciding whether a
+        # crate got worse needs to see this even on a green run.
+        print(f"Rust crate compile gate: {len(notices)} notice(s), not gating")
+        print("\n".join(notices))
     if failures:
         print(f"Rust crate compile gate: FAILED — {mode}")
         print("\n".join(failures))

@@ -37,7 +37,14 @@ COLOURED = (
 
 
 def _compare(measured, ledger):
-    return gate._compare(measured, ledger)
+    """Gating failures only. Notices are asserted separately, where they matter."""
+    failures, _notices = gate._compare(measured, ledger)
+    return failures
+
+
+def _notices(measured, ledger):
+    _failures, notices = gate._compare(measured, ledger)
+    return notices
 
 
 def _broken(reason):
@@ -53,11 +60,13 @@ def test_colour_escapes_are_stripped_before_comparison():
 
 
 def test_a_coloured_diagnostic_matches_the_plain_ledger_entry():
-    failures = _compare(
-        {"workers/nexus-ws-rs": _broken(gate._normalise(COLOURED))},
-        {"workers/nexus-ws-rs": {"status": gate.BROKEN, "reason": PLAIN}},
+    assert (
+        _notices(
+            {"workers/nexus-ws-rs": _broken(gate._normalise(COLOURED))},
+            {"workers/nexus-ws-rs": {"status": gate.BROKEN, "reason": PLAIN}},
+        )
+        == []
     )
-    assert failures == []
 
 
 def test_rustc_rewording_its_own_prose_is_not_a_change():
@@ -66,11 +75,11 @@ def test_rustc_rewording_its_own_prose_is_not_a_change():
         "src/main.rs:431:27: error[E0433]: failed to resolve: could not find `util` in `hyper`"
     )
     measured = "src/main.rs:431:27: error[E0433]: cannot find `util` in `hyper`"
-    failures = _compare(
+    notices = _notices(
         {"src/nanoservices/nsa_broker": _broken(measured)},
         {"src/nanoservices/nsa_broker": {"status": gate.BROKEN, "reason": recorded}},
     )
-    assert failures == []
+    assert notices == []
 
 
 # --- the mutations the loosening must still catch ------------------------
@@ -90,7 +99,7 @@ def test_rustc_rewording_its_own_prose_is_not_a_change():
     ],
 )
 def test_a_materially_different_failure_is_still_reported(measured):
-    failures = _compare(
+    notices = _notices(
         {
             "workers/nexus-ws-rs": gate.Measurement(
                 status=gate.BROKEN, reason=measured, diagnostics=[measured]
@@ -104,11 +113,11 @@ def test_a_materially_different_failure_is_still_reported(measured):
             }
         },
     )
-    assert len(failures) == 1
-    assert "[CHANGED]" in failures[0]
+    assert len(notices) == 1
+    assert "[changed, not gating]" in notices[0]
     # Both sides are printed, because a human has to decide which is right.
-    assert PLAIN in failures[0]
-    assert measured in failures[0]
+    assert PLAIN in notices[0]
+    assert measured in notices[0]
 
 
 # --- the rest of the status vocabulary ----------------------------------
@@ -217,9 +226,9 @@ def test_a_crate_that_gains_an_error_is_reported():
             "src/main.rs:401:9: error[E0599]: no method named `send` found",
         ],
     )
-    failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
-    assert len(failures) == 1
-    assert "[CHANGED]" in failures[0]
+    notices = _notices({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
+    assert len(notices) == 1
+    assert "[changed, not gating]" in notices[0]
 
 
 def test_the_same_error_set_in_a_different_order_is_not_a_change():
@@ -232,7 +241,7 @@ def test_the_same_error_set_in_a_different_order_is_not_a_change():
         "errors": gate._fingerprint([first, second]),
     }
     measured = gate.Measurement(status=gate.BROKEN, reason=second, diagnostics=[second, first])
-    assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
+    assert _notices({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
 
 
 def test_a_repeated_error_code_is_not_a_change_and_this_is_a_known_gap():
@@ -251,7 +260,7 @@ def test_a_repeated_error_code_is_not_a_change_and_this_is_a_known_gap():
     measured = gate.Measurement(
         status=gate.BROKEN, reason=one, diagnostics=[one, one.replace("1:1", "9:9")]
     )
-    assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
+    assert _notices({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
 
 
 def test_a_new_kind_of_error_alongside_a_repeated_one_is_a_change():
@@ -263,9 +272,9 @@ def test_a_new_kind_of_error_alongside_a_repeated_one_is_a_change():
         reason=one,
         diagnostics=[one, one, "src/b.rs:2:2: error[E0432]: unresolved import"],
     )
-    failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
-    assert len(failures) == 1
-    assert "[CHANGED]" in failures[0]
+    notices = _notices({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
+    assert len(notices) == 1
+    assert "[changed, not gating]" in notices[0]
 
 
 def test_a_source_edit_that_moves_a_line_is_not_a_change():
@@ -277,7 +286,7 @@ def test_a_source_edit_that_moves_a_line_is_not_a_change():
     }
     moved = PLAIN.replace("290:44", "312:44")
     measured = gate.Measurement(status=gate.BROKEN, reason=moved, diagnostics=[moved])
-    assert _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
+    assert _notices({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded}) == []
 
 
 def test_a_changed_type_mismatch_at_the_same_place_is_a_change():
@@ -296,19 +305,20 @@ def test_a_changed_type_mismatch_at_the_same_place_is_a_change():
     measured = gate.Measurement(
         status=gate.BROKEN, reason=measured_line, diagnostics=[measured_line]
     )
-    failures = _compare({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
-    assert len(failures) == 1
-    assert "[CHANGED]" in failures[0]
+    notices = _notices({"workers/nexus-ws-rs": measured}, {"workers/nexus-ws-rs": recorded})
+    assert len(notices) == 1
+    assert "[changed, not gating]" in notices[0]
 
 
 def test_a_non_string_reason_does_not_crash_the_comparison():
-    """`reason: 123` raised TypeError instead of reporting the LEDGER finding."""
-    failures = _compare(
+    """`reason: 123` raised TypeError from inside the comparison."""
+    failures, notices = gate._compare(
         {"workers/nexus-ws-rs": _broken(PLAIN)},
         {"workers/nexus-ws-rs": {"status": gate.BROKEN, "reason": 123}},
     )
-    assert failures  # reported, not raised
-    assert all(isinstance(f, str) for f in failures)
+    # Reported rather than raised; which bucket it lands in is not the point.
+    assert notices or failures
+    assert all(isinstance(line, str) for line in [*failures, *notices])
 
 
 def test_every_broken_crate_in_the_committed_ledger_records_its_error_set():

@@ -201,24 +201,43 @@ which is the state the weekly run exists to notice a departure from.
 
 ## What this gate does not catch
 
-Stated rather than left implicit, because a control's blind spots are the
-part people most need told.
+Stated rather than left implicit, because a control's blind spots are the part
+people most need told.
 
-**A repeated error code.** The comparison asserts the *set* of distinct error
-identities a crate emits, so a recorded-broken crate can gain another instance
-of a code it already has without reporting [CHANGED]. Counting them was tried
-and CI disproved it: `src/nanoservices/nsa_broker` reported [CHANGED] between
-rustc 1.94.1 locally and the runner's newer stable, with the same primary
-E0433 at the same line, because rustc's error *recovery* differs between
-releases — the number of consequent errors one root cause produces is a
-property of the compiler, not of the code. Keying on the count would fail this
-gate on nine crates at once on every rustc release, and a gate that fails for
-reasons unrelated to what it measures is the one that gets `|| true` attached.
+**A crate that breaks differently.** This is the big one, and it is a blind
+spot arrived at by measurement rather than chosen. The gate reports a
+diagnostic difference on an already-broken crate as a **notice, and does not
+fail on it.** Two attempts to make it a gating assertion were both disproved
+by CI on `src/nanoservices/nsa_broker`, which reported a change with the same
+primary `E0433` at the same line both times:
+
+1. Comparing the full multiset of diagnostics. rustc's error *recovery*
+   differs between releases, so the number of consequent errors one root cause
+   produces is a property of the compiler.
+2. Comparing the set of distinct error codes. The *kinds* move too — a newer
+   rustc reclassifies and suppresses follow-on errors from the same defect.
+
+The diagnostics a compiler emits for broken code are not a stable property of
+that code unless the compiler is pinned, and `rust.yml` uses
+`dtolnay/rust-toolchain@stable`. Gating on it means nine crates go red on
+every rustc release for a reason unrelated to the code, and that is precisely
+the failure mode that gets `|| true` attached — the defect this gate exists to
+stop repeating. **Pinning the toolchain is what would let this be promoted
+back to an assertion.** Until then the honest claim is narrower than the one
+this document originally made: the gate catches a crate that *stops
+compiling*, not one that breaks *differently*.
+
+What still gates, and is toolchain-stable: a crate recorded as compiling that
+no longer does ([REGRESSED]), one that compiles and is recorded broken
+([FIXED, UNRECORDED]), one in the tree and not in the ledger ([UNRECORDED]),
+one in the ledger and not in the tree ([GONE]), one that could not be checked
+at all ([BLOCKED]), a lockfile the manifest no longer satisfies
+([LOCKFILE STALE]), and the ledger's own validity rules ([LEDGER]).
 
 **Prose and location.** Neither is compared, for the same reason: rustc
 rewords its messages between releases, and a comment inserted above a failing
 line moves it. Both are still recorded and printed, because a human reading a
-[CHANGED] row needs them to decide which side is right.
+notice needs them to decide which side is right.
 
 **Runtime behaviour.** This gate compiles; it does not run. A crate that
 compiles can still be wrong.
