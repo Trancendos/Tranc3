@@ -27,3 +27,6 @@
 ## 2024-05-20 - Submodule git state during code modifications
 **Learning:** Modifying files inside a git submodule (like `workers/cranbania`) during a standard workflow and committing them within the submodule causes the parent repository to track the submodule as modified (`-dirty` or advanced commit pointer). This can block or fail code reviews that expect a clean, self-contained patch for the parent repository.
 **Action:** When asked to make UX/micro-UX improvements, ensure the changes stay within the scope of the parent repository and don’t unintentionally commit submodule state changes unless explicitly intended and handled correctly.
+## 2026-10-04 - Focus States for Hover-revealed Decorative Children
+**Learning:** When using Tailwind's `group-hover:opacity-100` to reveal decorative children inside naturally focusable parents (like `<a>` or `<button>`), keyboard users miss the visual cue during tab navigation because hover doesn't trigger on focus.
+**Action:** For decorative children in naturally focusable parents (like `<a>` or `<button>`), pair `group-hover:opacity-100` with `group-focus:opacity-100` so the child reveals itself when the parent receives keyboard focus.
