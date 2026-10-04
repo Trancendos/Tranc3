@@ -145,12 +145,12 @@ opentelemetry-api==1.45.0
 opentelemetry-sdk==1.45.0
 opentelemetry-exporter-otlp-proto-grpc==1.45.0
 opentelemetry-exporter-otlp-proto-http==1.45.0
-opentelemetry-instrumentation-fastapi==0.65b0
-opentelemetry-instrumentation-httpx==0.65b0
-opentelemetry-instrumentation-sqlalchemy==0.65b0
+opentelemetry-instrumentation-fastapi==0.66b0
+opentelemetry-instrumentation-httpx==0.66b0
+opentelemetry-instrumentation-sqlalchemy==0.66b0
 # Redis + aiohttp auto-instrumentation (zero-cost span coverage for all workers)
-opentelemetry-instrumentation-redis==0.65b0
-opentelemetry-instrumentation-aiohttp-client==0.65b0
+opentelemetry-instrumentation-redis==0.66b0
+opentelemetry-instrumentation-aiohttp-client==0.66b0
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
