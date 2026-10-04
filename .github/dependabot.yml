@@ -420,99 +420,27 @@ updates:
       - dependency-name: "clickhouse/clickhouse-server"
         update-types: ["version-update:semver-major"]
 
-  - package-ecosystem: "docker"
-    directory: "/workers"
-    schedule:
-      interval: "monthly"
-    open-pull-requests-limit: 5
-    groups:
-      # Patch and minor bumps travel together: they are the high-volume, low-risk
-      # majority, and one reviewed PR per ecosystem is worth more than thirty
-      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
-      # change an interpreter, a framework or a runtime still gets its own PR and
-      # its own decision.
-      safe-updates:
-        update-types:
-          - "minor"
-          - "patch"
-    labels:
-      - "dependencies"
-    ignore:
-      # Python base-image bumps are held here, not merged one Dockerfile at a
-      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
-      # merging one changes a container's interpreter without validating that
-      # container's pinned dependencies against it, and that one of them
-      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
-      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
-      # without this the estate regenerates 90 near-identical PRs every run —
-      # which is what produced the 90 that were open on 2026-08-22.
-      #
-      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
-      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
-      # note above does not actually hold the interpreter bump out of the
-      # safe-updates group the way its wording implies — listing only major here
-      # would leave the exact bump this ignore exists for still flowing through.
-      #
-      # Lift this per-directory as each target completes Stages 3-5 of that
-      # assessment's staged plan, rather than removing it wholesale.
-      - dependency-name: "python"
-        update-types:
-          - "version-update:semver-major"
-          - "version-update:semver-minor"
-      # Database images whose majors renovate.json blocks: "Block database
-      # major version upgrades -- require migration planning." Same reason as
-      # above: one policy, two bots, and only one of them reads renovate.json.
-      - dependency-name: "postgres"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse/clickhouse-server"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: "docker"
-    directory: "/deploy"
-    schedule:
-      interval: "monthly"
-    open-pull-requests-limit: 5
-    groups:
-      # Patch and minor bumps travel together: they are the high-volume, low-risk
-      # majority, and one reviewed PR per ecosystem is worth more than thirty
-      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
-      # change an interpreter, a framework or a runtime still gets its own PR and
-      # its own decision.
-      safe-updates:
-        update-types:
-          - "minor"
-          - "patch"
-    labels:
-      - "dependencies"
-    ignore:
-      # Python base-image bumps are held here, not merged one Dockerfile at a
-      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
-      # merging one changes a container's interpreter without validating that
-      # container's pinned dependencies against it, and that one of them
-      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
-      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
-      # without this the estate regenerates 90 near-identical PRs every run —
-      # which is what produced the 90 that were open on 2026-08-22.
-      #
-      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
-      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
-      # note above does not actually hold the interpreter bump out of the
-      # safe-updates group the way its wording implies — listing only major here
-      # would leave the exact bump this ignore exists for still flowing through.
-      #
-      # Lift this per-directory as each target completes Stages 3-5 of that
-      # assessment's staged plan, rather than removing it wholesale.
-      - dependency-name: "python"
-        update-types:
-          - "version-update:semver-major"
-          - "version-update:semver-minor"
-      # Database images whose majors renovate.json blocks: "Block database
-      # major version upgrades -- require migration planning." Same reason as
-      # above: one policy, two bots, and only one of them reads renovate.json.
-      - dependency-name: "postgres"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "clickhouse/clickhouse-server"
-        update-types: ["version-update:semver-major"]
+  # There is no docker block for /workers or /deploy, and their absence is a
+  # decision rather than an oversight. Both existed and neither had ever found
+  # anything: dependabot's docker ecosystem does NOT search below the directory
+  # it is given, /workers holds its 90 Dockerfiles one level down in
+  # workers/<name>/Dockerfile, and /deploy has no Dockerfile at all. Every run
+  # ended in `dependency_file_not_found: No Dockerfiles nor Kubernetes YAML
+  # found`. Nobody saw it, because a config change is what makes dependabot
+  # re-evaluate every block, and until #1250 touched this file none had.
+  #
+  # They were removed rather than repaired because renovate.json already covers
+  # both paths -- it sets no `enabledManagers`, so its `dockerfile` and
+  # `docker-compose` managers are live, and its `ignorePaths` excludes neither
+  # directory. Repairing /workers would have added a second bot proposing
+  # against 90 Dockerfiles on top of an already 36-deep bot queue, to duplicate
+  # a route that works.
+  #
+  # The four docker blocks that remain each have a Dockerfile directly in their
+  # directory. tests/test_dependency_policy_parity.py now asserts that, and it
+  # is asserted for docker only: pip is measurably different. On the same
+  # commit, `pip in /workers` succeeded while `docker in /workers` failed, from
+  # the same directory with no direct manifest -- pip recurses, docker does not.
 
   - package-ecosystem: "github-actions"
     directory: "/"

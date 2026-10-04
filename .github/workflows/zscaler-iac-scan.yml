@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name : Code Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # Absent credentials, this scan cannot run. It used to fail the job,
       # which put a permanent red X on every pull request and taught everyone
@@ -76,6 +76,6 @@ jobs:
       #Ensure that the following step is included in order to post the scan results under the code scanning alerts section within the repository.
       - name: Upload SARIF file
         if: ${{ steps.credentials.outputs.configured == 'true' && (success() || failure()) && (steps.zscaler-iac-scan.outputs.sarif_file_path != '') }}
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         with:
           sarif_file: ${{ steps.zscaler-iac-scan.sarif_file_path }}
