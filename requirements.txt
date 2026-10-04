@@ -40,7 +40,7 @@ tqdm==4.70.1
 # === Security & Infrastructure ===
 # Fixes: CVE-2026-26007 (key exchange), CVE-2024-12797 (Flush+Reload),
 #        CVE-2026-34073 (padding oracle), debricked-267656
-cryptography==50.0.1
+cryptography==50.0.2
 
 # Fixes: 20 CVEs including request smuggling, DoS, header parsing,
 #        information disclosure (CVE-2025-69223 through CVE-2026-34520)
@@ -50,7 +50,7 @@ aiohttp==3.14.3
 python-multipart==0.0.32
 
 # Fixes: CVE-2026-28684 (path traversal in dotenv loading)
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 
 # === Password Hashing ===
 # bcrypt 5.x: Used by src/auth/db_user_manager.py and auth.py for password hashing.
@@ -82,7 +82,7 @@ starlette==1.6.0
 httpx==0.28.1
 pydantic==2.13.5
 pydantic-settings==2.15.0
-sse-starlette==3.4.11
+sse-starlette==3.5.0
 uvicorn==0.52.4
 structlog==26.1.0
 python-jose[cryptography]==3.5.0
@@ -108,7 +108,7 @@ pyasn1==0.6.4
 # PyJWT: fixes PYSEC-2026-120 (algorithm confusion in multi-key verification),
 #        PYSEC-2025-183 (header injection via unvalidated kid/typ claims)
 # Transitive via multiple auth paths — pinned explicitly to prevent downgrade.
-PyJWT==2.15.0
+PyJWT==2.15.1
 # idna: fixes CVE-2026-45409 (quadratic complexity ReDoS on crafted labels)
 # Transitive via anyio, httpx, email-validator, requests — explicit pin required.
 idna==3.20
@@ -145,12 +145,12 @@ opentelemetry-api==1.45.0
 opentelemetry-sdk==1.45.0
 opentelemetry-exporter-otlp-proto-grpc==1.45.0
 opentelemetry-exporter-otlp-proto-http==1.45.0
-opentelemetry-instrumentation-fastapi==0.65b0
-opentelemetry-instrumentation-httpx==0.65b0
-opentelemetry-instrumentation-sqlalchemy==0.65b0
+opentelemetry-instrumentation-fastapi==0.66b0
+opentelemetry-instrumentation-httpx==0.66b0
+opentelemetry-instrumentation-sqlalchemy==0.66b0
 # Redis + aiohttp auto-instrumentation (zero-cost span coverage for all workers)
-opentelemetry-instrumentation-redis==0.65b0
-opentelemetry-instrumentation-aiohttp-client==0.65b0
+opentelemetry-instrumentation-redis==0.66b0
+opentelemetry-instrumentation-aiohttp-client==0.66b0
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
@@ -194,7 +194,7 @@ qiskit-aer==0.17.2
 # === MessagePack (content negotiation) ===
 # Fixes: GHSA-6v7p-g79w-8964 (HIGH) — out-of-bounds read/crash on Unpacker reuse after caught error.
 # Pinned to exact version per project policy (no >= or ~= specifiers).
-msgpack==1.2.2
+msgpack==1.2.3
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks (CWE-611); used by billing.py, oci/microceph providers
