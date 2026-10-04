@@ -244,8 +244,14 @@ security-scan:
 pr-audit:
 	python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
 
+# Installs from requirements-security.txt rather than re-pinning here. The four
+# tools this used to pin separately (pip-audit, bandit, safety, semgrep) had all
+# drifted below it -- semgrep by seven releases -- and that drift is what let the
+# mcp==1.23.3 accepted risk in that file stay written long after it was fixed.
+# scripts/check_security_toolchain_pins.py now fails CI on a reintroduced pin.
 security-install:
-	$(PIP) install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.172.0 pre-commit==3.7.1 --quiet
+	$(PIP) install -r requirements-security.txt --quiet
+	$(PIP) install pre-commit==3.7.1 --quiet
 
 pre-commit-install:
 	pre-commit install
