@@ -27,7 +27,7 @@ SCOPE_RULES: list[tuple[str, str, str]] = [
         "BLOCK — integration branch deletes modules; do not bulk merge",
     ),
     ("src/", "Backend src/", "review + test; avoid cross-cutting deletes"),
-    ("Dimensional/", "Dimensional layer", "medium risk — run targeted tests"),
+    ("Dimensionals/", "Dimensional layer", "medium risk — run targeted tests"),
     ("web/", "Arcadia frontend", "UX/a11y scoped PRs"),
     ("tests/", "Tests", "port with matching production changes"),
     ("scripts/", "Ops scripts", "usually safe if additive"),

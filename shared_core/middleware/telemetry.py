@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.middleware.telemetry"""
+"""Backward-compatibility shim — canonical: Dimensionals.middleware.telemetry"""
 
-from Dimensional.middleware.telemetry import *  # noqa: F401, F403
+from Dimensionals.middleware.telemetry import *  # noqa: F401, F403

@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional  # noqa: E402
 
 import aiohttp  # noqa: E402
 
-from Dimensional.sanitize import sanitize_for_log  # noqa: E402
+from Dimensionals.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
 
@@ -139,7 +139,8 @@ class SwarmCoordinator:
     async def _check_node_health(self, node_url: str) -> Dict[str, Any]:
         """Check health of swarm node"""
         try:
-            assert self.session is not None  # noqa: S101 — session is set by __aenter__
+            if self.session is None:
+                raise AssertionError("session is set by __aenter__")
             async with self.session.get(
                 f"{node_url}/health", timeout=aiohttp.ClientTimeout(total=5)
             ) as response:

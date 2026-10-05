@@ -17,7 +17,7 @@ Honest assessment based on repository state, open PRs, and test evidence.
 - **Overrides don't propagate**: Entity renames live only in Infinity-Admin SQLite; workers and `/health` still show hardcoded names.
 - **Documentation drift**: `master-schema.md`, test fixtures ("Sage" as Lead AI), MacIntyre/McIntyre split, Guardian title variants.
 - **No entity rename tests**: `/admin/entities` endpoints untested in pytest.
-- **Dual registries**: 43-entity `platform.py` vs 9-location `Dimensional/pillars/entities.py` vs portal `INFINITY_LOCATIONS`.
+- **Dual registries**: 43-entity `platform.py` vs 9-location `Dimensionals/pillars/entities.py` vs portal `INFINITY_LOCATIONS`.
 - **Cloudflare legacy**: 26+ workers migrating; split-brain risk between CF edge and self-hosted.
 - **Optional deps fail soft**: sentence-transformers, qiskit, Redis — warnings at startup but confusing in prod if unset.
 

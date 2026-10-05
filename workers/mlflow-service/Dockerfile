@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
+FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
 # Create non-root user
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
@@ -11,9 +11,9 @@ RUN mkdir -p /data/mlflow-service \
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the
 # repo root. Supplied by docker-compose.production.yml, or for a direct
-#   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
+#   docker build --build-context sharedcore=../../Dimensionals --build-context observability=../../src/observability .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=worker:worker . /app/Dimensional/
+COPY --from=sharedcore --chown=worker:worker . /app/Dimensionals/
 COPY --from=observability --chown=worker:worker . /app/src/observability/
 ENV PYTHONPATH=/app
 # --- end SFSC ---

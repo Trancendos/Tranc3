@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.security_automation.remediator"""
+"""Backward-compatibility shim — canonical: Dimensionals.security_automation.remediator"""
 
-from Dimensional.security_automation.remediator import *  # noqa: F401, F403
+from Dimensionals.security_automation.remediator import *  # noqa: F401, F403

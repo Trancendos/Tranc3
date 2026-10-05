@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.security_automation.watchdog"""
+"""Backward-compatibility shim — canonical: Dimensionals.security_automation.watchdog"""
 
-from Dimensional.security_automation.watchdog import *  # noqa: F401, F403
+from Dimensionals.security_automation.watchdog import *  # noqa: F401, F403

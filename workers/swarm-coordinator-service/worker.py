@@ -24,7 +24,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from src.entities.health_metadata import health_entity_block
 from src.errors.error_catalog import ErrorCode
 

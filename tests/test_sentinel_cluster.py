@@ -7,7 +7,7 @@ failover, partition handling, and cluster lifecycle.
 
 import asyncio  # noqa: I001
 
-from Dimensional.infinity.sentinel_cluster import (
+from Dimensionals.infinity.sentinel_cluster import (
     ClusterConfig,
     ClusterHealth,
     ClusterPartition,

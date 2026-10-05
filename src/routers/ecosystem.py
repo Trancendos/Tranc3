@@ -43,21 +43,21 @@ router = APIRouter(prefix="/api/ecosystem", tags=["ecosystem"])
 # ---------------------------------------------------------------------------
 
 try:
-    from Dimensional.architecture.audit_ledger import AuditLedger
-    from Dimensional.architecture.storage_factory import StorageFactory
-    from Dimensional.middleware.telemetry import TelemetryCollector
-    from Dimensional.orchestration.config_drift import ConfigDriftDetector
-    from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
-    from Dimensional.orchestration.enhanced_registry import EnhancedServiceRegistry
-    from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
-    from Dimensional.orchestration.heartbeat_aggregator import (
+    from Dimensionals.architecture.audit_ledger import AuditLedger
+    from Dimensionals.architecture.storage_factory import StorageFactory
+    from Dimensionals.middleware.telemetry import TelemetryCollector
+    from Dimensionals.orchestration.config_drift import ConfigDriftDetector
+    from Dimensionals.orchestration.dependency_graph import SmartDependencyGraph
+    from Dimensionals.orchestration.enhanced_registry import EnhancedServiceRegistry
+    from Dimensionals.orchestration.health_monitor import AdaptiveHealthMonitor
+    from Dimensionals.orchestration.heartbeat_aggregator import (
         Heartbeat,
         HeartbeatAggregator,
         HeartbeatMetrics,
         ServiceStatus,
     )
-    from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
-    from Dimensional.security_automation.defense_engine import DefenseEngine, ThreatLevel
+    from Dimensionals.security_automation.adaptive_scanner import AdaptiveScanner
+    from Dimensionals.security_automation.defense_engine import DefenseEngine, ThreatLevel
 
     _registry = EnhancedServiceRegistry()
     _health_monitor = AdaptiveHealthMonitor()
@@ -675,7 +675,7 @@ async def get_security_incidents(status: Optional[str] = None):
     """Get security incidents, optionally filtered by status."""
     if not _DIMENSIONAL_AVAILABLE or _defense_engine is None:
         return {"incidents": []}
-    from Dimensional.security_automation.defense_engine import IncidentStatus
+    from Dimensionals.security_automation.defense_engine import IncidentStatus
 
     status_enum = IncidentStatus(status) if status else None
     return {"incidents": _defense_engine.get_incidents(status_enum)}
