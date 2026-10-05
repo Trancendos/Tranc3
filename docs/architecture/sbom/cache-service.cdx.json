@@ -84,9 +84,9 @@
     {
       "type": "library",
       "name": "duckdb",
-      "bom-ref": "pkg:pypi/duckdb@1.5.5",
-      "purl": "pkg:pypi/duckdb@1.5.5",
-      "version": "1.5.5"
+      "bom-ref": "pkg:pypi/duckdb@1.5.6",
+      "purl": "pkg:pypi/duckdb@1.5.6",
+      "version": "1.5.6"
     },
     {
       "type": "library",
