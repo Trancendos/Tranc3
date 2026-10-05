@@ -37,7 +37,7 @@
       },
       {
         "name": "trancendos:base-image",
-        "value": "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "value": "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       },
       {
         "name": "trancendos:manifest",
@@ -77,16 +77,16 @@
     {
       "type": "library",
       "name": "ruff",
-      "bom-ref": "pkg:pypi/ruff@0.16.9",
-      "purl": "pkg:pypi/ruff@0.16.9",
-      "version": "0.16.9"
+      "bom-ref": "pkg:pypi/ruff@0.16.6",
+      "purl": "pkg:pypi/ruff@0.16.6",
+      "version": "0.16.6"
     },
     {
       "type": "library",
       "name": "mypy",
-      "bom-ref": "pkg:pypi/mypy@1.20.2",
-      "purl": "pkg:pypi/mypy@1.20.2",
-      "version": "1.20.2"
+      "bom-ref": "pkg:pypi/mypy@1.14.1",
+      "purl": "pkg:pypi/mypy@1.14.1",
+      "version": "1.14.1"
     },
     {
       "type": "library",

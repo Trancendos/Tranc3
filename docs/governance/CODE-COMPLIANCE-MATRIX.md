@@ -45,12 +45,12 @@ pattern), `C901` (complexity — warned, not blocked). Per-file overrides: `test
 
 ## 3. Layer 1 — CI (two systems, deliberately, see `CLAUDE.md`'s CI/CD section)
 
-- **GitHub Actions** (`.github/workflows/`, 28 files): `ci.yml` (Ruff/lint, Service Topology and
+- **GitHub Actions** (`.github/workflows/`, 19 files): `ci.yml` (Ruff/lint, Service Topology and
   Pytest-with-coverage — the PR-blocking gate),
   `codeql.yml`, `test.yml`, `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`,
   `publish-wiki.yml`, `publish-matrix-site.yml`, plus `deploy-cloudflare.yml`/`deploy-fly.yml`
   (legacy deploy paths).
-- **Forgejo** (`.forgejo/workflows/`, 33 files) — the primary system for deployment and heavier
+- **Forgejo** (`.forgejo/workflows/`, 30 files) — the primary system for deployment and heavier
   pipelines: `production-gate.yml` (the 16-file pytest merge gate, see
   `docs/governance/TRANCENDOS-MODELS-MATRIX.md`'s test-coverage notes), `compliance-gate.yml`,
   `security-scan.yml`, `security-baseline.yml`, `dependency-audit.yml`, `dependency-scanner.yml`,
@@ -62,7 +62,7 @@ pattern), `C901` (complexity — warned, not blocked). Per-file overrides: `test
   `integration-scope-plan.yml`, `phase7-nanoservices.yml`, `phase8-trancex.yml`,
   `audit-key-check.yml`, plus the deploy workflows.
 
-33 Forgejo workflow files is a wide surface this document doesn't re-describe individually — see
+30 Forgejo workflow files is a wide surface this document doesn't re-describe individually — see
 each file's own header comment; this section exists so a reader knows the split is deliberate
 (GitHub for PR-facing checks GitHub itself needs, Forgejo for everything else) rather than drift.
 

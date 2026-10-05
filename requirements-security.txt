@@ -13,50 +13,40 @@ hashin==1.0.5         # Add package hashes to requirements for integrity
 
 # === OWASP Compliance ===
 # These support OWASP Top 10 validation in CI/CD
-# 1.178.0 -> 1.179.0: clears 13 PyJWT advisories (PYSEC-2026-4140 through -4152).
-# 1.178.0 constrained `pyjwt[crypto]~=2.13.0`, which is `==2.13.*` -- so pyjwt could not
-# reach 2.14.0 or 2.15.0, the versions that patch those 13, no matter what this file
-# pinned. An explicit `pyjwt==2.15.1` override would not have worked either: against an
-# exact-series pin it is ResolutionImpossible, and pip resolves a requirements file
-# atomically, so that one line would have installed nothing from this file at all.
-# 1.179.0 relaxes it to `pyjwt[crypto]<3,>=2.15.0`. Measured by the procedure the old
-# mcp note prescribed -- `pip download --no-deps semgrep==<v>`, then read METADATA:
-#   1.178.0 -> pyjwt[crypto]~=2.13.0     mcp==1.29.0
-#   1.179.0 -> pyjwt[crypto]<3,>=2.15.0  mcp==1.29.0  click~=8.4.2
-# Resolving this file at 1.179.0 then measures pyjwt 2.15.1 / mcp 1.29.0 / click 8.4.2,
-# all with zero advisories.
-semgrep==1.179.0      # Pattern-based static analysis for security anti-patterns
+# 1.164.0 -> 1.172.0: transitively fixes CVE-2026-7246 (click command injection,
+# PYSEC-2026-2132) and 5 PyJWT CVEs (PYSEC-2026-175/176/177/178/179) by pulling in
+# click~=8.4.2 and pyjwt~=2.13.0 instead of semgrep 1.164.0's click~=8.1.8/pyjwt~=2.12.0.
+# semgrep still hard-pins mcp==1.23.3 exactly (verified: still true as of 1.172.0,
+# the latest release) -- see the mcp accepted-risk note below, this bump doesn't
+# touch that one.
+semgrep==1.173.0      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
-cyclonedx-bom==7.4.0  # Generate SBOM from requirements/pip environment
+cyclonedx-bom==7.3.1  # Generate SBOM from requirements/pip environment
 
 # === Transitive dependency overrides (security pins) ===
 # filelock: CVE-2025-68146, CVE-2026-22701 (fix: >=3.20.3) — transitive via semgrep
 # safety>=3.8.0 requires filelock>=3.16.1 so this pin is compatible
-filelock==3.32.7
+filelock==3.32.5
 # cyclonedx-python-lib: pin to 11.x so pip resolves lxml<7,>=4 → lxml 6.1.1
 # (cyclonedx-bom 7.3.0 accepts cyclonedx-python-lib<12,>=8.0; 11.7.0 satisfies that
 #  AND requires lxml<7 which pins to 6.1.1, fixing PYSEC-2026-87)
 cyclonedx-python-lib==11.12.0
 # lxml: PYSEC-2026-87 (fix: >=6.1.0) — resolved by cyclonedx-python-lib==11.12.0 above
-lxml==6.1.3
+lxml==6.1.2
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks in XML parsing (CWE-611)
 
 # === Accepted risks (documented, upstream-blocked -- do not silently re-suppress) ===
-# None currently open in this file.
-#
-# An mcp==1.23.3 accepted risk stood here (PYSEC-2026-3481/3482/3483 -- session
-# hijacking and missing Host/Origin validation in mcp's SSE, WebSocket and
-# experimental-tasks *server* transports, transitive via semgrep's exact pin). It is
-# removed because it had already stopped being true, which is the part worth recording:
-# SECURITY_ALERT_REGISTER.md closed it as SEC-005 RESOLVED on 2026-09-11 against
-# mcp 1.29.0, and the semgrep pinned right here -- 1.178.0 -- already required
-# `mcp==1.29.0`, not 1.23.3. So this file went on asserting an open, upstream-blocked
-# risk, and naming 1.172.0 as the verified latest release, while its own register and
-# its own pinned dependency both said otherwise. Nothing had to change for the note to
-# go false, so nothing reported that it had. Its own instruction -- re-check on every
-# semgrep bump via `pip download --no-deps semgrep==<version>` and grep METADATA for
-# `Requires-Dist: mcp` -- is what caught it, and stays the procedure for the next one.
+# mcp==1.23.3 (transitive via semgrep, exact-pinned `mcp==1.23.3` by every semgrep
+# release through 1.172.0 -- verified, not just the currently-pinned 1.172.0):
+# CVE-2026-52869/52870/59950 (PYSEC-2026-3481/3482/3483) are session-hijacking and
+# missing Host/Origin validation bugs in mcp's SSE, WebSocket, and experimental-tasks
+# *server* transports. semgrep here is invoked purely as a CLI SAST scanner (pre-commit,
+# CI) -- it never starts an mcp server, so those transport code paths are never reached.
+# Overriding this pin breaks installation (semgrep's `mcp==1.23.3` is an exact pin, not
+# a range) -- see requirements-security.txt PR history for the pip resolver conflict.
+# Re-check on every semgrep bump: `pip download --no-deps semgrep==<version>` and grep
+# its METADATA for `Requires-Dist: mcp` to see if the pin has moved.

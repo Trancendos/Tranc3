@@ -7,6 +7,3 @@
 ## 2024-05-27 - [Fast Mean Squared Error Optimization]
 **Learning:** `sum(map(operator.mul, diffs, diffs))` after `diffs = list(map(operator.sub, a, b))` is ~30% faster than `sum((p - t) ** 2 for p, t in zip(a, b))` for computing squared errors in pure Python due to eliminating generator expression overhead.
 **Action:** When calculating sum of squared differences or MSE in pure Python without `numpy`, use `map(operator.sub, ...)` combined with `sum(map(operator.mul, ...))` instead of generator expressions with `zip` and `**2`.
-## 2024-05-18 - Avoid pure Python loops for multiple-pass optimizations
-**Learning:** Fusing multi-pass iterative calculations into a single `for` loop in CPython (e.g., computing a dot product and two norms at the same time to avoid multiple iterations) can actually be *slower* than running multiple separate C-optimized iterations (like `sum(map(operator.mul, ...))`). The interpreter overhead for each iteration in Python is greater than the cost of iterating over the list multiple times in C.
-**Action:** When trying to speed up numeric calculations in pure Python, prioritize C-level primitives (like `sum` + `map` + `operator.mul`) for each stage of the calculation, rather than writing a single manual Python loop that tries to compute everything at once.

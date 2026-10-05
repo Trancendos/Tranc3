@@ -6,4 +6,4 @@ fastapi==0.141.1
 starlette==1.6.0
 uvicorn[standard]==0.52.4
 httpx==0.28.1
-sqlalchemy==2.1.1
+sqlalchemy==2.0.52

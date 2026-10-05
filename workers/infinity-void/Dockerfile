@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
+FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
 
 LABEL maintainer="Trancendos"
 LABEL description="The Void — self-hosted encrypted secrets vault (replaces Cloudflare Worker)"

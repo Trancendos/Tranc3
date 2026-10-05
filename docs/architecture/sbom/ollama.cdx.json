@@ -8,7 +8,7 @@
       "type": "container",
       "name": "ollama",
       "bom-ref": "CI-CT-ollama",
-      "version": "ollama/ollama:latest@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c"
+      "version": "ollama/ollama:latest@sha256:020e4134285e2ef4d8fd801234176de3b4faadc992a3eb06c8e66a2f9d4c4ba2"
     },
     "properties": [
       {

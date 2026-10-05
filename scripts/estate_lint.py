@@ -32,17 +32,11 @@ import re
 import sys
 from pathlib import Path
 
-# This module is imported by tests/test_estate_lint.py, so nothing in its body
-# may terminate the interpreter. It used to `sys.exit(1)` here when PyYAML was
-# missing, which raised SystemExit during pytest collection -- pytest reports
-# that as INTERNALERROR and abandons the entire run, so one absent dependency
-# took down all ~1000 tests with exit code 3 instead of failing this one file.
-# Re-raising is the honest signal: the module genuinely cannot work without
-# yaml, and an ImportError is reported against this collection target alone.
 try:
     import yaml
-except ImportError as exc:  # pragma: no cover - exercised by the import itself
-    raise ImportError("PyYAML not installed. Run: pip install pyyaml") from exc
+except ImportError:
+    print("ERROR: PyYAML not installed. Run: pip install pyyaml")
+    sys.exit(1)
 
 ROOT = Path(__file__).parent.parent
 REGISTRY_PATH = ROOT / "config" / "estate" / "registry.yaml"

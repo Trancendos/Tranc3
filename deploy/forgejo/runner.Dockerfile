@@ -9,11 +9,7 @@
 #   - wrangler (Cloudflare Workers deploy)
 #   - Node.js 20 (LTS)
 #   - Python 3.11
-#   - pip security tools, from requirements-security.txt: pip-audit, bandit,
-#     semgrep, pip-tools, hashin, cyclonedx-bom, defusedxml (see the install
-#     step below for why Safety is installed by that file and then removed)
-#   - ruff, mypy (pinned at the install step; requirements-security.txt does
-#     not carry them)
+#   - pip security tools: pip-audit, bandit, safety, semgrep
 #   - gitleaks v8
 #   - docker CLI (client only — talks to the /var/run/docker.sock bind-mounted
 #     into this container by docker-compose.yml; no dockerd of its own)
@@ -95,46 +91,13 @@ RUN curl -fsSL https://fly.io/install.sh -o /tmp/flyctl_install.sh \
     && flyctl version
 
 # ── Python security tools ─────────────────────────────────────────────────────
-# Installed from requirements-security.txt, not re-pinned here. This file used to
-# pin pip-audit 2.9.0, bandit 1.8.3 and semgrep 1.100.0 -- semgrep 79 releases
-# behind what that requirements file pinned. This image is
-# `trancendos/act-runner:latest`, mapped to the `self-hosted` label the semgrep
-# job in .forgejo/workflows/security-scan.yml runs on, so a scanner invocation on
-# the runner that is not preceded by the job's own `pip install -r
-# requirements-security.txt` ran at 1.100.0. The accepted-risk notes in that file
-# describe one semgrep; this was a fifth, and the furthest adrift of them.
-#
-# The build context is the repository root (deploy/forgejo/bootstrap.sh builds
-# with "${REPO_ROOT}"), so the COPY resolves. scripts/check_security_toolchain_pins.py
-# fails CI if a version is restated here again.
-#
-# ruff and mypy stay pinned: they are linters rather than scanners and
-# requirements-security.txt does not carry them.
-#
-# Safety is then removed again, deliberately and explicitly. This image did not
-# ship it before -- the four pins here were pip-audit, bandit, semgrep and the two
-# linters -- and installing the requirements file wholesale brought it in, because
-# that file still pins safety 3.8.1. `.forgejo/workflows/security-scan.yml` line 27
-# says why it should not run here: "Safety removed -- no longer free for commercial
-# use." An image built for this estate's CI must not ship a tool that estate has
-# removed on licensing grounds, and a removal that happens in one workflow while
-# the shared requirements file still installs it is not a removal.
-#
-# Uninstalling after the fact rather than filtering the file keeps one pin source
-# -- the drift this whole change exists to end -- and makes the single exclusion
-# visible, with its reason, to anyone reading the image definition. The
-# contradiction itself (a workflow removing a tool the shared requirements file
-# still pins, and .pre-commit-config.yaml still runs) is a licensing decision for
-# the owner, not something to settle in a Dockerfile.
-COPY requirements-security.txt /tmp/requirements-security.txt
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
-    && python3 -m pip install --no-cache-dir -r /tmp/requirements-security.txt \
     && python3 -m pip install --no-cache-dir \
+        pip-audit==2.9.0 \
+        bandit==1.8.3 \
+        semgrep==1.100.0 \
         ruff==0.15.8 \
-        mypy==1.10.0 \
-    && python3 -m pip uninstall -y safety safety-schemas \
-    && rm /tmp/requirements-security.txt \
-    && ! python3 -m pip show safety > /dev/null 2>&1
+        mypy==1.10.0
 
 # ── gitleaks ──────────────────────────────────────────────────────────────────
 ARG GITLEAKS_VERSION=8.18.4

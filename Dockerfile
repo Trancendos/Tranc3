@@ -5,7 +5,7 @@
 # Run:    docker run -p 8000:8000 -p 8001:8001 --env-file .env tranc3
 # Fly.io: fly deploy  (uses this Dockerfile automatically)
 
-FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
+FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

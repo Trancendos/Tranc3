@@ -8,7 +8,7 @@
       "type": "container",
       "name": "langfuse",
       "bom-ref": "CI-CT-langfuse",
-      "version": "langfuse/langfuse:latest@sha256:3d2ae888a0e6edb41fdba6e7d5baca5e4baede3a870dac7970dadd9d925b018e"
+      "version": "langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425"
     },
     "properties": [
       {

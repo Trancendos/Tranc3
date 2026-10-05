@@ -71,7 +71,7 @@ repos:
 
   # ── Semgrep (semantic code analysis) ──────────────────────────────
   - repo: https://github.com/semgrep/pre-commit
-    rev: v1.179.0
+    rev: v1.174.0
     hooks:
       - id: semgrep
         args: ["--config", "auto", "--error"]

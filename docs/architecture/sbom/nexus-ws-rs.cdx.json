@@ -879,9 +879,9 @@
     {
       "type": "library",
       "name": "uuid",
-      "bom-ref": "pkg:cargo/uuid@1.27.0",
-      "purl": "pkg:cargo/uuid@1.27.0",
-      "version": "1.27.0"
+      "bom-ref": "pkg:cargo/uuid@1.26.0",
+      "purl": "pkg:cargo/uuid@1.26.0",
+      "version": "1.26.0"
     },
     {
       "type": "library",

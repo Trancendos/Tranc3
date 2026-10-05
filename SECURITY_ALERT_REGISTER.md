@@ -1706,3 +1706,30 @@ python scripts/pre_deploy_quality_gate.py
 - Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
   --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
   Forgejo UI.
+
+### SEC-010 — pyjwt PYSEC-2026-4140 to 4152 (transitive via semgrep)
+
+| Field | Value |
+|---|---|
+| CVE(s) | PYSEC-2026-4140, PYSEC-2026-4141, PYSEC-2026-4142, PYSEC-2026-4143, PYSEC-2026-4144, PYSEC-2026-4145, PYSEC-2026-4146, PYSEC-2026-4147, PYSEC-2026-4148, PYSEC-2026-4149, PYSEC-2026-4150, PYSEC-2026-4151, PYSEC-2026-4152 |
+| Component | `pyjwt` |
+| Source | `requirements-security.txt` (transitive via `semgrep==1.173.0`) |
+| **Disposition** | **SUPPRESS** |
+| Reasoning | Semgrep 1.173.0 exact-pins `pyjwt~=2.13.0` (which resolves to 2.13.0). Attempting to force `PyJWT==2.15.0` causes pip resolution failure (`pip-audit` aborts). We use semgrep solely as a CLI SAST scanner. It does not run a server or verify untrusted JWTs in our pipeline. The vulnerability is unreachable in our usage. |
+| **Blocked-by** | semgrep==1.173.0 |
+| Owner | Security Chapter |
+| Review | 2026-11-04 (or next semgrep bump) |
+
+
+### SEC-030 — pyjwt PYSEC-2026-4140 to 4152 (transitive via semgrep in security requirements)
+
+| Field | Value |
+|---|---|
+| CVE(s) | PYSEC-2026-4140, PYSEC-2026-4141, PYSEC-2026-4142, PYSEC-2026-4143, PYSEC-2026-4144, PYSEC-2026-4145, PYSEC-2026-4146, PYSEC-2026-4147, PYSEC-2026-4148, PYSEC-2026-4149, PYSEC-2026-4150, PYSEC-2026-4151, PYSEC-2026-4152 |
+| Component | `pyjwt` |
+| Source | `requirements-security.txt` |
+| **Disposition** | **SUPPRESS** |
+| Reasoning | Semgrep 1.173.0 exact-pins `pyjwt~=2.13.0` (which resolves to 2.13.0). Attempting to force `PyJWT==2.15.0` causes pip resolution failure (`pip-audit` aborts). We use semgrep solely as a CLI SAST scanner. It does not run a server or verify untrusted JWTs in our pipeline. The vulnerability is unreachable in our usage. |
+| **Blocked-by** | semgrep==1.173.0 |
+| Owner | Security Chapter |
+| Review | 2026-11-04 (or next semgrep bump) |

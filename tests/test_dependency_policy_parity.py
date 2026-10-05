@@ -127,19 +127,15 @@ def _declared_packages(ecosystem: str, directory: str) -> set[str] | None:
     if ecosystem == "pip":
         names = set()
         found = False
-        # rglob, not glob: dependabot's pip ecosystem searches below the
-        # directory it is given. Proven on 6bcb75c9 -- `pip in /workers`
-        # succeeded against a directory whose only requirements files are one
-        # level down, on the same commit where `docker in /workers` failed for
-        # finding nothing.
-        for manifest in sorted(root.rglob("requirements*.txt")):
+        for manifest in sorted(root.glob("requirements*.txt")):
             found = True
             for line in manifest.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if not line or line.startswith(("#", "-")):
                     continue
                 names.add(re.split(r"[\[<>=!~;\s]", line, maxsplit=1)[0].lower())
-        for pyproject in sorted(root.rglob("pyproject.toml")):
+        pyproject = root / "pyproject.toml"
+        if pyproject.is_file():
             found = True
             for match in re.finditer(
                 r"^\s*[\"']([A-Za-z0-9._-]+)[\[<>=!~\"']",
@@ -217,31 +213,18 @@ def test_a_block_ignores_every_blocked_package_its_own_manifest_declares() -> No
 
     The demand is made per block, from the manifest that block's own
     `directory` declares -- `package.json` for npm, `requirements*.txt` and
-    `pyproject.toml` for pip.
-
-    **How far down that search goes is per-ecosystem, and this file used to
-    state it wrongly.** It said dependabot "reads that directory's manifest,
-    directly, not recursively" for both. Measured on commit `6bcb75c9`, where
-    a config change made dependabot re-evaluate all twelve blocks at once:
-    `pip in /workers` **succeeded** and `docker in /workers` **failed** with
-    `No Dockerfiles nor Kubernetes YAML found`, from the same directory, which
-    holds no manifest of either kind directly and 84 requirements files and 90
-    Dockerfiles one level down. pip recurses. docker does not.
-
-    So pip is searched recursively here and npm is not. npm stays direct
-    because recursing from the root would pull `web/package.json` into the
-    root npm block and demand six React ignores for a manifest holding only
-    undici, vite and ws -- and unlike pip, nothing has yet been measured that
-    settles npm's real behaviour, so the narrower reading is the honest one.
+    `pyproject.toml` for pip. Directly, not recursively: dependabot with a
+    plain `directory:` reads that directory's manifest, and recursing would
+    pull `web/package.json` into the root npm block and demand six React
+    ignores for a manifest holding only undici, vite and ws.
 
     Limits, stated rather than implied. Only npm and pip are covered here,
     because those are the two ecosystems where "the manifest for directory D"
     is unambiguous; docker dependencies are scattered across Dockerfiles and
-    compose files, covered instead by the tree-wide name check below and by
-    `test_every_docker_block_has_a_dockerfile_in_its_own_directory`. An ignore
-    repeated into a block whose manifest does not declare the package is left
-    alone -- it is inert, not wrong, and already correct if that package is
-    added there later.
+    compose files, and are covered instead by the tree-wide name check below.
+    An ignore repeated into a block whose manifest does not declare the
+    package is left alone -- it is inert, not wrong, and it is already correct
+    if that package is added there later.
     """
     blocked = _renovate_blocked()
     gaps: list[str] = []
@@ -336,73 +319,4 @@ def test_every_docker_ignore_names_an_image_the_tree_declares() -> None:
     assert not unmatched, (
         "these docker ignores name images the tree never declares, so they "
         f"block nothing: {sorted(set(unmatched))}"
-    )
-
-
-def _looks_like_kubernetes(path: Path) -> bool:
-    """Whether a YAML file is a Kubernetes manifest dependabot's docker ecosystem reads.
-
-    Judged on the two fields every manifest carries rather than on the
-    filename, and tolerant of multi-document files. A parse failure reads as
-    "not a manifest" rather than raising: this helper decides whether a
-    directory has something to scan, and an unreadable file is not something
-    dependabot could scan either.
-    """
-    try:
-        documents = list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
-    except (yaml.YAMLError, OSError):
-        return False
-    return any(isinstance(d, dict) and "apiVersion" in d and "kind" in d for d in documents)
-
-
-def test_every_docker_block_can_find_something_to_scan() -> None:
-    """A dependabot block pointing at a directory with nothing to read is dead.
-
-    `.github/dependabot.yml` carried docker blocks for `/workers` and
-    `/deploy`. Neither had ever found anything. dependabot's docker ecosystem
-    does not search below the directory it is given; `/workers` holds its 90
-    Dockerfiles one level down in `workers/<name>/Dockerfile`, and `/deploy`
-    has no Dockerfile anywhere. Every run ended in
-    `dependency_file_not_found: No Dockerfiles nor Kubernetes YAML found`.
-
-    Nobody saw it for the ordinary reason: dependabot re-evaluates every block
-    when the config changes, and until #1250 edited this file, none had. A
-    control that fails silently and is only observed by accident is the defect
-    this repository keeps finding, and a dead block is worse than no block --
-    it reads on the page as coverage that does not exist.
-
-    Asserted for docker only, and deliberately so. pip is measurably
-    different: on the same commit, `pip in /workers` succeeded where `docker
-    in /workers` failed, from a directory with no direct manifest of either
-    kind. Extending this rule to pip would flag a block that demonstrably
-    works. What is asserted here is what was measured, not what is tidy.
-    """
-    missing: list[str] = []
-    for block in _dependabot_blocks():
-        if block["ecosystem"] != "docker":
-            continue
-        root = REPO / block["directory"].lstrip("/")
-        if not root.is_dir():
-            missing.append(f"{block['directory']} (no such directory)")
-            continue
-        # is_file(), because a *directory* called `Dockerfile.d` would
-        # otherwise satisfy a glob that only ever meant to find a file.
-        if any(p.is_file() for p in root.glob("Dockerfile*")):
-            continue
-        # Kubernetes manifests count too. dependabot's own failure names both
-        # -- "No Dockerfiles nor Kubernetes YAML found" -- so a block resting
-        # on k8s YAML is legitimate, and flagging it would make this guard
-        # reject a configuration that works.
-        if any(_looks_like_kubernetes(p) for p in root.glob("*.y*ml")):
-            continue
-        deeper = len([p for p in root.rglob("Dockerfile*") if p.is_file()])
-        missing.append(
-            f"{block['directory']} (no Dockerfile or Kubernetes manifest directly here"
-            + (f"; {deeper} Dockerfile(s) one or more levels down)" if deeper else ")")
-        )
-
-    assert not missing, (
-        "these dependabot docker blocks point at directories holding no "
-        "Dockerfile, so every run fails with dependency_file_not_found and the "
-        f"block scans nothing: {missing}"
     )

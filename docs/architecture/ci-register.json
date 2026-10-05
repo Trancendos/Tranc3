@@ -1812,7 +1812,7 @@
       "ci_class": "Container",
       "name": "airflow",
       "container_name": "trancendos-airflow",
-      "image": "apache/airflow:3.3.2@sha256:e9982ad3f49a60418622e1baf80c34b0daf3fa5091a336cb5ee61f0cdd189371",
+      "image": "apache/airflow:3.3.1@sha256:0c4bcc0370e526de1b7892a3bf4343d260c6c82359c66f77155b53cd773d6339",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -1871,7 +1871,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/analytics-service",
       "dockerfile": "workers/analytics-service/Dockerfile",
@@ -1900,7 +1900,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/api-gateway/Dockerfile",
@@ -1929,7 +1929,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/artifactory-service",
       "dockerfile": "workers/artifactory-service/Dockerfile",
@@ -1958,7 +1958,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/audit-service",
       "dockerfile": "workers/audit-service/Dockerfile",
@@ -1984,7 +1984,7 @@
       "ci_class": "Container",
       "name": "authentik-db",
       "container_name": "trancendos-authentik-db",
-      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -2009,7 +2009,7 @@
       "ci_class": "Container",
       "name": "authentik-redis",
       "container_name": "trancendos-authentik-redis",
-      "image": "redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
+      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -2092,7 +2092,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/backup-service/Dockerfile",
@@ -2121,7 +2121,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/basement",
       "dockerfile": "workers/basement/Dockerfile",
@@ -2179,7 +2179,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/blender-worker",
       "dockerfile": "workers/blender-worker/Dockerfile",
@@ -2207,7 +2207,7 @@
       "ci_class": "Container",
       "name": "bookstack",
       "container_name": "trancendos-bookstack",
-      "image": "lscr.io/linuxserver/bookstack:latest@sha256:99cd1f5707c1911afad213adec5c9739763b76f843d1477142231834ecdcb6f7",
+      "image": "lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -2232,7 +2232,7 @@
       "ci_class": "Container",
       "name": "bookstack-db",
       "container_name": "trancendos-bookstack-db",
-      "image": "mariadb:12@sha256:2bdff1534a7e569fecaf4b10b66ad0d410806e382d9db29ba305448addda97c4",
+      "image": "mariadb:12@sha256:dd9b303aed4f4890ed09f766d8ca9ddfd176c0c6f6267feff53b3192ec65a979",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -2261,7 +2261,7 @@
       "provenance": "built",
       "base_images": [
         "node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503",
-        "node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
+        "node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
       ],
       "build_context": "./workers/bullmq-queue-service",
       "dockerfile": "workers/bullmq-queue-service/Dockerfile",
@@ -2290,7 +2290,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/cache-service",
       "dockerfile": "workers/cache-service/Dockerfile",
@@ -2374,7 +2374,7 @@
       "ci_class": "Container",
       "name": "calcom-db",
       "container_name": "trancendos-calcom-db",
-      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -2402,7 +2402,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/cdn-service",
       "dockerfile": "workers/cdn-service/Dockerfile",
@@ -2431,7 +2431,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/chaos-party",
       "dockerfile": "workers/chaos-party/Dockerfile",
@@ -2462,7 +2462,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/config-service",
       "dockerfile": "workers/config-service/Dockerfile",
@@ -2524,7 +2524,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/cron-service",
       "dockerfile": "workers/cron-service/Dockerfile",
@@ -2555,7 +2555,7 @@
       "image": "trancendos/cryptex:latest",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/cryptex",
       "dockerfile": "workers/cryptex/Dockerfile",
@@ -2640,7 +2640,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/deepagents-orchestrator-service",
       "dockerfile": "workers/deepagents-orchestrator-service/Dockerfile",
@@ -2721,7 +2721,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/devocity",
       "dockerfile": "workers/devocity/Dockerfile",
@@ -2749,7 +2749,7 @@
       "ci_class": "Container",
       "name": "dozzle",
       "container_name": "trancendos-dozzle",
-      "image": "amir20/dozzle:latest@sha256:db7e19fd36189823c66239894e821561cb201248af35362ec6d39a08e23ff88b",
+      "image": "amir20/dozzle:latest@sha256:243666b0593ff33ed1373901575236f0d6bed8a2d6b451cdae4345969a7b6d5c",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -2779,7 +2779,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/dspy-service",
       "dockerfile": "workers/dspy-service/Dockerfile",
@@ -2808,7 +2808,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/email-service",
       "dockerfile": "workers/email-service/Dockerfile",
@@ -2862,7 +2862,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/fabulousa-service",
       "dockerfile": "workers/fabulousa-service/Dockerfile",
@@ -2919,7 +2919,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim-bookworm@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3"
+        "python:3.12-slim-bookworm@sha256:0f5b26b9518d002b6173fd61daad821fa340635ebfec5bba471013f9ca114579"
       ],
       "build_context": "./workers/ffmpeg-worker",
       "dockerfile": "workers/ffmpeg-worker/Dockerfile",
@@ -2950,7 +2950,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/files-service",
       "dockerfile": "workers/files-service/Dockerfile",
@@ -3036,7 +3036,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/gbrain-bridge",
       "dockerfile": "workers/gbrain-bridge/Dockerfile",
@@ -3065,7 +3065,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/geo-service",
       "dockerfile": "workers/geo-service/Dockerfile",
@@ -3116,7 +3116,7 @@
       "ci_class": "Container",
       "name": "grafana",
       "container_name": "tranc3-grafana",
-      "image": "grafana/grafana:13.1.6@sha256:d8276d620291d3aaae3e31dde6d63e6807afee49825f04e8aa7392bbe024216f",
+      "image": "grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -3147,7 +3147,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/haystack-service",
       "dockerfile": "workers/haystack-service/Dockerfile",
@@ -3176,7 +3176,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/health-aggregator",
       "dockerfile": "workers/health-aggregator/Dockerfile",
@@ -3205,7 +3205,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/hive-service",
       "dockerfile": "workers/hive-service/Dockerfile",
@@ -3234,7 +3234,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/ice-box-service/Dockerfile",
@@ -3263,7 +3263,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/identity-service",
       "dockerfile": "workers/identity-service/Dockerfile",
@@ -3294,7 +3294,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/imaginarium",
       "dockerfile": "workers/imaginarium/Dockerfile",
@@ -3325,7 +3325,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/imind",
       "dockerfile": "workers/imind/Dockerfile",
@@ -3356,7 +3356,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-admin-service/Dockerfile",
@@ -3387,7 +3387,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/infinity-ai",
       "dockerfile": "workers/infinity-ai/Dockerfile",
@@ -3418,7 +3418,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-auth/Dockerfile",
@@ -3449,7 +3449,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-bridge-service/Dockerfile",
@@ -3478,7 +3478,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-one-service/Dockerfile",
@@ -3507,7 +3507,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-portal-service/Dockerfile",
@@ -3536,7 +3536,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-shards-service/Dockerfile",
@@ -3567,7 +3567,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/infinity-void",
       "dockerfile": "workers/infinity-void/Dockerfile",
@@ -3598,7 +3598,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/infinity-ws/Dockerfile",
@@ -3772,7 +3772,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/lab-service",
       "dockerfile": "workers/lab-service/Dockerfile",
@@ -3803,7 +3803,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/langchain-integration-service",
       "dockerfile": "workers/langchain-integration-service/Dockerfile",
@@ -3829,7 +3829,7 @@
       "ci_class": "Container",
       "name": "langfuse",
       "container_name": "trancendos-langfuse",
-      "image": "langfuse/langfuse:latest@sha256:3d2ae888a0e6edb41fdba6e7d5baca5e4baede3a870dac7970dadd9d925b018e",
+      "image": "langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -3854,7 +3854,7 @@
       "ci_class": "Container",
       "name": "langfuse-db",
       "container_name": "trancendos-langfuse-db",
-      "image": "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "image": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -3882,7 +3882,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/ledger-service",
       "dockerfile": "workers/ledger-service/Dockerfile",
@@ -3911,7 +3911,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/library-service",
       "dockerfile": "workers/library-service/Dockerfile",
@@ -3970,7 +3970,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/litellm-service",
       "dockerfile": "workers/litellm-service/Dockerfile",
@@ -4026,7 +4026,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/llamaindex-service",
       "dockerfile": "workers/llamaindex-service/Dockerfile",
@@ -4052,7 +4052,7 @@
       "ci_class": "Container",
       "name": "loki",
       "container_name": "tranc3-loki",
-      "image": "grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193",
+      "image": "grafana/loki:3.7.7@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4108,7 +4108,7 @@
       "ci_class": "Container",
       "name": "mattermost-db",
       "container_name": "trancendos-mattermost-db",
-      "image": "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "image": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4240,7 +4240,7 @@
       "ci_class": "Container",
       "name": "misp-redis",
       "container_name": "trancendos-misp-redis",
-      "image": "redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
+      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4268,7 +4268,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/mlflow-service",
       "dockerfile": "workers/mlflow-service/Dockerfile",
@@ -4297,7 +4297,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/model-router-service",
       "dockerfile": "workers/model-router-service/Dockerfile",
@@ -4326,7 +4326,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/monitoring",
       "dockerfile": "workers/monitoring/Dockerfile",
@@ -4354,7 +4354,7 @@
       "ci_class": "Container",
       "name": "n8n",
       "container_name": "trancendos-n8n",
-      "image": "n8nio/n8n:latest@sha256:87e0bab2c93192e8dd885ff7b0697c22a1bd97489568a8c67cc140fd7dbb342d",
+      "image": "n8nio/n8n:latest@sha256:a9e2e3c8006ed453238266669ea1274be7136f515abe290a2f75a0ab9044c93d",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4410,7 +4410,7 @@
       "ci_class": "Container",
       "name": "netdata",
       "container_name": "tranc3-netdata",
-      "image": "netdata/netdata:latest@sha256:69f2e706d9b8e2c4f72e65b106cbcf60277ff070883e45149eebe8241d6f0196",
+      "image": "netdata/netdata:latest@sha256:b93fd79b21974e66b73eeed265af1b5ca5eb741d2240b98be7eb74aa8093ec08",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4509,7 +4509,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/notifications",
       "dockerfile": "workers/notifications/Dockerfile",
@@ -4540,7 +4540,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/observatory",
       "dockerfile": "workers/observatory/Dockerfile",
@@ -4568,7 +4568,7 @@
       "ci_class": "Container",
       "name": "ollama",
       "container_name": "trancendos-ollama",
-      "image": "ollama/ollama:latest@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c",
+      "image": "ollama/ollama:latest@sha256:020e4134285e2ef4d8fd801234176de3b4faadc992a3eb06c8e66a2f9d4c4ba2",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4595,7 +4595,7 @@
       "ci_class": "Container",
       "name": "openbao",
       "container_name": "trancendos-openbao",
-      "image": "openbao/openbao:latest@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
+      "image": "openbao/openbao:latest@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4649,7 +4649,7 @@
       "ci_class": "Container",
       "name": "openbas-db",
       "container_name": "trancendos-openbas-db",
-      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4704,7 +4704,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/orders-service",
       "dockerfile": "workers/orders-service/Dockerfile",
@@ -4761,7 +4761,7 @@
       "ci_class": "Container",
       "name": "outline",
       "container_name": "trancendos-outline",
-      "image": "outlinewiki/outline:latest@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8",
+      "image": "outlinewiki/outline:latest@sha256:32d76719c378931dd65d93945930ca380d8376a0337d98a991fcc12b266f33cf",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4788,7 +4788,7 @@
       "ci_class": "Container",
       "name": "outline-db",
       "container_name": "trancendos-outline-db",
-      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4813,7 +4813,7 @@
       "ci_class": "Container",
       "name": "outline-redis",
       "container_name": "trancendos-outline-redis",
-      "image": "valkey/valkey:9-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11",
+      "image": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4868,7 +4868,7 @@
       "ci_class": "Container",
       "name": "paperless-db",
       "container_name": "trancendos-paperless-db",
-      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4893,7 +4893,7 @@
       "ci_class": "Container",
       "name": "paperless-redis",
       "container_name": "trancendos-paperless-redis",
-      "image": "redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
+      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4919,7 +4919,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/payments-service",
       "dockerfile": "workers/payments-service/Dockerfile",
@@ -4947,7 +4947,7 @@
       "ci_class": "Container",
       "name": "penpot-backend",
       "container_name": "trancendos-penpot-backend",
-      "image": "penpotapp/backend:latest@sha256:3b7df71db88d7c478b6a10103acb4108fa86a17a47277de81437de3899959e9e",
+      "image": "penpotapp/backend:latest@sha256:770b55f6e51bfcee49152b30858ca6a47143256de8d43953a50b952b5c60bb55",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4972,7 +4972,7 @@
       "ci_class": "Container",
       "name": "penpot-db",
       "container_name": "trancendos-penpot-db",
-      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -4997,7 +4997,7 @@
       "ci_class": "Container",
       "name": "penpot-exporter",
       "container_name": "trancendos-penpot-exporter",
-      "image": "penpotapp/exporter:latest@sha256:3b6f9d808c777908e4f4e290e91458ec747678a7994e39125e4f3af4ef70ba9f",
+      "image": "penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5020,7 +5020,7 @@
       "ci_class": "Container",
       "name": "penpot-frontend",
       "container_name": "trancendos-penpot-frontend",
-      "image": "penpotapp/frontend:latest@sha256:e1eb4756ec175eb71390f9bf0ddee819468d72f67f12cf3b1532bee8d591217e",
+      "image": "penpotapp/frontend:latest@sha256:94fa2864d8fc0cd62245af95c03cca89306a7fd23c206a98a3e9dc9a376ea27e",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5045,7 +5045,7 @@
       "ci_class": "Container",
       "name": "prefect-server",
       "container_name": "trancendos-prefect",
-      "image": "prefecthq/prefect:3-python3.12@sha256:f15a7bda40608ee890ff97e963ec3403dc25d633810a4ef1fff93ff303f4ef5f",
+      "image": "prefecthq/prefect:3-python3.12@sha256:6c0dc14195cae814eddeb66104a8333810a0a9886a5d7f0c45443136f167b3e0",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5075,7 +5075,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/products-service",
       "dockerfile": "workers/products-service/Dockerfile",
@@ -5103,7 +5103,7 @@
       "ci_class": "Container",
       "name": "prometheus",
       "container_name": "tranc3-prometheus",
-      "image": "prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7",
+      "image": "prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5159,7 +5159,7 @@
       "ci_class": "Container",
       "name": "qdrant",
       "container_name": "trancendos-qdrant",
-      "image": "qdrant/qdrant:latest@sha256:12364fe851b9f17356fc88189fc06d1b521262e04659ec7345975b00c9246a10",
+      "image": "qdrant/qdrant:latest@sha256:057ee3a8da769fe7310dd3537b4dc7583bf87a95ce8ac43c0af5a46bc580d1fc",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5190,7 +5190,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/queue-service",
       "dockerfile": "workers/queue-service/Dockerfile",
@@ -5219,7 +5219,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/rate-limit-service",
       "dockerfile": "workers/rate-limit-service/Dockerfile",
@@ -5276,7 +5276,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
+        "node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
       ],
       "build_context": "./workers/remotion-render-service",
       "dockerfile": "workers/remotion-render-service/Dockerfile",
@@ -5302,7 +5302,7 @@
       "ci_class": "Container",
       "name": "renovate-bot",
       "container_name": "trancendos-renovate-bot",
-      "image": "renovate/renovate:latest@sha256:2c801b47ce82c349453e554188abe4fa0b51bde333cfea54e67ad8a88d525087",
+      "image": "renovate/renovate:latest@sha256:6922c734849f2ed1c01e3a7924bd60e25e0ea904731a67bad72b02d563c0c3c3",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5330,7 +5330,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/resonate",
       "dockerfile": "workers/resonate/Dockerfile",
@@ -5361,7 +5361,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/sashas-photo-studio",
       "dockerfile": "workers/sashas-photo-studio/Dockerfile",
@@ -5390,7 +5390,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/search-service",
       "dockerfile": "workers/search-service/Dockerfile",
@@ -5419,7 +5419,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/sentinel-station-service/Dockerfile",
@@ -5496,7 +5496,7 @@
       "ci_class": "Container",
       "name": "signoz-otel-collector",
       "container_name": "trancendos-signoz-otel",
-      "image": "signoz/signoz-otel-collector:latest@sha256:deb566a7a3c0ba544ee58ccc92ee1f0e6da827bc40383e52f3c824705e100a3d",
+      "image": "signoz/signoz-otel-collector:latest@sha256:72aa1e4c1ec529f178e962c049be35cfd7abae02fe9a397edad10b4a9cba62fa",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5553,7 +5553,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/skills-benchmark-service",
       "dockerfile": "workers/skills-benchmark-service/Dockerfile",
@@ -5582,7 +5582,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/sms-service",
       "dockerfile": "workers/sms-service/Dockerfile",
@@ -5608,7 +5608,7 @@
       "ci_class": "Container",
       "name": "stirling-pdf",
       "container_name": "trancendos-stirling-pdf",
-      "image": "stirlingtools/stirling-pdf:latest@sha256:c195925341aa35ee5932d9c225edef48a92e46a1280963180d79619cb5f29e6e",
+      "image": "stirlingtools/stirling-pdf:latest@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -5641,7 +5641,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/storage-service",
       "dockerfile": "workers/storage-service/Dockerfile",
@@ -5672,7 +5672,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/swarm-coordinator-service/Dockerfile",
@@ -5701,7 +5701,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/taimra",
       "dockerfile": "workers/taimra/Dockerfile",
@@ -5732,7 +5732,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/tateking",
       "dockerfile": "workers/tateking/Dockerfile",
@@ -5821,7 +5821,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/the-academy",
       "dockerfile": "workers/the-academy/Dockerfile",
@@ -5850,7 +5850,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/the-dutchy",
       "dockerfile": "workers/the-dutchy/Dockerfile",
@@ -5881,7 +5881,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/the-grid",
       "dockerfile": "workers/the-grid/Dockerfile",
@@ -5912,7 +5912,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/the-lab",
       "dockerfile": "workers/the-lab/Dockerfile",
@@ -5941,7 +5941,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/the-studio",
       "dockerfile": "workers/the-studio/Dockerfile",
@@ -5997,7 +5997,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/topology-service",
       "dockerfile": "workers/topology-service/Dockerfile",
@@ -6058,7 +6058,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/tranc3-ai",
       "dockerfile": "workers/tranc3-ai/Dockerfile",
@@ -6087,7 +6087,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "Dockerfile",
@@ -6125,7 +6125,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/tranceflow",
       "dockerfile": "workers/tranceflow/Dockerfile",
@@ -6156,7 +6156,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/tranquility",
       "dockerfile": "workers/tranquility/Dockerfile",
@@ -6187,7 +6187,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/triposr-worker",
       "dockerfile": "workers/triposr-worker/Dockerfile",
@@ -6219,7 +6219,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/turings-hub-service",
       "dockerfile": "workers/turings-hub-service/Dockerfile",
@@ -6248,7 +6248,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": ".",
       "dockerfile": "workers/users-service/Dockerfile",
@@ -6276,7 +6276,7 @@
       "ci_class": "Container",
       "name": "valkey",
       "container_name": "tranc3-valkey",
-      "image": "valkey/valkey:9-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11",
+      "image": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -6334,7 +6334,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/vault-service",
       "dockerfile": "workers/vault-service/Dockerfile",
@@ -6394,7 +6394,7 @@
       "ci_class": "Container",
       "name": "victoriametrics",
       "container_name": "tranc3-victoriametrics",
-      "image": "victoriametrics/victoria-metrics:latest@sha256:5eff7af5341e401471002f58d106d399e614a62f3d240f2dbc21901e49eed5dd",
+      "image": "victoriametrics/victoria-metrics:latest@sha256:6d164540a04f49ba4e696cbdb70f9fee78be1e94b8f2a1292743a0b1ab8275bd",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -6422,7 +6422,7 @@
       "ci_class": "Container",
       "name": "vllm",
       "container_name": "trancendos-vllm",
-      "image": "vllm/vllm-openai:latest@sha256:8a69ffad015f138d7170c4ddc429e230a3bc1c1719f67e14324749df200a4b90",
+      "image": "vllm/vllm-openai:latest@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14",
       "provenance": "pulled",
       "base_images": [],
       "build_context": "",
@@ -6452,7 +6452,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016"
+        "python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217"
       ],
       "build_context": "./workers/vrar3d",
       "dockerfile": "workers/vrar3d/Dockerfile",
@@ -6483,7 +6483,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/warp-radio",
       "dockerfile": "workers/warp-radio/Dockerfile",
@@ -6512,7 +6512,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/warp-tunnel",
       "dockerfile": "workers/warp-tunnel/Dockerfile",
@@ -6725,7 +6725,7 @@
       "image": "",
       "provenance": "built",
       "base_images": [
-        "python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b"
+        "python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6"
       ],
       "build_context": "./workers/workflow-engine-service",
       "dockerfile": "workers/workflow-engine-service/Dockerfile",

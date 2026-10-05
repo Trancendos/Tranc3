@@ -8,7 +8,7 @@
       "type": "container",
       "name": "prometheus",
       "bom-ref": "CI-CT-prometheus",
-      "version": "prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7"
+      "version": "prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69"
     },
     "properties": [
       {
