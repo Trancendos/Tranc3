@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from Dimensional.path_validation import PathTraversalError
+from Dimensionals.path_validation import PathTraversalError
 from src.backup.engine import BackupEngine
 from src.backup.registry import WORKER_DATABASE_REGISTRY, BackupTier, WorkerDB
 

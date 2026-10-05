@@ -1,14 +1,14 @@
-FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
+FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
 COPY --chown=worker:worker workers/infinity-one-service/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY --chown=worker:worker workers/infinity-one-service/worker.py .
-# worker.py imports Dimensional.dimensionals and Dimensional.infinity.* -
+# worker.py imports Dimensionals.dimensionals and Dimensionals.infinity.* -
 # vendored from the repo-root build context (context: . per
 # docker-compose.production.yml), not duplicated locally.
-COPY --chown=worker:worker Dimensional/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 
 RUN mkdir -p data && chown -R worker:worker data
 

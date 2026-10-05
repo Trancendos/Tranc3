@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
     #### Package Build Instructions
     ### Use this section to define the build steps used by your software package.
     ### Endor Labs builds your software for you where possible but the required build tools must be made available.
@@ -54,19 +54,19 @@ jobs:
 
     - name: Endor Labs scan pull request
       if: github.event_name == 'pull_request' && steps.namespace.outputs.configured == 'true'
-      uses: endorlabs/github-action@b51bd06466b545f01a6ac788e3e1147695d3936c
+      uses: endorlabs/github-action@f46ffb04c928a9c9c356f9627bd60b710ed0963e
       with:
         namespace: ${{ vars.ENDOR_NAMESPACE }}
         sarif_file: findings.sarif
     - name: Endor Labs scan monitor
       if: github.event_name == 'push' && steps.namespace.outputs.configured == 'true'
-      uses: endorlabs/github-action@b51bd06466b545f01a6ac788e3e1147695d3936c
+      uses: endorlabs/github-action@f46ffb04c928a9c9c356f9627bd60b710ed0963e
       with:
         namespace: ${{ vars.ENDOR_NAMESPACE }}
         ci_run: "false"
         sarif_file: findings.sarif
     - name: Upload SARIF to github
       if: steps.namespace.outputs.configured == 'true'
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
       with:
         sarif_file: findings.sarif

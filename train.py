@@ -175,7 +175,7 @@ def train(args):
         max_sequence_length = args.max_length
         dropout = args.dropout
 
-    from Dimensional.path_validation import validate_path
+    from Dimensionals.path_validation import validate_path
     from src.core.advanced_model import AdvancedTransformerModel
 
     if args.resume:

@@ -40,8 +40,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from Dimensional.path_validation import PathTraversalError
-from Dimensional.service_auth import check_internal_secret
+from Dimensionals.path_validation import PathTraversalError
+from Dimensionals.service_auth import check_internal_secret
 from src.backup.engine import BackupEngine
 from src.backup.registry import (
     REGISTRY_BY_TIER,
