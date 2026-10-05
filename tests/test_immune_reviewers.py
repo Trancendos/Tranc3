@@ -232,3 +232,44 @@ def test_every_phrase_is_lowercase_so_matching_cannot_silently_miss():
         assert phrase == phrase.lower(), phrase
         assert phrase.strip() == phrase, phrase
         assert source, "every phrase must name the reviewer that emits it, or 'generic'"
+
+
+def test_the_manifests_stated_count_matches_its_own_list():
+    """A number stated beside a list is the drift this estate guards against.
+
+    This file said "of the five `depends_on` reviewers" against eight entries on
+    the day it was written -- caught by `cubic-dev-ai` and `codeant-ai` on
+    #1373, not by anything in the repository. Measured across CLAUDE.md the same
+    afternoon: every count with a guard was right, every count without one had
+    drifted. So this one gets a guard rather than a correction.
+    """
+    import re
+
+    text = DEFAULT_MANIFEST.read_text()
+    match = re.search(r"of the (\d+) `depends_on` reviewers", text)
+    assert match, "the manifest must state how many reviewers it depends on"
+    depends_on, _ = load_manifest()
+    assert int(match.group(1)) == len(depends_on), (
+        f"the manifest says {match.group(1)} depended-on reviewers but lists {len(depends_on)}"
+    )
+
+
+def test_on_request_reviewers_are_not_depended_on():
+    """A reviewer whose declared default is "no review" cannot be one whose
+    silence means something.
+
+    Raised by `llamapreview[bot]` on #1373. Two entries annotated "Review on
+    request" sat in `depends_on`, which guaranteed they would read SILENT or
+    UNPROVEN on every pull request nobody summoned them to -- reported as a
+    coverage gap that is not one.
+    """
+    import yaml
+
+    data = yaml.safe_load(DEFAULT_MANIFEST.read_text())
+    depends_on = set(data.get("depends_on") or ())
+    on_request = set(data.get("on_request") or ())
+    not_a_reviewer = set(data.get("not_a_reviewer") or ())
+    assert on_request, "the on-request group should not be empty while such bots are installed"
+    assert not depends_on & on_request, "a reviewer cannot be both depended on and on-request"
+    assert not depends_on & not_a_reviewer
+    assert not on_request & not_a_reviewer

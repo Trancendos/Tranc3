@@ -12,10 +12,15 @@
 # happened to comment. With no `depends_on` entry matched, the tool reports its
 # observations and says coverage is UNDETERMINED rather than guessing.
 #
-# Measured 2026-10-05: of the five `depends_on` reviewers below, three were
+# Measured 2026-10-05: of the 6 `depends_on` reviewers below, three were
 # simultaneously unable to review (credits, quota, subscription) across the four
 # most recent pull requests. On #1372 `sourcery-ai` was the only one that
 # reviewed, and it found five real defects.
+#
+# That count is checked against the list by `tests/test_immune_reviewers.py`.
+# It said "five" against eight entries when this file was written, which is the
+# same defect the rest of this estate guards numbers against -- a figure stated
+# once beside a list that then grew.
 
 # Reviewers whose silence on a defect is meant to mean something.
 depends_on:
@@ -25,8 +30,17 @@ depends_on:
   codeant-ai[bot]: "AI code review"
   qodo-code-review[bot]: "AI code review; subscription currently inactive"
   devloai[bot]: "Custom review agent; currently out of credits"
-  chatgpt-codex-connector[bot]: "Review on request"
-  google-labs-jules[bot]: "Review on request"
+
+# Reviewers that review when asked and post nothing otherwise. Depending on
+# these would guarantee they read SILENT or UNPROVEN on every pull request
+# nobody summoned them to -- which is not blindness and should not be reported
+# as a coverage gap. Raised by `llamapreview[bot]` on #1373, correctly: a
+# reviewer whose declared default is "no review" cannot be one whose silence
+# means something.
+on_request:
+  chatgpt-codex-connector[bot]: "Reviews on @codex review, or on open/ready-for-review"
+  google-labs-jules[bot]: "Reviews on request"
+  llamapreview[bot]: "Open-source reviewer; posted blocking findings on #1373"
 
 # Bots that comment on pull requests and are NOT reviewing them. Listed
 # explicitly, with what each actually does, because leaving them unlisted is
