@@ -162,10 +162,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install semgrep
-        # Pinned to match requirements-security.txt / Makefile's security-install --
-        # that pin's accepted-risk notes (mcp==1.23.3, SECURITY.md) are only
-        # authoritative if every semgrep invocation actually uses the same version.
-        run: python3 -m pip install semgrep==1.172.0 --quiet
+        # Installs requirements-security.txt rather than restating its pin. The
+        # comment that stood here said this pin was "Pinned to match
+        # requirements-security.txt / Makefile's security-install", and that
+        # "that pin's accepted-risk notes (mcp==1.23.3, SECURITY.md) are only
+        # authoritative if every semgrep invocation actually uses the same
+        # version." Both halves were untrue: this said 1.172.0, the Makefile
+        # 1.172.0, .pre-commit-config.yaml v1.174.0 and requirements-security.txt
+        # 1.178.0. The note it named as conditional on that agreement is exactly
+        # the one that went stale. Nothing measured the condition the comment
+        # stated, so scripts/check_security_toolchain_pins.py now does.
+        run: python3 -m pip install -r requirements-security.txt --quiet
 
       - name: Run semgrep (Python security + OWASP + FastAPI + JWT + SQL injection)
         run: |

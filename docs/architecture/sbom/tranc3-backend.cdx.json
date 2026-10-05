@@ -135,9 +135,9 @@
     {
       "type": "library",
       "name": "semgrep",
-      "bom-ref": "pkg:pypi/semgrep@1.178.0",
-      "purl": "pkg:pypi/semgrep@1.178.0",
-      "version": "1.178.0"
+      "bom-ref": "pkg:pypi/semgrep@1.179.0",
+      "purl": "pkg:pypi/semgrep@1.179.0",
+      "version": "1.179.0"
     },
     {
       "type": "library",
