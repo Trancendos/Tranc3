@@ -41,7 +41,7 @@
       },
       {
         "name": "trancendos:base-image",
-        "value": "node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
+        "value": "node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
       },
       {
         "name": "trancendos:manifest",
@@ -58,7 +58,7 @@
       "properties": [
         {
           "name": "tranc3:declared-range",
-          "value": "^5.21.2"
+          "value": "^6.0.0"
         },
         {
           "name": "tranc3:manifest-field",
@@ -119,20 +119,20 @@
     {
       "type": "library",
       "name": "@types/node",
-      "bom-ref": "pkg:npm/@types/node@24.13.3",
+      "bom-ref": "pkg:npm/@types/node@24.13.6",
       "scope": "optional",
       "properties": [
         {
           "name": "tranc3:declared-range",
-          "value": "24.13.3"
+          "value": "24.13.6"
         },
         {
           "name": "tranc3:manifest-field",
           "value": "devDependencies"
         }
       ],
-      "version": "24.13.3",
-      "purl": "pkg:npm/@types/node@24.13.3"
+      "version": "24.13.6",
+      "purl": "pkg:npm/@types/node@24.13.6"
     },
     {
       "type": "library",
