@@ -182,6 +182,9 @@ class InMemoryVectorStore:
 
         Performance optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than pure python for loop.
         """
+        if not a or not b or len(a) != len(b):
+            return 0.0
+
         import math
 
         dot = sum(map(operator.mul, a, b))
