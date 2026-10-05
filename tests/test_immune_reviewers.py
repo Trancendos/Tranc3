@@ -95,9 +95,48 @@ def test_a_review_of_an_earlier_commit_is_stale_not_coverage():
     assert not verdict.trustworthy
 
 
-def test_with_no_head_to_compare_review_evidence_is_not_called_stale():
-    """Saying "stale" without knowing the head would be inventing a fact."""
-    assert classify("x", [_review("x", commit=OLDER)], None).sight is Sight.REVIEWED
+def test_an_unknown_head_makes_the_verdict_unknown_not_reviewed():
+    """REGRESSION: this returned REVIEWED, asserting coverage of an unidentified head.
+
+    Raised by `cubic-dev-ai` on #1373. Saying "stale" without knowing the head
+    would invent a fact -- but so does saying "reviewed". The honest answer is
+    that there is nothing to compare the evidence against.
+    """
+    verdict = classify("x", [_review("x", commit=OLDER)], None)
+    assert verdict.sight is Sight.UNKNOWN
+    assert not verdict.trustworthy
+    assert "head unknown" in verdict.evidence
+
+
+def test_review_evidence_with_no_commit_is_unproven_not_stale():
+    """REGRESSION: this returned STALE "last reviewed ?".
+
+    GitHub can return `commit_id: null`. Calling that stale claimed the review
+    targeted an earlier commit with nothing to show it -- the same invented fact
+    the unknown-head branch one line above refuses to assert.
+    """
+    verdict = classify("x", [_review("x", commit=None)], HEAD)
+    assert verdict.sight is Sight.UNPROVEN
+    assert not verdict.trustworthy
+
+
+def test_a_pending_draft_review_is_not_submitted_evidence():
+    """A PENDING review is a draft. It must not satisfy coverage."""
+    pending = Remark("x", "", "review", HEAD, "PENDING")
+    assert classify("x", [pending], HEAD).sight is not Sight.REVIEWED
+    # ... while a submitted one at the same commit does count.
+    submitted = Remark("x", "", "review", HEAD, "APPROVED")
+    assert classify("x", [submitted], HEAD).sight is Sight.REVIEWED
+
+
+def test_a_pending_review_does_not_make_a_pull_request_covered():
+    coverage = assess(
+        "#1373",
+        [Remark("sourcery-ai[bot]", "wip", "review", HEAD, "PENDING")],
+        expected=DEPENDS,
+        head=HEAD,
+    )
+    assert not coverage.covered
 
 
 # --- Blindness binds to the reviewer that emits it ---------------------------

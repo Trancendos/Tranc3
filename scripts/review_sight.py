@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT))
 from src.immune.reviewers import Remark, assess, load_manifest  # noqa: E402
 
 REPO = "Trancendos/Tranc3"
+GH_TIMEOUT = 120
 
 
 class Unavailable(RuntimeError):
@@ -42,9 +43,14 @@ def _gh(path: str, paginate: bool = True) -> object:
     if paginate:
         cmd.append("--paginate")
     cmd.append(path)
-    proc = subprocess.run(  # nosec B603 — list args, no shell; path is built below
-        cmd, cwd=ROOT, capture_output=True, text=True
-    )
+    try:
+        proc = subprocess.run(  # nosec B603 — list args, no shell; path is built below
+            cmd, cwd=ROOT, capture_output=True, text=True, timeout=GH_TIMEOUT
+        )
+    except subprocess.TimeoutExpired as exc:
+        # The one failure the all-or-nothing contract could not report: a stalled
+        # `gh` neither returned UNKNOWN nor exited, it just stopped.
+        raise Unavailable(f"gh api {path}: timed out after {GH_TIMEOUT}s") from exc
     if proc.returncode != 0:
         raise Unavailable(f"gh api {path}: {proc.stderr.strip()[:160]}")
     text = proc.stdout.strip()

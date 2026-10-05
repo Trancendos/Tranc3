@@ -101,9 +101,12 @@ class Sight(str, Enum):
         STALE       reviewed an earlier diff, not this one
         BLIND       said it could not review
         UNPUBLISHED reached findings and could not publish them as a check
-        UNPROVEN    spoke, but nothing it said shows it read the diff
+        UNPROVEN    spoke, or left review evidence anchored to no commit at all,
+                    so nothing it shows proves it read this diff
         SILENT      said nothing at all
-        UNKNOWN     its evidence could not be collected
+        UNKNOWN     its evidence could not be collected, or the pull request's
+                    head could not be determined, so there is nothing to
+                    compare the evidence against
 
         -- and treating any of them as evidence of quality is the inference this
         module exists to block.
@@ -198,14 +201,27 @@ def classify(
     if not remarks:
         return ReviewerVerdict(reviewer, Sight.SILENT)
 
-    reviewed_at = [r.commit_id for r in remarks if r.kind in REVIEW_KINDS]
-    if reviewed_at:
-        # No head to compare against: the remark is review evidence, and saying
-        # it is stale would be inventing a fact. Say it reviewed.
-        if head is None or any(c == head for c in reviewed_at):
+    # A PENDING review is a draft the reviewer has not submitted. Counting it
+    # would let an unfinished review satisfy coverage.
+    evidence = [r for r in remarks if r.kind in REVIEW_KINDS and r.state != "PENDING"]
+    if evidence:
+        if head is None:
+            # The head could not be determined, so whether this review covers it
+            # is unknown. The previous version returned REVIEWED here, which
+            # asserted coverage of a commit it had never identified -- this
+            # module's own founding defect, one branch away from the comment
+            # warning against it.
+            return ReviewerVerdict(reviewer, Sight.UNKNOWN, "pull request head unknown")
+        anchors = [r.commit_id for r in evidence]
+        if any(c == head for c in anchors):
             return ReviewerVerdict(reviewer, Sight.REVIEWED)
-        seen = next((c for c in reviewed_at if c), None)
-        return ReviewerVerdict(reviewer, Sight.STALE, f"last reviewed {(seen or '?')[:8]}")
+        if not any(anchors):
+            # GitHub can return `commit_id: null`. Calling that STALE would claim
+            # the review targeted an earlier commit with nothing to show it --
+            # the same invented fact refused for an unknown head above.
+            return ReviewerVerdict(reviewer, Sight.UNPROVEN, "review evidence with no commit")
+        seen = next(c for c in anchors if c)
+        return ReviewerVerdict(reviewer, Sight.STALE, f"last reviewed {seen[:8]}")
 
     for remark in remarks:
         hit = _match(remark.body, reviewer, BLINDNESS_PHRASES)
@@ -266,6 +282,10 @@ class ReviewCoverage:
         return self._of(Sight.SILENT)
 
     @property
+    def unknown(self) -> list[ReviewerVerdict]:
+        return self._of(Sight.UNKNOWN)
+
+    @property
     def coverage_known(self) -> bool:
         """Is there a declared set to judge coverage against, and full evidence?"""
         return bool(self.expected) and self.collected
@@ -298,6 +318,7 @@ class ReviewCoverage:
             ("blind", self.blind),
             ("stale", self.stale),
             ("unproven", self.unproven),
+            ("unknown", self.unknown),
             ("silent", self.silent),
         ):
             named = [v.reviewer for v in group if v.reviewer in self.expected]

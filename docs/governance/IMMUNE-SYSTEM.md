@@ -742,8 +742,10 @@ because the first live run of this module reported #1372 as *"reviewed by
 mergify[bot], Trancendos"* — a merge-queue checkbox and the author's own replies
 to review threads. Counting those as coverage is the same false-clean the module
 was written to stop, reproduced inside it within minutes of its first run. With
-no declared reviewer matched, the verdict is `UNDETERMINED` rather than a guess,
-which is the same refusal `load_manifest` makes when the manifest is absent.
+no reviewer *declared* at all, the verdict is `UNDETERMINED` rather than a guess
+— the same refusal `load_manifest` makes when the manifest is absent. Declared
+reviewers that simply produced no matching evidence give `UNREVIEWED`, which is
+a different statement: someone was asked and nobody looked.
 
 **What this does not do.** It does not gate. `--require` exits non-zero on a
 pull request with no trustworthy reviewer, and it is deliberately not wired into
