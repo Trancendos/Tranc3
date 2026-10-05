@@ -192,3 +192,46 @@ def test_a_missing_act_runner_image_is_rejected(tmp_path, at):
     tree = _tree(tmp_path)
     (tree / "deploy" / "forgejo" / "runner.Dockerfile").unlink()
     assert at(tree) == 1
+
+
+def test_the_runner_image_does_not_ship_safety():
+    """The act-runner image must not install a tool this estate removed.
+
+    `.forgejo/workflows/security-scan.yml` says, at the top of the file: "Safety
+    removed — no longer free for commercial use." `requirements-security.txt`
+    nonetheless still pins it, so pointing the runner image at that file (which is
+    what ends the version drift this module exists for) brings Safety back into an
+    image that never shipped it.
+
+    Both halves are asserted, because the first without the second is a comment:
+    the Dockerfile must uninstall it, and the build must then prove it is gone.
+    Checked as text rather than by building the image — there is no Docker daemon
+    in the test environment — so this guards the instruction, not the layer.
+    """
+    dockerfile = (
+        Path(__file__).resolve().parent.parent / "deploy/forgejo/runner.Dockerfile"
+    ).read_text(encoding="utf-8")
+    assert "pip uninstall -y safety" in dockerfile, (
+        "the runner image installs requirements-security.txt, which pins safety; "
+        "it must uninstall it again or the image ships a tool removed on licensing grounds"
+    )
+    assert "! python3 -m pip show safety" in dockerfile, (
+        "the uninstall is unverified: the build must fail if safety survives it"
+    )
+
+
+def test_the_contradiction_this_exclusion_works_around_still_exists():
+    """If Safety ever leaves requirements-security.txt, delete the workaround.
+
+    The exclusion above is only warranted while the shared requirements file pins
+    a tool the security workflow removed. That contradiction is the owner's to
+    settle; this test fails when it is settled, so the workaround cannot outlive
+    its reason.
+    """
+    requirements = (Path(__file__).resolve().parent.parent / "requirements-security.txt").read_text(
+        encoding="utf-8"
+    )
+    assert "\nsafety==" in requirements, (
+        "requirements-security.txt no longer pins safety, so the runner image's "
+        "uninstall-and-assert workaround is dead code — remove it and this test"
+    )
