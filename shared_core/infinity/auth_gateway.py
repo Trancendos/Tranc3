@@ -1,7 +1,7 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.auth_gateway"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.auth_gateway"""
 
-from Dimensional.infinity.auth_gateway import *  # noqa: F401, F403
-from Dimensional.infinity.auth_gateway import (  # noqa: F401
+from Dimensionals.infinity.auth_gateway import *  # noqa: F401, F403
+from Dimensionals.infinity.auth_gateway import (  # noqa: F401
     _extract_api_key,
     _extract_bearer_token,
     _tier_to_role,

@@ -1,5 +1,5 @@
 # FFmpeg worker — non-root hardened (Forgejo #2127)
-FROM python:3.12-slim-bookworm@sha256:0f5b26b9518d002b6173fd61daad821fa340635ebfec5bba471013f9ca114579
+FROM python:3.12-slim-bookworm@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
@@ -16,9 +16,9 @@ RUN chown -R tranc3:tranc3 /app
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the
 # repo root. Supplied by docker-compose.production.yml, or for a direct
-#   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
+#   docker build --build-context sharedcore=../../Dimensionals --build-context observability=../../src/observability .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=tranc3:tranc3 . /app/Dimensional/
+COPY --from=sharedcore --chown=tranc3:tranc3 . /app/Dimensionals/
 COPY --from=observability --chown=tranc3:tranc3 . /app/src/observability/
 ENV PYTHONPATH=/app
 # --- end SFSC ---

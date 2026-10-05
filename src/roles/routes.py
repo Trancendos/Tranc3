@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from auth import get_current_user
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.roles.registry import RoleAssignment, UnknownLocationError, get_registry
 from src.roles.suite_stewardship import (
     MatrixSuitesError,

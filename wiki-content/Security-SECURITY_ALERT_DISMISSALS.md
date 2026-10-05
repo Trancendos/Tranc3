@@ -29,10 +29,10 @@ to bulk-close stale GitHub Security alerts.
 
 **Addressed (PR follow-up on `cursor/codeql-deferred-cleanup-e51c`):**
 
-- Empty-except (`except: pass`) in `shared_core/`, `Dimensional/`, and `archive/` — replaced with
+- Empty-except (`except: pass`) in `shared_core/`, `Dimensionals/`, and `archive/` — replaced with
   `logger.debug("suppressed %s", _exc, exc_info=False)` via `scripts/fix_empty_except_pass.py`
   (~157 handlers across 56 files). Intentional null-stub `pass` in `_Null*` classes unchanged.
-- Cyclic-import Notes in `shared_core/` and `Dimensional/` — barrel re-exports and lazy optional
+- Cyclic-import Notes in `shared_core/` and `Dimensionals/` — barrel re-exports and lazy optional
   imports annotated with `# codeql[py/cyclic-import]` (same pattern as live `src/mcp/` and
   `src/workflow/`). Scope: package `__init__.py` barrels, infinity worker kit, proactive wiring,
   service bus, auth middleware, and sentinel vault checks.
@@ -46,9 +46,9 @@ to bulk-close stale GitHub Security alerts.
 | #2558–#2559 | `*/infinity/proactive_defense.py` | Removed unused `FirewallAction`, `ThreatLevel` optional imports |
 | #2546–#2551, #2552–#2557 | `*/infinity/adaptive_intelligence.py` | Dropped unused optional symbols (`PulseMode`, `Anomaly`, `RepairStrategy`, `ReactiveState`, `ProbabilityVector`, `ThreatLevel`) |
 | #1021, #1458 | `*/infinity/fluidic_gateway.py` | Removed unused `_global_causal_bus` import |
-| #2478 | `Dimensional/path_validation.py` | Removed unused `Iterator` |
+| #2478 | `Dimensionals/path_validation.py` | Removed unused `Iterator` |
 | #2409 | `api.py` | Removed unused `CapacityExceededError` import |
-| #2331, #2328 | `Dimensional/hive/hive_core.py`, `bridge/bridge_core.py` | Removed unused `sqlite3` (uses `sqlite3_connect` helper) |
+| #2331, #2328 | `Dimensionals/hive/hive_core.py`, `bridge/bridge_core.py` | Removed unused `sqlite3` (uses `sqlite3_connect` helper) |
 | #2172, #2118 | `shared_core/architecture/*_provider.py` | `# codeql[py/unused-import]` on barrel re-exports |
 | #2149 | `src/event_bus/bus.py` | Import only `_event_type_to_subject` (not `NATSTransport`) |
 | #958 | `src/neural/attention_router.py` | Removed dead numpy probe (`_HAS_NUMPY` never read) |
@@ -62,7 +62,7 @@ to bulk-close stale GitHub Security alerts.
 
 **Branch:** `cursor/codeql-exception-exposure-e51c`
 
-**Pattern:** `log_server_error(exc, status_code, context=...)` in `Dimensional/error_handlers.py`
+**Pattern:** `log_server_error(exc, status_code, context=...)` in `Dimensionals/error_handlers.py`
 and `shared_core/error_handlers.py` logs the real exception server-side and returns static
 client messages (never embeds `str(exc)`), satisfying CodeQL `py/exception-information-leakage`.
 
@@ -91,9 +91,9 @@ client messages (never embeds `str(exc)`), satisfying CodeQL `py/exception-infor
 
 **Pattern:** User-controlled or external values (exceptions, stderr, workflow IDs, usernames,
 URLs, client metadata) must not flow into log format strings via f-strings or `str.format`.
-Use `%`-style logging with `sanitize_for_log(value)` from `Dimensional/sanitize.py` (or
+Use `%`-style logging with `sanitize_for_log(value)` from `Dimensionals/sanitize.py` (or
 `shared_core/sanitize.py` under `shared_core/`). Central handlers
-`log_server_error()` in `Dimensional/error_handlers.py` and `shared_core/error_handlers.py`
+`log_server_error()` in `Dimensionals/error_handlers.py` and `shared_core/error_handlers.py`
 sanitize `context`, exception type, and message before writing.
 
 **Tooling (safe to keep):** `scripts/remediate_cwe117.py` (targeted replacements),
@@ -104,11 +104,11 @@ Do **not** use `scripts/remediate_cwe117_ast.py` (`ast.unparse` corrupts formatt
 |-------------|------|-----|
 | #2578, #2577, #2573, #2572, #2136 | `workers/blender-worker/worker.py` | `sanitize_for_log` on returncode, stderr, scene paths |
 | #2576, #2227 | `src/workflow/routes.py`, `src/workflow/executor.py` | Workflow ID + exception in `%s` logs |
-| #2571 | `Dimensional/error_handlers.py` | `log_server_error` ref logging |
+| #2571 | `Dimensionals/error_handlers.py` | `log_server_error` ref logging |
 | #2570, #2367–#2365 | `archive/api_enhanced.py` | Request metadata + errors |
 | #2493, #2483, #2231 | `src/mcp/server.py` | Client/tool identifiers in MCP logs |
 | #2491, #2490 | `workers/infinity-one-service/worker.py` | Identity/session fields |
-| #2489, #2488, #2487, #1891 | `workers/sentinel-station-service/worker.py`, `Dimensional/infinity/sentinel_station.py` | Threat/event context |
+| #2489, #2488, #2487, #1891 | `workers/sentinel-station-service/worker.py`, `Dimensionals/infinity/sentinel_station.py` | Threat/event context |
 | #2486 | `workers/analytics-service/worker.py` | Query/event parameters |
 | #2485, #2484 | `workers/gateway-service/worker.py` | Route/upstream identifiers |
 | #2477, #2241–#2236, #541 | `workers/notifications/worker.py` | Channel, recipient, dispatch errors |
@@ -128,9 +128,9 @@ Do **not** use `scripts/remediate_cwe117_ast.py` (`ast.unparse` corrupts formatt
 | #2226 | `src/resonate/empathy.py` | *(already on `main`)* session fields |
 | #2225 | `src/taimra/digital_twin.py` | *(already on `main`)* twin IDs |
 | #2143 | `workers/ffmpeg-worker/worker.py` | FFmpeg stderr/args |
-| #1890 | `Dimensional/security_automation/defense_engine.py` | Rule/threat context |
-| #1889, #1888 | `Dimensional/infinity/abac.py` | ABAC subject/resource |
-| #1438–#1436 | `Dimensional/hive/hive_core.py` | Queue/agent identifiers |
+| #1890 | `Dimensionals/security_automation/defense_engine.py` | Rule/threat context |
+| #1889, #1888 | `Dimensionals/infinity/abac.py` | ABAC subject/resource |
+| #1438–#1436 | `Dimensionals/hive/hive_core.py` | Queue/agent identifiers |
 | #950 | `src/compliance/magna_carta.py` | *(already on `main`)* |
 | #949 | `src/security/ip_protection.py` | IP/asset identifiers |
 | #868, #867 | `src/citadel/routes.py` | *(already on `main`)* |
