@@ -223,7 +223,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   manifests in the build context, so base-image and transitive contents are
   named as excluded rather than quietly absent. Jurisdiction is the Location or
   AI the container serves; custody is The Ice Box in every case, which is the
-  one part that is not derived. Measured: 144 datastore and 174 container CIs,
+  one part that is not derived. Measured: 125 datastore and 174 container CIs,
   derived by `src/cmdb/{containers,datastores}.py` and checked in CI, because a
   register nobody regenerates describes the estate it was written for
 - `docs/governance/CI-ESTATE-CONSOLIDATION.md` — why 84 pull requests were blocked
