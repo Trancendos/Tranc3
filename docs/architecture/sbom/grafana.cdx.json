@@ -8,7 +8,7 @@
       "type": "container",
       "name": "grafana",
       "bom-ref": "CI-CT-grafana",
-      "version": "grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043"
+      "version": "grafana/grafana:13.1.6@sha256:d8276d620291d3aaae3e31dde6d63e6807afee49825f04e8aa7392bbe024216f"
     },
     "properties": [
       {

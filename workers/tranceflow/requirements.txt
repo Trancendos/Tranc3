@@ -13,4 +13,4 @@ pyvista==0.49.0
 meshio==5.3.5
 opentelemetry-sdk==1.45.0
 opentelemetry-exporter-otlp-proto-grpc==1.45.0
-opentelemetry-instrumentation-fastapi==0.65b0
+opentelemetry-instrumentation-fastapi==0.66b0
