@@ -8,7 +8,7 @@
       "type": "container",
       "name": "netdata",
       "bom-ref": "CI-CT-netdata",
-      "version": "netdata/netdata:latest@sha256:b93fd79b21974e66b73eeed265af1b5ca5eb741d2240b98be7eb74aa8093ec08"
+      "version": "netdata/netdata:latest@sha256:69f2e706d9b8e2c4f72e65b106cbcf60277ff070883e45149eebe8241d6f0196"
     },
     "properties": [
       {

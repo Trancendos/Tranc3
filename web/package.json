@@ -40,8 +40,8 @@
         "@storybook/addon-vitest": "10.6.0",
         "@storybook/react-vite": "10.6.0",
         "@tailwindcss/postcss": "4.3.3",
-        "@types/node": "26.6.2",
-        "@types/react": "18.3.29",
+        "@types/node": "26.6.3",
+        "@types/react": "18.3.31",
         "@types/react-dom": "18.3.7",
         "@vitejs/plugin-react": "6.1.1",
         "@vitest/browser-playwright": "4.1.11",
@@ -62,14 +62,14 @@
     },
     "overrides": {
         "brace-expansion": "^5.0.8",
-        "dompurify": "^3.4.13",
+        "dompurify": "^3.4.16",
         "nanoid": "^6.0.0",
         "valibot": "^1.4.2"
     },
     "pnpm": {
         "overrides": {
             "brace-expansion": "^5.0.8",
-            "dompurify": "^3.4.13",
+            "dompurify": "^3.4.16",
             "nanoid": "^6.0.0",
             "valibot": "^1.4.2"
         }

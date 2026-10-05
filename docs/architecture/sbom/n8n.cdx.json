@@ -8,7 +8,7 @@
       "type": "container",
       "name": "n8n",
       "bom-ref": "CI-CT-n8n",
-      "version": "n8nio/n8n:latest@sha256:a9e2e3c8006ed453238266669ea1274be7136f515abe290a2f75a0ab9044c93d"
+      "version": "n8nio/n8n:latest@sha256:87e0bab2c93192e8dd885ff7b0697c22a1bd97489568a8c67cc140fd7dbb342d"
     },
     "properties": [
       {
