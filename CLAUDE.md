@@ -654,8 +654,20 @@ Forgejo at `trancendos.com/the-workshop`. Act-runner in `deploy/forgejo/docker-c
 each asserting that a **committed, generated** file still matches the tree it was
 derived from: the container SBOMs, the CI register, the action backlog, the 3D
 topology, the taxonomy tree, the service review, the solution packs, the matrix
-index, the AI BOM. Nothing regenerates them automatically, and neither dependabot
-nor renovate knows they exist.
+index, the gate-engine documentation and the PLM documentation. Nothing
+regenerates them automatically, and neither dependabot nor renovate knows they
+exist.
+
+The AI BOM is **not** one of them, though an earlier draft of this section said
+it was. `scripts/ai_bom.py` writes only `logs/ai-bom.cyclonedx.json`, which
+`.gitignore` covers, so no currency check can compare it against a committed
+copy; and CI's `AI model inventory drift` step asks a different question
+entirely — `ai_bom.py --check` fails on code that references an **undeclared
+model**, which is a finding about the change rather than a stale artefact. It is
+excluded from `make regen` for that reason, pinned by
+`tests/test_regenerate_derived.py`, because running it refreshed an invisible
+file for no currency benefit while making `--check` mutate something it could
+not see.
 
 So a pull request that edits one worker requirement arrives red at `Container
 SBOMs are current`; one that bumps a compose digest arrives red at `CI register

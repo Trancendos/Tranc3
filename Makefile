@@ -245,10 +245,10 @@ download-model:
 # regenerates them. Does NOT run the check_*/conformance scripts: a failure
 # from one of those is a finding about your change, not a stale artefact.
 regen:
-	python3 scripts/regenerate_derived.py
+	$(PYTHON) scripts/regenerate_derived.py
 
 regen-check:
-	python3 scripts/regenerate_derived.py --check
+	$(PYTHON) scripts/regenerate_derived.py --check
 
 # ── Security ──────────────────────────────────────────────────────────────────
 security-scan:

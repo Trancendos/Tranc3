@@ -58,16 +58,24 @@ GENERATORS = (
     "build_solution_packs.py",
     "build_action_backlog.py",
     "build_matrix_index.py",
-    "ai_bom.py",
     "generate_gate_engine_doc.py",
     "generate_plm_docs.py",
 )
 
-# Generated files that `.gitignore` covers, so `git status` cannot see them and
-# `git checkout` cannot restore them. `--check` promises to leave the tree as it
-# found it; without an explicit snapshot that promise is false for these, which
-# would make this script an instance of the defect it exists to prevent.
-IGNORED_OUTPUTS = ("logs/ai-bom.cyclonedx.json",)
+# `scripts/ai_bom.py` is deliberately NOT in that list, and the reason matters.
+# It writes only `logs/ai-bom.cyclonedx.json`, which `.gitignore` covers, so no
+# currency check can compare it against a committed copy -- and CI's `AI model
+# inventory drift` step does something different anyway: `ai_bom.py --check`
+# fails on code referencing an UNDECLARED MODEL, which is a finding about the
+# change, not a stale artefact. Running it here refreshed an invisible file for
+# no currency benefit, and made `--check` mutate something it could not see.
+#
+# Measured 2026-10-05, by marker-file mtime across every generator: of the
+# eleven, `ai_bom.py` was the ONLY one writing a path git ignores. With it
+# removed, `--check` leaves nothing behind that `git status` cannot show, so no
+# snapshot machinery is needed. `tests/test_regenerate_derived.py` pins this:
+# re-adding a generator whose output git ignores breaks `--check`'s promise.
+IGNORED_WRITERS = ("ai_bom.py",)
 
 
 def _status() -> dict[str, str]:
@@ -129,17 +137,13 @@ def main() -> int:
         )
         return 1
 
-    snapshots: dict[Path, bytes | None] = {}
-    if args.check:
-        for rel in IGNORED_OUTPUTS:
-            path = ROOT / rel
-            snapshots[path] = path.read_bytes() if path.is_file() else None
-
     failed: list[str] = []
+    ran = 0
     for name in GENERATORS:
         script = ROOT / "scripts" / name
         if not script.is_file():
             continue
+        ran += 1
         result = subprocess.run(  # nosec B603 — list args, no shell; names are the literals above
             [sys.executable, str(script)], cwd=ROOT
         )
@@ -150,19 +154,16 @@ def main() -> int:
     after = {p: code for p, code in _status().items() if p not in before}
     if args.check:
         _restore(after)
-        for path, content in snapshots.items():
-            if content is None:
-                if path.is_file():
-                    path.unlink()
-            else:
-                path.write_bytes(content)
 
     if failed:
         print(f"\n{len(failed)} generator(s) failed: {', '.join(failed)}")
         return 1
 
     if not after:
-        print(f"Derived registers: already current ({len(GENERATORS)} generators ran)")
+        # `ran`, not len(GENERATORS): a generator missing from an older branch is
+        # skipped, and claiming it ran would be this script reporting a number it
+        # did not measure.
+        print(f"Derived registers: already current ({ran} generators ran)")
         return 0
 
     verb = "would change" if args.check else "regenerated"
