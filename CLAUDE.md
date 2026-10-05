@@ -245,6 +245,18 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   so every sensor declares a **probe** — a planted defect it must flag — and one
   that reports clean while failing its own probe is recorded blind. Read it
   before adding any scanner to this estate
+- `docs/governance/RUST-CRATE-COMPILE-GATE.md` — `rust.yml` was filtered to
+  `paths: aeonmind/rust/**` and compiled **one** of the tree's nine Cargo crates; a
+  PR touching `rust_extensions/`, `workers/*-rs/` or `src/nanoservices/` did not
+  trigger it at all. Measured with `cargo check` on each: **three of nine do not
+  compile**, and none is dead code — `workers/nexus-ws-rs` is a compose service whose
+  Dockerfile copies no `Cargo.lock`, so its image resolves fresh and fails the same
+  nine ways; `nsa_broker` is the port-7780 IPC broker; `tranc3_crypto` is the
+  AES-256-GCM extension whose Python shim falls back silently at **debug** level, which
+  is why an unbuildable component read as merely not installed. `scripts/check_rust_crates.py`
+  now compiles every crate against `config/estate/rust_crate_status.yaml` and fails in
+  both directions, including on a crate the ledger has never heard of. Read it before
+  merging any Rust dependency-bot PR — seven are open against crates nothing compiles
 - `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — three externally supplied AI
   assessments of Tranc3 checked claim by claim. The rule they establish: **they
   reliably read the issue tracker and reliably invent the aggregates.** Document 3
@@ -560,6 +572,15 @@ which is the worse failure: a number that is right three times and wrong twice c
 
 This matters beyond tidiness. `docs/governance/IMMUNE-SYSTEM.md` says to read it before adding any
 scanner to this estate, and that instruction only binds if adding one is visible.
+
+**`rust.yml` compiled one of nine Cargo crates until 2026-09-28.** Its `paths:` filter and
+every job's `working-directory` were `aeonmind/rust`, so eight crates went unchecked by it and
+a PR touching only them never triggered the workflow. **Seven** of those had no compile check
+anywhere: `rust-nanoservice.yml` already ran `cargo check --locked` on
+`src/nanoservices/rust/tranc3-nanoservice`, so that one crate was covered. Its `crates` job now runs `scripts/check_rust_crates.py` across the whole tree
+on any `*.rs`/`Cargo.*` change and weekly, because a crate breaks when a caret range resolves
+to a new dependency release, not when someone edits it. See
+`docs/governance/RUST-CRATE-COMPILE-GATE.md`.
 
 **`codecov.yml` was retired on 2026-09-03**, not dropped: coverage is now produced by `ci.yml`'s
 Pytest job, which already ran the same suite. The retired workflow existed only to run that suite

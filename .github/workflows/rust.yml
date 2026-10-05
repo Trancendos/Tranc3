@@ -1,14 +1,53 @@
 name: Rust CI
 
+# The path filter used to be 'aeonmind/rust/**' alone, which is one of the
+# tree's nine Cargo crates. A pull request touching rust_extensions/,
+# workers/*-rs/ or src/nanoservices/ did not trigger this workflow at all, so
+# eight crates went green without a rustc invocation. See the `crates` job and
+# scripts/check_rust_crates.py.
 on:
   push:
     paths:
-      - 'aeonmind/rust/**'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - '**/*.rs'
+      # Cargo configuration sets compiler flags and targets -- aeonmind/rust's
+      # .cargo/config.toml supplies the getrandom_backend cfg the WASM build
+      # needs -- so a configuration-only change can break a build the gate is
+      # then not run for. The old 'aeonmind/rust/**' filter covered it; the
+      # first version of this widened filter did not.
+      - '**/.cargo/config'
+      - '**/.cargo/config.toml'
+      - '**/rust-toolchain'
+      - '**/rust-toolchain.toml'
+      - 'config/estate/rust_crate_status.yaml'
+      - 'scripts/check_rust_crates.py'
+      - '.github/workflows/rust.yml'
     branches: [ main, 'phase-*' ]
   pull_request:
     paths:
-      - 'aeonmind/rust/**'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - '**/*.rs'
+      # Cargo configuration sets compiler flags and targets -- aeonmind/rust's
+      # .cargo/config.toml supplies the getrandom_backend cfg the WASM build
+      # needs -- so a configuration-only change can break a build the gate is
+      # then not run for. The old 'aeonmind/rust/**' filter covered it; the
+      # first version of this widened filter did not.
+      - '**/.cargo/config'
+      - '**/.cargo/config.toml'
+      - '**/rust-toolchain'
+      - '**/rust-toolchain.toml'
+      - 'config/estate/rust_crate_status.yaml'
+      - 'scripts/check_rust_crates.py'
+      - '.github/workflows/rust.yml'
     branches: [ main ]
+  schedule:
+    # A crate does not break when someone edits it; it breaks when a caret
+    # range resolves to a new dependency release. All three crates recorded
+    # broken today broke that way, on a day nobody touched them. A weekly run
+    # is what notices that.
+    - cron: '17 4 * * 1'
 
 env:
   CARGO_TERM_COLOR: always
@@ -86,3 +125,58 @@ jobs:
         run: pip install maturin
       - name: Build wheel
         run: maturin build --release --features python
+
+  crates:
+    name: Every Rust crate compiles, or is recorded as not
+    runs-on: ubuntu-latest
+    # cargo runs the build scripts of every resolved dependency after
+    # checkout, and this job never pushes. The sibling rust-nanoservice.yml
+    # hardens exactly this scenario and this job had neither half of it:
+    # no permissions block at all, and a checkout that persists credentials.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          # The ledger records wasm32-unknown-unknown for aeonmind/wasm, and the
+          # gate reports a crate BLOCKED when a recorded target is not installed
+          # rather than quietly passing it on the host alone. This action
+          # installs no extra targets by default, so without this the gate would
+          # have been correct and the workflow wrong -- the job would fail for a
+          # missing target rather than for anything about the code.
+          targets: wasm32-unknown-unknown
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.11'
+      - name: Cache Cargo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-crates-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-crates-
+      - name: Install PyYAML
+        # Pinned to the version requirements.txt already carries. Scorecard's
+        # Pinned-Dependencies rule asks for a hash, which no workflow in this
+        # repository does; version-pinning is the estate's convention
+        # (publish-matrix-site.yml, ci.yml's ruff) and is what this matches.
+        run: pip install "pyyaml==6.0.3"
+      - name: Compile every crate and compare against the ledger
+        run: python3 scripts/check_rust_crates.py
+
+      # Every crate has a committed Cargo.lock, so the run above reuses the
+      # locked graph and cannot see a caret range resolving to a newer release
+      # -- which is the whole reason the weekly schedule exists, and is exactly
+      # what the three worker Dockerfiles do, since none of them copies
+      # Cargo.lock into the image.
+      - name: Resolve fresh, as the images do (scheduled runs)
+        if: github.event_name == 'schedule'
+        run: python3 scripts/check_rust_crates.py --unlocked
+      - name: The gate must not have changed the tree it measured
+        run: git diff --exit-code
