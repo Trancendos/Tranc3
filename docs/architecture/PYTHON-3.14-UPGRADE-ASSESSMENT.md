@@ -66,7 +66,7 @@ Three workers ship **zero** dependency pins at all — `triposr-worker`, `blende
 `ffmpeg-worker` (`fastapi`, `uvicorn`, `pillow` unpinned). On a fresh interpreter these will
 resolve to whatever the latest wheels happen to be at build time, untested against anything.
 `haystack-service`, `dspy-service`, `llamaindex-service` pin `pydantic==2.8.2`, materially older
-than the `2.11.5`–`2.13.4` used everywhere else — worth reconciling regardless of the Python
+than the `2.11.5`–`2.13.5` used everywhere else — worth reconciling regardless of the Python
 version work, since it's existing drift.
 
 ## 2a. Dependency risk — MEASURED (2026-08-12, supersedes Section 2)

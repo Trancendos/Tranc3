@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import torch
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.distributed.intelligence_blockchain import (
     HomomorphicCrypto,
     IntelligenceBlockchain,

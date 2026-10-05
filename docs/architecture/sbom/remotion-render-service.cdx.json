@@ -1,0 +1,162 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:8e6d84f3-a6a9-5e39-aa51-9bce4a9941f8",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "remotion-render-service",
+      "bom-ref": "CI-CT-remotion-render-service",
+      "version": "built-from-source"
+    },
+    "properties": [
+      {
+        "name": "trancendos:sbom-scope",
+        "value": "source"
+      },
+      {
+        "name": "trancendos:sbom-scope-note",
+        "value": "Declared application dependencies only. Base-image OS packages, system libraries and transitively resolved versions are NOT included. Generate an image SBOM with syft or trivy for those."
+      },
+      {
+        "name": "trancendos:provenance",
+        "value": "built"
+      },
+      {
+        "name": "trancendos:jurisdiction",
+        "value": "_unrouted_"
+      },
+      {
+        "name": "trancendos:custodian",
+        "value": "The Ice Box"
+      },
+      {
+        "name": "trancendos:ci-id",
+        "value": "CI-CT-remotion-render-service"
+      },
+      {
+        "name": "trancendos:base-image",
+        "value": "node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
+      },
+      {
+        "name": "trancendos:manifest",
+        "value": "workers/remotion-render-service/package.json"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "@remotion/bundler",
+      "bom-ref": "pkg:npm/@remotion/bundler",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^4.0.190"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@remotion/renderer",
+      "bom-ref": "pkg:npm/@remotion/renderer",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^4.0.190"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "bom-ref": "pkg:npm/express",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^5.0.0"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "helmet",
+      "bom-ref": "pkg:npm/helmet",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^8.3.0"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "bom-ref": "pkg:npm/react",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^18.3.1"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react-dom",
+      "bom-ref": "pkg:npm/react-dom",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^18.3.1"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "remotion",
+      "bom-ref": "pkg:npm/remotion",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^4.0.190"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    }
+  ]
+}

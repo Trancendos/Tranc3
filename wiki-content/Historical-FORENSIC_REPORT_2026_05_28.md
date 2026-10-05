@@ -1,7 +1,7 @@
 # Trancendos Platform — Forensic Assessment & Production Readiness Roadmap
 **Date**: 2026-05-28
 **Branch**: claude/loving-mendel-dPsZ7 (merged to main as PR #75)
-**Scope**: Full repo deep-dive: src/, workers/, cloudflare/, Dimensional/, tests/, CI/CD
+**Scope**: Full repo deep-dive: src/, workers/, cloudflare/, Dimensionals/, tests/, CI/CD
 
 ---
 
@@ -235,7 +235,7 @@ The worker file itself correctly self-identifies as "The Void": `title="The Void
 
 ### 7.1 Dimensional Package
 
-`Dimensional/` is a first-party, well-structured package at repo root containing: `sanitize.py`, `log_sanitize.py`, `optional_import.py`, `architecture/`, `orchestration/`, `infinity/`. It is correctly installed as a Python package and used across 100+ files. Confirmed working.
+`Dimensionals/` is a first-party, well-structured package at repo root containing: `sanitize.py`, `log_sanitize.py`, `optional_import.py`, `architecture/`, `orchestration/`, `infinity/`. It is correctly installed as a Python package and used across 100+ files. Confirmed working.
 
 ### 7.2 ncps (Liquid Time-Constant Neural Networks)
 

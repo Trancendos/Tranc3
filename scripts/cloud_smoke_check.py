@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse, urlunparse
 
 DEFAULT_BACKEND = "https://tranc3-backend.fly.dev"
 GATED_STAGES = {"owner", "private_beta", "extended_beta"}
@@ -50,10 +52,49 @@ TIMEOUT = 15
 PROBE_BODY = {"username": "", "password": "x"}
 
 
+def build_validated_url(base_url: str) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+
+        parsed = urlparse(base_url)
+
+        # Protocol + host checks
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        # No host allowlist. --backend-url, --gateway-url and --frontend-url
+        # exist precisely so an operator can smoke-check a staging Fly app, a
+        # preview deploy or a custom domain, and the three names hard-coded
+        # here rejected all of them. The input is an operator's own CLI
+        # argument, so an allowlist adds friction without a threat it defends
+        # against. The scheme check above is the part that was doing work.
+        # (CodeRabbit, chatgpt-codex-connector on #1239)
+
+        return urlunparse(parsed)
+    except Exception:
+        # `from None` rather than `from exc`: the cause carries the rejected
+        # URL, and these helpers exist so a malformed or hostile URL is never
+        # echoed onward. Discarding it is the point, and stating that here is
+        # what B904 is asking for.
+        raise ValueError("Invalid URL") from None
+
+
 def _request(url: str, method: str = "GET", body: dict | None = None) -> tuple[int, str]:
+    # Validation lives inside the try. It used to sit above it, so a URL this
+    # function refused killed the whole run with a traceback -- no record(...)
+    # entry, no --json output, no exit code -- instead of being the failed
+    # check it is. A smoke check that cannot report its own bad input is not
+    # reporting. (chatgpt-codex-connector on #1239)
+    try:
+        validated_url = build_validated_url(url)
+    except ValueError as exc:
+        return 0, str(exc)
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(  # noqa: S310 — https URLs supplied by operator
-        url,
+        validated_url,
         data=data,
         method=method,
         headers={"Content-Type": "application/json", "User-Agent": "cloud-smoke-check"},

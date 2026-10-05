@@ -276,7 +276,7 @@ PROVIDER_INDEX: Dict[str, ProviderLimit] = {p.name: p for p in PROVIDERS}
 
 
 try:
-    from Dimensional.swarm.ant_colony import AntColonyRouter as _AntColonyRouter
+    from Dimensionals.swarm.ant_colony import AntColonyRouter as _AntColonyRouter
 
     _aco_router: Optional[_AntColonyRouter] = _AntColonyRouter(
         providers=[p.name for p in PROVIDERS]

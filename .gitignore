@@ -112,6 +112,12 @@ bridge-*
 nexus-*
 # exclude the Rust Nexus service from the above pattern
 !workers/nexus-ws-rs/
+# ...and that same service's generated SBOM. `nexus-*` above is unanchored, so
+# it matches this path too, and `git add -A` skips the file in silence: the
+# register records 174 containers with an SBOM while only 173 are committed,
+# so `build_ci_register.py --check` fails in CI on a file the author can see
+# on disk. Found exactly that way on PR #1249.
+!docs/architecture/sbom/nexus-*.cdx.json
 
 # Runtime data directories (backups and test workspaces)
 data/admin_os_backups/

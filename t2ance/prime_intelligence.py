@@ -141,7 +141,7 @@ class PrimeIntelligenceHub:
 
 def _get_pressure_balancer():
     try:
-        from Dimensional.gas.pressure import PressureBalancer
+        from Dimensionals.gas.pressure import PressureBalancer
 
         return PressureBalancer()
     except Exception:
@@ -150,7 +150,7 @@ def _get_pressure_balancer():
 
 def _get_fitness_evaluator():
     try:
-        from Dimensional.genetics.fitness import LatencyThroughputFitness
+        from Dimensionals.genetics.fitness import LatencyThroughputFitness
 
         return LatencyThroughputFitness()
     except Exception:

@@ -1,13 +1,13 @@
 # TRANC3 — CVE Vulnerability Remediation Report
-## Date: 2025-07 | Classification: Security Critical
+## Date: 2026-09 | Classification: Security Critical
 
 ---
 
 ## Executive Summary
 
-This report documents the remediation of **66 CVE vulnerabilities** identified across the Tranc3 ecosystem, spanning Python (PyPI) and Node.js (npm) dependencies. The vulnerabilities ranged from Critical (CVSS 9.8) to Low severity. All have been addressed through dependency upgrades, security hardening, and automated vulnerability management implementation.
+This report documents the remediation of **67 CVE vulnerabilities** identified across the Tranc3 ecosystem, spanning Python (PyPI) and Node.js (npm) dependencies. The vulnerabilities ranged from Critical (CVSS 9.8) to Low severity. All have been addressed through dependency upgrades, security hardening, and automated vulnerability management implementation.
 
-**Status: ALL 66 CVEs REMEDIATED**
+**Status: ALL 67 CVEs REMEDIATED**
 
 ---
 
@@ -34,14 +34,22 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 ### CVE-2026-1525 — undici (CVSS 9.8)
 - **Package:** undici (npm) — MIT
 - **Impact:** HTTP request smuggling vulnerability
-- **Remediation:** Upgraded to undici==7.15.0 in package.json
-- **Verification:** Version 7.x resolves all request smuggling patterns
+- **Remediation:** Upgraded to undici==8.10.2 in package.json (via 8.10.0 → 8.10.2)
+- **Verification:** Version 8.10.2 resolves request smuggling patterns and includes high-severity security fixes
+- **Additional Security Fixes (v8.10.2):** GHSA-vp8m-p9jh-q5pm (cache/deduplication interceptor cross-origin vulnerability), plus 9 other security advisories
 
 ### CVE-2025-32434 — torch (CVSS 9.8 / CVSS4 9.3)
 - **Package:** torch (PyPI) — BSD-3-Clause
 - **Impact:** `torch.load` with `weights_only=True` still leads to remote code execution via unsafe pickle deserialization
 - **Remediation:** Upgraded to torch==2.12.0
 - **Additional:** Added `weights_only=True` enforcement in model loading code with safe_loader wrapper
+
+### GHSA-2xp9-vwfh-vxw4 — next (Critical)
+- **Package:** next (npm) — MIT
+- **Impact:** Remote code execution vulnerability in image optimization affecting AVIF file processing. A vulnerability in the underlying `libheif` library used by `sharp` which Next.js uses for image optimization can lead to remote code execution when AVIF files are optimized.
+- **Remediation:** Upgraded from next 15.5.23 to next 15.5.25
+- **Date Remediated:** 2026-09-11
+- **Additional:** AVIF file optimization is disabled until the fix has propagated
 
 ---
 
@@ -109,7 +117,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2026-22036 — undici (CVSS 7.5)
 - **Impact:** HTTP header injection
-- **Fix:** undici==7.15.0
+- **Fix:** undici==8.10.2
 
 ### CVE-2025-6921 — transformers (CVSS 7.5)
 - **Impact:** Arbitrary file write via model download
@@ -117,7 +125,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2026-2229 — undici (CVSS 7.5)
 - **Impact:** CRLF injection in HTTP headers
-- **Fix:** undici==7.15.0
+- **Fix:** undici==8.10.2
 
 ### CVE-2024-12720 — transformers (CVSS 7.5)
 - **Impact:** Tokenization buffer overflow
@@ -125,7 +133,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2026-1526 — undici (CVSS 7.5)
 - **Impact:** HTTP/2 rapid reset attack
-- **Fix:** undici==7.15.0
+- **Fix:** undici==8.10.2
 
 ### CVE-2026-42561 — python-multipart (CVSS 7.5)
 - **Impact:** Memory corruption in multipart parser
@@ -148,7 +156,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2025-71176 — pytest (CVSS 6.8)
 - **Impact:** tempfile race condition
-- **Fix:** pytest==9.0.3
+- **Fix:** pytest==9.1.1
 
 ### CVE-2026-28684 — python-dotenv (CVSS 6.6)
 - **Impact:** Path traversal in .env file loading
@@ -180,7 +188,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ### CVE-2026-1527 — undici (CVSS 4.6)
 - **Impact:** Insufficient header validation
-- **Fix:** undici==7.15.0
+- **Fix:** undici==8.10.2
 
 ### CVE-2026-45736 — ws (CVSS 4.4)
 - **Impact:** WebSocket frame processing vulnerability
@@ -238,7 +246,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 | aiohttp | (new dep) | 3.13.5 | 20 |
 | python-multipart | (new dep) | 0.0.29 | 4 |
 | python-dotenv | (new dep) | 1.2.2 | 1 |
-| pytest | (new dep) | 9.0.3 | 1 |
+| pytest | (new dep) | 9.1.1 | 1 |
 | langchain-community | (new dep) | 0.4.1 | 1 |
 | langfuse | (new dep) | 4.6.1 | 1 |
 
@@ -246,7 +254,8 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 | Package | Previous | Updated | CVEs Resolved |
 |---------|----------|---------|---------------|
-| undici | (new dep) | 7.15.0 | 5 |
+| next | 15.5.23 | 15.5.25 | 1 |
+| undici | 8.10.0 | 8.10.2 | 5 |
 | vite | (new dep) | 7.1.3 | 1 |
 | ws | (new dep) | 8.18.3 | 1 |
 | esbuild | (new dep) | 0.25.9 | 2 |
@@ -319,7 +328,7 @@ This report documents the remediation of **66 CVE vulnerabilities** identified a
 
 ## 8. Verification Checklist
 
-- [x] All 66 CVEs addressed through dependency upgrades
+- [x] All 67 CVEs addressed through dependency upgrades
 - [x] No `>=` or `~=` version specifiers in requirements.txt
 - [x] Docker containers run as non-root user
 - [x] Security scanning workflows created

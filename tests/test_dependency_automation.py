@@ -27,9 +27,35 @@ SAFE_TYPES = {"minor", "patch"}
 
 # The exact set this config is supposed to cover. Asserting membership rather
 # than just "every entry that exists is well-formed" is what stops the file
-# being emptied -- a template regeneration that dropped all twelve entries
-# would otherwise satisfy every per-entry check by having nothing to check.
-EXPECTED_ENTRIES = 12
+# being emptied -- a template regeneration that dropped every entry would
+# otherwise satisfy every per-entry check by having nothing to check.
+#
+# This was a bare count (`EXPECTED_ENTRIES = 12`) until 2026-09-28, while the
+# comment above it already claimed it asserted "the exact set". It did not: a
+# count cannot tell a removal from a swap, so replacing `docker:/web` with
+# `docker:/nonexistent` would have kept it green. That gap is the same shape as
+# the defect that prompted the change which exposed it -- a control that reports
+# on something narrower than what it claims to check.
+#
+# `docker:/workers` and `docker:/deploy` were removed deliberately, not lost.
+# Neither had ever scanned a file: dependabot's docker ecosystem does not search
+# below the directory it is given, `/workers` holds its 90 Dockerfiles one level
+# down, and `/deploy` has no Dockerfile anywhere. Both paths are already covered
+# by renovate. See tests/test_dependency_policy_parity.py, whose
+# `test_every_docker_block_can_find_something_to_scan` is what keeps a dead
+# block from being added back.
+EXPECTED_ENTRIES = {
+    "pip:/",
+    "pip:/tranc3-bots",
+    "pip:/workers",
+    "npm:/",
+    "npm:/web",
+    "docker:/",
+    "docker:/docker",
+    "docker:/tranc3-bots",
+    "docker:/web",
+    "github-actions:/",
+}
 
 
 @pytest.fixture(scope="module")
@@ -43,11 +69,16 @@ def _entry_id(entry: dict) -> str:
 
 def test_the_config_still_covers_every_ecosystem(config):
     """Fail closed: an empty `updates:` list must not pass as "all grouped"."""
-    entries = config.get("updates") or []
-    assert len(entries) == EXPECTED_ENTRIES, (
-        f"expected {EXPECTED_ENTRIES} ecosystem entries, found {len(entries)}; "
-        f"a regenerated dependabot.yml that drops entries would otherwise pass "
-        f"every other test in this file by having nothing left to check"
+    present = {_entry_id(entry) for entry in config.get("updates") or []}
+
+    missing = sorted(EXPECTED_ENTRIES - present)
+    extra = sorted(present - EXPECTED_ENTRIES)
+    assert not missing and not extra, (
+        f"dependabot.yml no longer covers what it is supposed to. "
+        f"Missing: {missing}. Unexpected: {extra}. A regenerated file that "
+        f"dropped entries would otherwise pass every other test here by having "
+        f"nothing left to check, and one that swapped a live directory for a "
+        f"dead one would have passed the count this replaced."
     )
 
 

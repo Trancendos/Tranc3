@@ -1,32 +1,29 @@
-# Security Alert Register
+# Security Alert Register (wiki pointer)
 
-> **This page is a pointer. The register itself is
-> [`SECURITY_ALERT_REGISTER.md`](https://github.com/Trancendos/Tranc3/blob/main/SECURITY_ALERT_REGISTER.md)
-> in the repository root.**
+This page is a pointer. The security alert register lives at
+[`SECURITY_ALERT_REGISTER.md`](../SECURITY_ALERT_REGISTER.md) in the repository
+root, and that is the only copy.
 
-## Why this page no longer holds the register
+## Why this page is not the register
 
-Until 2026-09-04 this page held a second copy of the register, and the two had
-diverged. The root copy is the live one — `scripts/security_score.py` reads it
-(`_register_complete()`), where it contributes 12 points to the Security
-dimension of the production readiness scorecard. This copy was read by people
-and by nothing else.
+Until 2026-09-26 this page was a second document with the same title, last
+substantively updated 2026-09-11, holding a 134-line subset while the root
+register held 1,500-plus lines. `scripts/check_doc_duplication.py` fails on a
+shared H1 for exactly the reason that pair demonstrated: two documents claiming
+to be the same thing drift, and each stays blind to the other's contents. Four
+of the five Forgejo-export rows recorded here were absent from the root
+register, and the root register's SEC-009…SEC-019 findings were absent from
+here.
 
-The divergence cost something real. This page carried two advisories the root
-register had never heard of — GHSA-67mh-4wv8-2f99 (`esbuild`) and
-GHSA-3h5v-q93c-6h6q (`ws`), both transitive through `wrangler` — and asserted
-that the `overrides` remedy was applied in *all* Cloudflare `package.json`
-files. It was in one of seven. Six surfaces stood unremediated behind a
-record that said otherwise, in a document the scanner never read.
+Everything this page held that the root register did not has been moved into
+it, under *Appendix — scanner scope and procedures, merged from the wiki copy*:
+the Forgejo export rows and procedure, the Kubernetes manifest hardening table,
+the npm audit scope, the SAST scope, the KSV118 Trivy row, guard calibration,
+the vulnerability census, and the verification commands. Nothing was dropped.
 
-Both advisories now live in the root register as **SEC-008**, with the
-measured state rather than the claimed one, and all seven packages carry the
-overrides. `scripts/check_doc_duplication.py` fails the build if a second
-document starts claiming to be this register again.
+## Where to add a new entry
 
-## What belongs here instead
-
-Wiki pages are the **administrative** view: orientation, navigation, and
-narrative. When a document is read by a script, the script's copy is
-canonical and the wiki links to it rather than restating it — restating is
-how the two came apart.
+In [`SECURITY_ALERT_REGISTER.md`](../SECURITY_ALERT_REGISTER.md), under
+**Open entries**, with a disposition (`FIX` / `FP` / `ACCEPT` / `SUPPRESS`),
+the reasoning, and a review date. `scripts/security_score.py` reads that file
+and nothing reads this one.
