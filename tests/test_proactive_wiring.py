@@ -1,5 +1,5 @@
 """
-Tests for Dimensional.architecture.proactive_wiring.
+Tests for Dimensionals.architecture.proactive_wiring.
 
 Covers: WiringStatus, BridgeType, BridgeConnection, ProactiveSystemBootstrap.
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 
-from Dimensional.architecture.proactive_wiring import (
+from Dimensionals.architecture.proactive_wiring import (
     BridgeConnection,
     BridgeType,
     ProactiveSystemBootstrap,

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, Query
 
 from config import INTERNAL_SECRET, PROVIDER_DAILY_LIMITS, WORKER_NAME, WORKER_PORT
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import ChatCompletionRequest
 
 # These are injected at startup via init_router()

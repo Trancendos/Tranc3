@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.url_validation"""
+"""Backward-compatibility shim — canonical: Dimensionals.url_validation"""
 
-from Dimensional.url_validation import *  # noqa: F401, F403
+from Dimensionals.url_validation import *  # noqa: F401, F403

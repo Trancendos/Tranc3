@@ -269,7 +269,8 @@ class DeploymentModeRegistry:
         against PLATFORM_ENTITIES and _seed_defaults has run, so a mode row
         always exists."""
         state = self.get_mode(location)
-        assert state is not None  # seeded for every PLATFORM_ENTITIES key
+        if state is None:
+            raise AssertionError("seeded for every PLATFORM_ENTITIES key")
         return state.mode
 
     def set_mode(

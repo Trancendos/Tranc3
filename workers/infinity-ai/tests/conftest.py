@@ -24,14 +24,14 @@ if str(WORKER_DIR) not in sys.path:
 # Dimensional is IN THIS REPOSITORY, not an optional dependency, so it is
 # imported rather than stubbed.
 #
-# This block used to read `sys.modules.setdefault("Dimensional", MagicMock())`,
+# This block used to read `sys.modules.setdefault("Dimensionals", MagicMock())`,
 # which replaced the whole package with an object that is not a package. Every
-# `from Dimensional.<submodule> import ...` in the worker then failed with
-# "'Dimensional' is not a package" — 10 collection errors out of 18 tests here.
+# `from Dimensionals.<submodule> import ...` in the worker then failed with
+# "'Dimensionals' is not a package" — 10 collection errors out of 18 tests here.
 #
 # It went unnoticed because nothing runs this suite: `ci.yml` runs
 # `pytest tests/`, `pyproject.toml` sets `testpaths = ["tests"]`, and no workflow
-# names a worker suite. The import it breaks — `Dimensional.service_auth_fastapi`
+# names a worker suite. The import it breaks — `Dimensionals.service_auth_fastapi`
 # — was added to this worker by `scripts/migrate_internal_auth.py`, after this
 # stub was written. A stub frozen against an older version of the code it stands
 # in for, with no gate to notice the drift.
@@ -40,16 +40,16 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.append(str(_REPO_ROOT))
 
 try:  # pragma: no cover - exercised by which branch the environment takes
-    import Dimensional.sanitize  # noqa: F401
+    import Dimensionals.sanitize  # noqa: F401
 except ImportError:
     # Only if the real package genuinely cannot be imported. Stub the SUBMODULE,
     # never the package: a MagicMock package breaks every sibling import.
-    dim_pkg = ModuleType("Dimensional")
+    dim_pkg = ModuleType("Dimensionals")
     dim_pkg.__path__ = []  # marks it as a package so submodule imports resolve
     dim_mod = MagicMock()
     dim_mod.sanitize_for_log = lambda x: str(x)
-    sys.modules.setdefault("Dimensional", dim_pkg)
-    sys.modules.setdefault("Dimensional.sanitize", dim_mod)
+    sys.modules.setdefault("Dimensionals", dim_pkg)
+    sys.modules.setdefault("Dimensionals.sanitize", dim_mod)
 
 # src.* — optional integrations
 for _pkg in [

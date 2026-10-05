@@ -24,7 +24,7 @@ OCI provides the most generous free tier among major cloud providers, making it 
 | Vault | 20 keys, 150 secrets | Encryption key management |
 | API Gateway | 1M requests/month | 25K requests/minute |
 
-**Tranc3 Integration**: OCI Object Storage provider implemented in `Dimensional/architecture/oci_storage.py`. The StorageFactory auto-detects OCI as the preferred cloud provider when available.
+**Tranc3 Integration**: OCI Object Storage provider implemented in `Dimensionals/architecture/oci_storage.py`. The StorageFactory auto-detects OCI as the preferred cloud provider when available.
 
 ### Cloudflare — Edge Computing & CDN
 

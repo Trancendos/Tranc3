@@ -19,7 +19,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 
 from .bot_swarm import BotSwarm, StepResult
 from .task_loader import TaskLoader

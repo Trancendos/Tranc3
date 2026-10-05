@@ -24,3 +24,6 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
+## 2024-05-20 - Submodule git state during code modifications
+**Learning:** Modifying files inside a git submodule (like `workers/cranbania`) during a standard workflow and committing them within the submodule causes the parent repository to track the submodule as modified (`-dirty` or advanced commit pointer). This can block or fail code reviews that expect a clean, self-contained patch for the parent repository.
+**Action:** When asked to make UX/micro-UX improvements, ensure the changes stay within the scope of the parent repository and don’t unintentionally commit submodule state changes unless explicitly intended and handled correctly.

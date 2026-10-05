@@ -79,7 +79,7 @@ def test_an_adjudication_does_not_leak_to_another_file(filterer):
     it in all three — the over-broad suppression this module exists to end,
     reintroduced one layer up.
     """
-    other = "Dimensional/path_validation.py"
+    other = "Dimensionals/path_validation.py"
     assert filterer.adjudication_for(LISTED, "py/non-iterable-in-for-loop")
     assert filterer.adjudication_for(other, "py/non-iterable-in-for-loop") is None
     sarif, dropped, surprises = filterer.filter_sarif(

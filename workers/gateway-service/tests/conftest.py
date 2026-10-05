@@ -151,32 +151,32 @@ def client(mocks):
     """Return a TestClient backed by the gateway FastAPI app with all Dimensional deps mocked."""
     patches = [
         patch(
-            "Dimensional.dimensionals.get_dimensional_registry",
+            "Dimensionals.dimensionals.get_dimensional_registry",
             return_value=mocks["dimensional_registry"],
         ),
         patch(
-            "Dimensional.dimensionals.get_dimensional_bus", return_value=mocks["dimensional_bus"]
+            "Dimensionals.dimensionals.get_dimensional_bus", return_value=mocks["dimensional_bus"]
         ),
         patch(
-            "Dimensional.dimensionals.get_underverse_registry",
+            "Dimensionals.dimensionals.get_underverse_registry",
             return_value=mocks["underverse_registry"],
         ),
-        patch("Dimensional.infinity.abac.ABACEngine", return_value=mocks["abac"]),
-        patch("Dimensional.infinity.abac.get_default_policies", return_value=[]),
+        patch("Dimensionals.infinity.abac.ABACEngine", return_value=mocks["abac"]),
+        patch("Dimensionals.infinity.abac.get_default_policies", return_value=[]),
         patch(
-            "Dimensional.infinity.auth_gateway.WebSocketAuthManager", return_value=mocks["ws_auth"]
+            "Dimensionals.infinity.auth_gateway.WebSocketAuthManager", return_value=mocks["ws_auth"]
         ),
-        patch("Dimensional.infinity.rbac.RBACEngine", return_value=mocks["rbac"]),
+        patch("Dimensionals.infinity.rbac.RBACEngine", return_value=mocks["rbac"]),
         patch(
-            "Dimensional.infinity.sentinel_station.get_sentinel_station",
+            "Dimensionals.infinity.sentinel_station.get_sentinel_station",
             return_value=mocks["sentinel"],
         ),
         patch(
-            "Dimensional.infinity.sentinel_station.SharedSSEGenerator",
+            "Dimensionals.infinity.sentinel_station.SharedSSEGenerator",
             return_value=mocks["sse_gen"],
         ),
         patch(
-            "Dimensional.infinity.worker_integration.InfinityWorkerKit",
+            "Dimensionals.infinity.worker_integration.InfinityWorkerKit",
             return_value=mocks["worker_kit"],
         ),
     ]

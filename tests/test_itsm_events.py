@@ -14,7 +14,7 @@ from src.event_bus.types import PlatformEventType
 from src.event_bus.wiring import _event_type_to_sentinel_channel
 
 #: The channels Sentinel Station will accept. Mirrors SentinelChannel in
-#: workers/dimensional-nexus-service/Dimensional/infinity/nomenclature.py.
+#: workers/dimensional-nexus-service/Dimensionals/infinity/nomenclature.py.
 #:
 #: Duplicated here on purpose rather than imported: that module lives inside a
 #: worker's vendored tree, is copied into several workers, and is not on this
@@ -127,7 +127,7 @@ class TestEveryITSMEventRoutesToAChannelSentinelAccepts:
         # assertion in this class trusts would have been verified by nothing.
         source = (
             pathlib.Path(__file__).resolve().parents[1]
-            / "workers/dimensional-nexus-service/Dimensional/infinity/nomenclature.py"
+            / "workers/dimensional-nexus-service/Dimensionals/infinity/nomenclature.py"
         )
         if not source.exists():  # pragma: no cover - worker tree not checked out
             pytest.skip("dimensional-nexus worker tree not present")

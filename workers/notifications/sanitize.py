@@ -1,8 +1,8 @@
 # workers/notifications/sanitize.py
-# Vendored copy of Dimensional/sanitize.py — this worker's Docker build context
+# Vendored copy of Dimensionals/sanitize.py — this worker's Docker build context
 # is ./workers/notifications only, isolated from the repo-root Dimensional
 # package worker.py used to import unconditionally. Keep in sync with
-# Dimensional/sanitize.py.
+# Dimensionals/sanitize.py.
 #
 # Log sanitization and input cleaning utilities.
 #
@@ -12,7 +12,7 @@
 # log entries, potentially covering their tracks or creating false audit trails.
 #
 # Usage:
-#   from Dimensional.sanitize import sanitize_for_log, SafeLogger
+#   from Dimensionals.sanitize import sanitize_for_log, SafeLogger
 #
 #   # Quick sanitization:
 #   logger.info("User %s logged in", sanitize_for_log(username))
@@ -133,7 +133,7 @@ class SafeLogger:
 
     Usage:
         import logging
-        from Dimensional.sanitize import SafeLogger
+        from Dimensionals.sanitize import SafeLogger
 
         raw_logger = logging.getLogger(__name__)
         logger = SafeLogger(raw_logger)

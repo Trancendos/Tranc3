@@ -7,7 +7,7 @@ leader election, log replication, commitment, and cluster management.
 
 import asyncio  # noqa: I001
 
-from Dimensional.nexus.raft.raft_core import (
+from Dimensionals.nexus.raft.raft_core import (
     NexusCluster,
     NexusClusterNode,
     RaftConfig,

@@ -1,5 +1,5 @@
 # workers/infinity-ai/sanitize.py
-# Vendored copy of Dimensional/sanitize.py's sanitize_for_log().
+# Vendored copy of Dimensionals/sanitize.py's sanitize_for_log().
 #
 # service.py imported this unconditionally from the repo-root `Dimensional`
 # package, but this worker's Docker build context is `./workers/infinity-ai`
@@ -7,7 +7,7 @@
 # never visible to the build, so the import raised ModuleNotFoundError on
 # every container start. Vendoring the one function actually used keeps this
 # worker self-contained within its own build context, matching every other
-# worker in this repo. Keep in sync with Dimensional/sanitize.py if that
+# worker in this repo. Keep in sync with Dimensionals/sanitize.py if that
 # module's sanitize_for_log() changes.
 
 from __future__ import annotations

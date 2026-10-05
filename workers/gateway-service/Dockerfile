@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
+FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
@@ -8,11 +8,11 @@ RUN pip install --no-cache-dir -r requirements-worker.txt
 # config/database/models/service/router from this same directory - copying
 # only worker.py left every one of those imports unresolvable.
 COPY --chown=worker:worker workers/gateway-service/config.py workers/gateway-service/database.py workers/gateway-service/models.py workers/gateway-service/service.py workers/gateway-service/router.py workers/gateway-service/main.py workers/gateway-service/worker.py .
-# service.py/router.py/main.py import Dimensional.dimensionals and
-# Dimensional.infinity.* - vendored from the repo-root build context
+# service.py/router.py/main.py import Dimensionals.dimensionals and
+# Dimensionals.infinity.* - vendored from the repo-root build context
 # (context: . — see docker-compose.production.yml note if/when this service
 # is wired in), not duplicated locally.
-COPY --chown=worker:worker Dimensional/ ./Dimensional/
+COPY --chown=worker:worker Dimensionals/ ./Dimensionals/
 
 RUN mkdir -p data && chown -R worker:worker data
 

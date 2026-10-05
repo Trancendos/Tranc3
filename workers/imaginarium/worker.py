@@ -22,7 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, FastAPI, Header, HTTPException, 
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8064")
 WORKER_NAME = "imaginarium"

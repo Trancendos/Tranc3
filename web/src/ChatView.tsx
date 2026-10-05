@@ -7,6 +7,33 @@ import { useAnalytics } from './hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || ''
 
+// Hosts the upgrade flow may hand to window.open. The Aikido fix this came
+// from shipped an empty array with the comment "ACTION REQUIRED: Add your
+// allowed hosts before merging", which makes isSafeExternalUrl return false
+// for every candidate -- so /billing/checkout creates a real Stripe session
+// and the browser never opens it, and the modal just closes. A check that
+// rejects everything is not a strict check; it is the feature turned off.
+//
+// Stripe Checkout is the default because that is what /billing/checkout
+// returns today. VITE_ALLOWED_CHECKOUT_HOSTS overrides it as a comma-separated
+// list, so adding a provider is deployment configuration rather than a code
+// change. isSafeExternalUrl also matches subdomains of each entry.
+const ALLOWED_HOSTS: string[] = (
+  import.meta.env.VITE_ALLOWED_CHECKOUT_HOSTS || 'checkout.stripe.com'
+)
+  .split(',')
+  .map((host: string) => host.trim())
+  .filter((host: string) => host.length > 0)
+
+function isSafeExternalUrl(url: string, allowedHosts: string[]) {
+  if (!url) return false
+  try {
+    const parsed = new URL(String(url).replace(/[\t\n\r]/g, ''))
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+    return allowedHosts.some((h) => parsed.hostname === h || parsed.hostname.endsWith('.' + h))
+  } catch (e) { return false }
+}
+
 interface Message {
   id: string
   content: string
@@ -98,7 +125,7 @@ export default function ChatView() {
       })
       if (r.ok) {
         const data = await r.json()
-        if (data.checkout_url) window.open(data.checkout_url, '_blank')
+        if (data.checkout_url && isSafeExternalUrl(data.checkout_url, ALLOWED_HOSTS)) window.open(data.checkout_url, '_blank')
       }
     } catch { }
     setShowUpgrade(false)

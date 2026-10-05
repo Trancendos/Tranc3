@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.exchange.engine import Candidate, get_engine
 from src.exchange.sources import SELLABLE_RESOURCES, by_seat, constrained_resources
 from src.exchange.valuation import Basis
