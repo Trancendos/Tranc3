@@ -9,7 +9,11 @@
 #   - wrangler (Cloudflare Workers deploy)
 #   - Node.js 20 (LTS)
 #   - Python 3.11
-#   - pip security tools: pip-audit, bandit, safety, semgrep
+#   - pip security tools, from requirements-security.txt: pip-audit, bandit,
+#     semgrep, pip-tools, hashin, cyclonedx-bom, defusedxml (see the install
+#     step below for why Safety is installed by that file and then removed)
+#   - ruff, mypy (pinned at the install step; requirements-security.txt does
+#     not carry them)
 #   - gitleaks v8
 #   - docker CLI (client only — talks to the /var/run/docker.sock bind-mounted
 #     into this container by docker-compose.yml; no dockerd of its own)

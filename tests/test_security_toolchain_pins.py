@@ -235,3 +235,29 @@ def test_the_contradiction_this_exclusion_works_around_still_exists():
         "requirements-security.txt no longer pins safety, so the runner image's "
         "uninstall-and-assert workaround is dead code — remove it and this test"
     )
+
+
+def test_the_runner_image_header_does_not_advertise_safety():
+    """The image's own inventory must not list a tool it removes.
+
+    `deploy/forgejo/runner.Dockerfile` opens with a "Tools included:" block, and
+    it listed `safety` among the pip security tools while the install step took
+    Safety back out. That is the same defect this pull request is about — a
+    register describing the estate it was written for — in the smallest possible
+    form, and it survived the commit that created the mismatch.
+
+    Only inventory bullets are checked. The block may still *mention* Safety to
+    explain why it is removed, and should: the assertion is that it is not listed
+    as something the image ships.
+    """
+    dockerfile = Path(__file__).resolve().parent.parent / "deploy/forgejo/runner.Dockerfile"
+    header = dockerfile.read_text(encoding="utf-8").split("\nFROM ", 1)[0]
+    bullets = [
+        line
+        for line in header.splitlines()
+        if line.startswith("#   - ") and "safety" in line.lower()
+    ]
+    assert not bullets, (
+        "the Tools included block lists safety as shipped, but the install step "
+        f"uninstalls it: {bullets}"
+    )
