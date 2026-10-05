@@ -660,6 +660,55 @@ Workflow files in `.forgejo/workflows/`:
 
 Forgejo at `trancendos.com/the-workshop`. Act-runner in `deploy/forgejo/docker-compose.yml`. Org secrets: `CF_API_TOKEN`, `FLY_API_TOKEN`.
 
+### Derived registers — `make regen`
+
+`ci.yml`'s Service Topology job runs about a dozen steps named `... is current`,
+each asserting that a **committed, generated** file still matches the tree it was
+derived from: the container SBOMs, the CI register, the action backlog, the 3D
+topology, the taxonomy tree, the service review, the solution packs, the matrix
+index, the gate-engine documentation and the PLM documentation. Nothing
+regenerates them automatically, and neither dependabot nor renovate knows they
+exist.
+
+The AI BOM is **not** one of them, though an earlier draft of this section said
+it was. `scripts/ai_bom.py` writes only `logs/ai-bom.cyclonedx.json`, which
+`.gitignore` covers, so no currency check can compare it against a committed
+copy; and CI's `AI model inventory drift` step asks a different question
+entirely — `ai_bom.py --check` fails on code that references an **undeclared
+model**, which is a finding about the change rather than a stale artefact. It is
+excluded from `make regen` for that reason, pinned by
+`tests/test_regenerate_derived.py`, because running it refreshed an invisible
+file for no currency benefit while making `--check` mutate something it could
+not see.
+
+So a pull request that edits one worker requirement arrives red at `Container
+SBOMs are current`; one that bumps a compose digest arrives red at `CI register
+is current`; and one that merely **adds lines above a line the backlog cites**
+arrives red at `Action backlog is current`, because that register cites items by
+`file:line`. Measured 2026-10-05: four different steps in this job failed across
+six open pull requests in one afternoon, each needing the same command.
+
+**The command is `make regen`** (or `python3 scripts/regenerate_derived.py`).
+`make regen-check` reports what would change without keeping it. The job now also
+emits a notice naming the command when any step in it fails.
+
+Two things it deliberately does not do:
+
+- It never runs the `check_*` / `*_conformance` scripts in that job. Those are
+  assertions, not generators, and a failure from one is a **finding about the
+  change** rather than a stale artefact — #1252 failed `Documents are reachable`
+  by adding a document nothing linked to, and the fix was to link the document.
+  Regenerating would have hidden nothing and fixed nothing.
+- It does not run in CI against a contributor's branch. Pushing generated files
+  to someone's branch from CI is the pattern
+  `docs/governance/AGENT-DAEMON-FLEET-DECISION.md` declined, and it would also
+  paper over the genuine findings above. Whether to automate it anyway is an open
+  owner decision, not a default.
+
+Validated by running the whole pass against a clean `main`, where it produces
+**zero changes** — the property that makes it safe to run on a bot branch without
+smuggling unrelated churn into the diff.
+
 ### Pre-commit Hooks (`.pre-commit-config.yaml`)
 
 Runs on every local commit — zero-cost security gate. **22 hooks**, and this
