@@ -73,7 +73,14 @@ def main(argv: list[str] | None = None) -> int:
     payloads = _payloads()
 
     if args.check:
-        stale = [p for p, text in payloads.items() if not p.is_file() or p.read_text() != text]
+        # Written with encoding="utf-8" and ensure_ascii=False, so these files
+        # hold non-ASCII characters (— and ─). Reading them back at the locale
+        # encoding reports a current tree as STALE on any non-UTF-8 locale.
+        stale = [
+            p
+            for p, text in payloads.items()
+            if not p.is_file() or p.read_text(encoding="utf-8") != text
+        ]
         if stale:
             for path in stale:
                 print(f"STALE: {path.relative_to(REPO)}", file=sys.stderr)

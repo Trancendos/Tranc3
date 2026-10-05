@@ -12,19 +12,32 @@
 
 ## 1. The measured estate
 
-Not an estimate. `src/cmdb/datastores.py` walks the repository and finds every module that
-opens a datastore:
+Measured, not estimated — but measured as **Configuration Items, not physical stores**, and the
+difference matters before any of it is used to size a platform. `src/cmdb/datastores.py` walks the
+repository and emits one CI per distinct store, keyed on **engine + basename**:
 
-| Engine | Production stores | Notes |
+| Engine | Store CIs | Notes |
 |---|---:|---|
-| SQLite | 96 | file-backed, one file per store |
+| SQLite | 96 | file-backed, one CI per engine+basename |
 | Redis | 35 | reached over a URL |
 | PostgreSQL | 7 | reached over a URL |
 | DuckDB | 6 | embedded OLAP, already in the analytics worker |
 | **Total** | **144** | plus 69 more that only tests open |
 
-Of those 144: **123 are file-backed**, and **only 30 resolve to an owning Location** — 114 have
-no owner in the CMDB at all.
+Of those 144 CIs: **123 are file-backed**, and **only 30 resolve to an owning Location** — 114
+have no owner in the CMDB at all.
+
+**What the key does to these numbers.** Two Locations that open a same-named file under separate
+compose volumes collapse into one CI. `datastores.py` says so against itself at the keying
+decision: Sashas Photo Studio's and The Studio's `studio.db` merge although their volumes are
+separate, and `test_a_store_two_locations_open_names_both` asserts that merge deliberately,
+because a store two Locations genuinely share must be one CI naming both. Keying by Location
+instead yields 194 rather than 144. Both readings are right about different cases, and separating
+them needs the **deployed volume identity**, which the repository does not contain — open as
+#1249.
+
+So read 96, 123, 30/114 and the 13 below as CI counts. The true number of physical volumes is
+somewhere between 144 and 194 and is not knowable from this repository.
 
 Two further measurements matter more than the totals:
 
@@ -32,9 +45,15 @@ Two further measurements matter more than the totals:
   so: "sqlite3 hot-backup API". The estate also runs a MySQL instance (`misp-db`) and 7
   PostgreSQL stores. There is no code path that could back either up. This is issue #1146 and
   it is the highest-consequence item in `RELEASE-READINESS.md`.
-- **Only 13 of 96 SQLite stores are opened by more than one module.** That is the number that
-  says this is *not* yet a concurrency crisis — and the number that will change the moment
-  per-AI and per-Location databases arrive, because those are shared by definition.
+- **Only 13 of 96 SQLite store CIs are opened by more than one module.** Treat this as the
+  weakest figure here, in both directions. It is a lower bound on sharing, because two modules
+  opening genuinely separate volumes that happen to share a basename are counted as one shared
+  CI — so some of the 13 are not concurrency at all; and it is also not an upper bound, because
+  a store reached through a path this walker cannot resolve statically is invisible to it. It is
+  enough to say this is *not* yet a concurrency crisis on the evidence available, and not enough
+  to prove it. What is certain is the direction: per-AI and per-Location databases are shared by
+  definition, so the figure rises the moment they arrive, and settling #1249 is what would make
+  it load-bearing.
 
 ## 2. Why the advice is right — and where it is not
 

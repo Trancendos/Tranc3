@@ -65,8 +65,10 @@ They are separate associations generating separate columns. Collapsing them into
 `location_id` would merge the two facts the shared-jurisdiction model exists to keep apart.
 
 **80 routes**, read from Traefik labels and published ports in compose, each carrying the module
-that owns it — so "which routes reach the table holding credentials" is a query rather than an
-investigation.
+that owns it. Route-to-entity reachability is *not* derived: `Route` has no `exposes` field,
+because nothing in compose or the labels says which entity a route reads. So "which routes reach
+the table holding credentials" remains an investigation, and this model narrows it to the owning
+module rather than answering it.
 
 ## 3. Generated schema and security
 

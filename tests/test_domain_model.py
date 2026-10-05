@@ -31,13 +31,14 @@ if str(REPO) not in sys.path:
 
 from src.domain.build import build_model  # noqa: E402
 from src.domain.conformance import UNCHECKED, assess  # noqa: E402
-from src.domain.ddl import generate, rls_ddl  # noqa: E402
+from src.domain.ddl import _role_slug, generate, rls_ddl  # noqa: E402
 from src.domain.model import (  # noqa: E402
     Access,
     AccessRule,
     Attribute,
     AttributeType,
     Entity,
+    Multiplicity,
     _snake,
 )
 
@@ -417,4 +418,110 @@ def test_every_policy_predicate_names_a_column_its_table_has():
     assert not unknown, (
         "these policies test a column their table does not declare, so "
         f"CREATE POLICY fails: {unknown}"
+    )
+
+
+def test_a_write_rule_does_not_grant_insert_or_delete(model, sql):
+    """`Access.READ_WRITE` must not become `FOR ALL`.
+
+    `Access` carries Mendix's three levels, so "write" is a single value covering
+    every statement, and PostgreSQL's `FOR ALL` is INSERT, UPDATE and DELETE. The
+    generator used to map one onto the other, which handed every READ_WRITE rule
+    powers its own description disclaimed -- a Location seat could delete the
+    Location register row under a rule that said it "may edit its operational
+    fields". These are derived registers a build pipeline populates, so that is a
+    widening, not a convenience.
+
+    A rule that genuinely needs INSERT or DELETE should extend the model rather
+    than arrive as a side effect of the enum's coarseness, so this asserts the
+    absence of `FOR ALL` across the whole generated schema rather than only on the
+    rules that exist today.
+    """
+    assert "FOR ALL" not in sql, (
+        "a FOR ALL policy grants INSERT and DELETE; emit FOR SELECT and FOR UPDATE"
+    )
+
+    writable = [
+        (entity, rule)
+        for entity in model.entities
+        if entity.persistable
+        for rule in entity.access_rules
+        if rule.access is Access.READ_WRITE
+    ]
+    assert writable, "no READ_WRITE rules found — this test would pass vacuously"
+
+    for entity, rule in writable:
+        slug = _role_slug(rule.role)
+        matching = [
+            line
+            for line in sql.splitlines()
+            if line.startswith("CREATE POLICY")
+            and f"ON {entity.qualified} " in line
+            and f"_{slug}_w " in line
+        ]
+        assert matching, f"{entity.name}/{rule.role}: no write policy emitted"
+        for line in matching:
+            assert " FOR UPDATE " in line, f"{entity.name}/{rule.role}: {line}"
+
+
+def test_every_write_rule_also_emits_a_read_policy(model, sql):
+    """Narrowing the write policy must not remove the read it used to imply.
+
+    `FOR ALL` covered SELECT. Splitting it into FOR UPDATE alone would silently
+    drop a read the rule granted, which would be the same class of defect in the
+    opposite direction.
+    """
+    for entity in model.entities:
+        if not entity.persistable:
+            continue
+        for rule in entity.access_rules:
+            if rule.access is not Access.READ_WRITE:
+                continue
+            slug = _role_slug(rule.role)
+            reads = [
+                line
+                for line in sql.splitlines()
+                if line.startswith("CREATE POLICY")
+                and f"ON {entity.qualified} " in line
+                and f"_{slug}_r " in line
+                and " FOR SELECT " in line
+            ]
+            assert reads, f"{entity.name}/{rule.role}: write rule emits no read policy"
+
+
+def test_a_required_association_column_is_added_then_constrained(sql):
+    """`ADD COLUMN ... NOT NULL` with no default fails on a populated table.
+
+    PostgreSQL rejects it the moment the table already holds a row, and this file
+    is meant to be re-applicable to a live database — every table, index and
+    association column is `IF NOT EXISTS` for exactly that reason. The one
+    statement that was not re-applicable was the required association column, and
+    nothing noticed because no test applies this schema to a database holding
+    data (there is none to apply it to here, so this check is textual).
+
+    So: add nullable, then constrain separately. Re-applying to a populated
+    database then adds the column and stops at a NOT NULL it cannot satisfy,
+    naming the rows that need a reference, instead of failing before the column
+    exists at all. The backfill is deliberately not generated — which row points
+    where is the data's business.
+    """
+    offenders = [
+        line
+        for line in sql.splitlines()
+        if "ADD COLUMN IF NOT EXISTS" in line and "NOT NULL" in line
+    ]
+    assert not offenders, (
+        "a required column added NOT NULL in one statement cannot be applied to a "
+        f"populated table: {offenders}"
+    )
+
+    required = [
+        association
+        for association in build_model().associations
+        if association.required and association.multiplicity is not Multiplicity.MANY_TO_MANY
+    ]
+    assert required, "no required non-join associations found — this test would pass vacuously"
+    constrained = sql.count("SET NOT NULL")
+    assert constrained == len(required), (
+        f"{len(required)} required association(s) but {constrained} SET NOT NULL statement(s)"
     )

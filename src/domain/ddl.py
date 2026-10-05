@@ -135,13 +135,29 @@ def rls_ddl(entity: Entity) -> str:
         # A generated artefact that can only ever be applied once cannot be the
         # thing that keeps a database in step with the model.
         lines.append(f"DROP POLICY IF EXISTS {policy} ON {entity.qualified};")
+        lines.append(f"DROP POLICY IF EXISTS {policy}_r ON {entity.qualified};")
+        lines.append(f"DROP POLICY IF EXISTS {policy}_w ON {entity.qualified};")
         if rule.access is Access.READ:
             lines.append(
                 f"CREATE POLICY {policy} ON {entity.qualified} FOR SELECT USING ({using});"
             )
         else:
+            # READ_WRITE emits SELECT + UPDATE, not FOR ALL. `Access` carries
+            # Mendix's three levels, so "write" is one value covering every
+            # statement -- and FOR ALL is INSERT, UPDATE and DELETE. Every
+            # READ_WRITE rule in this model describes editing rows that already
+            # exist ("may edit its operational fields", "owns personality
+            # assignment", "may edit every container record"); these are derived
+            # registers a build pipeline populates, so a seat deleting its own
+            # register row is not a power the rule claimed. Granting it because the
+            # enum had no finer level is the kind of silent widening this file
+            # refuses elsewhere. A rule that genuinely needs INSERT or DELETE
+            # should say so by extending the model, where it is reviewable.
             lines.append(
-                f"CREATE POLICY {policy} ON {entity.qualified} FOR ALL "
+                f"CREATE POLICY {policy}_r ON {entity.qualified} FOR SELECT USING ({using});"
+            )
+            lines.append(
+                f"CREATE POLICY {policy}_w ON {entity.qualified} FOR UPDATE "
                 f"USING ({using}) WITH CHECK ({using});"
             )
 
@@ -220,12 +236,30 @@ def association_ddl(model: DomainModel) -> str:
             else:
                 holder, references = owner, target
             column = f"{_column_for(association.name, references.table)}_id"
-            null = " NOT NULL" if association.required else ""
             lines.append(f"-- {association.description}" if association.description else "")
+            # A required association is added nullable and then constrained,
+            # rather than `ADD COLUMN ... NOT NULL` in one statement. The
+            # one-statement form has no default, so PostgreSQL rejects it the
+            # moment the table already holds a row -- and the replay test only
+            # ever exercised an empty schema, so nothing here noticed. Splitting
+            # it means re-applying this file to a populated database adds the
+            # column, stops at a NOT NULL it cannot satisfy, and says which rows
+            # need a reference. That is a failure an operator can act on, where
+            # the single statement failed before the column existed at all.
+            #
+            # The backfill cannot be generated: which row should point where is
+            # the data's business, not the model's, and inventing a reference
+            # would be worse than stopping.
             lines.append(
                 f"ALTER TABLE {holder.qualified} ADD COLUMN IF NOT EXISTS "
-                f"{column} BIGINT{null} REFERENCES {references.qualified}(id);"
+                f"{column} BIGINT REFERENCES {references.qualified}(id);"
             )
+            if association.required:
+                lines.append(
+                    f"-- Required by the model. Backfill {holder.qualified}.{column} for any "
+                    f"existing rows, then:"
+                )
+                lines.append(f"ALTER TABLE {holder.qualified} ALTER COLUMN {column} SET NOT NULL;")
             if association.multiplicity is Multiplicity.ONE_TO_ONE:
                 # Without this the schema permits many-to-one on a column the
                 # model declares one-to-one -- the constraint exists only in the
