@@ -1,8 +1,8 @@
 # workers/cdn-service/path_validation.py
-# Vendored copy of Dimensional/path_validation.py — this worker's Docker build
+# Vendored copy of Dimensionals/path_validation.py — this worker's Docker build
 # context is ./workers/cdn-service only, isolated from the repo-root
 # Dimensional package worker.py used to import unconditionally. Keep in sync
-# with Dimensional/path_validation.py.
+# with Dimensionals/path_validation.py.
 #
 # Path traversal prevention utilities for safe filesystem operations.
 #
@@ -10,7 +10,7 @@
 # that resolved paths remain within an allowed base directory.
 #
 # Usage:
-#   from Dimensional.path_validation import validate_path, safe_join
+#   from Dimensionals.path_validation import validate_path, safe_join
 
 from __future__ import annotations
 

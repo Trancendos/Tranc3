@@ -16,14 +16,14 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-dimensionals-000001")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from Dimensional.dimensionals import (
+from Dimensionals.dimensionals import (
     DimensionalServiceBus,
     DimensionalServiceRegistry,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
-from Dimensional.dimensionals.underverse import UnderverseRegistry
+from Dimensionals.dimensionals.underverse import UnderverseRegistry
 
 
 def _run_coro(coro):

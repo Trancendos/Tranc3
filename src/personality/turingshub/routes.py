@@ -10,7 +10,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensionals.error_handlers import safe_error_detail
 
 router = APIRouter(prefix="/turingshub", tags=["turings-hub"])
 

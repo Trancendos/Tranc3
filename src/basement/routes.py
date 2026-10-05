@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth import get_current_user
-from Dimensional.security import constant_time_compare
+from Dimensionals.security import constant_time_compare
 from src.basement.archive import ArchiveSource, get_basement
 from src.basement.promotion import promote as promote_patterns
 

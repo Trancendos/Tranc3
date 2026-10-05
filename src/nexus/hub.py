@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.error_handlers import safe_error_detail
+from Dimensionals.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

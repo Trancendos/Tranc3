@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.architecture.smart_storage"""
+"""Backward-compatibility shim — canonical: Dimensionals.architecture.smart_storage"""
 
-from Dimensional.architecture.smart_storage import *  # noqa: F401, F403
+from Dimensionals.architecture.smart_storage import *  # noqa: F401, F403

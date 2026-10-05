@@ -220,7 +220,7 @@ in-house precedent, not a hypothetical fix.
 `src/entities/lifecycle.py`, `src/cloud/federation_controller.py`,
 `src/core/adaptive_fabric.py`, `src/security/security_framework.py`, `deploy/cuckoo/init.py`,
 `shared_core/security.py`, `api.py`, `docs/reference/security-framework.py`,
-`Dimensional/security.py`.
+`Dimensionals/security.py`.
 
 **No `uvloop` dependency anywhere** in `requirements.txt`, any worker `requirements*.txt`, or
 `tranc3-bots` — confirmed by repo-wide grep. This removes one commonly-cited asyncio-adjacent
@@ -315,26 +315,28 @@ Every other dependabot branch checked (spot-checked: `workers/cryptex`, `workers
 `dependabot/docker/tranc3-bots/python-3.14-slim`) changes **only** the `FROM` line's tag+digest —
 confirmed by diffing each against `main`. They do not touch `requires-python` in any
 `pyproject.toml`, any CI `python-version:` matrix entry, `ruff target-version`, or
-`mypy python_version`. All 84 Python-based worker Dockerfiles have a corresponding
-`dependabot/docker/workers/<name>/python-3.14-slim` branch (verified 1:1 by diffing the branch
-list against the worker directory list — no worker is missing a branch, and no branch targets a
-non-Python-based worker).
+`mypy python_version`. All 84 Python-based worker Dockerfiles have corresponding branches, but
+**those branches are managed by Renovate, not Dependabot** — Dependabot's Docker ecosystem does
+not search below the directory it is given, so the nonfunctional `/workers` block was removed from
+dependabot.yml; Renovate handles worker Dockerfile updates because its `dockerfile` manager is
+enabled and `/workers` is not in `ignorePaths`.
 
-**Merging any of these in isolation does not complete an upgrade** — it changes what the
-container's interpreter *is* without validating that the pinned dependencies in that same
-container's `requirements*.txt` actually install cleanly on it (§2's "uncertain" packages are
-exactly the ones that could fail silently at `docker build` time, turning into a production
-incident rather than a caught CI failure, since **no CI workflow in this repo builds and smoke-
-tests worker Docker images against a matrix of Python versions** — confirmed by grep of both
-`.github/workflows/` and `.forgejo/workflows/` for any Python-version-matrixed Docker build step;
-none exists).
+**Merging any worker-image branch (whether from Renovate or Dependabot) in isolation does not
+complete an upgrade** — it changes what the container's interpreter *is* without validating that
+the pinned dependencies in that same container's `requirements*.txt` actually install cleanly on
+it (§2's "uncertain" packages are exactly the ones that could fail silently at `docker build`
+time, turning into a production incident rather than a caught CI failure, since **no CI workflow
+in this repo builds and smoke-tests worker Docker images against a matrix of Python versions** —
+confirmed by grep of both `.github/workflows/` and `.forgejo/workflows/` for any
+Python-version-matrixed Docker build step; none exists).
 
 **Recommendation for these branches specifically:** do not merge any of them yet. Fix
 `docker/Dockerfile.api`'s hardcoded path first (whether or not its own dependabot branch is used),
-then treat the rest as raw material for Stage 3+ of the plan below — cherry-pick the `FROM` line
-change for whichever pilot worker is chosen first, verified by an actual `docker build` +
-container smoke test, rather than merging the branch wholesale on the assumption that a green
-Dependabot check means the application still runs.
+then treat the rest (from Renovate for workers; from Dependabot for `/`, `/docker`,
+`/tranc3-bots`, `/web`) as raw material for Stage 3+ of the plan below — cherry-pick the `FROM`
+line change for whichever pilot worker is chosen first, verified by an actual `docker build` +
+container smoke test, rather than merging the branch wholesale on the assumption that a green bot
+check means the application still runs.
 
 ---
 
@@ -386,16 +388,16 @@ dependency set isn't even reproducible on 3.11 today, so a 3.14 failure there wo
 impossible to attribute cleanly to the interpreter bump versus pin drift. Pin them first (Stage 6
 below), pilot after.
 
-For the chosen pilot(s): take the `FROM` line from that worker's existing dependabot branch
-(already using the correct, pre-resolved `python:3.14-slim` digest
+For the chosen pilot(s): take the `FROM` line from that worker's existing Renovate branch (already
+using the correct, pre-resolved `python:3.14-slim` digest
 `sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6`, confirmed identical
 across every worker branch spot-checked), build the image, and actually run its test coverage (if
 any exists — check `tests/test_workers_p0.py` and similar for coverage of the chosen worker)
 against the built container, not just against the host 3.11 interpreter.
 
 **Stage 4 — Roll to the rest of the P3 workers in small batches**, watching build + any available
-tests after each batch, using the now-verified `FROM` line from the corresponding dependabot
-branch each time.
+tests after each batch, using the now-verified `FROM` line from the corresponding Renovate branch
+each time.
 
 **Stage 5 — P0–P2 workers, `tranc3-bots`, then the root app last.**
 The root app carries every "uncertain"/"genuine risk" dependency identified in §2
@@ -416,14 +418,15 @@ pattern already used correctly in `src/observability/observatory.py` and
 `src/intelligence/semantic_knowledge.py`; replace the 19 files' `datetime.utcnow()` calls with
 `datetime.now(datetime.UTC)`.
 
-### On the existing dependabot branches specifically
+### On the existing automation branches specifically
 
 **Do not merge them as a shortcut to "done."** As established in §5: 87 of the 88
 Docker-base-image-bump branches are mechanically clean (FROM-line-only) but merging any one of
 them changes a container's interpreter without validating that container's pinned dependencies
 against it — exactly the runtime/build mismatch this task asked about — and **one of them
 (`docker/docker/python-3.14-slim`, i.e. `docker/Dockerfile.api`) is independently broken** by a
-stale hardcoded path unrelated to dependency compatibility. The correct use for these branches is
-as a source of the pre-resolved `python:3.14-slim` digest for each Dockerfile, consumed during
-Stages 3–5 above after each target has been through the verification those stages describe — not
-as PRs to merge directly.
+stale hardcoded path unrelated to dependency compatibility. Worker Dockerfile branches are managed
+by Renovate; `/`, `/docker`, `/tranc3-bots`, and `/web` are Dependabot. The correct use for both
+sets of branches is as a source of the pre-resolved `python:3.14-slim` digest for each Dockerfile,
+consumed during Stages 3–5 above after each target has been through the verification those stages
+describe — not as PRs to merge directly.

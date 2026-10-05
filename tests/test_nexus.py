@@ -26,8 +26,8 @@ import pytest
 # Ensure the project root is on sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from Dimensional.infinity.nomenclature import SentinelChannel
-from Dimensional.nexus.nexus_core import (
+from Dimensionals.infinity.nomenclature import SentinelChannel
+from Dimensionals.nexus.nexus_core import (
     CausalOrderingEngine,
     EventRouter,
     HealthAggregator,
@@ -870,7 +870,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_connect_disconnect(self):
         """WSManager tracks connections correctly."""
-        from Dimensional.nexus.nexus_core import NexusWSManager
+        from Dimensionals.nexus.nexus_core import NexusWSManager
 
         manager = NexusWSManager()
         assert len(manager._connections) == 0
@@ -893,7 +893,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_channel_subscribe(self):
         """WSManager tracks channel subscriptions."""
-        from Dimensional.nexus.nexus_core import NexusWSManager
+        from Dimensionals.nexus.nexus_core import NexusWSManager
 
         manager = NexusWSManager()
 
@@ -914,7 +914,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_broadcast(self):
         """WSManager broadcasts events to all connections."""
-        from Dimensional.nexus.nexus_core import NexusEvent, NexusWSManager
+        from Dimensionals.nexus.nexus_core import NexusEvent, NexusWSManager
 
         manager = NexusWSManager()
 
@@ -944,7 +944,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_broadcast_removes_dead(self):
         """WSManager removes connections that fail on broadcast."""
-        from Dimensional.nexus.nexus_core import NexusEvent, NexusWSManager
+        from Dimensionals.nexus.nexus_core import NexusEvent, NexusWSManager
 
         manager = NexusWSManager()
 
@@ -982,7 +982,7 @@ class TestDashboardEndpoint:
         """Dashboard endpoint returns HTML when file exists."""
         from httpx import ASGITransport, AsyncClient
 
-        from Dimensional.nexus.nexus_core import create_nexus_app
+        from Dimensionals.nexus.nexus_core import create_nexus_app
 
         app = create_nexus_app()
         transport = ASGITransport(app=app)
@@ -1000,7 +1000,7 @@ class TestDashboardEndpoint:
         """Root endpoint lists the dashboard in available endpoints."""
         from httpx import ASGITransport, AsyncClient
 
-        from Dimensional.nexus.nexus_core import create_nexus_app
+        from Dimensionals.nexus.nexus_core import create_nexus_app
 
         app = create_nexus_app()
         transport = ASGITransport(app=app)
@@ -1021,7 +1021,7 @@ class TestNexusSentinelBridge:
 
     def test_bridge_creation(self):
         """Bridge can be created with or without a nexus."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         bridge = NexusSentinelBridge()
         assert bridge._nexus is None
@@ -1031,7 +1031,7 @@ class TestNexusSentinelBridge:
 
     def test_bridge_stats(self):
         """Bridge stats track forwarded events."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         bridge = NexusSentinelBridge()
         stats = bridge.stats
@@ -1041,7 +1041,7 @@ class TestNexusSentinelBridge:
 
     def test_bridge_pause_resume_sentinel(self):
         """Bridge can pause/resume forwarding to Sentinel."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         bridge = NexusSentinelBridge()
         bridge.pause_sentinel_forward()
@@ -1051,7 +1051,7 @@ class TestNexusSentinelBridge:
 
     def test_bridge_pause_resume_nexus(self):
         """Bridge can pause/resume forwarding to Nexus."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         bridge = NexusSentinelBridge()
         bridge.pause_nexus_forward()
@@ -1062,7 +1062,7 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_status(self):
         """Bridge status returns correct info."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         bridge = NexusSentinelBridge()
         status = await bridge.get_status()
@@ -1076,8 +1076,8 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event(self):
         """Bridge forwards Sentinel events into the Nexus."""
-        from Dimensional.nexus.nexus_core import Nexus
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.nexus_core import Nexus
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         nexus = Nexus("bridge-test")
         bridge = NexusSentinelBridge(nexus)
@@ -1093,8 +1093,8 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event_paused(self):
         """Bridge does not forward when Nexus forwarding is paused."""
-        from Dimensional.nexus.nexus_core import Nexus
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensionals.nexus.nexus_core import Nexus
+        from Dimensionals.nexus.sentinel_bridge import NexusSentinelBridge
 
         nexus = Nexus("bridge-pause-test")
         bridge = NexusSentinelBridge(nexus)
@@ -1111,8 +1111,8 @@ class TestNexusSentinelBridge:
     def test_bridge_singleton(self):
         """get_bridge returns a singleton instance."""
         # Reset singleton for test isolation
-        import Dimensional.nexus.sentinel_bridge as _sb
-        from Dimensional.nexus.sentinel_bridge import get_bridge
+        import Dimensionals.nexus.sentinel_bridge as _sb
+        from Dimensionals.nexus.sentinel_bridge import get_bridge
 
         _sb._bridge_instance = None
         b1 = get_bridge()

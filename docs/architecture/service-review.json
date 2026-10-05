@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "02763be",
+  "commit": "58891ba0",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-26T05:33:03.096104+00:00",
+  "generated_at": "2026-10-04T18:46:35.863929+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -344,7 +344,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "apache/airflow:3.3.1@sha256:0c4bcc0370e526de1b7892a3bf4343d260c6c82359c66f77155b53cd773d6339",
+      "image": "apache/airflow:3.3.2@sha256:e9982ad3f49a60418622e1baf80c34b0daf3fa5091a336cb5ee61f0cdd189371",
       "lifecycle": "INFRA",
       "service": "airflow"
     },
@@ -369,7 +369,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/analytics-service/worker.py:35 Dimensional.service_auth_fastapi"
+            "workers/analytics-service/worker.py:35 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -441,7 +441,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/artifactory-service/worker.py:30 Dimensional.service_auth_fastapi"
+            "workers/artifactory-service/worker.py:30 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -479,7 +479,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/audit-service/worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/audit-service/worker.py:43 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -507,14 +507,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
       "lifecycle": "INFRA",
       "service": "authentik-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
+      "image": "redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
       "lifecycle": "INFRA",
       "service": "authentik-redis"
     },
@@ -580,7 +580,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/basement/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/basement/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -625,7 +625,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/blender-worker/worker.py:29 Dimensional.service_auth_fastapi"
+            "workers/blender-worker/worker.py:29 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -653,14 +653,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f",
+      "image": "lscr.io/linuxserver/bookstack:latest@sha256:99cd1f5707c1911afad213adec5c9739763b76f843d1477142231834ecdcb6f7",
       "lifecycle": "INFRA",
       "service": "bookstack"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "mariadb:12@sha256:dd9b303aed4f4890ed09f766d8ca9ddfd176c0c6f6267feff53b3192ec65a979",
+      "image": "mariadb:12@sha256:2bdff1534a7e569fecaf4b10b66ad0d410806e382d9db29ba305448addda97c4",
       "lifecycle": "INFRA",
       "service": "bookstack-db"
     },
@@ -712,7 +712,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/cache-service/worker.py:36 Dimensional.service_auth_fastapi"
+            "workers/cache-service/worker.py:36 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -753,7 +753,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
       "lifecycle": "INFRA",
       "service": "calcom-db"
     },
@@ -771,7 +771,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/cdn-service/worker.py:31 Dimensional.service_auth_fastapi"
+            "workers/cdn-service/worker.py:31 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -810,7 +810,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/chaos-party/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/chaos-party/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -848,7 +848,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/config-service/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/config-service/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -921,7 +921,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/cron-service/worker.py:45 Dimensional.service_auth_fastapi"
+            "workers/cron-service/worker.py:45 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -960,7 +960,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/cryptex/router.py:12 Dimensional.service_auth_fastapi"
+            "workers/cryptex/router.py:12 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1012,7 +1012,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/deepagents-orchestrator-service/worker.py:30 Dimensional.service_auth_fastapi"
+            "workers/deepagents-orchestrator-service/worker.py:30 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1065,7 +1065,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/devocity/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/devocity/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1092,7 +1092,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "amir20/dozzle:latest@sha256:243666b0593ff33ed1373901575236f0d6bed8a2d6b451cdae4345969a7b6d5c",
+      "image": "amir20/dozzle:latest@sha256:db7e19fd36189823c66239894e821561cb201248af35362ec6d39a08e23ff88b",
       "lifecycle": "INFRA",
       "service": "dozzle"
     },
@@ -1110,7 +1110,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/dspy-service/worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/dspy-service/worker.py:28 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1148,7 +1148,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/email-service/worker.py:33 Dimensional.service_auth_fastapi"
+            "workers/email-service/worker.py:33 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1194,7 +1194,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/fabulousa-service/worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/fabulousa-service/worker.py:28 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1239,7 +1239,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/ffmpeg-worker/worker.py:24 Dimensional.service_auth_fastapi"
+            "workers/ffmpeg-worker/worker.py:24 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1278,7 +1278,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/files-service/worker.py:38 Dimensional.service_auth_fastapi"
+            "workers/files-service/worker.py:38 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1330,7 +1330,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/gbrain-bridge/worker.py:42 Dimensional.service_auth_fastapi"
+            "workers/gbrain-bridge/worker.py:42 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1369,7 +1369,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/geo-service/worker.py:34 Dimensional.service_auth_fastapi"
+            "workers/geo-service/worker.py:34 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1404,7 +1404,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043",
+      "image": "grafana/grafana:13.1.6@sha256:d8276d620291d3aaae3e31dde6d63e6807afee49825f04e8aa7392bbe024216f",
       "lifecycle": "INFRA",
       "service": "grafana"
     },
@@ -1422,7 +1422,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/haystack-service/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/haystack-service/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1460,7 +1460,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 2 guarded, 0 vendored",
           "offenders": [
-            "workers/health-aggregator/worker.py:31 Dimensional.service_auth_fastapi"
+            "workers/health-aggregator/worker.py:31 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1567,7 +1567,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/identity-service/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/identity-service/worker.py:26 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1606,8 +1606,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/imaginarium/main.py:14 Dimensional.service_auth_fastapi",
-            "workers/imaginarium/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/imaginarium/main.py:14 Dimensionals.service_auth_fastapi",
+            "workers/imaginarium/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1645,7 +1645,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/imind/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/imind/worker.py:26 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1717,7 +1717,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 6 guarded, 0 vendored",
           "offenders": [
-            "workers/infinity-ai/router.py:14 Dimensional.service_auth_fastapi"
+            "workers/infinity-ai/router.py:14 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2031,7 +2031,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/lab-service/router.py:13 Dimensional.service_auth_fastapi"
+            "workers/lab-service/router.py:13 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2069,7 +2069,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/langchain-integration-service/worker.py:48 Dimensional.service_auth_fastapi"
+            "workers/langchain-integration-service/worker.py:48 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2097,14 +2097,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425",
+      "image": "langfuse/langfuse:latest@sha256:3d2ae888a0e6edb41fdba6e7d5baca5e4baede3a870dac7970dadd9d925b018e",
       "lifecycle": "INFRA",
       "service": "langfuse"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "image": "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
       "lifecycle": "INFRA",
       "service": "langfuse-db"
     },
@@ -2122,7 +2122,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/ledger-service/worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/ledger-service/worker.py:43 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2161,7 +2161,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/library-service/router.py:12 Dimensional.service_auth_fastapi"
+            "workers/library-service/router.py:12 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2206,7 +2206,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/litellm-service/worker.py:42 Dimensional.service_auth_fastapi"
+            "workers/litellm-service/worker.py:42 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2251,7 +2251,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/llamaindex-service/worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/llamaindex-service/worker.py:28 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2278,7 +2278,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "grafana/loki:3.7.7@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500",
+      "image": "grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193",
       "lifecycle": "INFRA",
       "service": "loki"
     },
@@ -2292,7 +2292,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "image": "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
       "lifecycle": "INFRA",
       "service": "mattermost-db"
     },
@@ -2327,7 +2327,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
+      "image": "redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
       "lifecycle": "INFRA",
       "service": "misp-redis"
     },
@@ -2345,7 +2345,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/mlflow-service/worker.py:69 Dimensional.service_auth_fastapi"
+            "workers/mlflow-service/worker.py:69 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2384,7 +2384,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/model-router-service/worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/model-router-service/worker.py:43 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2423,8 +2423,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/monitoring/worker.py:43 Dimensional.service_auth",
-            "workers/monitoring/worker.py:44 Dimensional.service_auth_fastapi"
+            "workers/monitoring/worker.py:43 Dimensionals.service_auth",
+            "workers/monitoring/worker.py:44 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2452,7 +2452,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "n8nio/n8n:latest@sha256:a9e2e3c8006ed453238266669ea1274be7136f515abe290a2f75a0ab9044c93d",
+      "image": "n8nio/n8n:latest@sha256:87e0bab2c93192e8dd885ff7b0697c22a1bd97489568a8c67cc140fd7dbb342d",
       "lifecycle": "INFRA",
       "service": "n8n"
     },
@@ -2466,7 +2466,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "netdata/netdata:latest@sha256:b93fd79b21974e66b73eeed265af1b5ca5eb741d2240b98be7eb74aa8093ec08",
+      "image": "netdata/netdata:latest@sha256:69f2e706d9b8e2c4f72e65b106cbcf60277ff070883e45149eebe8241d6f0196",
       "lifecycle": "INFRA",
       "service": "netdata"
     },
@@ -2525,7 +2525,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/notifications/worker.py:814 Dimensional.service_auth_fastapi"
+            "workers/notifications/worker.py:814 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2564,7 +2564,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/observatory/router.py:12 Dimensional.service_auth_fastapi"
+            "workers/observatory/router.py:12 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2591,14 +2591,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ollama/ollama:latest@sha256:020e4134285e2ef4d8fd801234176de3b4faadc992a3eb06c8e66a2f9d4c4ba2",
+      "image": "ollama/ollama:latest@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c",
       "lifecycle": "INFRA",
       "service": "ollama"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "openbao/openbao:latest@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641",
+      "image": "openbao/openbao:latest@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
       "lifecycle": "INFRA",
       "service": "openbao"
     },
@@ -2612,7 +2612,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
       "lifecycle": "INFRA",
       "service": "openbas-db"
     },
@@ -2637,7 +2637,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/orders-service/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/orders-service/worker.py:26 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2672,21 +2672,21 @@
     {
       "checks": {},
       "failures": [],
-      "image": "outlinewiki/outline:latest@sha256:32d76719c378931dd65d93945930ca380d8376a0337d98a991fcc12b266f33cf",
+      "image": "outlinewiki/outline:latest@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8",
       "lifecycle": "INFRA",
       "service": "outline"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
       "lifecycle": "INFRA",
       "service": "outline-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9",
+      "image": "valkey/valkey:9-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11",
       "lifecycle": "INFRA",
       "service": "outline-redis"
     },
@@ -2700,14 +2700,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
       "lifecycle": "INFRA",
       "service": "paperless-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
+      "image": "redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
       "lifecycle": "INFRA",
       "service": "paperless-redis"
     },
@@ -2725,7 +2725,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/payments-service/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/payments-service/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2753,35 +2753,35 @@
     {
       "checks": {},
       "failures": [],
-      "image": "penpotapp/backend:latest@sha256:770b55f6e51bfcee49152b30858ca6a47143256de8d43953a50b952b5c60bb55",
+      "image": "penpotapp/backend:latest@sha256:3b7df71db88d7c478b6a10103acb4108fa86a17a47277de81437de3899959e9e",
       "lifecycle": "INFRA",
       "service": "penpot-backend"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+      "image": "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
       "lifecycle": "INFRA",
       "service": "penpot-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8",
+      "image": "penpotapp/exporter:latest@sha256:3b6f9d808c777908e4f4e290e91458ec747678a7994e39125e4f3af4ef70ba9f",
       "lifecycle": "INFRA",
       "service": "penpot-exporter"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "penpotapp/frontend:latest@sha256:94fa2864d8fc0cd62245af95c03cca89306a7fd23c206a98a3e9dc9a376ea27e",
+      "image": "penpotapp/frontend:latest@sha256:e1eb4756ec175eb71390f9bf0ddee819468d72f67f12cf3b1532bee8d591217e",
       "lifecycle": "INFRA",
       "service": "penpot-frontend"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "prefecthq/prefect:3-python3.12@sha256:6c0dc14195cae814eddeb66104a8333810a0a9886a5d7f0c45443136f167b3e0",
+      "image": "prefecthq/prefect:3-python3.12@sha256:f15a7bda40608ee890ff97e963ec3403dc25d633810a4ef1fff93ff303f4ef5f",
       "lifecycle": "INFRA",
       "service": "prefect-server"
     },
@@ -2799,7 +2799,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/products-service/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/products-service/worker.py:26 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2827,7 +2827,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69",
+      "image": "prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7",
       "lifecycle": "INFRA",
       "service": "prometheus"
     },
@@ -2841,7 +2841,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "qdrant/qdrant:latest@sha256:057ee3a8da769fe7310dd3537b4dc7583bf87a95ce8ac43c0af5a46bc580d1fc",
+      "image": "qdrant/qdrant:latest@sha256:12364fe851b9f17356fc88189fc06d1b521262e04659ec7345975b00c9246a10",
       "lifecycle": "INFRA",
       "service": "qdrant"
     },
@@ -2859,7 +2859,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/queue-service/worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/queue-service/worker.py:28 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2898,7 +2898,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/rate-limit-service/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/rate-limit-service/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2994,7 +2994,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "renovate/renovate:latest@sha256:6922c734849f2ed1c01e3a7924bd60e25e0ea904731a67bad72b02d563c0c3c3",
+      "image": "renovate/renovate:latest@sha256:2c801b47ce82c349453e554188abe4fa0b51bde333cfea54e67ad8a88d525087",
       "lifecycle": "INFRA",
       "service": "renovate-bot"
     },
@@ -3012,7 +3012,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/resonate/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/resonate/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3050,7 +3050,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/sashas-photo-studio/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/sashas-photo-studio/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3088,7 +3088,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/search-service/worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/search-service/worker.py:28 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3164,7 +3164,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "signoz/signoz-otel-collector:latest@sha256:72aa1e4c1ec529f178e962c049be35cfd7abae02fe9a397edad10b4a9cba62fa",
+      "image": "signoz/signoz-otel-collector:latest@sha256:deb566a7a3c0ba544ee58ccc92ee1f0e6da827bc40383e52f3c824705e100a3d",
       "lifecycle": "INFRA",
       "service": "signoz-otel-collector"
     },
@@ -3189,7 +3189,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/skills-benchmark-service/worker.py:43 Dimensional.service_auth_fastapi"
+            "workers/skills-benchmark-service/worker.py:43 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3228,7 +3228,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/sms-service/worker.py:32 Dimensional.service_auth_fastapi"
+            "workers/sms-service/worker.py:32 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3256,7 +3256,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "stirlingtools/stirling-pdf:latest@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396",
+      "image": "stirlingtools/stirling-pdf:latest@sha256:c195925341aa35ee5932d9c225edef48a92e46a1280963180d79619cb5f29e6e",
       "lifecycle": "INFRA",
       "service": "stirling-pdf"
     },
@@ -3274,8 +3274,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/storage-service/worker.py:41 Dimensional.path_validation",
-            "workers/storage-service/worker.py:42 Dimensional.service_auth_fastapi"
+            "workers/storage-service/worker.py:41 Dimensionals.path_validation",
+            "workers/storage-service/worker.py:42 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3347,7 +3347,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/taimra/worker.py:24 Dimensional.service_auth_fastapi"
+            "workers/taimra/worker.py:24 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3385,9 +3385,9 @@
         "imports_resolve": {
           "detail": "3 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/tateking/main.py:33 Dimensional.service_auth_fastapi",
-            "workers/tateking/worker.py:26 Dimensional.path_validation",
-            "workers/tateking/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/tateking/main.py:33 Dimensionals.service_auth_fastapi",
+            "workers/tateking/worker.py:26 Dimensionals.path_validation",
+            "workers/tateking/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3439,7 +3439,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/the-academy/worker.py:24 Dimensional.service_auth_fastapi"
+            "workers/the-academy/worker.py:24 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3477,7 +3477,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/the-dutchy/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/the-dutchy/worker.py:26 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3515,7 +3515,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/the-grid/router.py:13 Dimensional.service_auth_fastapi"
+            "workers/the-grid/router.py:13 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3553,8 +3553,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/the-lab/main.py:26 Dimensional.service_auth_fastapi",
-            "workers/the-lab/worker.py:27 Dimensional.service_auth_fastapi"
+            "workers/the-lab/main.py:26 Dimensionals.service_auth_fastapi",
+            "workers/the-lab/worker.py:27 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3592,7 +3592,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/the-studio/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/the-studio/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3637,7 +3637,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/topology-service/worker.py:44 Dimensional.service_auth_fastapi"
+            "workers/topology-service/worker.py:44 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3753,8 +3753,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/tranceflow/router.py:12 Dimensional.service_auth_fastapi",
-            "workers/tranceflow/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/tranceflow/router.py:12 Dimensionals.service_auth_fastapi",
+            "workers/tranceflow/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3792,7 +3792,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/tranquility/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/tranquility/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3830,7 +3830,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/triposr-worker/worker.py:31 Dimensional.service_auth_fastapi"
+            "workers/triposr-worker/worker.py:31 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3869,7 +3869,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/turings-hub-service/worker.py:55 Dimensional.service_auth_fastapi"
+            "workers/turings-hub-service/worker.py:55 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -3931,7 +3931,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9",
+      "image": "valkey/valkey:9-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11",
       "lifecycle": "INFRA",
       "service": "valkey"
     },
@@ -3956,7 +3956,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/vault-service/worker.py:50 Dimensional.service_auth_fastapi"
+            "workers/vault-service/worker.py:50 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4018,14 +4018,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "victoriametrics/victoria-metrics:latest@sha256:6d164540a04f49ba4e696cbdb70f9fee78be1e94b8f2a1292743a0b1ab8275bd",
+      "image": "victoriametrics/victoria-metrics:latest@sha256:5eff7af5341e401471002f58d106d399e614a62f3d240f2dbc21901e49eed5dd",
       "lifecycle": "INFRA",
       "service": "victoriametrics"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "vllm/vllm-openai:latest@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14",
+      "image": "vllm/vllm-openai:latest@sha256:8a69ffad015f138d7170c4ddc429e230a3bc1c1719f67e14324749df200a4b90",
       "lifecycle": "INFRA",
       "service": "vllm"
     },
@@ -4043,8 +4043,8 @@
         "imports_resolve": {
           "detail": "2 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/vrar3d/router.py:13 Dimensional.service_auth_fastapi",
-            "workers/vrar3d/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/vrar3d/router.py:13 Dimensionals.service_auth_fastapi",
+            "workers/vrar3d/worker.py:25 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4082,7 +4082,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/warp-radio/worker.py:26 Dimensional.service_auth_fastapi"
+            "workers/warp-radio/worker.py:26 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4120,7 +4120,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 0 guarded, 0 vendored",
           "offenders": [
-            "workers/warp-tunnel/worker.py:28 Dimensional.service_auth_fastapi"
+            "workers/warp-tunnel/worker.py:28 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4207,7 +4207,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/workflow-engine-service/worker.py:40 Dimensional.service_auth_fastapi"
+            "workers/workflow-engine-service/worker.py:40 Dimensionals.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -4277,8 +4277,8 @@
     "concerns": {
       "JWT verify": {
         "dimensional_modules": [
-          "Dimensional/infinity/auth_gateway.py",
-          "Dimensional/security.py"
+          "Dimensionals/infinity/auth_gateway.py",
+          "Dimensionals/security.py"
         ],
         "in_dimensional": true,
         "services_implementing_independently": [],
@@ -4328,10 +4328,10 @@
       },
       "circuit breaker": {
         "dimensional_modules": [
-          "Dimensional/architecture/oci_adaptive_provider.py",
-          "Dimensional/circuit_state.py",
-          "Dimensional/infinity/sentinel_station.py",
-          "Dimensional/orchestration/health_monitor.py"
+          "Dimensionals/architecture/oci_adaptive_provider.py",
+          "Dimensionals/circuit_state.py",
+          "Dimensionals/infinity/sentinel_station.py",
+          "Dimensionals/orchestration/health_monitor.py"
         ],
         "in_dimensional": true,
         "services_implementing_independently": [
@@ -4341,8 +4341,8 @@
       },
       "internal-secret verification": {
         "dimensional_modules": [
-          "Dimensional/service_auth.py",
-          "Dimensional/service_auth_fastapi.py"
+          "Dimensionals/service_auth.py",
+          "Dimensionals/service_auth_fastapi.py"
         ],
         "in_dimensional": true,
         "services_implementing_independently": [
@@ -4392,7 +4392,7 @@
       },
       "log sanitisation": {
         "dimensional_modules": [
-          "Dimensional/sanitize.py"
+          "Dimensionals/sanitize.py"
         ],
         "in_dimensional": true,
         "services_implementing_independently": [
@@ -4403,7 +4403,7 @@
       },
       "path traversal guard": {
         "dimensional_modules": [
-          "Dimensional/path_validation.py"
+          "Dimensionals/path_validation.py"
         ],
         "in_dimensional": true,
         "services_implementing_independently": [
@@ -4422,25 +4422,25 @@
     "dimensional": {
       "concern_coverage": {
         "JWT verify": [
-          "Dimensional/infinity/auth_gateway.py",
-          "Dimensional/security.py"
+          "Dimensionals/infinity/auth_gateway.py",
+          "Dimensionals/security.py"
         ],
         "OTel worker setup": [],
         "circuit breaker": [
-          "Dimensional/architecture/oci_adaptive_provider.py",
-          "Dimensional/circuit_state.py",
-          "Dimensional/infinity/sentinel_station.py",
-          "Dimensional/orchestration/health_monitor.py"
+          "Dimensionals/architecture/oci_adaptive_provider.py",
+          "Dimensionals/circuit_state.py",
+          "Dimensionals/infinity/sentinel_station.py",
+          "Dimensionals/orchestration/health_monitor.py"
         ],
         "internal-secret verification": [
-          "Dimensional/service_auth.py",
-          "Dimensional/service_auth_fastapi.py"
+          "Dimensionals/service_auth.py",
+          "Dimensionals/service_auth_fastapi.py"
         ],
         "log sanitisation": [
-          "Dimensional/sanitize.py"
+          "Dimensionals/sanitize.py"
         ],
         "path traversal guard": [
-          "Dimensional/path_validation.py"
+          "Dimensionals/path_validation.py"
         ],
         "token-bucket rate limit": []
       },

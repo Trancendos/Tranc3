@@ -94,20 +94,19 @@ Each entity gets an **Alpha agent** (primary) and **Beta agent** (shadow/backup)
 
 ---
 
-## Dimensional — Shared-Core Services
+## Dimensionals — Shared-Core Services
 
-> `shared_core/` and `Dimensional/` are the **same thing** — canonical name is **Dimensional**.
-> All `shared_core` references should resolve to `Dimensional`.
+> The platform taxonomy formalizes **Dimensionals** (plural) as the canonical name for the shared-core services layer. The package is `Dimensionals/`, and the taxonomy structure is **Locations / AIs / Dimensionals**. Both singular and plural forms may appear in the codebase, but the taxonomy uses the plural form as canonical.
 
 | Module | Path | Role |
 |--------|------|------|
-| Service Bus | `Dimensional/bus.py` | Cross-entity event bus |
-| Hive Core | `Dimensional/hive/` | The HIVE autoscaler + sentinel bridge |
-| Infinity IAM | `Dimensional/infinity/` | Auth gateway, RBAC, ZKP, OWASP hardening |
-| Orchestration | `Dimensional/orchestration/` | Health monitor, config drift, dependency graph |
-| Security Automation | `Dimensional/security_automation/` | Adaptive scanner, defense engine, watchdog |
-| Middleware | `Dimensional/middleware/` | Auth, rate limiter, telemetry |
-| Dimensionals | `Dimensional/dimensionals/` | Service registry, underverse |
+| Service Bus | `Dimensionals/bus.py` | Cross-entity event bus |
+| Hive Core | `Dimensionals/hive/` | The HIVE autoscaler + sentinel bridge |
+| Infinity IAM | `Dimensionals/infinity/` | Auth gateway, RBAC, ZKP, OWASP hardening |
+| Orchestration | `Dimensionals/orchestration/` | Health monitor, config drift, dependency graph |
+| Security Automation | `Dimensionals/security_automation/` | Adaptive scanner, defense engine, watchdog |
+| Middleware | `Dimensionals/middleware/` | Auth, rate limiter, telemetry |
+| Dimensionals | `Dimensionals/dimensionals/` | Service registry, underverse |
 | AI Gateway | `src/ai_gateway/` | 5-tier AI provider failover (Dimensional service) |
 | Service Mesh | `src/mesh/` | CircuitBreaker + service registry (Dimensional service) |
 | Event Bus | `src/event_bus/` | NATS JetStream transport (Dimensional service) |
