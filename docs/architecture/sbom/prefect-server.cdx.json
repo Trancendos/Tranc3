@@ -8,7 +8,7 @@
       "type": "container",
       "name": "prefect-server",
       "bom-ref": "CI-CT-prefect-server",
-      "version": "prefecthq/prefect:3-python3.12@sha256:6c0dc14195cae814eddeb66104a8333810a0a9886a5d7f0c45443136f167b3e0"
+      "version": "prefecthq/prefect:3-python3.12@sha256:f15a7bda40608ee890ff97e963ec3403dc25d633810a4ef1fff93ff303f4ef5f"
     },
     "properties": [
       {
