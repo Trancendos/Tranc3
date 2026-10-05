@@ -33,7 +33,7 @@ x-restart: &default-restart
 # ──────────────────────────────────────────────────────────────
 services:
   outline:
-    image: outlinewiki/outline:latest@sha256:32d76719c378931dd65d93945930ca380d8376a0337d98a991fcc12b266f33cf
+    image: outlinewiki/outline:latest@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8
     container_name: the-library
     <<: *default-restart
     profiles: ["library", "all"]
@@ -78,7 +78,7 @@ services:
       <<: *default-healthcheck
 
   outline-db:
-    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     container_name: outline-db
     <<: *default-restart
     profiles: ["library", "all"]
@@ -97,7 +97,7 @@ services:
       - tranc3-network
 
   outline-redis:
-    image: redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     container_name: outline-redis
     <<: *default-restart
     profiles: ["library", "all"]
@@ -153,7 +153,7 @@ services:
       <<: *default-healthcheck
 
   paperless-db:
-    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     container_name: paperless-db
     <<: *default-restart
     profiles: ["documents", "all"]
@@ -172,7 +172,7 @@ services:
       - tranc3-network
 
   paperless-redis:
-    image: redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     container_name: paperless-redis
     <<: *default-restart
     profiles: ["documents", "all"]
@@ -184,7 +184,7 @@ services:
   # Profile: design
   # ──────────────────────────────────────────────────────────────
   penpot-frontend:
-    image: penpotapp/frontend:latest@sha256:94fa2864d8fc0cd62245af95c03cca89306a7fd23c206a98a3e9dc9a376ea27e
+    image: penpotapp/frontend:latest@sha256:e1eb4756ec175eb71390f9bf0ddee819468d72f67f12cf3b1532bee8d591217e
     container_name: fabulousa-frontend
     <<: *default-restart
     profiles: ["design", "all"]
@@ -207,7 +207,7 @@ services:
       <<: *default-healthcheck
 
   penpot-backend:
-    image: penpotapp/backend:latest@sha256:770b55f6e51bfcee49152b30858ca6a47143256de8d43953a50b952b5c60bb55
+    image: penpotapp/backend:latest@sha256:3b7df71db88d7c478b6a10103acb4108fa86a17a47277de81437de3899959e9e
     container_name: fabulousa-backend
     <<: *default-restart
     profiles: ["design", "all"]
@@ -233,7 +233,7 @@ services:
       - tranc3-network
 
   penpot-exporter:
-    image: penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8
+    image: penpotapp/exporter:latest@sha256:3b6f9d808c777908e4f4e290e91458ec747678a7994e39125e4f3af4ef70ba9f
     container_name: fabulousa-exporter
     <<: *default-restart
     profiles: ["design", "all"]
@@ -244,7 +244,7 @@ services:
       - tranc3-network
 
   penpot-db:
-    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     container_name: penpot-db
     <<: *default-restart
     profiles: ["design", "all"]
@@ -265,7 +265,7 @@ services:
       - tranc3-network
 
   penpot-redis:
-    image: redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     container_name: penpot-redis
     <<: *default-restart
     profiles: ["design", "all"]
@@ -372,7 +372,7 @@ services:
       <<: *default-healthcheck
 
   calcom-db:
-    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     container_name: calcom-db
     <<: *default-restart
     profiles: ["scheduling", "all"]
@@ -420,7 +420,7 @@ services:
   # Profile: api-marketplace
   # ──────────────────────────────────────────────────────────────
   gravitee-gateway:
-    image: graviteeio/apim-gateway:4@sha256:eba91265410e36a7a952ab583c0722458c869e4f8aa50d196e849447a10ce52b
+    image: graviteeio/apim-gateway:4@sha256:b3e807fc7869b40627226dee717130623d73cbb3b4ae9f07b0d674bd5b2874c6
     container_name: api-marketplace-gateway
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -442,7 +442,7 @@ services:
       - "traefik.http.services.gravitee-gw.loadbalancer.server.port=8082"
 
   gravitee-management-api:
-    image: graviteeio/apim-management-api:4@sha256:3f915bf04eea3b9ddd32abb481624f8adc4ce51f30843a95597b1038955d740e
+    image: graviteeio/apim-management-api:4@sha256:d46f47c419c9ceab1a6d39a999aa788cde49b46add35deab3faf7b9f3bfd2933
     container_name: api-marketplace-mgmt
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -458,7 +458,7 @@ services:
       - tranc3-network
 
   gravitee-portal:
-    image: graviteeio/apim-portal-ui:4@sha256:6ac60b4ffea41119c53f40ff4c61aa7f2cc6b290fc81f37bdba4fe629b6cf338
+    image: graviteeio/apim-portal-ui:4@sha256:adcbd15edef2327f89bf2b1c433af3e661054a6e60e7865fcc471a7606e851c3
     container_name: api-marketplace-portal
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -477,7 +477,7 @@ services:
       - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
 
   gravitee-mongo:
-    image: mongo:7-jammy@sha256:406a4fdca9fc763443268f000218d3849ef8996f66ed9e92ba0b501b446ab822
+    image: mongo:7-jammy@sha256:f71f6d0913c945096cd058557cbadf4ad435007f378d84b3c4c636c928735e72
     container_name: gravitee-mongo
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -496,7 +496,7 @@ services:
   # Profile: sandbox
   # ──────────────────────────────────────────────────────────────
   icebox:
-    image: python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
+    image: python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
     container_name: the-ice-box
     <<: *default-restart
     profiles: ["sandbox", "all"]
