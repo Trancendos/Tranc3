@@ -32,6 +32,7 @@ def _tree(
     ),
     makefile: str = "security-install:\n\t$(PIP) install -r requirements-security.txt --quiet\n",
     forgejo: str = "      - name: Install semgrep\n        run: pip install -r requirements-security.txt\n",
+    dockerfile: str = "RUN pip install --no-cache-dir -r /tmp/requirements-security.txt\n",
 ) -> Path:
     (tmp_path / "requirements-security.txt").write_text(requirements, encoding="utf-8")
     (tmp_path / ".pre-commit-config.yaml").write_text(pre_commit, encoding="utf-8")
@@ -39,6 +40,9 @@ def _tree(
     workflow = tmp_path / ".forgejo" / "workflows"
     workflow.mkdir(parents=True, exist_ok=True)
     (workflow / "security-scan.yml").write_text(forgejo, encoding="utf-8")
+    runner = tmp_path / "deploy" / "forgejo"
+    runner.mkdir(parents=True, exist_ok=True)
+    (runner / "runner.Dockerfile").write_text(dockerfile, encoding="utf-8")
     return tmp_path
 
 
@@ -165,3 +169,26 @@ def test_two_semgrep_hooks_are_rejected(tmp_path, at):
 def test_a_version_marker_does_not_defeat_the_requirement_parse(tmp_path, at):
     tree = _tree(tmp_path, requirements='semgrep==1.179.0 ; python_version >= "3.11"\n')
     assert at(tree) == 0
+
+
+def test_the_act_runner_image_restating_the_pin_is_rejected(tmp_path, at):
+    """The fifth site, and the one this check missed when it was written.
+
+    `deploy/forgejo/runner.Dockerfile` builds `trancendos/act-runner:latest`,
+    which the `self-hosted` label resolves to — the label the Forgejo semgrep job
+    runs on. It pinned semgrep 1.100.0, seventy-nine releases behind the
+    requirements file, and the first version of this guard enumerated four sites
+    and did not include it. A guard that names four of five measures nothing
+    about the fifth.
+    """
+    tree = _tree(
+        tmp_path,
+        dockerfile="RUN python3 -m pip install --no-cache-dir semgrep==1.100.0\n",
+    )
+    assert at(tree) == 1
+
+
+def test_a_missing_act_runner_image_is_rejected(tmp_path, at):
+    tree = _tree(tmp_path)
+    (tree / "deploy" / "forgejo" / "runner.Dockerfile").unlink()
+    assert at(tree) == 1

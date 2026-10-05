@@ -8,9 +8,13 @@
     authoritative if every semgrep invocation actually uses the same version.
 
 The condition was stated correctly and never measured. Measured 2026-10-04, the
-four sites held four different versions: `requirements-security.txt` 1.178.0,
+five sites held five different versions: `requirements-security.txt` 1.178.0,
 `Makefile` 1.172.0, the Forgejo SAST job 1.172.0, `.pre-commit-config.yaml`
-v1.174.0. And the note the comment named as conditional on that agreement --
+v1.174.0, and `deploy/forgejo/runner.Dockerfile` -- the act-runner image the
+`self-hosted` label resolves to -- 1.100.0, seventy-nine releases behind. The
+fifth was found by review after this check had been written to cover four, which
+is its own lesson: a guard enumerating sites is only as good as the enumeration,
+so it now rejects a restated pin rather than comparing versions. And the note the comment named as conditional on that agreement --
 the mcp==1.23.3 accepted risk -- was by then false: the semgrep that
 `requirements-security.txt` actually pinned already required `mcp==1.29.0`.
 Whoever last read it was reading the 1.172.0 pin, which is why the file said
@@ -45,6 +49,11 @@ PRE_COMMIT_NAME = ".pre-commit-config.yaml"
 MUST_NOT_PIN = (
     Path("Makefile"),
     Path(".forgejo/workflows/security-scan.yml"),
+    # The act-runner image the `self-hosted` label resolves to. Missed on the
+    # first pass of this check, and it was the worst of the five: semgrep==1.100.0,
+    # 79 releases behind. A guard that names four of five sites measures nothing
+    # about the fifth, which is the failure this file was written about.
+    Path("deploy/forgejo/runner.Dockerfile"),
 )
 
 _REQUIREMENT = re.compile(r"^semgrep==([^\s;#]+)", re.MULTILINE)

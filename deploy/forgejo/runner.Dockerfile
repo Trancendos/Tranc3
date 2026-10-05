@@ -91,13 +91,28 @@ RUN curl -fsSL https://fly.io/install.sh -o /tmp/flyctl_install.sh \
     && flyctl version
 
 # ── Python security tools ─────────────────────────────────────────────────────
+# Installed from requirements-security.txt, not re-pinned here. This file used to
+# pin pip-audit 2.9.0, bandit 1.8.3 and semgrep 1.100.0 -- semgrep 79 releases
+# behind what that requirements file pinned. This image is
+# `trancendos/act-runner:latest`, mapped to the `self-hosted` label the semgrep
+# job in .forgejo/workflows/security-scan.yml runs on, so a scanner invocation on
+# the runner that is not preceded by the job's own `pip install -r
+# requirements-security.txt` ran at 1.100.0. The accepted-risk notes in that file
+# describe one semgrep; this was a fifth, and the furthest adrift of them.
+#
+# The build context is the repository root (deploy/forgejo/bootstrap.sh builds
+# with "${REPO_ROOT}"), so the COPY resolves. scripts/check_security_toolchain_pins.py
+# fails CI if a version is restated here again.
+#
+# ruff and mypy stay pinned: they are linters rather than scanners and
+# requirements-security.txt does not carry them.
+COPY requirements-security.txt /tmp/requirements-security.txt
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
+    && python3 -m pip install --no-cache-dir -r /tmp/requirements-security.txt \
     && python3 -m pip install --no-cache-dir \
-        pip-audit==2.9.0 \
-        bandit==1.8.3 \
-        semgrep==1.100.0 \
         ruff==0.15.8 \
-        mypy==1.10.0
+        mypy==1.10.0 \
+    && rm /tmp/requirements-security.txt
 
 # ── gitleaks ──────────────────────────────────────────────────────────────────
 ARG GITLEAKS_VERSION=8.18.4
