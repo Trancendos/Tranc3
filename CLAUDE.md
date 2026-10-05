@@ -226,6 +226,18 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   one part that is not derived. Measured: 125 datastore and 174 container CIs,
   derived by `src/cmdb/{containers,datastores}.py` and checked in CI, because a
   register nobody regenerates describes the estate it was written for
+- `docs/governance/DOMAIN-MODEL.md` — one description in `src/domain/model.py` generates
+  the database schema, the row-level security policies and the route table, so the three
+  cannot drift from each other the way three hand-maintained artefacts do. Its companion
+  conformance report (`docs/architecture/conformance.json`) records where the estate does
+  not yet meet the model and is blunt about it: of 43 Locations, 40 are in the CMDB, 34 have
+  documentation, and **6 are complete on all five properties**. It counts `env_unchecked`
+  separately from `env_ok` rather than reading an unevaluated property as a passing one —
+  `IMMUNE-SYSTEM.md`'s rule for sensors, applied to a conformance register. It read "all six"
+  over a five-property predicate until 2026-09-28; the withdrawn sixth and why it could never
+  have been one are recorded in the document. The generated DDL is applied to a real
+  PostgreSQL to prove it is valid, not merely current — it was neither until the same date.
+  Strategy in `docs/governance/DATA-PLATFORM-STRATEGY.md`
 - `docs/governance/CI-ESTATE-CONSOLIDATION.md` — why 84 pull requests were blocked
   by one cause rather than 84, the 48→27 workflow consolidation that followed, and
   the four Forgejo queue-hygiene audits that were built for exactly this problem and
