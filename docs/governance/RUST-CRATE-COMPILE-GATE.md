@@ -226,10 +226,10 @@ to the code — three, not nine, because the comparison only runs for entries
 the ledger records as broken; the six that compile measure no diagnostics at
 all. Three is still every broken crate in the tree, on every release, and
 that is precisely the failure mode that gets `|| true` attached — the defect
-this gate exists to stop repeating. **Pinning the toolchain is what would let this be promoted
-back to an assertion.** Until then the honest claim is narrower than the one
-this document originally made: the gate catches a crate that *stops
-compiling*, not one that breaks *differently*.
+this gate exists to stop repeating. **Pinning the toolchain is what would let
+this be promoted back to an assertion.** Until then the honest claim is
+narrower than the one this document originally made: the gate catches a crate
+that *stops compiling*, not one that breaks *differently*.
 
 What still gates, and is toolchain-stable: a crate recorded as compiling that
 no longer does ([REGRESSED]), one that compiles and is recorded broken
