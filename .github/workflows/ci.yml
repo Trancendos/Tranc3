@@ -571,6 +571,24 @@ jobs:
       - name: AI register conformance
         run: python scripts/check_ai_register.py
 
+      # This job runs about a dozen "... is current" steps against committed files
+      # that are generated from manifests, compose and the tree. Nothing
+      # regenerates them automatically and neither dependency bot knows they
+      # exist, so a one-line requirement bump arrives red here with no indication
+      # of what to run. Measured on 2026-10-05: four different steps in this job
+      # failed across six open pull requests in one afternoon, each needing the
+      # same command. This step says which one.
+      #
+      # It deliberately does not regenerate anything itself. Pushing generated
+      # files to a contributor's branch from CI is the pattern
+      # docs/governance/AGENT-DAEMON-FLEET-DECISION.md declined, and this job also
+      # fails on genuine findings (an unreachable document, a missing PID) that a
+      # regeneration would not fix and must not paper over.
+      - name: What to run if a currency check failed
+        if: failure()
+        run: |
+          echo "::notice title=Stale derived register?::If this job failed at a step named '... is current', run 'make regen' (or python3 scripts/regenerate_derived.py) and commit the result. If it failed at a check_* / conformance step, that is a finding about the change itself -- regenerating will not fix it."
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
