@@ -704,12 +704,36 @@ day. Had Sourcery's quota also been spent, that pull request would have merged
 carrying all five defects, and the pull request page would have looked no
 different.
 
-**What was built.** `src/immune/reviewers.py` classifies each commenter from its
-own words into `REVIEWED`, `BLIND` (declared it could not review), `UNPUBLISHED`
-(reached findings, could not publish them as a check — `ecc-tools`' case), or
-`SILENT` (never spoke). Only `REVIEWED` is `trustworthy`, for the same reason
-only `Outcome.OK` is above: silence from a reviewer that never looked is not
-evidence about the code. Run it with `python scripts/review_sight.py`.
+**What was built.** `src/immune/reviewers.py` classifies each reviewer's output
+into `REVIEWED`, `STALE` (reviewed an earlier head), `BLIND` (declared it could
+not review), `UNPUBLISHED` (reached findings, could not publish them as a check
+— `ecc-tools`' case), `UNPROVEN` (spoke, but nothing shows it read the diff),
+`SILENT` (never spoke), or `UNKNOWN` (its evidence could not be collected). Only
+`REVIEWED` is `trustworthy`, for the same reason only `Outcome.OK` is above.
+Run it with `python scripts/review_sight.py`.
+
+**Four structural rules, each one a bug this module shipped first.** The review
+of #1373 found that the module had the disease it diagnoses, in two cases
+measurably:
+
+1. **`REVIEWED` requires affirmative evidence, never the absence of a bad
+   sign.** The first version returned `REVIEWED` for any comment lacking a
+   blindness phrase, so Sourcery's own progress notice — *"Sourcery is reviewing
+   your pull request!"* — made a pull request read **covered and trustworthy**.
+   A greeting counted as a review. Only a submitted review or an inline comment
+   on the diff now proves a reviewer read it; an ordinary issue comment proves
+   it spoke, which is `UNPROVEN`.
+2. **Evidence is tied to the head it reviewed.** A review of an earlier commit
+   is `STALE`, because the question is whether anyone has seen *this* diff.
+   Measured immediately: on #1372 `chatgpt-codex-connector` had reviewed
+   `ba7258b9` while the head was `f2408ad8`, and the first version counted that
+   as coverage.
+3. **A phrase binds to the reviewer that emits it.** Matching every phrase
+   against every author meant a genuine review that *quoted* "review limit
+   reached" — which a review of this very file does — was classified `BLIND`.
+4. **Evidence that could not be collected reads `UNKNOWN`**, never `SILENT`.
+   The collector swallowed endpoint failures and presented the remainder as a
+   measurement, which is rule one of this subsystem violated on its own inputs.
 
 **Coverage is judged against a written decision, never against who commented.**
 `config/immune/reviewers.yaml` names the reviewers this estate depends on, and
@@ -724,12 +748,11 @@ which is the same refusal `load_manifest` makes when the manifest is absent.
 **What this does not do.** It does not gate. `--require` exits non-zero on a
 pull request with no trustworthy reviewer, and it is deliberately not wired into
 CI: *which* reviewers this estate's merges depend on is a decision to write
-down, not one for a script to assume. And it reads each reviewer's own words,
-so a reviewer that fails silently — no banner, no comment, no finding — is
-recorded `SILENT`, which is honest about the uncertainty rather than resolving
-it. Closing that needs a probe in the sense this document means: a planted
-defect each reviewer must flag. That is the next piece of work, and it is the
-same shape as `vaccination.py`.
+down, not one for a script to assume. And a reviewer that fails silently — no
+banner, no comment, no finding — is recorded `SILENT`, which is honest about the
+uncertainty rather than resolving it. Closing that needs a probe in the sense
+this document means: a planted defect each reviewer must flag. That is the next
+piece of work, and it is the same shape as `vaccination.py`.
 
 **The wider lesson for the marketplace question.** Nine review bots, four vendor
 scanners in `.github/workflows/`, and three third-party integrations dormant

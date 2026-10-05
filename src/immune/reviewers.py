@@ -3,8 +3,8 @@
 `docs/governance/IMMUNE-SYSTEM.md` sets one rule for every sensor in this
 estate: *a sensor that cannot see reports exactly what a clean estate reports*,
 so each one must declare whether it could see. `src/immune/sensors.py` applies
-that to the scanners this repository runs. It does not apply to the reviewers
-that run on this repository, and that is a real gap rather than a tidiness one.
+that to the scanners this repository runs. It did not apply to the reviewers
+that run on this repository, and that was a real gap rather than a tidy one.
 
 Measured on 2026-10-05 across the fifteen most recent pull requests:
 
@@ -14,31 +14,41 @@ Measured on 2026-10-05 across the fifteen most recent pull requests:
 * `qodo-code-review` posted "reviews are paused because the subscription is no
   longer active" on the same four.
 * `ecc-tools` posted 207 comments, a recurring one ending "Check publication was
-  denied or unavailable. An app owner must enable Checks: read and write" -- it
-  reached findings and could not publish them as a check.
+  denied or unavailable" -- it reached findings and could not publish them.
 
 On #1372, `sourcery-ai` was the only reviewer that genuinely reviewed, and it
 found five real defects, one of which destroyed a concurrent edit. Had it also
 been out of credits, that pull request would have carried every one of them and
-the pull request page would have looked no different: quiet bots, green checks.
+the page would have looked no different: quiet bots, green checks.
 
-That is the whole problem. A reviewer out of credits and a reviewer with nothing
-to say produce the same *visible* result, so "no review comments" silently means
-either "this is fine" or "nobody looked". This module refuses to collapse those
-two, and so a pull request nothing reviewed is reported as UNREVIEWED rather
-than as clean.
+WHY THIS MODULE IS SHAPED THE WAY IT IS
+---------------------------------------
+The first version of it caught that disease itself, and the review of #1373
+proved it in two measurable ways:
 
-Coverage is measured against a written decision, never inferred from who
-commented. `config/immune/reviewers.yaml` names the reviewers this estate
-depends on and, separately, the bots that comment without reviewing. That file
-exists because the first live run of this module reported #1372 as "reviewed by
-mergify[bot], Trancendos" -- a merge-queue checkbox and the author's own
-replies. Counting those as coverage is the same false-clean the module was
-written to stop, so with no declared reviewer matched the verdict is
-UNDETERMINED rather than a guess.
+* `classify` returned REVIEWED for any comment that merely lacked a blindness
+  phrase. Sourcery's own progress notice -- "Sourcery is reviewing your pull
+  request!" -- therefore made a pull request read as **covered and
+  trustworthy**. A greeting counted as a review.
+* Blindness phrases were matched against every author. A genuine review that
+  quoted the words "review limit reached" -- a review *of this file* would --
+  was classified BLIND.
 
-Pure functions over comment text. Nothing here touches the network; the caller
-supplies the comments and the manifest (see `scripts/review_sight.py`).
+Both are the exact false-clean this module exists to prevent, so the design now
+refuses them structurally rather than by pattern-matching harder:
+
+1. **REVIEWED requires affirmative evidence**, never the absence of a bad sign.
+   Only a submitted review or an inline comment on the diff proves a reviewer
+   read it. An ordinary issue comment proves it spoke, which is UNPROVEN.
+2. **Evidence is tied to the head it reviewed.** A review of an earlier commit
+   is STALE, not coverage: the question is whether anyone has seen *this* diff.
+3. **A phrase binds to the reviewer that emits it.** `coderabbitai`'s banner
+   says nothing about `sourcery-ai`, and quoting it is not emitting it.
+4. **Evidence that could not be collected reads UNKNOWN**, never SILENT -- which
+   is rule one of this whole subsystem applied to its own inputs.
+
+Pure functions over structured remarks. Nothing here touches the network; the
+caller supplies the remarks and the manifest (see `scripts/review_sight.py`).
 """
 
 from __future__ import annotations
@@ -50,43 +60,66 @@ from typing import Iterable, Sequence
 
 __all__ = [
     "Sight",
+    "Remark",
     "ReviewerVerdict",
     "ReviewCoverage",
     "BLINDNESS_PHRASES",
     "UNPUBLISHED_PHRASES",
+    "REVIEW_KINDS",
     "classify",
     "assess",
     "load_manifest",
     "DEFAULT_MANIFEST",
 ]
 
-DEFAULT_MANIFEST = Path("config/immune/reviewers.yaml")
+# Resolved against the repository, not the process working directory: a relative
+# default silently returned "no reviewers declared" -- i.e. UNDETERMINED -- for
+# any caller run from elsewhere, which is a wrong answer dressed as a cautious
+# one.
+_REPO = Path(__file__).resolve().parents[2]
+DEFAULT_MANIFEST = _REPO / "config" / "immune" / "reviewers.yaml"
 
 
 class Sight(str, Enum):
-    """What a reviewer's own words establish about whether it looked."""
+    """What a reviewer's own output establishes about whether it looked."""
 
     REVIEWED = "reviewed"
+    STALE = "stale"
     BLIND = "blind"
     UNPUBLISHED = "unpublished"
+    UNPROVEN = "unproven"
     SILENT = "silent"
+    UNKNOWN = "unknown"
 
     @property
     def trustworthy(self) -> bool:
         """Can this reviewer's silence on a defect be believed?
 
-        Only a reviewer that reviewed. BLIND said it could not look. SILENT
-        never spoke, so there is no evidence either way -- and treating absence
-        of comment as evidence of quality is the inference this module exists to
-        block. UNPUBLISHED did look, but its findings never became a check,
-        so nothing enforces them.
+        Only REVIEWED: a reviewer that left review evidence against the current
+        head. Every other value is a different way of not knowing --
+
+        STALE       reviewed an earlier diff, not this one
+        BLIND       said it could not review
+        UNPUBLISHED reached findings and could not publish them as a check
+        UNPROVEN    spoke, but nothing it said shows it read the diff
+        SILENT      said nothing at all
+        UNKNOWN     its evidence could not be collected
+
+        -- and treating any of them as evidence of quality is the inference this
+        module exists to block.
         """
         return self is Sight.REVIEWED
 
 
-# Each phrase is quoted from a comment measured in this repository, with the bot
-# that wrote it, because a pattern list assembled from imagination is how a
-# detector ends up matching nothing. Lowercase; matched as substrings.
+# Remark kinds that constitute evidence a reviewer read the diff. A submitted
+# review and an inline comment are both anchored to a commit; a bare issue
+# comment is not anchored to anything and proves only that something was posted.
+REVIEW_KINDS = frozenset({"review", "review_comment"})
+
+# Each phrase is quoted from a comment measured in this repository and bound to
+# the reviewer that emitted it, because a phrase list applied to every author
+# classifies a reviewer QUOTING a banner as having emitted it. "generic" phrases
+# apply to any reviewer and are kept deliberately few.
 BLINDNESS_PHRASES: tuple[tuple[str, str], ...] = (
     ("out of credits", "devloai[bot]"),
     ("run out of credits", "devloai[bot]"),
@@ -96,11 +129,9 @@ BLINDNESS_PHRASES: tuple[tuple[str, str], ...] = (
     ("review limit reached", "coderabbitai[bot]"),
     ("used all free oss reviews", "coderabbitai[bot]"),
     ("rate limited by", "coderabbitai[bot]"),
-    # Not yet measured here, but the same class, and cheap to carry:
     ("quota exceeded", "generic"),
     ("insufficient credits", "generic"),
     ("trial has expired", "generic"),
-    ("plan does not include", "generic"),
 )
 
 UNPUBLISHED_PHRASES: tuple[tuple[str, str], ...] = (
@@ -109,9 +140,32 @@ UNPUBLISHED_PHRASES: tuple[tuple[str, str], ...] = (
 )
 
 
-def _match(body: str, phrases: Iterable[tuple[str, str]]) -> str | None:
+@dataclass(frozen=True)
+class Remark:
+    """One thing a reviewer posted, with the metadata that makes it evidence.
+
+    `commit_id` is the head the remark was anchored to, where GitHub gives one.
+    Reducing a remark to (author, body) -- as the first version did -- discards
+    exactly what distinguishes "reviewed this diff" from "reviewed some diff".
+    """
+
+    author: str
+    body: str
+    kind: str = "issue_comment"
+    commit_id: str | None = None
+    state: str | None = None
+
+
+def _match(body: str, reviewer: str, phrases: Iterable[tuple[str, str]]) -> str | None:
+    """Find a phrase this reviewer is declared to emit.
+
+    A phrase bound to another reviewer is ignored, so quoting someone else's
+    banner -- or reviewing code that contains one -- does not read as blindness.
+    """
     low = body.lower()
-    for phrase, _source in phrases:
+    for phrase, source in phrases:
+        if source != "generic" and source != reviewer:
+            continue
         if phrase in low:
             return phrase
     return None
@@ -121,37 +175,53 @@ def _match(body: str, phrases: Iterable[tuple[str, str]]) -> str | None:
 class ReviewerVerdict:
     reviewer: str
     sight: Sight
-    evidence: str
-    """The phrase that decided a BLIND or UNPUBLISHED verdict, so the judgement
-    can be checked rather than taken on faith. Empty for REVIEWED and SILENT."""
+    evidence: str = ""
+    """What decided a non-REVIEWED verdict -- the phrase matched, or the commit
+    reviewed -- so the judgement can be checked rather than taken on faith."""
 
     @property
     def trustworthy(self) -> bool:
         return self.sight.trustworthy
 
 
-def classify(reviewer: str, bodies: Sequence[str]) -> ReviewerVerdict:
-    """Decide what a reviewer's comments establish about its sight.
+def classify(
+    reviewer: str,
+    remarks: Sequence[Remark],
+    head: str | None = None,
+) -> ReviewerVerdict:
+    """Decide what a reviewer's output establishes about its sight of `head`.
 
-    Order matters and is deliberate. A reviewer that declared blindness ANYWHERE
-    in its comments is BLIND even if it also posted a cheerful template: three
-    of the four bots measured here post a banner and a greeting in the same
-    breath, and reading the greeting first would score them as having reviewed.
+    Affirmative evidence is checked FIRST, so a reviewer that hit its quota
+    earlier and reviewed successfully later reads REVIEWED rather than BLIND --
+    the verdict describes the current state, not the first thing that happened.
     """
-    if not bodies:
-        return ReviewerVerdict(reviewer, Sight.SILENT, "")
+    if not remarks:
+        return ReviewerVerdict(reviewer, Sight.SILENT)
 
-    for body in bodies:
-        hit = _match(body, BLINDNESS_PHRASES)
+    reviewed_at = [r.commit_id for r in remarks if r.kind in REVIEW_KINDS]
+    if reviewed_at:
+        # No head to compare against: the remark is review evidence, and saying
+        # it is stale would be inventing a fact. Say it reviewed.
+        if head is None or any(c == head for c in reviewed_at):
+            return ReviewerVerdict(reviewer, Sight.REVIEWED)
+        seen = next((c for c in reviewed_at if c), None)
+        return ReviewerVerdict(reviewer, Sight.STALE, f"last reviewed {(seen or '?')[:8]}")
+
+    for remark in remarks:
+        hit = _match(remark.body, reviewer, BLINDNESS_PHRASES)
         if hit:
             return ReviewerVerdict(reviewer, Sight.BLIND, hit)
 
-    for body in bodies:
-        hit = _match(body, UNPUBLISHED_PHRASES)
+    for remark in remarks:
+        hit = _match(remark.body, reviewer, UNPUBLISHED_PHRASES)
         if hit:
             return ReviewerVerdict(reviewer, Sight.UNPUBLISHED, hit)
 
-    return ReviewerVerdict(reviewer, Sight.REVIEWED, "")
+    # It spoke, and nothing it said shows it read the diff. A greeting, a
+    # progress notice, a template. The first version of this module called that
+    # REVIEWED, which made "Sourcery is reviewing your pull request!" count as
+    # coverage.
+    return ReviewerVerdict(reviewer, Sight.UNPROVEN, "commented without review evidence")
 
 
 @dataclass
@@ -163,6 +233,10 @@ class ReviewCoverage:
     expected: tuple[str, ...] = ()
     """The reviewers this estate declared it depends on. Coverage is judged
     against these and nothing else."""
+    collected: bool = True
+    """False when some evidence could not be fetched. Everything downstream then
+    reads UNKNOWN, because a partial evidence set presented as a verdict is this
+    subsystem's founding defect applied to its own inputs."""
 
     def _of(self, sight: Sight) -> list[ReviewerVerdict]:
         return [v for v in self.verdicts if v.sight is sight]
@@ -180,60 +254,94 @@ class ReviewCoverage:
         return self._of(Sight.UNPUBLISHED)
 
     @property
+    def stale(self) -> list[ReviewerVerdict]:
+        return self._of(Sight.STALE)
+
+    @property
+    def unproven(self) -> list[ReviewerVerdict]:
+        return self._of(Sight.UNPROVEN)
+
+    @property
     def silent(self) -> list[ReviewerVerdict]:
         return self._of(Sight.SILENT)
 
     @property
     def coverage_known(self) -> bool:
-        """Is there a declared set to judge coverage against?
-
-        Without one, "somebody commented" is all that can be observed, and that
-        is not the same question. Saying so beats answering a question nobody
-        measured.
-        """
-        return bool(self.expected)
+        """Is there a declared set to judge coverage against, and full evidence?"""
+        return bool(self.expected) and self.collected
 
     @property
     def covered(self) -> bool:
-        """Did a reviewer this estate DEPENDS ON actually review this pull request?
+        """Did a reviewer this estate DEPENDS ON review the current head?
 
         This is the question the pull request page cannot answer. A page with no
         review comments and a page whose every reviewer was out of credits look
         identical, and only one of them has been reviewed.
-
-        Judged only over `expected`. A trustworthy verdict from a bot that posts
-        a merge checkbox does not make a pull request reviewed, and neither do
-        the author's own replies.
         """
         if not self.coverage_known:
             return False
         return any(v.trustworthy and v.reviewer in self.expected for v in self.verdicts)
 
     @property
-    def depended_on(self) -> list[ReviewerVerdict]:
-        """Verdicts for the declared reviewers only."""
-        return [v for v in self.verdicts if v.reviewer in self.expected]
-
-    @property
     def summary(self) -> str:
-        if not self.coverage_known:
-            commented = sorted(v.reviewer for v in self.reviewed)
-            return (
-                f"{self.pr}: UNDETERMINED -- no reviewers declared, so coverage was "
-                f"not measured ({len(commented)} author(s) commented)"
-            )
+        if not self.collected:
+            return f"{self.pr}: UNKNOWN -- some review evidence could not be collected"
+        if not self.expected:
+            return f"{self.pr}: UNDETERMINED -- no reviewers declared, so coverage was not measured"
         if self.covered:
             names = ", ".join(
                 sorted(v.reviewer for v in self.reviewed if v.reviewer in self.expected)
             )
             return f"{self.pr}: reviewed by {names}"
-        blind = sorted(v.reviewer for v in self.blind if v.reviewer in self.expected)
-        if blind:
-            return (
-                f"{self.pr}: UNREVIEWED -- {len(blind)} depended-on reviewer(s) declared "
-                f"they could not review ({', '.join(blind)}) and none reviewed"
-            )
-        return f"{self.pr}: UNREVIEWED -- no depended-on reviewer reported on it"
+        reasons = []
+        for label, group in (
+            ("blind", self.blind),
+            ("stale", self.stale),
+            ("unproven", self.unproven),
+            ("silent", self.silent),
+        ):
+            named = [v.reviewer for v in group if v.reviewer in self.expected]
+            if named:
+                reasons.append(f"{len(named)} {label}")
+        detail = ", ".join(reasons) or "no depended-on reviewer reported"
+        return f"{self.pr}: UNREVIEWED -- {detail}"
+
+
+def assess(
+    pr: str,
+    remarks: Iterable[Remark],
+    expected: Sequence[str] = (),
+    author: str | None = None,
+    head: str | None = None,
+    not_a_reviewer: Sequence[str] = (),
+    collected: bool = True,
+) -> ReviewCoverage:
+    """Group remarks by reviewer and classify each one against `head`.
+
+    `author` is excluded: a pull request is not reviewed by whoever opened it,
+    and the author's own replies to review threads were counted as coverage
+    until this argument existed.
+
+    `not_a_reviewer` is excluded too. A merge-queue checkbox is not a review,
+    and listing such a bot in the manifest should keep it out of the verdicts
+    rather than merely out of the arithmetic.
+    """
+    excluded = set(not_a_reviewer)
+    grouped: dict[str, list[Remark]] = {name: [] for name in expected}
+    for remark in remarks:
+        if author is not None and remark.author == author:
+            continue
+        if remark.author in excluded and remark.author not in expected:
+            continue
+        grouped.setdefault(remark.author, []).append(remark)
+
+    verdicts = [classify(name, rs, head) for name, rs in sorted(grouped.items())]
+    return ReviewCoverage(
+        pr=pr,
+        verdicts=verdicts,
+        expected=tuple(expected),
+        collected=collected,
+    )
 
 
 def load_manifest(path: Path | None = None) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -253,30 +361,3 @@ def load_manifest(path: Path | None = None) -> tuple[tuple[str, ...], tuple[str,
         tuple(data.get("depends_on") or ()),
         tuple(data.get("not_a_reviewer") or ()),
     )
-
-
-def assess(
-    pr: str,
-    comments: Iterable[tuple[str, str]],
-    expected: Sequence[str] = (),
-    author: str | None = None,
-) -> ReviewCoverage:
-    """Group (author, body) pairs by reviewer and classify each one.
-
-    `expected` names the reviewers coverage is judged against -- normally
-    `load_manifest()[0]`. One of them that posts nothing is recorded SILENT
-    rather than dropped, because a reviewer absent from a pull request entirely
-    is the hardest blindness to notice: there is no comment to read.
-
-    `author` is excluded. A pull request is not reviewed by the person who
-    opened it, and on this estate the author's own replies to review threads
-    were being counted as review coverage until this argument existed.
-    """
-    grouped: dict[str, list[str]] = {name: [] for name in expected}
-    for commenter, body in comments:
-        if author is not None and commenter == author:
-            continue
-        grouped.setdefault(commenter, []).append(body)
-
-    verdicts = [classify(name, bodies) for name, bodies in sorted(grouped.items())]
-    return ReviewCoverage(pr=pr, verdicts=verdicts, expected=tuple(expected))
