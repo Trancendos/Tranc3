@@ -190,6 +190,7 @@ export default function DigitalGridPage() {
                   <div className="pt-1">
                     <button
                       onClick={() => {
+                        if (!window.confirm("Are you sure you want to delete this node?")) return;
                         setWorkflow((wf) => ({
                           ...wf,
                           nodes: wf.nodes.filter((n) => n.id !== selectedNode.id),

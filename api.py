@@ -34,8 +34,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.error_handlers import safe_error_detail
+from Dimensionals.sanitize import sanitize_for_log
 from src.core.startup_validator import validate_startup
 from src.entities.health_metadata import health_entity_block
 

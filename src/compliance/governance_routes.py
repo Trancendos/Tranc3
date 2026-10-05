@@ -15,7 +15,7 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.compliance.escalation_fsm import (
     ActionRequest,
     CharterNotFoundError,

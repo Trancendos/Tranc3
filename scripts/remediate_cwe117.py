@@ -15,11 +15,11 @@ REPO = Path(__file__).resolve().parents[1]
 
 # Files under shared_core use shared_core.sanitize
 SHARED_CORE_IMPORT = "from shared_core.sanitize import sanitize_for_log"
-DIMENSIONAL_IMPORT = "from Dimensional.sanitize import sanitize_for_log"
+DIMENSIONAL_IMPORT = "from Dimensionals.sanitize import sanitize_for_log"
 
 # Per-file line-oriented replacements (old substring -> new substring)
 REPLACEMENTS: dict[str, list[tuple[str, str]]] = {
-    "Dimensional/error_handlers.py": [
+    "Dimensionals/error_handlers.py": [
         (
             '        log_fn(\n            "Error ref=%s status=%d: %s: %s",\n            ref_id,\n            status_code,\n            type(exc).__name__,\n            exc,\n        )',
             '        log_fn(\n            "Error ref=%s status=%d: %s: %s",\n            ref_id,\n            status_code,\n            sanitize_for_log(type(exc).__name__),\n            sanitize_for_log(exc),\n        )',
@@ -177,9 +177,9 @@ def main() -> int:
     for rel_path in REPLACEMENTS:
         if apply_replacements(rel_path):
             changed += 1
-    hive = REPO / "Dimensional/hive/hive_core.py"
+    hive = REPO / "Dimensionals/hive/hive_core.py"
     if hive.exists() and fix_hive_core(hive):
-        print("FIXED: Dimensional/hive/hive_core.py (f-strings)")
+        print("FIXED: Dimensionals/hive/hive_core.py (f-strings)")
         changed += 1
     print(f"\n=== Updated {changed} files ===")
     return 0

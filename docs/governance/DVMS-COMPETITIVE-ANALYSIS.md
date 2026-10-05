@@ -116,7 +116,12 @@ not the Cloud Only one.
 ### Weaknesses — all measured
 - **No automated reachability.** The 2026 differentiator, absent. We perform it manually:
   SEC-005 and SEC-007 both contain hand-written reachability arguments. That is high-quality
-  analysis that does not scale past a handful of entries.
+  analysis that does not scale past a handful of entries — and SEC-007 is now the evidence
+  that it does not scale *safely* either. Its reachability argument was sound and its
+  conclusion irrelevant: it read `posthog-js`'s declared `^0.4.8` range as the resolved
+  version and never opened the lockfile, which already held the patched 0.4.9. A tool that
+  reads lockfiles does not make that mistake. Prose costs analyst time; the failure mode is
+  that it also buys a wrong answer at full confidence.
 - **The register is machine-unreadable.** It is, functionally, a VEX document that no tool
   can consume. Trivy, grype and OSV-Scanner run in our own workflows and re-report findings
   we have already dispositioned, because the disposition cannot reach them.
@@ -151,8 +156,11 @@ not the Cloud Only one.
 - **OpenVEX is the missing wire, and it is free.** Trivy, grype and OSV-Scanner — all three
   already in our workflows — accept `--vex` with an OpenVEX document. The register becomes
   machine-readable once, and three scanners stop re-litigating settled findings.
-- **`vulnerable_code_not_in_execute_path` is already our reasoning.** SEC-007's disposition
-  is that exact justification, written in prose. The standard has a slot for it.
+- **`vulnerable_code_not_in_execute_path` is already our reasoning.** SEC-007 carried that
+  exact justification in prose until 2026-09-26, when it was superseded by the plainer
+  `fixed` status. The slot in the standard is still the right one for the next such entry;
+  what SEC-007 now demonstrates is that the status has to be re-derived from the lockfile
+  each run, not frozen into the export.
 - **The history file is now the substrate for the analysis nobody has written yet.** MTTR,
   recurrence-per-package and "is exposure growing" are all reads over a file that exists;
   none of them are implemented.
@@ -164,11 +172,14 @@ not the Cloud Only one.
 ### Threats
 - **A naive VEX export would be a fail-open control.** This is the single most important
   finding in this document. Marking every dispositioned entry `not_affected` would suppress
-  real vulnerabilities in three scanners at once. Of our eight entries, **only SEC-007** is
-  genuinely `not_affected` (the vulnerable function is never called). SEC-006 is the
-  opposite: no patch exists and reachability was never established — it is `affected` with
-  an action statement. Exporting it as `not_affected` would hide a live issue behind a
-  standards-compliant file.
+  real vulnerabilities in three scanners at once. Of our eight entries, **not one** is
+  genuinely `not_affected` today. SEC-007 was the only candidate, and on 2026-09-26 it turned
+  out to be `fixed` instead — the installed fflate had been patched all along. SEC-006 is the
+  opposite case: no patch exists and reachability was never established — it is `affected`
+  with an action statement. Exporting it as `not_affected` would hide a live issue behind a
+  standards-compliant file. A VEX export built today would correctly assert nothing, which is
+  the strongest possible argument for deriving each status at export time rather than
+  transcribing the register's prose.
 - **Dependency on a dormant runner.** Fourteen scheduled Forgejo supply-chain jobs need the
   self-hosted act-runner. They are built, wired, and do not fire.
 - **Register drift.** Eight entries are maintainable by hand; seventy are not. Field naming
