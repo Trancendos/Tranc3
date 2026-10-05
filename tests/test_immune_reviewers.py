@@ -312,3 +312,18 @@ def test_on_request_reviewers_are_not_depended_on():
     assert not depends_on & on_request, "a reviewer cannot be both depended on and on-request"
     assert not depends_on & not_a_reviewer
     assert not on_request & not_a_reviewer
+
+
+def test_uncollected_evidence_makes_every_reviewer_unknown_not_silent():
+    """REGRESSION: with collection failed, every expected reviewer read SILENT.
+
+    Raised by `cubic-dev-ai` on #1373. The summary line said UNKNOWN honestly
+    while the per-reviewer verdicts said "said nothing at all" -- a caller
+    reading `coverage.silent` was told a measurement that was never taken. The
+    fourth instance of this module's own founding defect, inside it.
+    """
+    coverage = assess("#1373", [], expected=DEPENDS, head=HEAD, collected=False)
+    assert not coverage.silent, "unavailable evidence is not silence"
+    assert {v.reviewer for v in coverage.unknown} == set(DEPENDS)
+    assert all(not v.trustworthy for v in coverage.verdicts)
+    assert not coverage.covered

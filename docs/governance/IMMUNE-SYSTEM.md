@@ -708,9 +708,15 @@ different.
 into `REVIEWED`, `STALE` (reviewed an earlier head), `BLIND` (declared it could
 not review), `UNPUBLISHED` (reached findings, could not publish them as a check
 — `ecc-tools`' case), `UNPROVEN` (spoke, but nothing shows it read the diff),
-`SILENT` (never spoke), or `UNKNOWN` (its evidence could not be collected). Only
-`REVIEWED` is `trustworthy`, for the same reason only `Outcome.OK` is above.
-Run it with `python scripts/review_sight.py`.
+`SILENT` (never spoke), or `UNKNOWN`. Only `REVIEWED` is `trustworthy`, for the
+same reason only `Outcome.OK` is above. Run it with
+`python scripts/review_sight.py`.
+
+`UNKNOWN` carries two distinct meanings and both are deliberate: per reviewer,
+that the pull request's head could not be determined, so there is nothing to
+compare its evidence against; and per pull request, that collection failed, in
+which case *every* reviewer reads `UNKNOWN` rather than `SILENT` — because
+"we could not look" is not "they said nothing".
 
 **Four structural rules, each one a bug this module shipped first.** The review
 of #1373 found that the module had the disease it diagnoses, in two cases

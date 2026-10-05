@@ -356,7 +356,17 @@ def assess(
             continue
         grouped.setdefault(remark.author, []).append(remark)
 
-    verdicts = [classify(name, rs, head) for name, rs in sorted(grouped.items())]
+    if not collected:
+        # Classifying an empty bucket as SILENT would say "this reviewer said
+        # nothing" when the truth is "we could not look" -- reporting a result
+        # not measured, in the module written to refuse exactly that. The
+        # summary line was already honest; the per-reviewer verdicts were not.
+        verdicts = [
+            ReviewerVerdict(name, Sight.UNKNOWN, "evidence could not be collected")
+            for name in sorted(set(grouped) | set(expected))
+        ]
+    else:
+        verdicts = [classify(name, rs, head) for name, rs in sorted(grouped.items())]
     return ReviewCoverage(
         pr=pr,
         verdicts=verdicts,
