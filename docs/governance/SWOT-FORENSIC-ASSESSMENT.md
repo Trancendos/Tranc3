@@ -116,7 +116,7 @@ a list somebody can clear in a week, and unlike fifty-two, a true one.
   backlog, because `harvest()` read markdown tables. A backlog that claims
   "every outstanding item the estate records" and cannot see `- [ ]` was
   overstating its coverage. Closed; see F7.
-- **Forgejo is the declared primary CI and is dormant.** 32 workflow files, 57
+- **Forgejo is the declared primary CI and is dormant.** 33 workflow files, 57
   of 83 jobs pinned to a `self-hosted` runner that is not standing. The
   production merge gate exists in both trees and had already diverged
   materially before `scripts/check_workflow_drift.py` was written. The weaker

@@ -5,7 +5,7 @@ Comprehensive tests for the 9 platform locations, entity hierarchy,
 tier system, and pillar registry.
 """
 
-from Dimensional.pillars.entities import (
+from Dimensionals.pillars.entities import (
     LOCATION_CONFIGS,
     LOCATIONS,
     EntityTier,

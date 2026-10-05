@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.zkp"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.zkp"""
 
-from Dimensional.infinity.zkp import *  # noqa: F401, F403
+from Dimensionals.infinity.zkp import *  # noqa: F401, F403

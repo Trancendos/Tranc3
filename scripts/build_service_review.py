@@ -39,7 +39,7 @@ Lifecycle:
 SFSC SCOPE
 
 A capability is *in* the Shared Functional Services Core when it lives in
-`Dimensional/`. It is a *candidate* when the same cross-cutting concern is
+`Dimensionals/`. It is a *candidate* when the same cross-cutting concern is
 implemented independently in two or more services — measured by scanning for
 the concern's signature, not by opinion. Concerns owned by exactly one service
 are out of scope by definition: that is not shared, it is that service's job.
@@ -69,7 +69,7 @@ WORKERS = ROOT / "workers"
 OUT_JSON = ROOT / "docs" / "architecture" / "service-review.json"
 OUT_MD = ROOT / "docs" / "architecture" / "SERVICE-REVIEW.md"
 
-ROOT_PACKAGES = {"src", "Dimensional", "shared_core"}
+ROOT_PACKAGES = {"src", "Dimensionals", "shared_core"}
 
 
 # Images we pull rather than build. Their internals are not ours to review, but
@@ -399,7 +399,7 @@ CONCERNS = {
 
 
 def dimensional_inventory() -> dict[str, Any]:
-    dim = ROOT / "Dimensional"
+    dim = ROOT / "Dimensionals"
     mods = sorted(p.relative_to(ROOT).as_posix() for p in dim.rglob("*.py"))
     covered = {}
     for concern, pat in CONCERNS.items():
@@ -723,7 +723,7 @@ def render_md(g: dict) -> str:
 
     a("## Dimensionals — what is in scope, what is not")
     a("")
-    a(f"`Dimensional/` holds {g['sfsc']['dimensional']['module_count']} modules. ")
+    a(f"`Dimensionals/` holds {g['sfsc']['dimensional']['module_count']} modules. ")
     a("A concern is *in scope* when the shared core owns it; a *candidate* when two or")
     a("more services solve it independently; *out of scope* when exactly one service")
     a("does, because that is not shared code, it is that service's job.")
@@ -745,7 +745,7 @@ def render_md(g: dict) -> str:
         a("### Why `internal-secret verification` is the first one to fix")
         a("")
         a(f"{v['total']} services each write their own check, and they have not stayed")
-        a("the same. `Dimensional/security.py` already exposes a constant-time compare")
+        a("the same. `Dimensionals/security.py` already exposes a constant-time compare")
         a("that none of them import.")
         a("")
         a("| Behaviour | Services |")

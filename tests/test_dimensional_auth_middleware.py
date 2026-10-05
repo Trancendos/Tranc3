@@ -1,5 +1,5 @@
 # tests/test_dimensional_auth_middleware.py
-# Regression tests for Dimensional/middleware/auth.py's AuthMiddleware.
+# Regression tests for Dimensionals/middleware/auth.py's AuthMiddleware.
 #
 # This middleware is not currently mounted anywhere live (only referenced from
 # the already-archived archive/api_ecosystem.py), but a cubic-dev-ai review
@@ -21,7 +21,7 @@ from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from auth import create_token
-from Dimensional.middleware.auth import AuthMiddleware
+from Dimensionals.middleware.auth import AuthMiddleware
 from src.auth.rbac import get_permissions_for_user
 
 

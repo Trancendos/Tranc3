@@ -135,7 +135,7 @@ def adaptive_provider_score(provider_name: str, latency_ms: float, error_rate: f
     """
     # Try Dimensional genetic fitness evaluator first (zero-cost, always available)
     try:
-        from Dimensional.genetics.fitness import LatencyThroughputFitness
+        from Dimensionals.genetics.fitness import LatencyThroughputFitness
 
         fitness = LatencyThroughputFitness()
         return fitness.evaluate(latency_ms=latency_ms, error_rate=error_rate)

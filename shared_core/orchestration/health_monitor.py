@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.orchestration.health_monitor"""
+"""Backward-compatibility shim — canonical: Dimensionals.orchestration.health_monitor"""
 
-from Dimensional.orchestration.health_monitor import *  # noqa: F401, F403
+from Dimensionals.orchestration.health_monitor import *  # noqa: F401, F403

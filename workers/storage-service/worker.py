@@ -38,8 +38,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from Dimensional.path_validation import PathTraversalError, safe_join
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.path_validation import PathTraversalError, safe_join
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ── Config ────────────────────────────────────────────────────────────────────
 WORKER_PORT = int(os.environ.get("STORAGE_PORT", "8020"))
@@ -284,7 +284,7 @@ def _record_event(backend: str, success: bool) -> None:
 # finding. `.github/workflows/codeql.yml` now retains the SARIF so the next
 # five can be named on the day they appear.
 #
-# `safe_join` is the shared core's existing helper (Dimensional/
+# `safe_join` is the shared core's existing helper (Dimensionals/
 # path_validation.py) -- the same one `src/admin_os/files_manager.py` uses. It
 # validates each component, rejects `..`, null bytes and absolute segments, and
 # re-checks containment after `resolve()`, so a symlink planted inside the root
@@ -711,7 +711,11 @@ async def download_object(bucket: str, key: str):
     headers = {"ETag": row["etag"]}
 
     if backend == "local" and row["path"]:
-        p = Path(row["path"])
+        base_real = os.path.realpath(LOCAL_ROOT)
+        target_real = os.path.realpath(row["path"])
+        if os.path.commonpath([base_real, target_real]) != base_real:
+            raise HTTPException(status_code=403, detail="Invalid file path")
+        p = Path(target_real)
         if not p.exists():
             raise HTTPException(status_code=404, detail="Object file missing")
         return FileResponse(str(p), media_type=ctype, headers=headers)

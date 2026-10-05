@@ -33,7 +33,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.compliance.matrix_suites import SuiteHealth, list_suite_health
 
 logger = logging.getLogger("tranc3.compliance.matrix_suites_cranbania")
