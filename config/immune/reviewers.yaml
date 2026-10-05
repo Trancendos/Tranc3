@@ -1,0 +1,42 @@
+# Which reviewers this estate's pull requests actually depend on.
+#
+# This manifest exists for the same reason `sensors.yaml` does. Nine bots post
+# on a pull request here, and most of them are not reviewing it: one posts a
+# merge-queue checkbox, one posts coverage deltas, one posts a greeting. If
+# "somebody commented" counted as "somebody reviewed", then a pull request whose
+# every real reviewer was out of credits would read as covered -- which is the
+# exact false-clean `src/immune/reviewers.py` was written to stop, and which the
+# first live run of it did report until this file existed.
+#
+# So coverage is measured against a written decision, never inferred from who
+# happened to comment. With no `depends_on` entry matched, the tool reports its
+# observations and says coverage is UNDETERMINED rather than guessing.
+#
+# Measured 2026-10-05: of the five `depends_on` reviewers below, three were
+# simultaneously unable to review (credits, quota, subscription) across the four
+# most recent pull requests. On #1372 `sourcery-ai` was the only one that
+# reviewed, and it found five real defects.
+
+# Reviewers whose silence on a defect is meant to mean something.
+depends_on:
+  sourcery-ai[bot]: "Reads the diff and reports defects; found 5 real ones on #1372"
+  coderabbitai[bot]: "Line-level review with reachability analysis; rate-limited on the free OSS tier"
+  cubic-dev-ai[bot]: "AI code review"
+  codeant-ai[bot]: "AI code review"
+  qodo-code-review[bot]: "AI code review; subscription currently inactive"
+  devloai[bot]: "Custom review agent; currently out of credits"
+  chatgpt-codex-connector[bot]: "Review on request"
+  google-labs-jules[bot]: "Review on request"
+
+# Bots that comment on pull requests and are NOT reviewing them. Listed
+# explicitly, with what each actually does, because leaving them unlisted is
+# what let a merge-queue checkbox count as review coverage.
+not_a_reviewer:
+  mergify[bot]: "Merge-queue control checkbox -- posts no finding of any kind"
+  codecov[bot]: "Coverage delta report, not a defect review"
+  pre-commit-ci[bot]: "Formatter; rewrites files rather than reporting on them"
+  ecc-tools[bot]: "Posts taxonomy and evidence audits, but cannot publish them as checks"
+  dependabot[bot]: "Opens dependency pull requests"
+  renovate[bot]: "Opens dependency pull requests"
+  dosubot[bot]: "Answers questions; does not review the diff"
+  github-actions[bot]: "Runs workflows"
