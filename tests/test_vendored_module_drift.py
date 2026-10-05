@@ -1,7 +1,7 @@
 """Guard the vendored worker copies against silent drift from their source modules.
 
 `workers/hive-service/` and `workers/dimensional-nexus-service/` each carry a
-partial copy of the repo-root `Dimensional/` package (and, for hive, a slice of
+partial copy of the repo-root `Dimensionals/` package (and, for hive, a slice of
 `src/`). That vendoring is deliberate: `docker-compose.production.yml` gives each
 worker a build context of its own directory, so `COPY` cannot reach repo root.
 
@@ -29,26 +29,26 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # directory and the repo root. Every *.py beneath these, in either location, is
 # compared.
 VENDORED_TREES: dict[str, tuple[str, ...]] = {
-    "workers/hive-service": ("Dimensional", "src"),
-    "workers/dimensional-nexus-service": ("Dimensional",),
+    "workers/hive-service": ("Dimensionals", "src"),
+    "workers/dimensional-nexus-service": ("Dimensionals",),
 }
 
 
 # Package inits deliberately emptied in the vendored copies. The root versions
-# eagerly import the whole tree (`Dimensional/__init__.py` pulls in EventBus,
+# eagerly import the whole tree (`Dimensionals/__init__.py` pulls in EventBus,
 # models, registry, security, ...), none of which the partial copy contains, so
 # emptying them is what makes it importable at all.
 #
 # Declared explicitly rather than inferred from "the vendored file is empty".
 # That inference would also swallow a *real* init that got accidentally emptied
-# — blanking `Dimensional/hive/__init__.py` breaks `from Dimensional.hive import
+# — blanking `Dimensionals/hive/__init__.py` breaks `from Dimensionals.hive import
 # Hive` in the container, and the check would have called it a shim and stayed
 # green. Anything not named here is compared, including files that happen to be
 # empty on both sides (`src/errors/__init__.py`), which simply compare equal.
 NAMESPACE_SHIMS = frozenset(
     {
-        "Dimensional/__init__.py",
-        "Dimensional/infinity/__init__.py",
+        "Dimensionals/__init__.py",
+        "Dimensionals/infinity/__init__.py",
         "src/__init__.py",
     }
 )
@@ -104,10 +104,10 @@ def test_vendored_file_list_is_not_empty():
 # inconvenience: the two app factories that install CORSMiddleware, and the
 # module they now resolve their allow-list from.
 SECURITY_CRITICAL = {
-    "workers/hive-service::Dimensional/cors.py",
-    "workers/hive-service::Dimensional/hive/hive_core.py",
-    "workers/dimensional-nexus-service::Dimensional/cors.py",
-    "workers/dimensional-nexus-service::Dimensional/nexus/nexus_core.py",
+    "workers/hive-service::Dimensionals/cors.py",
+    "workers/hive-service::Dimensionals/hive/hive_core.py",
+    "workers/dimensional-nexus-service::Dimensionals/cors.py",
+    "workers/dimensional-nexus-service::Dimensionals/nexus/nexus_core.py",
 }
 
 

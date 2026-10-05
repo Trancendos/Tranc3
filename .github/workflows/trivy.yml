@@ -91,7 +91,7 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload Trivy config SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         if: always()
         with:
           sarif_file: "trivy-config.sarif"
@@ -126,7 +126,7 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload Trivy fs SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         if: always()
         with:
           sarif_file: "trivy-fs.sarif"
@@ -150,7 +150,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # `load: true` is what makes this job a scan rather than a build.
       # setup-buildx-action installs the `docker-container` driver, whose
@@ -161,7 +161,7 @@ jobs:
       # UNAUTHORIZED. The image scan had never scanned an image.
       - name: Build Docker image
         id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: false
@@ -180,7 +180,7 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload Trivy image SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         if: always()
         with:
           sarif_file: "trivy-image.sarif"
@@ -226,10 +226,28 @@ jobs:
   # wording below is part of why it went unexamined while it failed on every
   # push to main from 2026-08-25 onward. Left named as-is only because the job
   # name is a required status check; the description is now accurate.
+  #
+  # It runs on pull requests too, and did not until 2026-09-13. The job-level
+  # `if` that used to sit here made it main-only, which had two consequences.
+  #
+  # The visible one: `trivy-fs-enforce` is a code-scanning category present on
+  # `refs/heads/main` and absent from every PR ref, so GitHub's generated
+  # "Trivy" check reported "1 configuration not found" and concluded FAILURE on
+  # 100% of pull requests -- forever, and regardless of the code. A check that
+  # is red on a clean branch and red on a filthy one carries no information, and
+  # the only thing it can teach a reader is to stop looking at a red Trivy.
+  #
+  # The one that matters more: this is the strict pass. `limit-severities-for-
+  # sarif` makes its exit code answer to HIGH,CRITICAL, and it was only ever run
+  # AFTER the merge it exists to gate. A pull request could introduce a critical
+  # finding and hear nothing about it until the push to main.
+  #
+  # Enforcement itself has not moved. The scan runs everywhere and reports; only
+  # a push to main takes exit-code 1, so a PR sees the finding without being
+  # blocked by the estate's pre-existing ones.
   trivy-enforce:
     name: Trivy Enforce on main (opt-in)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [prepare-cache]
     steps:
       - name: Checkout repository
@@ -245,7 +263,8 @@ jobs:
           format: ${{ env.TRIVY_OUTPUT_FORMAT }}
           output: "trivy-fs-enforce.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
-          exit-code: "1"
+          # Blocking on main, reporting everywhere else -- see the job comment.
+          exit-code: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && '1' || '0' }}
           # Required for the severity filter above to govern the exit code.
           # With format=sarif and this left at its `false` default, the action
           # logs "Building SARIF report with all severities" and overrides
@@ -258,7 +277,7 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload enforcement SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         if: always()
         with:
           sarif_file: "trivy-fs-enforce.sarif"

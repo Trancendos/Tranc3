@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
+FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
 WORKDIR /app
 COPY requirements.txt .
 # shellcheck is the one non-Python checker small enough to justify here
@@ -12,9 +12,9 @@ COPY main.py .
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the
 # repo root. Supplied by docker-compose.production.yml, or for a direct
-#   docker build --build-context sharedcore=../../Dimensional .
+#   docker build --build-context sharedcore=../../Dimensionals .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
-COPY --from=sharedcore --chown=appuser:appuser . /app/Dimensional/
+COPY --from=sharedcore --chown=appuser:appuser . /app/Dimensionals/
 ENV PYTHONPATH=/app
 # --- end SFSC ---
 

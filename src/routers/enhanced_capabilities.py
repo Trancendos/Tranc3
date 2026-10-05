@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
-from Dimensional.error_handlers import safe_error_detail
+from Dimensionals.error_handlers import safe_error_detail
 
 _log = logging.getLogger("tranc3.enhanced_capabilities")
 

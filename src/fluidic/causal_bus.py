@@ -6,8 +6,8 @@ import logging
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Set
 
-from Dimensional.models import EventMessage, VectorClock
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.models import EventMessage, VectorClock
+from Dimensionals.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

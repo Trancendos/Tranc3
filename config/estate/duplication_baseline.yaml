@@ -20,7 +20,7 @@ orphaned_worker_dirs:
   # outright; needs either wiring in or CLAUDE.md correcting.
   - dimensional-nexus-service
   # gateway-service: a complete, unwired FastAPI app (own tests/, router.py,
-  # Dimensional/ middleware) that duplicates api-gateway's role. Not
+  # Dimensionals/ middleware) that duplicates api-gateway's role. Not
   # referenced by CLAUDE.md or any compose file. Needs a delete-or-adopt
   # decision, not silent removal.
   - gateway-service

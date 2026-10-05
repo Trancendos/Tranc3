@@ -7,7 +7,7 @@ scaling policies, cooldown management, and threshold triggers.
 
 import asyncio  # noqa: I001
 
-from Dimensional.hive.autoscaler import (
+from Dimensionals.hive.autoscaler import (
     AutoScalerEngine,
     CooldownManager,
     MetricsCollector,

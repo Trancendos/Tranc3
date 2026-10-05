@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from Dimensional.sanitize import sanitize_for_log
+from Dimensionals.sanitize import sanitize_for_log
 from src.compliance.escalation_fsm import ActionRequest, RecordNotFoundError, get_escalation_fsm
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 

@@ -254,10 +254,10 @@ impl QuantumDecisionCircuit {
         let params_per_layer = config.rotations_per_layer * n_qubits;
         let total_params = params_per_layer * n_layers;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let (low, high) = config.parameter_range;
         let parameters: Vec<f64> = (0..total_params)
-            .map(|_| rng.gen_range(low..high))
+            .map(|_| rng.random_range(low..high))
             .collect();
 
         Self {

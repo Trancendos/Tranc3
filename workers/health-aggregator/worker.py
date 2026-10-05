@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Config
@@ -777,7 +777,7 @@ async def cascade_predict() -> Dict[str, Any]:
     """Uses a cellular automaton over the service dependency graph to predict which
     services will fail within the next 2 monitoring cycles based on current health."""
     try:
-        from Dimensional.cellular.automata import ServiceHealthCA
+        from Dimensionals.cellular.automata import ServiceHealthCA
 
         ca = ServiceHealthCA()
         # Seed CA with current observed health scores

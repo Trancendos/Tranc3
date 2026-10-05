@@ -16,10 +16,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass, field
 from typing import Optional
+from urllib.parse import urlparse, urlunparse
 
 try:
     import httpx
@@ -84,6 +86,51 @@ class ServiceResult:
     detail: dict = field(default_factory=dict)
 
 
+def build_validated_url(base_url: str, port: int, path: str) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        if "/../" in path or re.search(r"/%2e%2e/", path, re.IGNORECASE):
+            raise ValueError("Invalid path")
+
+        parsed = urlparse(base_url)
+
+        # Protocol check
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+
+        # Host check
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+
+        # Port validation
+        port = int(port)
+        if not 1 <= port <= 65535:
+            raise ValueError("Invalid port")
+
+        # Validate path parameter
+        if not re.fullmatch(r"/[A-Za-z0-9_/-]*", path):
+            raise ValueError("Invalid parameter")
+
+        # Build URL with validated port and path.
+        # `parsed.hostname` strips the brackets from an IPv6 literal, so
+        # http://[::1] became the unparseable http://::1:8000/health and every
+        # service failed -- and because this runs outside the probe's error
+        # handling, the whole run could abort rather than report. Put the
+        # brackets back. (chatgpt-codex-connector on #1239)
+        host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        parsed = parsed._replace(netloc=f"{host}:{port}", path=path)
+
+        return urlunparse(parsed)
+    except Exception:
+        # `from None` rather than `from exc`: the cause carries the rejected
+        # URL, and these helpers exist so a malformed or hostile URL is never
+        # echoed onward. Discarding it is the point, and stating that here is
+        # what B904 is asking for.
+        raise ValueError("Invalid URL") from None
+
+
 async def probe_httpx(name: str, url: str) -> tuple[bool, int, float, Optional[str], dict]:
     start = time.perf_counter()
     try:
@@ -123,7 +170,7 @@ def probe_urllib(url: str) -> tuple[bool, int, float, Optional[str], dict]:
 
 
 async def check_service(name: str, port: int, path: str, priority: str) -> ServiceResult:
-    url = f"{BASE}:{port}{path}"
+    url = build_validated_url(BASE, port, path)
     if _HAS_HTTPX:
         ok, code, ms, err, detail = await probe_httpx(name, url)
     else:

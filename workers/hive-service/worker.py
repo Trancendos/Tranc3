@@ -35,12 +35,12 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from Dimensional.hive.hive_core import (  # noqa: E402
+from Dimensionals.hive.hive_core import (  # noqa: E402
     DataPriority,
     create_hive_app,
     get_hive,
 )
-from Dimensional.service_auth import check_internal_secret  # noqa: E402
+from Dimensionals.service_auth import check_internal_secret  # noqa: E402
 
 WORKER_PORT = int(os.environ.get("HIVE_PORT", "8060"))
 WORKER_NAME = "hive"

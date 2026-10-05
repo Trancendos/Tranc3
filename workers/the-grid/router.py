@@ -10,7 +10,7 @@ from service import WorkflowEngineRouter
 
 import config
 from database import GridDatabase
-from Dimensional.service_auth_fastapi import guard_internal_secret
+from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import EngineType, WorkflowDefinition, WorkflowStep
 
 

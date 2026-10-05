@@ -83,7 +83,7 @@ SURFACES: tuple[tuple[str, tuple[str, ...], str], ...] = (
             "src/auth/**",
             "workers/infinity-auth/**",
             "src/townhall/route_auth.py",
-            "Dimensional/service_auth*.py",
+            "Dimensionals/service_auth*.py",
         ),
         "changes who may do what; the blast radius is every route behind it",
     ),

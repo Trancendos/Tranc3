@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 import httpx
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensionals.error_handlers import safe_error_detail
 
 from .base import BaseNode, NodeResult
 

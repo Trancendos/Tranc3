@@ -1,3 +1,3 @@
-"""Backward-compatibility shim — canonical: Dimensional.infinity.sentinel_config"""
+"""Backward-compatibility shim — canonical: Dimensionals.infinity.sentinel_config"""
 
-from Dimensional.infinity.sentinel_config import *  # noqa: F401, F403
+from Dimensionals.infinity.sentinel_config import *  # noqa: F401, F403
