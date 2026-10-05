@@ -8,7 +8,7 @@
       "type": "container",
       "name": "bookstack",
       "bom-ref": "CI-CT-bookstack",
-      "version": "lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f"
+      "version": "lscr.io/linuxserver/bookstack:latest@sha256:99cd1f5707c1911afad213adec5c9739763b76f843d1477142231834ecdcb6f7"
     },
     "properties": [
       {
