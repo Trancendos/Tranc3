@@ -1706,3 +1706,34 @@ python scripts/pre_deploy_quality_gate.py
 - Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
   --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
   Forgejo UI.
+
+### SEC-020 — python-jose lacks fix for CVE-2026-85394
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | CVE-2026-85394 |
+| **Scanner** | pip-audit |
+| **Component** | `python-jose==3.5.0` — `requirements.txt` |
+| **Recorded** | 2026-10-06 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-06 |
+| **Re-evaluate** | When a patched version of python-jose is released. |
+
+**No patched release exists.** The package `python-jose` version `3.5.0` does not have a fix for this vulnerability.
+
+
+### SEC-021 — wrangler, miniflare, sharp, source-map-js vulnerabilities
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GHSA-wq5f-xc86-pv6w, GHSA-68fv-2mgg-jv7q, unknown |
+| **Scanner** | npm audit |
+| **Component** | `wrangler`, `miniflare`, `sharp`, `source-map-js` |
+| **Recorded** | 2026-10-06 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-06 |
+| **Re-evaluate** | When wrangler and other tools upgrade their upstream dependencies. |
+
+**No patched release exists for current stack.** These vulnerabilities are present in the `cloudflare` workers and root `package.json`, which require breaking changes or lack upstream fixes.
