@@ -286,9 +286,32 @@ class ReviewCoverage:
         return self._of(Sight.UNKNOWN)
 
     @property
-    def coverage_known(self) -> bool:
-        """Is there a declared set to judge coverage against, and full evidence?"""
+    def unmeasurable(self) -> list[ReviewerVerdict]:
+        """Expected reviewers whose sight could not be established at all."""
+        return [v for v in self.unknown if v.reviewer in self.expected]
+
+    @property
+    def _declared(self) -> bool:
         return bool(self.expected) and self.collected
+
+    @property
+    def _proven(self) -> bool:
+        return any(v.trustworthy and v.reviewer in self.expected for v in self.verdicts)
+
+    @property
+    def coverage_known(self) -> bool:
+        """Is there a declared set to judge coverage against, and full evidence?
+
+        An expected reviewer whose verdict is UNKNOWN is missing evidence just
+        as surely as a failed collection is: that reviewer may hold the review
+        which would make this head covered, and nothing here can tell. Proven
+        coverage settles the question anyway -- one trustworthy review of this
+        head is enough -- so an UNKNOWN withholds the answer only while no
+        expected reviewer has proved coverage.
+        """
+        if not self._declared:
+            return False
+        return self._proven or not self.unmeasurable
 
     @property
     def covered(self) -> bool:
@@ -298,9 +321,7 @@ class ReviewCoverage:
         review comments and a page whose every reviewer was out of credits look
         identical, and only one of them has been reviewed.
         """
-        if not self.coverage_known:
-            return False
-        return any(v.trustworthy and v.reviewer in self.expected for v in self.verdicts)
+        return self._declared and self._proven
 
     @property
     def summary(self) -> str:
@@ -313,12 +334,14 @@ class ReviewCoverage:
                 sorted(v.reviewer for v in self.reviewed if v.reviewer in self.expected)
             )
             return f"{self.pr}: reviewed by {names}"
+        if self.unmeasurable:
+            names = ", ".join(sorted(v.reviewer for v in self.unmeasurable))
+            return f"{self.pr}: UNKNOWN -- sight not established for {names}"
         reasons = []
         for label, group in (
             ("blind", self.blind),
             ("stale", self.stale),
             ("unproven", self.unproven),
-            ("unknown", self.unknown),
             ("silent", self.silent),
         ):
             named = [v.reviewer for v in group if v.reviewer in self.expected]

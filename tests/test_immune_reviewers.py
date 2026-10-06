@@ -327,3 +327,57 @@ def test_uncollected_evidence_makes_every_reviewer_unknown_not_silent():
     assert {v.reviewer for v in coverage.unknown} == set(DEPENDS)
     assert all(not v.trustworthy for v in coverage.verdicts)
     assert not coverage.covered
+
+
+def test_an_unknown_head_reads_unknown_not_unreviewed_in_the_aggregate():
+    """REGRESSION: with the head unknown, the aggregate said UNREVIEWED.
+
+    Raised by `cubic-dev-ai` on #1373. The per-reviewer verdicts were already
+    honest -- UNKNOWN, because an unidentified head is nothing to compare
+    evidence against -- but `collected` was still true, so `coverage_known`
+    stayed true and `summary` fell through to "UNREVIEWED -- N unknown". That
+    is an affirmative claim this head was not reviewed, built out of verdicts
+    that each declined to make it. The fifth instance of this module's own
+    founding defect, inside it.
+    """
+    speaker = DEPENDS[0]
+    coverage = assess("#1373", [_review(speaker, commit=OLDER)], expected=DEPENDS, head=None)
+    assert not coverage.covered
+    assert not coverage.coverage_known, "an unidentifiable head is not known coverage"
+    assert "UNREVIEWED" not in coverage.summary
+    assert "UNKNOWN" in coverage.summary
+    assert {v.reviewer for v in coverage.unmeasurable} == {speaker}
+
+
+def test_silence_stays_measurable_when_the_head_is_unknown():
+    """Silence needs no head: a reviewer who left nothing said nothing.
+
+    The guard above must not over-reach into this. An expected reviewer with no
+    remarks at all is SILENT whatever the head is, so a page where every
+    depended-on reviewer stayed quiet is still an honest UNREVIEWED -- the
+    unknown head costs us nothing we had.
+    """
+    coverage = assess("#1373", [_review("x", commit=OLDER)], expected=DEPENDS, head=None)
+    assert not coverage.unmeasurable, "a non-expected reviewer cannot withhold the answer"
+    assert {v.reviewer for v in coverage.silent} == set(DEPENDS)
+    assert coverage.coverage_known
+    assert "UNREVIEWED" in coverage.summary
+
+
+def test_proven_coverage_outranks_an_unmeasurable_reviewer():
+    """One trustworthy review of this head settles coverage regardless.
+
+    The guard above must withhold the answer only while nothing has proved it.
+    A reviewer whose sight could not be established cannot un-review a head
+    that another expected reviewer demonstrably did review.
+    """
+    reviewed = DEPENDS[0]
+    coverage = assess(
+        "#1373",
+        [_review(reviewed, commit=HEAD)],
+        expected=DEPENDS,
+        head=HEAD,
+    )
+    assert coverage.covered
+    assert coverage.coverage_known
+    assert "reviewed by" in coverage.summary
