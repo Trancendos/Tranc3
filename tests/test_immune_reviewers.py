@@ -395,8 +395,17 @@ def test_an_unpublished_reviewer_is_named_not_folded_into_the_generic_reason():
 
     `ecc-tools[bot]` is in `not_a_reviewer` in the shipped manifest, so this is
     latent rather than live -- it is used here because it is the one source that
-    actually produces UNPUBLISHED. Any depended-on reviewer hitting a check
-    permission problem makes it live.
+    actually produces UNPUBLISHED.
+
+    It goes live two ways, and only these two: `ecc-tools[bot]` moves to
+    `depends_on`, or an UNPUBLISHED phrase is added whose source is a
+    depended-on reviewer (or `generic`). A depended-on reviewer merely hitting a
+    check permission problem does NOT make it live -- both phrases in
+    `UNPUBLISHED_PHRASES` name `ecc-tools[bot]` as their source and `_match`
+    applies a phrase only to its named source, so another bot's wording for the
+    same failure matches nothing. Raised by `cubic-dev-ai`, which was right: the
+    sentence this replaces claimed behaviour its author had not checked, in a
+    module whose whole subject is not doing that.
     """
     publisher = "ecc-tools[bot]"
     coverage = assess(
