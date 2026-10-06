@@ -10,6 +10,21 @@
 # .forgejo/workflows/security-scan.yml, the EA workbook in the Service
 # Topology job of .github/workflows/ci.yml.
 ci:
+  # Autofix is OFF, and this is the reason rather than a preference.
+  #
+  # pre-commit.ci's autofix pushes a formatting commit onto the pull request's
+  # own branch. On a bot branch that is not a convenience, it is a second
+  # author: the bot can no longer fast-forward its own branch, so its next run
+  # merges `main` in to recover -- and that merge is what produces the
+  # conflict. Measured 2026-10-05: 14 of the conflicted pull requests in the
+  # queue carried an autofix commit, and 8 had lost PR content to the repeated
+  # main-merges the conflict forced.
+  #
+  # The hooks still run and still fail the check. What changes is that a
+  # formatting miss now reports a finding instead of rewriting someone's
+  # branch, which is the same rule `docs/governance/AGENT-DAEMON-FLEET-
+  # DECISION.md` sets for every other agent with write access here.
+  autofix_prs: false
   skip:
     - semgrep
     - python-safety-dependencies-check
