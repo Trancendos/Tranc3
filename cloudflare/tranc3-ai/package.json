@@ -8,10 +8,15 @@
     "tail": "wrangler tail"
   },
   "devDependencies": {
-    "wrangler": "4.145.0"
+    "wrangler": "^4.148.0"
   },
   "overrides": {
     "esbuild": "0.28.2",
-    "ws": "8.21.3"
+    "ws": "8.21.3",
+    "sharp": "0.35.5",
+    "sharp": "0.35.5"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^5.20261006.1"
   }
 }
