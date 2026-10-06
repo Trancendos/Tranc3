@@ -340,6 +340,13 @@ class ReviewCoverage:
         reasons = []
         for label, group in (
             ("blind", self.blind),
+            # UNPUBLISHED belongs here for the same reason the others do. It was
+            # missing until 2026-10-06, so an expected reviewer that reached its
+            # findings and could not publish them fell through to the generic
+            # "no depended-on reviewer reported" -- which is false: one did
+            # report. Latent today only because every phrase source currently
+            # sits in `not_a_reviewer`; live the moment one does not.
+            ("unpublished", self.unpublished),
             ("stale", self.stale),
             ("unproven", self.unproven),
             ("silent", self.silent),

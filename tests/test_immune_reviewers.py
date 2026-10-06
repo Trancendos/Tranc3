@@ -381,3 +381,31 @@ def test_proven_coverage_outranks_an_unmeasurable_reviewer():
     assert coverage.covered
     assert coverage.coverage_known
     assert "reviewed by" in coverage.summary
+
+
+def test_an_unpublished_reviewer_is_named_not_folded_into_the_generic_reason():
+    """REGRESSION: `unpublished` was missing from the summary's reason list.
+
+    Found via the one line codecov reported uncovered on #1373 -- the
+    `unpublished` aggregate accessor, which nothing had ever exercised. Tracing
+    why showed the state was classified and accessible but unnameable: an
+    expected reviewer that reached its findings and could not publish them fell
+    through to "no depended-on reviewer reported", which is false. It reported;
+    it could not publish. The accessor being untested is what hid it.
+
+    `ecc-tools[bot]` is in `not_a_reviewer` in the shipped manifest, so this is
+    latent rather than live -- it is used here because it is the one source that
+    actually produces UNPUBLISHED. Any depended-on reviewer hitting a check
+    permission problem makes it live.
+    """
+    publisher = "ecc-tools[bot]"
+    coverage = assess(
+        "#1373",
+        [Remark(publisher, ECC_UNPUBLISHED)],
+        expected=(publisher,),
+        head=HEAD,
+    )
+    assert {v.reviewer for v in coverage.unpublished} == {publisher}
+    assert not coverage.covered
+    assert "1 unpublished" in coverage.summary
+    assert "no depended-on reviewer reported" not in coverage.summary
