@@ -5,6 +5,7 @@ Registers and dispatches SparkTool instances over JSON-RPC 2.0.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import logging
 import time
@@ -19,6 +20,44 @@ logger = logging.getLogger(__name__)
 # Restricted built-ins for execute_code sandbox
 # ---------------------------------------------------------------------------
 
+#: Why `_SAFE_BUILTINS` is not on its own a sandbox, measured rather than
+#: assumed. Removing `dir`, `getattr` and `type` from the allowlist below was
+#: proposed as a fix for a sandbox escape (#1366) and does not close it: the
+#: escape needs no builtin at all.
+#:
+#:     ().__class__.__mro__[-1].__subclasses__()
+#:
+#: is pure attribute access on a literal, and it reaches `subprocess.Popen`.
+#: Demonstrated against the shipped allowlist on 2026-10-06: 573 subclasses
+#: traversed, `Popen` among them, which is arbitrary command execution from
+#: inside the sandbox. With those three builtins removed it still returns
+#: `Popen` from 572 subclasses.
+#:
+#: So the allowlist is a second layer, and this is the first: no snippet may
+#: name a dunder. That blocks `__class__`, `__mro__`, `__subclasses__`,
+#: `__globals__`, `__builtins__` and `__import__` in one rule, at parse time,
+#: before anything is compiled or run. `test_mcp_sandbox_escape.py` holds the
+#: probe -- both chains, asserted to be refused -- because a security control
+#: that is never shown to fail is the thing this repository keeps finding.
+_DUNDER = "__"
+
+
+def _reflection_refusal(code: str) -> Optional[str]:
+    """Why `code` is refused, or None if it names no dunder.
+
+    Parse-time and syntactic on purpose: it inspects names and attributes, so
+    there is no evaluation to be subverted and nothing to time-of-check race.
+    `SyntaxError` is left to propagate -- unparseable code is the caller's
+    error and is reported as one, not silently allowed through.
+    """
+    for node in ast.walk(ast.parse(code)):
+        if isinstance(node, ast.Attribute) and node.attr.startswith(_DUNDER):
+            return f"attribute {node.attr!r} on line {node.lineno}"
+        if isinstance(node, ast.Name) and node.id.startswith(_DUNDER):
+            return f"name {node.id!r} on line {node.lineno}"
+    return None
+
+
 _SAFE_BUILTINS = {
     k: __builtins__[k] if isinstance(__builtins__, dict) else getattr(__builtins__, k, None)
     for k in (
@@ -29,14 +68,12 @@ _SAFE_BUILTINS = {
         "bytes",
         "chr",
         "dict",
-        "dir",
         "divmod",
         "enumerate",
         "filter",
         "float",
         "format",
         "frozenset",
-        "getattr",
         "hasattr",
         "hash",
         "hex",
@@ -64,7 +101,6 @@ _SAFE_BUILTINS = {
         "str",
         "sum",
         "tuple",
-        "type",
         "zip",
     )
     if (isinstance(__builtins__, dict) and k in __builtins__)
@@ -941,6 +977,23 @@ class SparkToolRegistry:
             }
 
         code = params["code"]
+
+        # Refuse before compiling: the allowlist below cannot stop
+        # `().__class__.__mro__[-1].__subclasses__()`, which uses no builtin.
+        try:
+            refusal = _reflection_refusal(code)
+        except SyntaxError as exc:
+            return {"error": f"could not parse code: {exc}", "code": -32602}
+        if refusal is not None:
+            return {
+                "error": (
+                    "refused: sandboxed code may not use reflection — "
+                    f"{refusal}. Dunder access reaches the object graph and "
+                    "escapes the sandbox."
+                ),
+                "code": -32602,
+            }
+
         timeout_seconds = int(params.get("timeout_seconds", 30))
         context = params.get("context", {})
 
