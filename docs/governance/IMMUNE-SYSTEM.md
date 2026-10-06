@@ -665,3 +665,106 @@ was untracked and the guard reads `git ls-files`, so it scanned nothing and
 reported clean. It is recorded in the test suite because **"guard missed" and
 "probe never ran" produce the same green**, and that is the failure this whole
 subsystem exists to make impossible.
+
+## Sight for the review layer
+
+> *"Learn from all GitHub connections, actions, plugins, extensions, marketplace
+> items, toolsets and technologies and see if they can be built into the immune
+> system."* — the owner
+
+Answered by measuring what those integrations actually do on this repository,
+and the answer is that **the rule above already applied to a layer nothing was
+enforcing it on.**
+
+Everything above concerns scanners *this estate runs*. It says nothing about the
+reviewers that *run on us* — and this repository has nine bots commenting on
+pull requests. Measured 2026-10-05 across the fifteen most recent:
+
+| Reviewer | What it did |
+|---|---|
+| `coderabbitai` | **"Review limit reached — you've used all free OSS reviews"** on 4 |
+| `devloai` | **"You have run out of credits"** on 4 |
+| `qodo-code-review` | **"reviews are paused because the subscription is no longer active"** on 4 |
+| `ecc-tools` | 207 comments; a recurring one ends **"Check publication was denied or unavailable"** |
+| `sourcery-ai` | Reviewed #1372 and found **five real defects** |
+| `mergify`, `codecov`, `pre-commit-ci` | Posted — but not a review of the diff |
+
+Three reviewers were simultaneously unable to review, and each said so in a
+comment nobody reads. **A reviewer out of credits and a reviewer with nothing to
+say produce the identical visible result**: no findings, quiet bots, green
+checks. That is this document's founding property — *a sensor that cannot see
+reports exactly what a clean estate reports* — occurring in the review layer,
+live, on the pull requests in the queue right now.
+
+The cost is not hypothetical. On #1372 `sourcery-ai` was the **only** reviewer
+that looked, and it found a `git checkout -- .` that destroyed a concurrent
+edit, and a `--check` that silently rewrote a gitignored file on every run while
+reporting "already current". Three of the four other reviewers were blind that
+day. Had Sourcery's quota also been spent, that pull request would have merged
+carrying all five defects, and the pull request page would have looked no
+different.
+
+**What was built.** `src/immune/reviewers.py` classifies each reviewer's output
+into `REVIEWED`, `STALE` (reviewed an earlier head), `BLIND` (declared it could
+not review), `UNPUBLISHED` (reached findings, could not publish them as a check
+— `ecc-tools`' case), `UNPROVEN` (spoke, but nothing shows it read the diff),
+`SILENT` (never spoke), or `UNKNOWN`. Only `REVIEWED` is `trustworthy`, for the
+same reason only `Outcome.OK` is above. Run it with
+`python scripts/review_sight.py`.
+
+`UNKNOWN` carries two distinct meanings and both are deliberate: per reviewer,
+that the pull request's head could not be determined, so there is nothing to
+compare its evidence against; and per pull request, that collection failed, in
+which case *every* reviewer reads `UNKNOWN` rather than `SILENT` — because
+"we could not look" is not "they said nothing".
+
+**Four structural rules, each one a bug this module shipped first.** The review
+of #1373 found that the module had the disease it diagnoses, in two cases
+measurably:
+
+1. **`REVIEWED` requires affirmative evidence, never the absence of a bad
+   sign.** The first version returned `REVIEWED` for any comment lacking a
+   blindness phrase, so Sourcery's own progress notice — *"Sourcery is reviewing
+   your pull request!"* — made a pull request read **covered and trustworthy**.
+   A greeting counted as a review. Only a submitted review or an inline comment
+   on the diff now proves a reviewer read it; an ordinary issue comment proves
+   it spoke, which is `UNPROVEN`.
+2. **Evidence is tied to the head it reviewed.** A review of an earlier commit
+   is `STALE`, because the question is whether anyone has seen *this* diff.
+   Measured immediately: on #1372 `chatgpt-codex-connector` had reviewed
+   `ba7258b9` while the head was `f2408ad8`, and the first version counted that
+   as coverage.
+3. **A phrase binds to the reviewer that emits it.** Matching every phrase
+   against every author meant a genuine review that *quoted* "review limit
+   reached" — which a review of this very file does — was classified `BLIND`.
+4. **Evidence that could not be collected reads `UNKNOWN`**, never `SILENT`.
+   The collector swallowed endpoint failures and presented the remainder as a
+   measurement, which is rule one of this subsystem violated on its own inputs.
+
+**Coverage is judged against a written decision, never against who commented.**
+`config/immune/reviewers.yaml` names the reviewers this estate depends on, and
+separately names the bots that comment without reviewing. That file exists
+because the first live run of this module reported #1372 as *"reviewed by
+mergify[bot], Trancendos"* — a merge-queue checkbox and the author's own replies
+to review threads. Counting those as coverage is the same false-clean the module
+was written to stop, reproduced inside it within minutes of its first run. With
+no reviewer *declared* at all, the verdict is `UNDETERMINED` rather than a guess
+— the same refusal `load_manifest` makes when the manifest is absent. Declared
+reviewers that simply produced no matching evidence give `UNREVIEWED`, which is
+a different statement: someone was asked and nobody looked.
+
+**What this does not do.** It does not gate. `--require` exits non-zero on a
+pull request with no trustworthy reviewer, and it is deliberately not wired into
+CI: *which* reviewers this estate's merges depend on is a decision to write
+down, not one for a script to assume. And a reviewer that fails silently — no
+banner, no comment, no finding — is recorded `SILENT`, which is honest about the
+uncertainty rather than resolving it. Closing that needs a probe in the sense
+this document means: a planted defect each reviewer must flag. That is the next
+piece of work, and it is the same shape as `vaccination.py`.
+
+**The wider lesson for the marketplace question.** Nine review bots, four vendor
+scanners in `.github/workflows/`, and three third-party integrations dormant
+behind unset credentials do not add up to nine-plus-four-plus-three layers of
+defence. Measured, they add up to *one* reviewer that was actually working on
+the day it mattered. Adding the tenth bot is not the improvement; knowing which
+of the nine can currently see is.
