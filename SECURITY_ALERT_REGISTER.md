@@ -1549,6 +1549,68 @@ becomes unavoidable and should be planned and announced, not slipped in.
 
 ---
 
+### SEC-020 — python-jose algorithm-confusion guard bypassed, no patched release
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | CVE-2026-85394 (GHSA-3qf3-8w2g-rqmx; aliases CVE-2024-33663, GHSA-6c5p-j8vq-pqhj, PYSEC-2024-232) |
+| **Scanner** | pip-audit, via `scripts/vulnerability_census.py` |
+| **Component** | `python-jose[cryptography]==3.5.0` — declared runtime dependency, `requirements.txt:88` |
+| **Severity** | CVSS 3.1 `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N`; CVSS 4.0 `AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N` |
+| **Recorded** | 2026-10-06 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-06 |
+| **Re-evaluate** | On the census resolving any python-jose version other than 3.5.0; on the advisory naming a fixed version (a SUPPRESS then means declining an available fix); on the census ceasing to report it; or on **any** JWT decode site widening its `algorithms=` beyond a single literal entry, passing a variable, or omitting it. **Every one of these is enforced by `scripts/check_disposition_premises.py` (`check_sec_020`)**, which reads the census output and walks every Python file's AST, rather than relying on anyone remembering |
+
+**No patched release exists.** 3.5.0 is the newest release on PyPI (the full
+published set is 3.0.1, 3.1.0, 3.2.0, 3.3.0, 3.4.0, 3.5.0), and the GHSA range is
+`introduced: 0, last_affected: 3.5.0` — every published release is affected. OSV's
+query endpoint, asked directly whether `python-jose 3.5.0` is affected, returns
+GHSA-3qf3-8w2g-rqmx. There is deliberately **no Blocked-by row**: a fix is not out of
+reach, it does not exist, and that distinction is what makes this entry fail the gate
+again the day one ships.
+
+**This supersedes a claim already in the tree, and that is the more important half of
+this entry.** `requirements.txt` carried the comment "Fixes: CVE-2024-33663 (algorithm
+confusion) … via python-jose>=3.4.0". CVE-2026-85394 *is* CVE-2024-33663 — the same
+GHSA, re-issued — and it says the guard 3.4.0 added can be stepped around with a
+**DER-encoded public key**. So the repository asserted a fix that has since been shown
+bypassable, and went on asserting it for as long as nobody re-read the line. The
+comment is corrected in the same change as this entry.
+
+**Not exploitable as used, and this is the premise under guard.** The vulnerability is
+algorithm confusion: it requires a verifier that will attempt an HMAC algorithm while
+holding an asymmetric key, so that a public key can be passed off as an HMAC secret.
+Every JWT decode site in this repository names **exactly one** algorithm, as a literal
+list, so a token's `alg` either equals that single entry or is rejected before any key
+is touched. Measured 2026-10-06: **12 decode sites, 12 single-element allowlists, 0
+exceptions** — the number is produced by the premise checker on each run rather than
+quoted from this paragraph.
+
+The site that would matter most if this slipped is `src/security/security_framework.py`,
+which is the one place that genuinely verifies with an asymmetric public key:
+
+```python
+ALGORITHM = "RS256";  _VERIFY_KEY = _PUBLIC_KEY_PEM   # when RSA keys are configured
+ALGORITHM = "HS256";  _VERIFY_KEY = SECRET_KEY         # fallback
+...
+jwt.decode(token, _VERIFY_KEY, algorithms=[ALGORITHM])
+```
+
+`algorithms=[ALGORITHM]` is a one-element list in both branches, and the key and the
+algorithm are chosen together by the same branch — they cannot be mismatched. Widening
+that list to `["HS256", "RS256"]` would hand an attacker the RSA public key as a
+candidate HMAC secret, which is the attack verbatim. That is precisely the edit
+`check_sec_020` refuses.
+
+The check covers PyJWT decode sites as well as python-jose ones, deliberately:
+algorithm confusion is not unique to this library (cf. CVE-2022-29217), and a
+single-algorithm allowlist is the correct posture for both. A site that genuinely needs
+two algorithms amends this entry rather than quietly failing the gate.
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for

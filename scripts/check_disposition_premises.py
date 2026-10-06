@@ -114,6 +114,34 @@ _WEB_LOCKFILE = "web/package-lock.json"
 _SEC_006_MEASURED_NLTK = "3.10.3"
 _CENSUS_OUTPUT = "logs/vulnerability_census.json"
 
+#: SEC-020 is a SUPPRESS on the same terms as SEC-006: no patched release
+#: exists, and the finding is not reachable as this repository uses the
+#: component. The second half is the part that can rot silently, so it is
+#: the part this checks.
+#:
+#: CVE-2026-85394 (GHSA-3qf3-8w2g-rqmx, alias of CVE-2024-33663) is an
+#: algorithm-confusion bypass: the guard python-jose added for the original
+#: CVE can be stepped around with a DER-encoded public key. Exploiting it
+#: requires a verifier that will attempt an HMAC algorithm while holding an
+#: asymmetric key. A decode call that passes exactly ONE algorithm cannot do
+#: that -- the token's `alg` either matches that single entry or is rejected
+#: before any key is touched.
+#:
+#: So the premise is: every JWT decode site in this repository pins exactly
+#: one algorithm, as a literal list. Measured 2026-10-06: twelve sites, all
+#: single-element. The failure mode this guards is somebody widening one to
+#: two (`["HS256", "RS256"]`) or passing a variable, which reintroduces the
+#: confusion the suppression says cannot happen here.
+_SEC_020_MEASURED_JOSE = "3.5.0"
+_SEC_020_PACKAGE = "python-jose"
+
+#: The names a JWT module is bound to at the decode sites in this tree:
+#: `jwt` (python-jose and PyJWT both), `pyjwt`, `_jwt`, `jose_jwt`. The check
+#: covers PyJWT sites too, deliberately: algorithm confusion is not unique to
+#: python-jose (cf. CVE-2022-29217), and a single-algorithm allowlist is
+#: correct on both. A site that genuinely needs two amends the entry.
+_JWT_MODULE_NAMES = {"jwt", "pyjwt", "_jwt", "jose_jwt"}
+
 
 def _walk(base: Path, suffixes: set[str]):
     """Repository files under `base` with one of `suffixes`, skipping vendored trees."""
@@ -516,8 +544,141 @@ def check_sec_007() -> list[str]:
     return failures
 
 
+def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
+    """(line, shape, count) for every JWT decode call in one module.
+
+    `shape` is "pinned" when exactly one algorithm is named as a literal list,
+    and otherwise says what is wrong: an absent `algorithms=` (python-jose then
+    accepts whatever the token asks for), a non-literal the AST cannot read, or
+    a list naming more than one.
+    """
+    sites: list[tuple[int, str, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not isinstance(func, ast.Attribute) or func.attr != "decode":
+            continue
+        base = func.value
+        if not isinstance(base, ast.Name) or base.id not in _JWT_MODULE_NAMES:
+            continue
+        keyword = next((k for k in node.keywords if k.arg == "algorithms"), None)
+        if keyword is None:
+            sites.append((node.lineno, "no algorithms= argument at all", 0))
+        elif not isinstance(keyword.value, ast.List):
+            sites.append((node.lineno, "algorithms= is not a literal list", -1))
+        elif len(keyword.value.elts) != 1:
+            sites.append((node.lineno, "algorithms= names more than one", len(keyword.value.elts)))
+        else:
+            sites.append((node.lineno, "pinned", 1))
+    return sites
+
+
+def _census_jose_premises() -> list[str]:
+    """What the census resolved for python-jose, against what SEC-020 claims.
+
+    Same two premises as SEC-006, for the same reason: a SUPPRESS is only
+    honest while the version is the one assessed and no fix exists.
+    """
+    import json  # noqa: PLC0415 - only needed on this path
+
+    output = ROOT / _CENSUS_OUTPUT
+    if not output.is_file():
+        return [
+            f"SEC-020: {_CENSUS_OUTPUT} is absent, so the {_SEC_020_PACKAGE} version "
+            "and fix-availability premises cannot be confirmed. Run "
+            "`python3 scripts/vulnerability_census.py --check --scope core` first."
+        ]
+    try:
+        data = json.loads(output.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f"SEC-020: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    failures: list[str] = []
+    seen = False
+    for surface in data.get("surfaces") or []:
+        for finding in (surface or {}).get("findings") or []:
+            if (finding or {}).get("package") != _SEC_020_PACKAGE:
+                continue
+            seen = True
+            version = finding.get("version")
+            if version != _SEC_020_MEASURED_JOSE:
+                failures.append(
+                    f"SEC-020: the census resolved {_SEC_020_PACKAGE} {version}, but the "
+                    f"entry in {REGISTER} is written against {_SEC_020_MEASURED_JOSE}. "
+                    "Re-assess before the suppression is relied on."
+                )
+            fixes = finding.get("fix_versions") or []
+            if fixes:
+                failures.append(
+                    f"SEC-020: the advisory now names fixed version(s) {fixes}. The "
+                    f"suppression in {REGISTER} rests on 'no patched release exists'. "
+                    "One does, so this is a fix waiting to be taken, not a suppression."
+                )
+    if not seen:
+        failures.append(
+            f"SEC-020: the census no longer reports {_SEC_020_PACKAGE} at all. Close the "
+            f"entry in {REGISTER} rather than leaving a live suppression for a risk that "
+            "has gone."
+        )
+    return failures
+
+
+def check_sec_020() -> list[str]:
+    """python-jose algorithm confusion: no fix exists, and no site can reach it."""
+    failures = _census_jose_premises()
+
+    pinned = 0
+    for path in _walk(ROOT, {".py"}):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            # Not this check's business to police unparseable files; other
+            # guards do that. Silence here would hide a decode site, so say so.
+            failures.append(
+                f"SEC-020: {path.relative_to(ROOT)} could not be parsed, so any JWT "
+                "decode site in it is unexamined. The premise covers every site or none."
+            )
+            continue
+        for line, shape, count in _jwt_decode_sites(tree):
+            if shape == "pinned":
+                pinned += 1
+                continue
+            detail = f" ({count})" if count > 1 else ""
+            failures.append(
+                f"SEC-020: {path.relative_to(ROOT)}:{line} — {shape}{detail}. The "
+                f"suppression in {REGISTER} rests on every decode site naming exactly "
+                "one algorithm, which is what makes the DER-encoded-public-key "
+                "confusion unreachable. This site does not."
+            )
+
+    if not failures and pinned == 0:
+        failures.append(
+            f"SEC-020: no JWT decode site was found at all. The entry in {REGISTER} "
+            "argues from twelve of them; a premise about code that is not there "
+            "describes nothing. Re-assess."
+        )
+    return failures
+
+
+def _pinned_decode_sites() -> int:
+    """How many JWT decode sites pin a single algorithm — for the pass message.
+
+    Reported rather than asserted, so the line says what was measured on this
+    run instead of repeating the number someone wrote down once.
+    """
+    total = 0
+    for path in _walk(ROOT, {".py"}):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            continue
+        total += sum(1 for _, shape, _c in _jwt_decode_sites(tree) if shape == "pinned")
+    return total
+
+
 def main() -> int:
-    failures = check_sec_006() + check_sec_007()
+    failures = check_sec_006() + check_sec_007() + check_sec_020()
     if failures:
         print(
             "[ERROR] A recorded disposition rests on a premise that no longer holds.\n"
@@ -531,9 +692,11 @@ def main() -> int:
     fflate = ", ".join(sorted({version for _, version in locked})) or "absent"
     print(
         "Disposition premises: PASSED — SEC-006 (nltk 3.10.3 with no fix available, "
-        "undeclared in runtime manifests, reached lazily, wordnet only, no path call) "
-        f"and SEC-007 (web/ resolves fflate {fflate}, outside every affected range of "
-        "GHSA-px8p-9vwx-vf98) both still hold"
+        "undeclared in runtime manifests, reached lazily, wordnet only, no path call), "
+        f"SEC-007 (web/ resolves fflate {fflate}, outside every affected range of "
+        "GHSA-px8p-9vwx-vf98), and SEC-020 (python-jose 3.5.0 with no fix available, "
+        f"{_pinned_decode_sites()} JWT decode sites all naming exactly one algorithm) "
+        "all still hold"
     )
     return 0
 
