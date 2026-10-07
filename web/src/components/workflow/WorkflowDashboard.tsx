@@ -36,9 +36,10 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
           </div>
           <button
             onClick={onCreate}
+            aria-label="Create new workflow"
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
-            + New Workflow
+            <span aria-hidden="true">+</span> New Workflow
           </button>
         </div>
 
@@ -57,6 +58,7 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
             <p className="text-gray-600 text-sm mt-1 mb-4">Create your first workflow to connect AI nodes into intelligent pipelines.</p>
             <button
               onClick={onCreate}
+              aria-label="Create your first workflow"
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             >
               Create Workflow
@@ -84,6 +86,7 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => onOpen(wf)}
+                    aria-label={`Open editor for ${wf.name}`}
                     className="flex-1 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                   >
                     Open Editor
@@ -91,9 +94,10 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
                   <button
                     onClick={() => handleRun(wf)}
                     disabled={runningId === wf.id}
+                    aria-label={runningId === wf.id ? `Running ${wf.name}` : `Run ${wf.name}`}
                     className="flex-1 py-1.5 text-xs font-medium bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                   >
-                    {runningId === wf.id ? "Running…" : "▶ Run"}
+                    {runningId === wf.id ? "Running…" : <><span aria-hidden="true">▶</span> Run</>}
                   </button>
                 </div>
               </div>
