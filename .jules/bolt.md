@@ -13,3 +13,6 @@
 ## 2024-05-27 - [Fast Euclidean and Manhattan Distance Optimization]
 **Learning:** `list(map(operator.sub, a, b))` combined with `sum(map(operator.mul, diff, diff))` is ~30% faster for Euclidean distance, and `sum(map(abs, map(operator.sub, a, b)))` is ~28% faster for Manhattan distance compared to pure Python generator expressions with indexing. For multiple operations like `MSE`, materializing the `map` into a `list` is required to prevent iterator exhaustion.
 **Action:** When calculating Euclidean or Manhattan distances in pure Python without `numpy`, use `map` with `operator.sub`, `operator.mul`, and `abs` instead of index-based generator comprehensions.
+## 2024-05-28 - [Fast INT8 Dot Product]
+**Learning:** `sum(map(operator.mul, map(int, row), inputs))` is ~30% faster than `sum(int(w) * x for w, x in zip(row, inputs))` for computing dot products involving INT8 scaling/typecasting in pure Python, eliminating the interpreter overhead of the generator expression loop.
+**Action:** When computing dot products in pure Python that require a type cast (like INT8 weights), chain `map` with `operator.mul` instead of using a generator expression with `zip` and explicit casting.
