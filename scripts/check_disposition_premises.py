@@ -590,11 +590,18 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
     (`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and
     simple assignment aliases (`verifier = jose.jwt`).
 
-    Does NOT resolve: an alias reached through a container, a call, a
-    comprehension or a conditional -- anything needing real dataflow. That is
-    a bound on what this can claim, not a gap being hidden: SEC-020's entry
-    says the checker resolves imports and simple assignments, so the claim
-    matches the capability rather than overstating it.
+    Because the walk enters every statement body, an assignment nested inside
+    an `if`, `try`/`except`, `with` or loop is resolved as well. Measured, not
+    assumed -- and worth stating, because the first wording of this bound said
+    "a conditional" and so UNDERSTATED the coverage, which is the same defect
+    as overstating it pointed the other way.
+
+    Does NOT resolve: an alias reached through a container (`d = {"j": jwt}`),
+    a call (`get().decode(...)`), a comprehension, or a conditional EXPRESSION
+    (`v = jose.jwt if flag else None`) -- anything needing real dataflow. That
+    is a bound on what this can claim, not a gap being hidden: SEC-020's entry
+    states the same bound, so the claim matches the capability in both
+    directions.
     """
     names: set[str] = set(_JWT_MODULE_NAMES)
     direct: set[str] = set()
@@ -621,8 +628,8 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
     # have to match.
     #
     # Two passes, because an alias can be defined after another alias it is
-    # built from. Deliberately NOT general dataflow -- see the module note
-    # below on what this does and does not resolve.
+    # built from. Deliberately NOT general dataflow -- this function's own
+    # docstring, above, lists what it does and does not resolve.
     for _ in range(2):
         for node in ast.walk(tree):
             if not isinstance(node, ast.Assign) or len(node.targets) != 1:

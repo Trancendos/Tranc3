@@ -191,3 +191,38 @@ def test_an_aliased_non_jwt_decoder_is_still_not_claimed():
     """The boundary: resolving aliases must not sweep in unrelated decoders."""
     src = 'import base64\nb = base64\nb.decode(blob, algorithms=["x", "y"])'
     assert cdp._jwt_decode_sites(ast.parse(src)) == []
+
+
+def test_an_assignment_inside_a_statement_body_is_resolved():
+    """The register says so, so it has to be true.
+
+    `ast.walk` enters every statement body, so an alias assigned inside an
+    `if`, `try`/`except`, `with` or loop is resolved. The first wording of the
+    coverage bound said it did not resolve "a conditional", which readers would
+    take as the `if` statement -- UNDERSTATING the coverage. Raised by cubic on
+    #1376. Understating a bound is the same defect as overstating it, pointed
+    the other way: either way the entry describes a checker that isn't this one.
+    """
+    for src in (
+        'import jose\nif flag:\n    v = jose.jwt\nv.decode(t, k, algorithms=["A", "B"])',
+        "import jose\ntry:\n    v = jose.jwt\nexcept ImportError:\n    v = None\n"
+        'v.decode(t, k, algorithms=["A", "B"])',
+    ):
+        sites = cdp._jwt_decode_sites(ast.parse(src))
+        assert sites, src
+        assert sites[0][1] == "algorithms= names more than one", sites
+
+
+def test_the_forms_the_bound_excludes_really_are_unresolved():
+    """A bound is only honest if the excluded forms are actually excluded.
+
+    If one of these quietly started resolving, the entry would be understating
+    again -- so the exclusions are pinned, not just the inclusions.
+    """
+    for src in (
+        # conditional EXPRESSION, not an `if` statement
+        'import jose\nv = jose.jwt if flag else None\nv.decode(t, k, algorithms=["A", "B"])',
+        'import jose\nd = {"j": jose.jwt}\nd["j"].decode(t, k, algorithms=["A", "B"])',
+        'import jose\n\n\ndef get():\n    return jose.jwt\n\n\nget().decode(t, k, algorithms=["A", "B"])',
+    ):
+        assert cdp._jwt_decode_sites(ast.parse(src)) == [], src

@@ -1607,9 +1607,13 @@ Counts are produced by the checker on each run, never quoted from this paragraph
 It finds decode sites written as import aliases (`from jose import jwt as verifier`),
 directly imported decoders (`from jose.jwt import decode`), aliased plain imports
 (`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and **simple assignment
-aliases** (`verifier = jose.jwt`, including one alias built from another). It does *not*
-resolve an alias reached through a container, a call, a comprehension or a conditional —
-anything requiring real dataflow analysis.
+aliases** (`verifier = jose.jwt`, including one alias built from another). Because the
+scan walks every statement body, an assignment nested inside an `if`, `try`/`except`,
+`with` or loop is resolved too — measured, not assumed.
+
+It does *not* resolve an alias reached through a container (`d = {"j": jose.jwt}`), a
+call (`get().decode(...)`), a comprehension, or a **conditional expression**
+(`v = jose.jwt if flag else None`) — anything requiring real dataflow analysis.
 
 That bound is written here deliberately. Each of those spellings was a gap found by
 review rather than by this entry, and the first version of the entry claimed coverage of
