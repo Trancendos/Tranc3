@@ -114,6 +114,65 @@ _WEB_LOCKFILE = "web/package-lock.json"
 _SEC_006_MEASURED_NLTK = "3.10.3"
 _CENSUS_OUTPUT = "logs/vulnerability_census.json"
 
+#: SEC-020 is a SUPPRESS on the same terms as SEC-006: no patched release
+#: exists, and the finding is not reachable as this repository uses the
+#: component. The second half is the part that can rot silently, so it is
+#: the part this checks.
+#:
+#: CVE-2026-85394 (GHSA-3qf3-8w2g-rqmx, alias of CVE-2024-33663) is an
+#: algorithm-confusion bypass: the guard python-jose added for the original
+#: CVE can be stepped around with a DER-encoded public key. Exploiting it
+#: requires a verifier that will attempt an HMAC algorithm while holding an
+#: asymmetric key. A decode call that passes exactly ONE algorithm cannot do
+#: that -- the token's `alg` either matches that single entry or is rejected
+#: before any key is touched.
+#:
+#: So the premise is: every JWT decode site in this repository pins exactly
+#: one algorithm, as a literal list. Measured 2026-10-06: twelve sites, all
+#: single-element. The failure mode this guards is somebody widening one to
+#: two (`["HS256", "RS256"]`) or passing a variable, which reintroduces the
+#: confusion the suppression says cannot happen here.
+_SEC_020_MEASURED_JOSE = "3.5.0"
+_SEC_020_PACKAGE = "python-jose"
+
+#: The advisory SEC-020 suppresses, with its aliases. Matching on the package
+#: alone was wrong: if SEC-020 were closed while a *different* python-jose
+#: finding stood at 3.5.0 with no fix, the package match would mark it "seen"
+#: and this entry would never be re-evaluated. Raised by coderabbit on #1376.
+_SEC_020_ADVISORY_IDS = frozenset(
+    {
+        "CVE-2026-85394",
+        "GHSA-3QF3-8W2G-RQMX",
+        "CVE-2024-33663",
+        "GHSA-6C5P-J8VQ-PQHJ",
+        "PYSEC-2024-232",
+    }
+)
+
+#: Every manifest pinning python-jose. The census runs `--scope core`, which
+#: does not cover the worker manifests, so the entry's "any version other than
+#: 3.5.0" trigger went unenforced for seven of the eight places it is pinned.
+#: Read directly rather than inferred. Raised by codex on #1376.
+_SEC_020_MANIFESTS = (
+    "requirements.txt",
+    "workers/gateway-service/requirements-worker.txt",
+    "workers/infinity-one-service/requirements-worker.txt",
+    "workers/infinity-admin-service/requirements-worker.txt",
+    "workers/sentinel-station-service/requirements-worker.txt",
+    "workers/infinity-auth/requirements-worker.txt",
+    "workers/infinity-portal-service/requirements-worker.txt",
+    "workers/gbrain-bridge/requirements-worker.txt",
+)
+
+_JOSE_PIN = re.compile(r"^python-jose(?:\[[^\]]*\])?\s*==\s*([0-9][^\s#;]*)", re.MULTILINE)
+
+#: The names a JWT module is bound to at the decode sites in this tree:
+#: `jwt` (python-jose and PyJWT both), `pyjwt`, `_jwt`, `jose_jwt`. The check
+#: covers PyJWT sites too, deliberately: algorithm confusion is not unique to
+#: python-jose (cf. CVE-2022-29217), and a single-algorithm allowlist is
+#: correct on both. A site that genuinely needs two amends the entry.
+_JWT_MODULE_NAMES = {"jwt", "pyjwt", "_jwt", "jose_jwt"}
+
 
 def _walk(base: Path, suffixes: set[str]):
     """Repository files under `base` with one of `suffixes`, skipping vendored trees."""
@@ -516,8 +575,351 @@ def check_sec_007() -> list[str]:
     return failures
 
 
+def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
+    """Local names a JWT module is bound to here, plus directly imported `decode`.
+
+    Matching four hard-coded receiver spellings was not enough: `from jose
+    import jwt as verifier` makes `verifier.decode(...)` invisible, so a site
+    could widen its allowlist to two algorithms and the gate would stay green
+    having never looked at it. Raised by sourcery, codex and coderabbit on
+    #1376, and reproduced -- `verifier.decode(t, k, algorithms=["HS256",
+    "RS256"])` returned no sites at all.
+
+    Resolves: import aliases (`from jose import jwt as verifier`), directly
+    imported decoders (`from jose.jwt import decode`), aliased plain imports
+    (`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and
+    simple assignment aliases (`verifier = jose.jwt`).
+
+    Because the walk enters every statement body, an assignment nested inside
+    an `if`, `try`/`except`, `with` or loop is resolved as well. Measured, not
+    assumed -- and worth stating, because the first wording of this bound said
+    "a conditional" and so UNDERSTATED the coverage, which is the same defect
+    as overstating it pointed the other way.
+
+    Does NOT resolve: an alias reached through a container (`d = {"j": jwt}`),
+    a call (`get().decode(...)`), a comprehension, or a conditional EXPRESSION
+    (`v = jose.jwt if flag else None`) -- anything needing real dataflow. That
+    is a bound on what this can claim, not a gap being hidden: SEC-020's entry
+    states the same bound, so the claim matches the capability in both
+    directions.
+    """
+    names: set[str] = set(_JWT_MODULE_NAMES)
+    direct: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module == "jose" or module.startswith("jose") or "jwt" in module:
+                for alias in node.names:
+                    local = alias.asname or alias.name
+                    if alias.name == "decode":
+                        direct.add(local)
+                    else:
+                        names.add(local)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if "jwt" in alias.name or alias.name.startswith("jose"):
+                    names.add(alias.asname or alias.name.split(".")[0])
+
+    # Simple assignment aliases: `verifier = jose.jwt`, `d = jwt.decode`.
+    # Raised by coderabbit on #1376, correctly: resolving imports but not
+    # assignments left `verifier.decode(...)` invisible, and the register
+    # claims coverage of EVERY decode site. A claim with a known gap is the
+    # defect this checker exists to prevent, so the claim and the capability
+    # have to match.
+    #
+    # Two passes, because an alias can be defined after another alias it is
+    # built from. Deliberately NOT general dataflow -- this function's own
+    # docstring, above, lists what it does and does not resolve.
+    for _ in range(2):
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            if not isinstance(target, ast.Name):
+                continue
+            path = _receiver_path(node.value)
+            if path is None:
+                continue
+            segments = set(path.split("."))
+            if path.split(".")[-1] == "decode" and (segments & names or segments & {"jwt", "jose"}):
+                direct.add(target.id)
+            elif segments & names or segments & {"jwt", "jose"}:
+                names.add(target.id)
+
+    bound: dict[str, object] = dict.fromkeys(names, True)
+    bound["__direct__"] = frozenset(direct)
+    return bound
+
+
+def _algorithm_shape(element: ast.expr) -> tuple[str, int]:
+    """Classify the sole `algorithms=` entry as (shape, count).
+
+    Counting AST elements was the first version's defect: it reported
+    `algorithms=[get_unverified_header(token)["alg"]]` as *pinned*, which is
+    the attack verbatim -- the token picks the algorithm while the verifier
+    holds an asymmetric key. Raised by sourcery, codex, coderabbit and codeant
+    on #1376, all correctly, and reproduced before fixing.
+
+    Two shapes are admissible, reported apart because they are not equally
+    strong:
+
+      * `literal`   -- a string constant; the allowlist is in the source.
+      * `reference` -- a bare name or dotted attribute, resolving to a module
+        constant or parameter default. Chosen by this code, never by the token.
+
+    Anything else is rejected: a call, subscript, f-string, starred or computed
+    expression could all take their value from the token.
+    """
+    if isinstance(element, ast.Constant):
+        if isinstance(element.value, str):
+            return "literal", 1
+        return f"algorithm is a non-string constant {element.value!r}", -1
+    root = element
+    while isinstance(root, ast.Attribute):
+        root = root.value
+    if isinstance(root, ast.Name):
+        return "reference", 1
+    return "algorithm is computed, so the token could choose it", -1
+
+
+def _receiver_path(node: ast.expr) -> str | None:
+    """The dotted receiver of a call, e.g. "jose.jwt" for `jose.jwt.decode(...)`.
+
+    Requiring a bare `ast.Name` receiver missed every qualified spelling:
+    `jose.jwt.decode(...)` has an `ast.Attribute` base, so the site was skipped
+    entirely and a widened allowlist written that way would never be seen.
+    Raised by `llamapreview` on #1376.
+    """
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return None
+    parts.append(node.id)
+    return ".".join(reversed(parts))
+
+
+def _algorithm_of(node: ast.Call) -> tuple[str, int]:
+    """Shape of a `decode(...)` call's `algorithms=` argument.
+
+    Used for both call spellings -- a directly-imported `decode(...)` and a
+    qualified `jwt.decode(...)` / `jose.jwt.decode(...)` -- so the two cannot
+    disagree about what an acceptable allowlist looks like.
+    """
+    keyword = next((k for k in node.keywords if k.arg == "algorithms"), None)
+    if keyword is None:
+        return "no algorithms= argument at all", 0
+    if not isinstance(keyword.value, ast.List):
+        return "algorithms= is not a literal list", -1
+    if len(keyword.value.elts) != 1:
+        return "algorithms= names more than one", len(keyword.value.elts)
+    return _algorithm_shape(keyword.value.elts[0])
+
+
+def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
+    """(line, shape, count) for every JWT decode call in one module.
+
+    Two shapes are admissible, and `check_sec_020` accepts exactly these:
+
+    - "literal"   -- one algorithm, written as a string literal in the list
+    - "reference" -- one algorithm, a module-level name the AST can see
+
+    Anything else is a refusal naming what is wrong: an absent `algorithms=`
+    (python-jose then accepts whatever the token asks for), a non-literal list
+    the AST cannot read, a list naming more than one, or a single element that
+    is computed -- a token-derived element is the algorithm-confusion bug the
+    allowlist exists to prevent, so it is rejected rather than counted.
+
+    There is no "pinned" shape. It was replaced by the literal/reference split
+    because "exactly one element" is not the property that matters: one
+    token-derived element pins nothing.
+    """
+    bound = _jwt_bound_names(tree)
+    sites: list[tuple[int, str, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id in bound["__direct__"]:
+            sites.append((node.lineno, *_algorithm_of(node)))
+            continue
+        if not isinstance(func, ast.Attribute) or func.attr != "decode":
+            continue
+        path = _receiver_path(func.value)
+        if path is None:
+            continue
+        segments = set(path.split("."))
+        # A bare bound name (`jwt`, or an alias resolved from the imports), or
+        # any qualified spelling whose segments name a JWT module.
+        if not (segments & set(bound) or segments & {"jwt", "jose"}):
+            continue
+        # Same analysis as the direct-import branch above, so the same function.
+        # It was a verbatim second copy -- including the three message strings
+        # -- until review pointed out that two copies of an allowlist check can
+        # drift, which is the one thing this checker must not do.
+        sites.append((node.lineno, *_algorithm_of(node)))
+    return sites
+
+
+def _census_jose_premises() -> list[str]:
+    """What the census resolved for python-jose, against what SEC-020 claims.
+
+    Same two premises as SEC-006, for the same reason: a SUPPRESS is only
+    honest while the version is the one assessed and no fix exists.
+    """
+    import json  # noqa: PLC0415 - only needed on this path
+
+    output = ROOT / _CENSUS_OUTPUT
+    if not output.is_file():
+        return [
+            f"SEC-020: {_CENSUS_OUTPUT} is absent, so the {_SEC_020_PACKAGE} version "
+            "and fix-availability premises cannot be confirmed. Run "
+            "`python3 scripts/vulnerability_census.py --check --scope core` first."
+        ]
+    try:
+        data = json.loads(output.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f"SEC-020: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    failures: list[str] = []
+    seen = False
+    for surface in data.get("surfaces") or []:
+        for finding in (surface or {}).get("findings") or []:
+            if (finding or {}).get("package") != _SEC_020_PACKAGE:
+                continue
+            identifiers = {
+                str((finding or {}).get("id") or "").upper(),
+                *(str(a).upper() for a in ((finding or {}).get("aliases") or [])),
+            }
+            if not (_SEC_020_ADVISORY_IDS & identifiers):
+                continue  # a different python-jose advisory, not this premise
+            seen = True
+            version = finding.get("version")
+            if version != _SEC_020_MEASURED_JOSE:
+                failures.append(
+                    f"SEC-020: the census resolved {_SEC_020_PACKAGE} {version}, but the "
+                    f"entry in {REGISTER} is written against {_SEC_020_MEASURED_JOSE}. "
+                    "Re-assess before the suppression is relied on."
+                )
+            fixes = finding.get("fix_versions") or []
+            if fixes:
+                failures.append(
+                    f"SEC-020: the advisory now names fixed version(s) {fixes}. The "
+                    f"suppression in {REGISTER} rests on 'no patched release exists'. "
+                    "One does, so this is a fix waiting to be taken, not a suppression."
+                )
+    if not seen:
+        failures.append(
+            f"SEC-020: the census no longer reports {_SEC_020_PACKAGE} at all. Close the "
+            f"entry in {REGISTER} rather than leaving a live suppression for a risk that "
+            "has gone."
+        )
+    return failures
+
+
+def _declared_jose_versions() -> list[str]:
+    """Every manifest pin of python-jose, read from the manifests themselves.
+
+    The census runs `--scope core`, which does not cover the worker manifests,
+    so SEC-020's "any version other than 3.5.0" trigger was unenforced for
+    seven of the eight files that pin this package. A worker could have been
+    moved to a different version while the checker went on reading the root
+    finding and passing. Raised by `chatgpt-codex-connector` on #1376.
+    """
+    failures: list[str] = []
+    seen = 0
+    for relative in _SEC_020_MANIFESTS:
+        path = ROOT / relative
+        if not path.is_file():
+            failures.append(
+                f"SEC-020: {relative} is named in this check's manifest list but is not "
+                "in the tree. Either it moved, in which case the list is stale, or the "
+                "pin it carried is gone -- re-assess rather than skipping it."
+            )
+            continue
+        pins = _JOSE_PIN.findall(path.read_text(encoding="utf-8"))
+        if not pins:
+            failures.append(
+                f"SEC-020: {relative} no longer pins python-jose. The entry in {REGISTER} "
+                "lists it as one of the places the assessed version is pinned; drop it "
+                "from the list deliberately rather than leaving the claim unverified."
+            )
+            continue
+        for pin in pins:
+            seen += 1
+            if pin != _SEC_020_MEASURED_JOSE:
+                failures.append(
+                    f"SEC-020: {relative} pins python-jose {pin}, but the entry in "
+                    f"{REGISTER} is assessed against {_SEC_020_MEASURED_JOSE}. A "
+                    "different version ships different code and a different advisory "
+                    "range. Re-assess before the suppression is relied on."
+                )
+    if not failures and seen == 0:
+        failures.append(
+            "SEC-020: no python-jose pin was found in any listed manifest, so the "
+            "version premise rests on nothing. Re-assess."
+        )
+    return failures
+
+
+#: The pinned-site count `check_sec_020` measured on this run. Held here so the
+#: pass message can report it without a second full-tree walk --
+#: `_pinned_decode_sites` used to re-parse every `.py` file purely to format
+#: that line, roughly doubling the script's cost. Raised by cubic on #1376.
+_SEC_020_PINNED: list[int] = []
+
+
+def check_sec_020() -> list[str]:
+    """python-jose algorithm confusion: no fix exists, and no site can reach it."""
+    failures = _census_jose_premises() + _declared_jose_versions()
+
+    pinned = 0
+    for path in _walk(ROOT, {".py"}):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            # Not this check's business to police unparseable files; other
+            # guards do that. Silence here would hide a decode site, so say so.
+            failures.append(
+                f"SEC-020: {path.relative_to(ROOT)} could not be parsed, so any JWT "
+                "decode site in it is unexamined. The premise covers every site or none."
+            )
+            continue
+        for line, shape, count in _jwt_decode_sites(tree):
+            if shape in ("literal", "reference"):
+                pinned += 1
+                continue
+            detail = f" ({count})" if count > 1 else ""
+            failures.append(
+                f"SEC-020: {path.relative_to(ROOT)}:{line} — {shape}{detail}. The "
+                f"suppression in {REGISTER} rests on every decode site naming exactly "
+                "one algorithm, which is what makes the DER-encoded-public-key "
+                "confusion unreachable. This site does not."
+            )
+
+    _SEC_020_PINNED[:] = [pinned]
+    if not failures and pinned == 0:
+        failures.append(
+            f"SEC-020: no JWT decode site was found at all. The entry in {REGISTER} "
+            "argues from twelve of them; a premise about code that is not there "
+            "describes nothing. Re-assess."
+        )
+    return failures
+
+
+def _pinned_decode_sites() -> int:
+    """The count `check_sec_020` measured on this run.
+
+    Reported rather than re-derived: this used to walk and parse every `.py`
+    file a second time just to format the pass line, duplicating the walk
+    `check_sec_020` had already completed.
+    """
+    return _SEC_020_PINNED[0] if _SEC_020_PINNED else 0
+
+
 def main() -> int:
-    failures = check_sec_006() + check_sec_007()
+    failures = check_sec_006() + check_sec_007() + check_sec_020()
     if failures:
         print(
             "[ERROR] A recorded disposition rests on a premise that no longer holds.\n"
@@ -531,9 +933,11 @@ def main() -> int:
     fflate = ", ".join(sorted({version for _, version in locked})) or "absent"
     print(
         "Disposition premises: PASSED — SEC-006 (nltk 3.10.3 with no fix available, "
-        "undeclared in runtime manifests, reached lazily, wordnet only, no path call) "
-        f"and SEC-007 (web/ resolves fflate {fflate}, outside every affected range of "
-        "GHSA-px8p-9vwx-vf98) both still hold"
+        "undeclared in runtime manifests, reached lazily, wordnet only, no path call), "
+        f"SEC-007 (web/ resolves fflate {fflate}, outside every affected range of "
+        "GHSA-px8p-9vwx-vf98), and SEC-020 (python-jose 3.5.0 with no fix available, "
+        f"{_pinned_decode_sites()} JWT decode sites all naming exactly one algorithm) "
+        "all still hold"
     )
     return 0
 

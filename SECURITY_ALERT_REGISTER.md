@@ -1549,6 +1549,110 @@ becomes unavoidable and should be planned and announced, not slipped in.
 
 ---
 
+### SEC-020 — python-jose algorithm-confusion guard bypassed, no patched release
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | CVE-2026-85394 (GHSA-3qf3-8w2g-rqmx; aliases CVE-2024-33663, GHSA-6c5p-j8vq-pqhj, PYSEC-2024-232) |
+| **Scanner** | pip-audit, via `scripts/vulnerability_census.py` |
+| **Component** | `python-jose[cryptography]==3.5.0` — declared runtime dependency. Pinned at that version in `requirements.txt` and in **7** worker manifests (`workers/{gateway-service,infinity-one-service,infinity-admin-service,sentinel-station-service,infinity-auth,infinity-portal-service,gbrain-bridge}/requirements-worker.txt`); all eight are read by the premise checker, because the census runs `--scope core` and does not cover the worker manifests. No line number is cited on purpose: this entry's own comment block moved the root pin from line 88 to 95, so a line reference is stale the moment anything above it changes |
+| **Severity** | CVSS 3.1 `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N`; CVSS 4.0 `AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N` |
+| **Recorded** | 2026-10-06 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-06 |
+| **Re-evaluate** | On the census resolving any python-jose version other than 3.5.0; on the advisory naming a fixed version (a SUPPRESS then means declining an available fix); on the census ceasing to report it; or on **any** JWT decode site widening its `algorithms=` beyond a single literal entry, passing a variable, or omitting it. **Every one of these is enforced by `scripts/check_disposition_premises.py` (`check_sec_020`)**, which reads the census output and walks every Python file's AST, rather than relying on anyone remembering |
+
+**No patched release exists.** 3.5.0 is the newest release on PyPI (the full
+published set is 3.0.1, 3.1.0, 3.2.0, 3.3.0, 3.4.0, 3.5.0), and the GHSA range is
+`introduced: 0, last_affected: 3.5.0` — every published release is affected. OSV's
+query endpoint, asked directly whether `python-jose 3.5.0` is affected, returns
+GHSA-3qf3-8w2g-rqmx. There is deliberately **no Blocked-by row**: a fix is not out of
+reach, it does not exist, and that distinction is what makes this entry fail the gate
+again the day one ships.
+
+**This supersedes a claim already in the tree, and that is the more important half of
+this entry.** `requirements.txt` carried the comment "Fixes: CVE-2024-33663 (algorithm
+confusion) … via python-jose>=3.4.0". CVE-2026-85394 *is* CVE-2024-33663 — the same
+GHSA, re-issued — and it says the guard 3.4.0 added can be stepped around with a
+**DER-encoded public key**. So the repository asserted a fix that has since been shown
+bypassable, and went on asserting it for as long as nobody re-read the line. The
+comment is corrected in the same change as this entry.
+
+**Not exploitable as used, and this is the premise under guard.** The vulnerability is
+algorithm confusion: it requires a verifier that will attempt an HMAC algorithm while
+holding an asymmetric key, so that a public key can be passed off as an HMAC secret.
+Every JWT decode site in this repository names **exactly one** algorithm, so a token's
+`alg` either equals that single entry or is rejected before any key is touched.
+
+The checker distinguishes two admissible shapes, because conflating them was a real
+defect in its first version — raised by sourcery, codex, coderabbit and codeant on
+#1376, all correctly:
+
+* **literal** — `algorithms=["HS256"]`. The allowlist is in the source.
+* **by reference** — `algorithms=[ALGORITHM]`, a bare name or dotted attribute
+  resolving to a module constant or a parameter default. The value is chosen by this
+  code, never by the token, so algorithm confusion stays unreachable.
+
+What it now **rejects** is the shape that actually carries the vulnerability: a single
+element built from a call, subscript, f-string or starred expression.
+`algorithms=[get_unverified_header(token)["alg"]]` is the attack verbatim, and the first
+version of this checker counted AST elements and reported it as *pinned* — while this
+entry claimed a variable would fail the gate. It did not. Both the checker and the claim
+are fixed.
+
+Counts are produced by the checker on each run, never quoted from this paragraph.
+
+**What the checker resolves, stated as a bound rather than a claim of completeness.**
+It finds decode sites written as import aliases (`from jose import jwt as verifier`),
+directly imported decoders (`from jose.jwt import decode`), aliased plain imports
+(`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and **simple assignment
+aliases** (`verifier = jose.jwt`, including one alias built from another). Because the
+scan walks every statement body, an assignment nested inside an `if`, `try`/`except`,
+`with` or loop is resolved too — measured, not assumed.
+
+It does *not* resolve an alias reached through a container (`d = {"j": jose.jwt}`), a
+call (`get().decode(...)`), a comprehension, or a **conditional expression**
+(`v = jose.jwt if flag else None`) — anything requiring real dataflow analysis.
+
+That bound is written here deliberately. Each of those spellings was a gap found by
+review rather than by this entry, and the first version of the entry claimed coverage of
+every decode site while the checker matched four hard-coded receiver names. A disposition
+that overstates what its own check verifies is the failure this register exists to
+prevent, so the claim is now the narrower true one.
+
+The site that would matter most if this slipped is `src/security/security_framework.py`,
+which is the one place that genuinely verifies with an asymmetric public key:
+
+```python
+ALGORITHM = "RS256";  _VERIFY_KEY = _PUBLIC_KEY_PEM   # when RSA keys are configured
+ALGORITHM = "HS256";  _VERIFY_KEY = SECRET_KEY         # fallback
+...
+jwt.decode(token, _VERIFY_KEY, algorithms=[ALGORITHM])
+```
+
+`algorithms=[ALGORITHM]` is a one-element list in both branches, and the key and the
+algorithm are chosen together by the same branch — they cannot be mismatched. Widening
+that list to `["HS256", "RS256"]` would hand an attacker the RSA public key as a
+candidate HMAC secret, which is the attack verbatim. That is precisely the edit
+`check_sec_020` refuses.
+
+The check covers PyJWT decode sites as well as python-jose ones, deliberately:
+algorithm confusion is not unique to this library, and a single-algorithm allowlist is
+the correct posture for both. A site that genuinely needs two algorithms amends this
+entry rather than quietly failing the gate.
+
+**No advisory identifier other than this entry's own appears anywhere in it, and that is
+deliberate.** `src/security/accepted_risk_register.py` collects accepted IDs with
+`ID_PATTERN.findall(block)` over the *whole* entry, not just its ID row. An earlier draft
+of the paragraph above cited PyJWT's own algorithm-confusion CVE as a comparison, which
+would have silently registered that unrelated advisory as an accepted risk here — and
+licensed a `.trivyignore` entry for it. Raised by `chatgpt-codex-connector` on #1376.
+Inside an accepting entry, cite comparable advisories by description, never by
+identifier.
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for

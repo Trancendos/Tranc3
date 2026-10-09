@@ -249,10 +249,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Go 1.24
+      # Read from go.mod rather than pinning, matching .github/workflows/go.yml.
+      # This was pinned to 1.24 while `aeonmind/go` moved to 1.26 (required by
+      # the x/net advisory fixes below) -- so this job, the Forgejo copy of the
+      # vulnerability scan, could not have resolved the module graph it audits.
+      # Dormant today, which is exactly how the weaker of two copies of a gate
+      # stays broken until the day it takes over.
+      - name: Set up Go (from aeonmind/go/go.mod)
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version: '1.24'
+          go-version-file: aeonmind/go/go.mod
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
