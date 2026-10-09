@@ -127,30 +127,42 @@ def _reflection_refusal(code: str) -> Optional[str]:
             deepest = depth
             if deepest > _MAX_AST_DEPTH:
                 return (
-                    f"nested deeper than {_MAX_AST_DEPTH} levels — refused "
-                    "without being read, because a snippet this deep is not a "
-                    "tool call and the parser's own limit is not portable"
+                    f"nested deeper than {_MAX_AST_DEPTH} levels, so it was not "
+                    "read at all. A snippet this deep is not a tool call, and "
+                    "the parser's own limit is not portable across CPython "
+                    "versions"
                 )
         stack.extend((child, depth + 1) for child in ast.iter_child_nodes(node))
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             if node.attr.startswith(_DUNDER):
-                return f"attribute {node.attr!r} on line {node.lineno}"
+                return (
+                    f"attribute {node.attr!r} on line {node.lineno} — dunder "
+                    "access reaches the object graph and escapes the sandbox"
+                )
             if node.attr in _FRAME_ATTRS:
-                return f"frame attribute {node.attr!r} on line {node.lineno}"
+                return (
+                    f"frame attribute {node.attr!r} on line {node.lineno} — a live "
+                    "frame leads to the host's own builtins"
+                )
             if node.attr in _FORMAT_METHODS:
                 return (
                     f"{node.attr}() on line {node.lineno} — its template can "
                     "name attributes this check cannot see; use an f-string"
                 )
         elif isinstance(node, ast.Name) and node.id.startswith(_DUNDER):
-            return f"name {node.id!r} on line {node.lineno}"
+            return (
+                f"name {node.id!r} on line {node.lineno} — dunder access reaches "
+                "the object graph and escapes the sandbox"
+            )
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
             hit = _DUNDER_FIELD.search(node.value)
             if hit:
                 return (
-                    f"replacement field {hit.group(0)!r} on line {node.lineno} reaches for a dunder"
+                    f"replacement field {hit.group(0)!r} on line {node.lineno} "
+                    "names a dunder, which str.format resolves at runtime where "
+                    "this check cannot see it"
                 )
     return None
 
@@ -1087,14 +1099,15 @@ class SparkToolRegistry:
             # and both escaped this handler as generic failures until #1378.
             return {"error": f"could not parse code: {exc!r}", "code": -32602}
         if refusal is not None:
-            return {
-                "error": (
-                    "refused: sandboxed code may not use reflection — "
-                    f"{refusal}. Dunder access reaches the object graph and "
-                    "escapes the sandbox."
-                ),
-                "code": -32602,
-            }
+            # The reason comes from the refusal itself. This wrapper used to
+            # append "Dunder access reaches the object graph and escapes the
+            # sandbox" to every refusal, which was true when a dunder was the
+            # only one. Three more kinds were added in this PR -- depth, frame
+            # attributes, format templates -- and each was then reported to the
+            # caller as a dunder hit it never was. Raised by cubic on #1378,
+            # and it is this PR's own subject: a message stating a conclusion
+            # nobody measured.
+            return {"error": f"refused: {refusal}", "code": -32602}
 
         timeout_seconds = int(params.get("timeout_seconds", 30))
         context = params.get("context", {})

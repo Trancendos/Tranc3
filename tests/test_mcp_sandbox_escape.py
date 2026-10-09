@@ -102,7 +102,8 @@ def test_popen_is_not_reachable_through_the_handler():
         )
     )
     assert "error" in result, result
-    assert "reflection" in result["error"], result["error"]
+    assert "refused" in result["error"], result["error"]
+    assert "__subclasses__" in result["error"], result["error"]
 
 
 def test_the_handler_still_runs_ordinary_code():
@@ -296,7 +297,8 @@ def test_an_admin_is_still_held_to_the_sandbox_gate():
     """Authority to call the tool is not authority to escape it."""
     payload = {"name": "execute_code", "arguments": {"code": _BUILTIN_FREE_CHAIN}}
     result = _call(payload, {"role": "admin"})
-    assert "reflection" in _text(result), _text(result)
+    assert "refused" in _text(result), _text(result)
+    assert "__subclasses__" in _text(result), _text(result)
 
 
 def test_a_refused_call_is_reported_as_an_error():
@@ -313,3 +315,39 @@ def test_a_refused_call_is_reported_as_an_error():
         ]
         is True
     )
+
+
+def test_a_refusal_states_its_own_reason_and_not_another():
+    """cubic, #1378: every refusal was reported to the caller as a dunder hit.
+
+    The handler appended "Dunder access reaches the object graph and escapes
+    the sandbox" to whatever the gate returned. That was true when a dunder
+    was the only refusal. This PR added three more -- depth, frame attributes,
+    format templates -- and each then arrived at the caller carrying a reason
+    it had nothing to do with: a message asserting a conclusion nobody
+    measured, which is this PR's whole subject.
+    """
+    from src.mcp.tools import SparkToolRegistry
+
+    registry = SparkToolRegistry()
+
+    def _refuse(code):
+        result = asyncio.run(
+            registry._handle_execute_code({"__admin__": True, "code": code, "timeout_seconds": 5})
+        )
+        assert "error" in result, result
+        return result["error"]
+
+    # Non-dunder refusals must NOT claim dunder access.
+    for code, expected in (
+        ("a" + ".b" * (_MAX_AST_DEPTH + 100), "nested deeper"),
+        ("import sys\n\nsys.exc_info()[2].tb_frame", "frame attribute"),
+        ('"{}".format(1)', "format()"),
+    ):
+        error = _refuse(code)
+        assert expected in error, error
+        assert "dunder" not in error.lower(), error
+
+    # Dunder refusals must still say so -- the fix is accuracy, not silence.
+    for code in ("().__class__", "x = __builtins__"):
+        assert "dunder" in _refuse(code).lower()
