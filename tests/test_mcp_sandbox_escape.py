@@ -239,14 +239,23 @@ def test_a_caller_cannot_grant_itself_admin():
 
 def test_a_forged_key_is_stripped_not_merely_ignored():
     """The reserved shape is removed, so no handler can ever see a forged one."""
-    from src.mcp.server import _RESERVED_ARG
+    from src.mcp.server import _is_reserved_arg
 
-    assert _RESERVED_ARG.match("__admin__")
+    assert _is_reserved_arg("__admin__")
     # Reserved as a shape rather than as one known key: a private argument
     # added later must not become forgeable by being added.
-    assert _RESERVED_ARG.match("__internal__")
-    assert not _RESERVED_ARG.match("code")
-    assert not _RESERVED_ARG.match("_private")
+    assert _is_reserved_arg("__internal__")
+    assert not _is_reserved_arg("code")
+    assert not _is_reserved_arg("_private")
+    # A key with the shape but a newline inside it. The first version of this
+    # predicate was `re.compile(r"^__.*__$").match`, which misses this one
+    # because `.` never crosses a newline -- the shape the rule names, and the
+    # check did not enforce it. `scripts/check_anchored_validators.py` caught
+    # it in CI, which is the same defect class as the rest of this file.
+    assert _is_reserved_arg("__a\nb__")
+    # Non-string keys cannot arrive via JSON, but the predicate is total.
+    assert not _is_reserved_arg(None)
+    assert not _is_reserved_arg(7)
 
 
 def test_a_real_admin_still_runs_code():

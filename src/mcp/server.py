@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 import time
 import uuid
 from collections import OrderedDict
@@ -193,7 +192,25 @@ _bus = _SSEBus()
 #: The dunder shape is reserved for this server's own channel, so the whole shape
 #: is stripped rather than the one known key: a later private argument must not
 #: become forgeable by being added.
-_RESERVED_ARG = re.compile(r"^__.*__$")
+#:
+#: A plain string predicate rather than `re.compile(r"^__.*__$")`, which was the
+#: first attempt and which `scripts/check_anchored_validators.py` rejected --
+#: correctly, and as an instance of the defect this whole PR is about. With
+#: `.match()`, `$` also matches before a trailing newline while `.` never
+#: crosses one, so `"__a\nb__"` has the reserved shape and the pattern does not
+#: match it. A key that the rule describes and the check misses is a control not
+#: enforcing what it states. Nothing here needs a regex.
+_RESERVED_PREFIX = _RESERVED_SUFFIX = "__"
+
+
+def _is_reserved_arg(key: Any) -> bool:
+    """Whether `key` has the shape reserved for this server's own channel."""
+    return (
+        isinstance(key, str)
+        and len(key) >= len(_RESERVED_PREFIX) + len(_RESERVED_SUFFIX)
+        and key.startswith(_RESERVED_PREFIX)
+        and key.endswith(_RESERVED_SUFFIX)
+    )
 
 
 def _caller_is_admin(caller: Optional[Dict[str, Any]]) -> bool:
@@ -278,7 +295,7 @@ async def _method_tools_call(
     # Privilege is decided here, from the authenticated caller, and never read
     # out of the request body. Strip the reserved shape first so a forged key
     # cannot survive, then set what the server actually knows.
-    forged = [key for key in tool_params if _RESERVED_ARG.match(key)]
+    forged = [key for key in tool_params if _is_reserved_arg(key)]
     for key in forged:
         del tool_params[key]
     if forged:
