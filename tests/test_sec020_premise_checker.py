@@ -146,3 +146,48 @@ def test_the_pass_message_count_comes_from_the_measured_run():
     assert cdp._pinned_decode_sites() == 0, "no run yet reports 0, not a guess"
     cdp._SEC_020_PINNED[:] = [12]
     assert cdp._pinned_decode_sites() == 12
+
+
+# ---------------------------------------------------------------------------
+# Assignment aliases. Raised by coderabbit on #1376 as a durability gap:
+# `_jwt_bound_names` resolved imports but not assignments, so a decode site
+# reached through `verifier = jose.jwt` was invisible -- while the register
+# claimed coverage of every decode site. The gap is real; the claim being
+# wider than the capability is the defect.
+# ---------------------------------------------------------------------------
+
+
+def test_an_assignment_alias_is_resolved():
+    """REGRESSION: `verifier = jose.jwt` then `verifier.decode(...)`."""
+    src = 'import jose\nverifier = jose.jwt\nverifier.decode(t, k, algorithms=["HS256", "RS256"])'
+    sites = cdp._jwt_decode_sites(ast.parse(src))
+    assert sites, "a decode reached through an assignment alias must be seen"
+    assert sites[0][1] == "algorithms= names more than one", sites
+
+
+def test_an_assigned_decode_function_is_resolved():
+    """`d = jwt.decode` then `d(...)` -- no receiver at the call site at all."""
+    src = 'from jose import jwt\nd = jwt.decode\nd(t, k, algorithms=["HS256", "RS256"])'
+    sites = cdp._jwt_decode_sites(ast.parse(src))
+    assert sites, "an assigned decode function must be seen"
+    assert sites[0][1] == "algorithms= names more than one", sites
+
+
+def test_an_alias_built_from_another_alias_is_resolved():
+    """Why the resolution runs twice: an alias can be defined from an alias."""
+    src = 'import jose\na = jose.jwt\nb = a\nb.decode(t, k, algorithms=["HS256", "RS256"])'
+    sites = cdp._jwt_decode_sites(ast.parse(src))
+    assert sites, "a chained alias must be seen"
+    assert sites[0][1] == "algorithms= names more than one", sites
+
+
+def test_a_pinned_site_reached_through_an_alias_still_passes():
+    """Widening the matcher must not start failing correct code."""
+    src = 'import jose\nv = jose.jwt\nv.decode(t, k, algorithms=["HS256"])'
+    assert cdp._jwt_decode_sites(ast.parse(src)) == [(3, "literal", 1)]
+
+
+def test_an_aliased_non_jwt_decoder_is_still_not_claimed():
+    """The boundary: resolving aliases must not sweep in unrelated decoders."""
+    src = 'import base64\nb = base64\nb.decode(blob, algorithms=["x", "y"])'
+    assert cdp._jwt_decode_sites(ast.parse(src)) == []

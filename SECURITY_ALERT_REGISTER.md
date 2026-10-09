@@ -1603,6 +1603,20 @@ are fixed.
 
 Counts are produced by the checker on each run, never quoted from this paragraph.
 
+**What the checker resolves, stated as a bound rather than a claim of completeness.**
+It finds decode sites written as import aliases (`from jose import jwt as verifier`),
+directly imported decoders (`from jose.jwt import decode`), aliased plain imports
+(`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and **simple assignment
+aliases** (`verifier = jose.jwt`, including one alias built from another). It does *not*
+resolve an alias reached through a container, a call, a comprehension or a conditional —
+anything requiring real dataflow analysis.
+
+That bound is written here deliberately. Each of those spellings was a gap found by
+review rather than by this entry, and the first version of the entry claimed coverage of
+every decode site while the checker matched four hard-coded receiver names. A disposition
+that overstates what its own check verifies is the failure this register exists to
+prevent, so the claim is now the narrower true one.
+
 The site that would matter most if this slipped is `src/security/security_framework.py`,
 which is the one place that genuinely verifies with an asymmetric public key:
 

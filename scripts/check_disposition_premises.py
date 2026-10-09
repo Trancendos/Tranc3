@@ -584,6 +584,17 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
     having never looked at it. Raised by sourcery, codex and coderabbit on
     #1376, and reproduced -- `verifier.decode(t, k, algorithms=["HS256",
     "RS256"])` returned no sites at all.
+
+    Resolves: import aliases (`from jose import jwt as verifier`), directly
+    imported decoders (`from jose.jwt import decode`), aliased plain imports
+    (`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and
+    simple assignment aliases (`verifier = jose.jwt`).
+
+    Does NOT resolve: an alias reached through a container, a call, a
+    comprehension or a conditional -- anything needing real dataflow. That is
+    a bound on what this can claim, not a gap being hidden: SEC-020's entry
+    says the checker resolves imports and simple assignments, so the claim
+    matches the capability rather than overstating it.
     """
     names: set[str] = set(_JWT_MODULE_NAMES)
     direct: set[str] = set()
@@ -601,6 +612,33 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
             for alias in node.names:
                 if "jwt" in alias.name or alias.name.startswith("jose"):
                     names.add(alias.asname or alias.name.split(".")[0])
+
+    # Simple assignment aliases: `verifier = jose.jwt`, `d = jwt.decode`.
+    # Raised by coderabbit on #1376, correctly: resolving imports but not
+    # assignments left `verifier.decode(...)` invisible, and the register
+    # claims coverage of EVERY decode site. A claim with a known gap is the
+    # defect this checker exists to prevent, so the claim and the capability
+    # have to match.
+    #
+    # Two passes, because an alias can be defined after another alias it is
+    # built from. Deliberately NOT general dataflow -- see the module note
+    # below on what this does and does not resolve.
+    for _ in range(2):
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            if not isinstance(target, ast.Name):
+                continue
+            path = _receiver_path(node.value)
+            if path is None:
+                continue
+            segments = set(path.split("."))
+            if path.split(".")[-1] == "decode" and (segments & names or segments & {"jwt", "jose"}):
+                direct.add(target.id)
+            elif segments & names or segments & {"jwt", "jose"}:
+                names.add(target.id)
+
     bound: dict[str, object] = dict.fromkeys(names, True)
     bound["__direct__"] = frozenset(direct)
     return bound
