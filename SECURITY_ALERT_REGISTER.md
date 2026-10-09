@@ -1556,7 +1556,7 @@ becomes unavoidable and should be planned and announced, not slipped in.
 | **Disposition** | **SUPPRESS** |
 | **ID** | CVE-2026-85394 (GHSA-3qf3-8w2g-rqmx; aliases CVE-2024-33663, GHSA-6c5p-j8vq-pqhj, PYSEC-2024-232) |
 | **Scanner** | pip-audit, via `scripts/vulnerability_census.py` |
-| **Component** | `python-jose[cryptography]==3.5.0` — declared runtime dependency, `requirements.txt:88` |
+| **Component** | `python-jose[cryptography]==3.5.0` — declared runtime dependency. Pinned at that version in `requirements.txt` and in **7** worker manifests (`workers/{gateway-service,infinity-one-service,infinity-admin-service,sentinel-station-service,infinity-auth,infinity-portal-service,gbrain-bridge}/requirements-worker.txt`); all eight are read by the premise checker, because the census runs `--scope core` and does not cover the worker manifests. No line number is cited on purpose: this entry's own comment block moved the root pin from line 88 to 95, so a line reference is stale the moment anything above it changes |
 | **Severity** | CVSS 3.1 `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N`; CVSS 4.0 `AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N` |
 | **Recorded** | 2026-10-06 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
@@ -1582,11 +1582,26 @@ comment is corrected in the same change as this entry.
 **Not exploitable as used, and this is the premise under guard.** The vulnerability is
 algorithm confusion: it requires a verifier that will attempt an HMAC algorithm while
 holding an asymmetric key, so that a public key can be passed off as an HMAC secret.
-Every JWT decode site in this repository names **exactly one** algorithm, as a literal
-list, so a token's `alg` either equals that single entry or is rejected before any key
-is touched. Measured 2026-10-06: **12 decode sites, 12 single-element allowlists, 0
-exceptions** — the number is produced by the premise checker on each run rather than
-quoted from this paragraph.
+Every JWT decode site in this repository names **exactly one** algorithm, so a token's
+`alg` either equals that single entry or is rejected before any key is touched.
+
+The checker distinguishes two admissible shapes, because conflating them was a real
+defect in its first version — raised by sourcery, codex, coderabbit and codeant on
+#1376, all correctly:
+
+* **literal** — `algorithms=["HS256"]`. The allowlist is in the source.
+* **by reference** — `algorithms=[ALGORITHM]`, a bare name or dotted attribute
+  resolving to a module constant or a parameter default. The value is chosen by this
+  code, never by the token, so algorithm confusion stays unreachable.
+
+What it now **rejects** is the shape that actually carries the vulnerability: a single
+element built from a call, subscript, f-string or starred expression.
+`algorithms=[get_unverified_header(token)["alg"]]` is the attack verbatim, and the first
+version of this checker counted AST elements and reported it as *pinned* — while this
+entry claimed a variable would fail the gate. It did not. Both the checker and the claim
+are fixed.
+
+Counts are produced by the checker on each run, never quoted from this paragraph.
 
 The site that would matter most if this slipped is `src/security/security_framework.py`,
 which is the one place that genuinely verifies with an asymmetric public key:
@@ -1605,9 +1620,18 @@ candidate HMAC secret, which is the attack verbatim. That is precisely the edit
 `check_sec_020` refuses.
 
 The check covers PyJWT decode sites as well as python-jose ones, deliberately:
-algorithm confusion is not unique to this library (cf. CVE-2022-29217), and a
-single-algorithm allowlist is the correct posture for both. A site that genuinely needs
-two algorithms amends this entry rather than quietly failing the gate.
+algorithm confusion is not unique to this library, and a single-algorithm allowlist is
+the correct posture for both. A site that genuinely needs two algorithms amends this
+entry rather than quietly failing the gate.
+
+**No advisory identifier other than this entry's own appears anywhere in it, and that is
+deliberate.** `src/security/accepted_risk_register.py` collects accepted IDs with
+`ID_PATTERN.findall(block)` over the *whole* entry, not just its ID row. An earlier draft
+of the paragraph above cited PyJWT's own algorithm-confusion CVE as a comparison, which
+would have silently registered that unrelated advisory as an accepted risk here — and
+licensed a `.trivyignore` entry for it. Raised by `chatgpt-codex-connector` on #1376.
+Inside an accepting entry, cite comparable advisories by description, never by
+identifier.
 
 ---
 
