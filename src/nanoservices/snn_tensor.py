@@ -22,6 +22,7 @@ matmul_i8(a, a_rows, a_cols, b, b_cols) → list[int]
 from __future__ import annotations
 
 import logging
+import operator
 from typing import List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -74,8 +75,9 @@ def _py_leaky_step_i8(
     new_mem: List[float] = []
     for j in range(out_dim):
         row = weights[j * in_dim : (j + 1) * in_dim]
-        current = sum(int(w) * x for w, x in zip(row, inputs)) + bias[j]
-        current = max(0.0, current)  # ReLU
+        # Optimization: map(operator.mul) is faster than generator expression
+        current = sum(map(operator.mul, row, inputs)) + bias[j]
+        current = current if current > 0.0 else 0.0  # ReLU
         nm = beta * mem[j] + current
         if nm >= threshold:
             spikes.append(1)
