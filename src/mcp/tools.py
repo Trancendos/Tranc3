@@ -77,6 +77,20 @@ _FORMAT_METHODS = frozenset({"format", "format_map"})
 #: elsewhere cannot carry the traversal out.
 _DUNDER_FIELD = re.compile(r"\{[^{}]*__[^{}]*\}")
 
+#: Deepest AST this gate will read. Raised by cubic on #1378, against the first
+#: version of this check, which relied on `ast.parse` raising `RecursionError`
+#: on a pathologically nested snippet. That is a CPython 3.11 behaviour, not a
+#: language one: 3.12 reworked the parser's recursion handling, so the same
+#: snippet parses there and the gate returned a clean verdict for input it had
+#: never been shown to handle. This repository supports Python 3.11+, so the
+#: check has to mean the same thing on all of them.
+#:
+#: Bounded explicitly instead, measured with an iterative walk that cannot
+#: itself recurse. 200 is far above anything a tool-call snippet needs and far
+#: below any interpreter's limit, so the verdict no longer depends on which
+#: CPython is reading it.
+_MAX_AST_DEPTH = 200
+
 
 def _reflection_refusal(code: str) -> Optional[str]:
     """Why `code` is refused, or None if it reaches for nothing reflective.
@@ -84,8 +98,14 @@ def _reflection_refusal(code: str) -> Optional[str]:
     Parse-time and syntactic on purpose: it inspects the source, so there is
     no evaluation to be subverted and nothing to time-of-check race.
     `SyntaxError`, `TypeError` and `RecursionError` are left to propagate --
-    unparseable, non-string and pathologically nested input are all the
-    caller's error and are reported as such, never silently allowed through.
+    unparseable and non-string input is the caller's error and is reported as
+    such, never silently allowed through.
+
+    Pathologically nested input is REFUSED rather than left to the parser,
+    because whether the parser raises is a CPython version detail (see
+    `_MAX_AST_DEPTH`) and a gate whose verdict changes with the interpreter is
+    not a gate. The `RecursionError` catch upstream stays as a second layer for
+    the parsers that do raise before this code is reached at all.
 
     This is hardening, not a sandbox boundary. An in-process `exec` sharing an
     interpreter with its host cannot be made safe by filtering source tokens;
@@ -93,7 +113,27 @@ def _reflection_refusal(code: str) -> Optional[str]:
     this does is close every traversal anybody has demonstrated against it,
     and fail loudly rather than silently when it cannot see.
     """
-    for node in ast.walk(ast.parse(code)):
+    tree = ast.parse(code)
+
+    # Explicit stack, not recursion: a depth check that could itself overflow
+    # would reintroduce exactly the version-dependent failure it exists to
+    # remove. Depth is measured on the way down, so an over-deep snippet is
+    # refused before the rest of the walk runs.
+    stack: list[tuple[ast.AST, int]] = [(tree, 0)]
+    deepest = 0
+    while stack:
+        node, depth = stack.pop()
+        if depth > deepest:
+            deepest = depth
+            if deepest > _MAX_AST_DEPTH:
+                return (
+                    f"nested deeper than {_MAX_AST_DEPTH} levels — refused "
+                    "without being read, because a snippet this deep is not a "
+                    "tool call and the parser's own limit is not portable"
+                )
+        stack.extend((child, depth + 1) for child in ast.iter_child_nodes(node))
+
+    for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             if node.attr.startswith(_DUNDER):
                 return f"attribute {node.attr!r} on line {node.lineno}"

@@ -21,7 +21,12 @@ from __future__ import annotations
 
 import asyncio
 
-from src.mcp.tools import _DUNDER, _SAFE_BUILTINS, _reflection_refusal
+from src.mcp.tools import (
+    _DUNDER,
+    _MAX_AST_DEPTH,
+    _SAFE_BUILTINS,
+    _reflection_refusal,
+)
 
 #: Reaches the object graph using the reflection builtins. This is the chain
 #: #1366 identified, and removing those builtins does block it.
@@ -186,20 +191,42 @@ def test_a_non_string_snippet_raises_rather_than_passing_through():
     raise AssertionError("a non-string snippet must not be reported as clean")
 
 
-def test_a_pathologically_nested_snippet_raises_rather_than_passing_through():
-    """Measured reproducer, not a hypothetical.
+def test_a_pathologically_nested_snippet_never_reads_as_clean():
+    """The property, stated so it holds on every CPython this repo supports.
 
-    Deep PARENTHESIS nesting is only a `SyntaxError` on CPython 3.11, so the
-    obvious probe does not exercise this path. A long attribute chain does:
-    `ast.parse("a" + ".b" * 5000)` exhausts the default 1000-frame limit.
+    The first version of this test asserted `RecursionError`, which was
+    measured on 3.11 and is a parser detail, not a language one: 3.12 reworked
+    recursion handling, so the same snippet parses there and the gate returned
+    a CLEAN verdict for input it had never been shown to handle. Raised by
+    cubic on #1378 — and it is the same defect as the rest of this file, in my
+    own test: a check asserting a property measured on one interpreter as if
+    it were universal.
+
+    Fixed in the gate rather than skipped in the test. `_MAX_AST_DEPTH` bounds
+    the depth explicitly, measured with an iterative walk that cannot itself
+    overflow, so the verdict no longer depends on who is reading it. The
+    assertion below is the property that actually matters, and it is satisfied
+    by a refusal on any parser and by an exception on the ones that raise
+    first.
     """
-    try:
-        _reflection_refusal("a" + ".b" * 5000)
-    except RecursionError:
-        return
-    except SyntaxError:  # pragma: no cover - a stricter parser is also fine
-        return
-    raise AssertionError("a snippet the parser cannot read must not read as clean")
+    for depth in (_MAX_AST_DEPTH + 1, 5000):
+        try:
+            refusal = _reflection_refusal("a" + ".b" * depth)
+        except (RecursionError, SyntaxError):
+            continue  # a parser that refuses it first is equally fine
+        assert refusal is not None, f"depth {depth} read as clean"
+        assert str(_MAX_AST_DEPTH) in refusal, refusal
+
+
+def test_the_depth_bound_leaves_ordinary_snippets_alone():
+    """A bound that refused real tool calls would be worse than none."""
+    for snippet in (
+        "x = 1 + 1",
+        "sum(len(s) for s in ['ab', 'cde'])",
+        "def f(a, b):\n    return a + b\n\nf(1, 2)",
+        "a" + ".b" * 20,
+    ):
+        assert _reflection_refusal(snippet) is None, snippet
 
 
 # ---------------------------------------------------------------------------
