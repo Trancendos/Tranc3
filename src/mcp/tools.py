@@ -5,8 +5,10 @@ Registers and dispatches SparkTool instances over JSON-RPC 2.0.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -19,6 +21,152 @@ logger = logging.getLogger(__name__)
 # Restricted built-ins for execute_code sandbox
 # ---------------------------------------------------------------------------
 
+#: Why `_SAFE_BUILTINS` is not on its own a sandbox, measured rather than
+#: assumed. Removing `dir`, `getattr` and `type` from the allowlist below was
+#: proposed as a fix for a sandbox escape (#1366) and does not close it: the
+#: escape needs no builtin at all.
+#:
+#:     ().__class__.__mro__[-1].__subclasses__()
+#:
+#: is pure attribute access on a literal, and it reaches `subprocess.Popen`.
+#: Demonstrated against the shipped allowlist on 2026-10-06: 573 subclasses
+#: traversed, `Popen` among them, which is arbitrary command execution from
+#: inside the sandbox. With those three builtins removed it still returns
+#: `Popen` from 572 subclasses.
+#:
+#: So the allowlist is a second layer, and this is the first: no snippet may
+#: name a dunder. That blocks `__class__`, `__mro__`, `__subclasses__`,
+#: `__globals__`, `__builtins__` and `__import__` in one rule, at parse time,
+#: before anything is compiled or run. `test_mcp_sandbox_escape.py` holds the
+#: probe -- both chains, asserted to be refused -- because a security control
+#: that is never shown to fail is the thing this repository keeps finding.
+_DUNDER = "__"
+
+#: Attributes that reach a live frame and, through it, the host's real
+#: builtins. None of them is a dunder, so the dunder rule alone lets them
+#: through. Raised by sourcery and cubic on #1378 as a generator-frame chain
+#: (`gi_frame.f_back` ... `f_builtins["__import__"]`). Measured: that exact
+#: chain does NOT currently reach the host, because a suspended generator's
+#: `f_back` is None -- but the attribute class is the right thing to refuse
+#: rather than a conclusion to rest on.
+_FRAME_ATTRS = frozenset(
+    {
+        "gi_frame",
+        "cr_frame",
+        "ag_frame",
+        "f_back",
+        "f_builtins",
+        "f_globals",
+        "f_locals",
+        "f_trace",
+        "tb_frame",
+        "tb_next",
+    }
+)
+
+#: `str.format` resolves attribute access written inside the *template*, which
+#: no AST walk over names and attributes can see. Measured on #1378:
+#: `"{0.__class__.__mro__}".format(())` passed the gate and the handler
+#: returned `(<class 'tuple'>, <class 'object'>)` -- the object graph, reached
+#: by a snippet the gate approved. Raised by cubic. Refused outright: a
+#: sandboxed snippet has f-strings, which the AST does see.
+_FORMAT_METHODS = frozenset({"format", "format_map"})
+
+#: A replacement field reaching for a dunder, e.g. `{0.__class__}`. Also
+#: refused inside any string constant, so a template built here and formatted
+#: elsewhere cannot carry the traversal out.
+_DUNDER_FIELD = re.compile(r"\{[^{}]*__[^{}]*\}")
+
+#: Deepest AST this gate will read. Raised by cubic on #1378, against the first
+#: version of this check, which relied on `ast.parse` raising `RecursionError`
+#: on a pathologically nested snippet. That is a CPython 3.11 behaviour, not a
+#: language one: 3.12 reworked the parser's recursion handling, so the same
+#: snippet parses there and the gate returned a clean verdict for input it had
+#: never been shown to handle. This repository supports Python 3.11+, so the
+#: check has to mean the same thing on all of them.
+#:
+#: Bounded explicitly instead, measured with an iterative walk that cannot
+#: itself recurse. 200 is far above anything a tool-call snippet needs and far
+#: below any interpreter's limit, so the verdict no longer depends on which
+#: CPython is reading it.
+_MAX_AST_DEPTH = 200
+
+
+def _reflection_refusal(code: str) -> Optional[str]:
+    """Why `code` is refused, or None if it reaches for nothing reflective.
+
+    Parse-time and syntactic on purpose: it inspects the source, so there is
+    no evaluation to be subverted and nothing to time-of-check race.
+    `SyntaxError`, `TypeError` and `RecursionError` are left to propagate --
+    unparseable and non-string input is the caller's error and is reported as
+    such, never silently allowed through.
+
+    Pathologically nested input is REFUSED rather than left to the parser,
+    because whether the parser raises is a CPython version detail (see
+    `_MAX_AST_DEPTH`) and a gate whose verdict changes with the interpreter is
+    not a gate. The `RecursionError` catch upstream stays as a second layer for
+    the parsers that do raise before this code is reached at all.
+
+    This is hardening, not a sandbox boundary. An in-process `exec` sharing an
+    interpreter with its host cannot be made safe by filtering source tokens;
+    the only real boundary is a separate process with its own privileges. What
+    this does is close every traversal anybody has demonstrated against it,
+    and fail loudly rather than silently when it cannot see.
+    """
+    tree = ast.parse(code)
+
+    # Explicit stack, not recursion: a depth check that could itself overflow
+    # would reintroduce exactly the version-dependent failure it exists to
+    # remove. Depth is measured on the way down, so an over-deep snippet is
+    # refused before the rest of the walk runs.
+    stack: list[tuple[ast.AST, int]] = [(tree, 0)]
+    deepest = 0
+    while stack:
+        node, depth = stack.pop()
+        if depth > deepest:
+            deepest = depth
+            if deepest > _MAX_AST_DEPTH:
+                return (
+                    f"nested deeper than {_MAX_AST_DEPTH} levels, so it was not "
+                    "read at all. A snippet this deep is not a tool call, and "
+                    "the parser's own limit is not portable across CPython "
+                    "versions"
+                )
+        stack.extend((child, depth + 1) for child in ast.iter_child_nodes(node))
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute):
+            if node.attr.startswith(_DUNDER):
+                return (
+                    f"attribute {node.attr!r} on line {node.lineno} — dunder "
+                    "access reaches the object graph and escapes the sandbox"
+                )
+            if node.attr in _FRAME_ATTRS:
+                return (
+                    f"frame attribute {node.attr!r} on line {node.lineno} — a live "
+                    "frame leads to the host's own builtins"
+                )
+            if node.attr in _FORMAT_METHODS:
+                return (
+                    f"{node.attr}() on line {node.lineno} — its template can "
+                    "name attributes this check cannot see; use an f-string"
+                )
+        elif isinstance(node, ast.Name) and node.id.startswith(_DUNDER):
+            return (
+                f"name {node.id!r} on line {node.lineno} — dunder access reaches "
+                "the object graph and escapes the sandbox"
+            )
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            hit = _DUNDER_FIELD.search(node.value)
+            if hit:
+                return (
+                    f"replacement field {hit.group(0)!r} on line {node.lineno} "
+                    "names a dunder, which str.format resolves at runtime where "
+                    "this check cannot see it"
+                )
+    return None
+
+
 _SAFE_BUILTINS = {
     k: __builtins__[k] if isinstance(__builtins__, dict) else getattr(__builtins__, k, None)
     for k in (
@@ -29,14 +177,12 @@ _SAFE_BUILTINS = {
         "bytes",
         "chr",
         "dict",
-        "dir",
         "divmod",
         "enumerate",
         "filter",
         "float",
         "format",
         "frozenset",
-        "getattr",
         "hasattr",
         "hash",
         "hex",
@@ -64,7 +210,6 @@ _SAFE_BUILTINS = {
         "str",
         "sum",
         "tuple",
-        "type",
         "zip",
     )
     if (isinstance(__builtins__, dict) and k in __builtins__)
@@ -941,6 +1086,29 @@ class SparkToolRegistry:
             }
 
         code = params["code"]
+
+        # Refuse before compiling: the allowlist below cannot stop
+        # `().__class__.__mro__[-1].__subclasses__()`, which uses no builtin.
+        try:
+            refusal = _reflection_refusal(code)
+        except (SyntaxError, TypeError, RecursionError) as exc:
+            # TypeError: a non-string `code` (`None`, an int). RecursionError:
+            # measured, not assumed -- `ast.parse("a" + ".b" * 5000)` raises it
+            # on CPython 3.11 at the default 1000-frame limit, where deep
+            # parenthesis nesting is only a SyntaxError. Both are caller errors
+            # and both escaped this handler as generic failures until #1378.
+            return {"error": f"could not parse code: {exc!r}", "code": -32602}
+        if refusal is not None:
+            # The reason comes from the refusal itself. This wrapper used to
+            # append "Dunder access reaches the object graph and escapes the
+            # sandbox" to every refusal, which was true when a dunder was the
+            # only one. Three more kinds were added in this PR -- depth, frame
+            # attributes, format templates -- and each was then reported to the
+            # caller as a dunder hit it never was. Raised by cubic on #1378,
+            # and it is this PR's own subject: a message stating a conclusion
+            # nobody measured.
+            return {"error": f"refused: {refusal}", "code": -32602}
+
         timeout_seconds = int(params.get("timeout_seconds", 30))
         context = params.get("context", {})
 
