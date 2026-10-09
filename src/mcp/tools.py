@@ -8,6 +8,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -41,20 +42,76 @@ logger = logging.getLogger(__name__)
 #: that is never shown to fail is the thing this repository keeps finding.
 _DUNDER = "__"
 
+#: Attributes that reach a live frame and, through it, the host's real
+#: builtins. None of them is a dunder, so the dunder rule alone lets them
+#: through. Raised by sourcery and cubic on #1378 as a generator-frame chain
+#: (`gi_frame.f_back` ... `f_builtins["__import__"]`). Measured: that exact
+#: chain does NOT currently reach the host, because a suspended generator's
+#: `f_back` is None -- but the attribute class is the right thing to refuse
+#: rather than a conclusion to rest on.
+_FRAME_ATTRS = frozenset(
+    {
+        "gi_frame",
+        "cr_frame",
+        "ag_frame",
+        "f_back",
+        "f_builtins",
+        "f_globals",
+        "f_locals",
+        "f_trace",
+        "tb_frame",
+        "tb_next",
+    }
+)
+
+#: `str.format` resolves attribute access written inside the *template*, which
+#: no AST walk over names and attributes can see. Measured on #1378:
+#: `"{0.__class__.__mro__}".format(())` passed the gate and the handler
+#: returned `(<class 'tuple'>, <class 'object'>)` -- the object graph, reached
+#: by a snippet the gate approved. Raised by cubic. Refused outright: a
+#: sandboxed snippet has f-strings, which the AST does see.
+_FORMAT_METHODS = frozenset({"format", "format_map"})
+
+#: A replacement field reaching for a dunder, e.g. `{0.__class__}`. Also
+#: refused inside any string constant, so a template built here and formatted
+#: elsewhere cannot carry the traversal out.
+_DUNDER_FIELD = re.compile(r"\{[^{}]*__[^{}]*\}")
+
 
 def _reflection_refusal(code: str) -> Optional[str]:
-    """Why `code` is refused, or None if it names no dunder.
+    """Why `code` is refused, or None if it reaches for nothing reflective.
 
-    Parse-time and syntactic on purpose: it inspects names and attributes, so
-    there is no evaluation to be subverted and nothing to time-of-check race.
-    `SyntaxError` is left to propagate -- unparseable code is the caller's
-    error and is reported as one, not silently allowed through.
+    Parse-time and syntactic on purpose: it inspects the source, so there is
+    no evaluation to be subverted and nothing to time-of-check race.
+    `SyntaxError`, `TypeError` and `RecursionError` are left to propagate --
+    unparseable, non-string and pathologically nested input are all the
+    caller's error and are reported as such, never silently allowed through.
+
+    This is hardening, not a sandbox boundary. An in-process `exec` sharing an
+    interpreter with its host cannot be made safe by filtering source tokens;
+    the only real boundary is a separate process with its own privileges. What
+    this does is close every traversal anybody has demonstrated against it,
+    and fail loudly rather than silently when it cannot see.
     """
     for node in ast.walk(ast.parse(code)):
-        if isinstance(node, ast.Attribute) and node.attr.startswith(_DUNDER):
-            return f"attribute {node.attr!r} on line {node.lineno}"
-        if isinstance(node, ast.Name) and node.id.startswith(_DUNDER):
+        if isinstance(node, ast.Attribute):
+            if node.attr.startswith(_DUNDER):
+                return f"attribute {node.attr!r} on line {node.lineno}"
+            if node.attr in _FRAME_ATTRS:
+                return f"frame attribute {node.attr!r} on line {node.lineno}"
+            if node.attr in _FORMAT_METHODS:
+                return (
+                    f"{node.attr}() on line {node.lineno} — its template can "
+                    "name attributes this check cannot see; use an f-string"
+                )
+        elif isinstance(node, ast.Name) and node.id.startswith(_DUNDER):
             return f"name {node.id!r} on line {node.lineno}"
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            hit = _DUNDER_FIELD.search(node.value)
+            if hit:
+                return (
+                    f"replacement field {hit.group(0)!r} on line {node.lineno} reaches for a dunder"
+                )
     return None
 
 
@@ -982,8 +1039,13 @@ class SparkToolRegistry:
         # `().__class__.__mro__[-1].__subclasses__()`, which uses no builtin.
         try:
             refusal = _reflection_refusal(code)
-        except SyntaxError as exc:
-            return {"error": f"could not parse code: {exc}", "code": -32602}
+        except (SyntaxError, TypeError, RecursionError) as exc:
+            # TypeError: a non-string `code` (`None`, an int). RecursionError:
+            # measured, not assumed -- `ast.parse("a" + ".b" * 5000)` raises it
+            # on CPython 3.11 at the default 1000-frame limit, where deep
+            # parenthesis nesting is only a SyntaxError. Both are caller errors
+            # and both escaped this handler as generic failures until #1378.
+            return {"error": f"could not parse code: {exc!r}", "code": -32602}
         if refusal is not None:
             return {
                 "error": (

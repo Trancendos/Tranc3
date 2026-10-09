@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from collections import OrderedDict
@@ -179,6 +180,35 @@ _bus = _SSEBus()
 # ---------------------------------------------------------------------------
 
 
+#: Argument keys a caller may not set. `execute_code` reads `__admin__` to decide
+#: whether to run arbitrary Python, and `tool_params` comes straight off the wire
+#: from the JSON-RPC request's `arguments` -- so until #1378 any caller who could
+#: reach `/mcp/rpc` could grant themselves that by writing `"__admin__": true`.
+#: Measured, not inferred: `_method_tools_call` with that one key returned
+#: `{"return_value": 42}` for `a = 6*7`, and the same call without it was refused
+#: as "restricted to admin callers". An authorisation check whose only input is
+#: the claim it is meant to check is the defect class this repository keeps
+#: finding -- a control reporting a result it never measured.
+#:
+#: The dunder shape is reserved for this server's own channel, so the whole shape
+#: is stripped rather than the one known key: a later private argument must not
+#: become forgeable by being added.
+_RESERVED_ARG = re.compile(r"^__.*__$")
+
+
+def _caller_is_admin(caller: Optional[Dict[str, Any]]) -> bool:
+    """Whether the AUTHENTICATED caller holds admin, per `role == "admin"`.
+
+    The platform's existing convention (`src/auth/ownership.py`, `src/auth/rbac.py`).
+    `None` means no authenticated caller reached here -- `handle_rpc` is called
+    from `api_enhanced.py` outside the FastAPI dependency chain -- and that is
+    never admin.
+    """
+    if not isinstance(caller, dict):
+        return False
+    return (caller.get("role") or "").strip().lower() == "admin"
+
+
 def _ok(request_id: Any, result: Any) -> Dict[str, Any]:
     return {"jsonrpc": JSONRPC_VERSION, "id": request_id, "result": result}
 
@@ -195,7 +225,9 @@ def _err(request_id: Any, code: int, message: str, data: Any = None) -> Dict[str
 # ---------------------------------------------------------------------------
 
 
-async def _method_initialize(params: Optional[Dict[str, Any]], request_id: Any) -> Dict[str, Any]:
+async def _method_initialize(
+    params: Optional[Dict[str, Any]], request_id: Any, caller: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     client_info = (params or {}).get("clientInfo", {})
     logger.info(
         "mcp.initialize client=%s version=%s",
@@ -226,17 +258,37 @@ async def _method_initialize(params: Optional[Dict[str, Any]], request_id: Any) 
     )
 
 
-async def _method_tools_list(params: Optional[Dict[str, Any]], request_id: Any) -> Dict[str, Any]:
+async def _method_tools_list(
+    params: Optional[Dict[str, Any]], request_id: Any, caller: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     tools = registry.list_tools()
     return _ok(request_id, {"tools": tools})
 
 
-async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) -> Dict[str, Any]:
+async def _method_tools_call(
+    params: Optional[Dict[str, Any]], request_id: Any, caller: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     if not params:
         return _err(request_id, ERR_INVALID_PARAMS, "params required for tools/call")
 
     tool_name: str = params.get("name", "")
-    tool_params: Dict[str, Any] = params.get("arguments", params.get("params", {}))
+    supplied = params.get("arguments", params.get("params", {}))
+    tool_params: Dict[str, Any] = dict(supplied) if isinstance(supplied, dict) else {}
+
+    # Privilege is decided here, from the authenticated caller, and never read
+    # out of the request body. Strip the reserved shape first so a forged key
+    # cannot survive, then set what the server actually knows.
+    forged = [key for key in tool_params if _RESERVED_ARG.match(key)]
+    for key in forged:
+        del tool_params[key]
+    if forged:
+        logger.warning(
+            "mcp.tools_call stripped reserved arguments tool=%s keys=%s",
+            sanitize_for_log(tool_name),  # codeql[py/log-injection]
+            sanitize_for_log(",".join(sorted(forged))),  # codeql[py/log-injection]
+        )
+    if _caller_is_admin(caller):
+        tool_params["__admin__"] = True
 
     tool = registry.get(tool_name)
     if tool is None:
@@ -262,11 +314,17 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
             },
         )
 
+        # A handler that returned an error reported `isError: False` until
+        # #1378, so an MCP client reading that field saw a refused
+        # `execute_code` call as a successful one. Derived from the result now.
+        # `is not None` rather than key presence: `execute_code`'s SUCCESS
+        # payload carries `"error": null`, so a presence test reported every
+        # successful run as an error. The probe is what caught that.
         return _ok(
             request_id,
             {
                 "content": [{"type": "text", "text": json.dumps(result)}],
-                "isError": False,
+                "isError": isinstance(result, dict) and result.get("error") is not None,
                 "_meta": {"elapsed_ms": round(elapsed_ms, 2)},
             },
         )
@@ -285,7 +343,7 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
 
 
 async def _method_resources_list(
-    params: Optional[Dict[str, Any]], request_id: Any
+    params: Optional[Dict[str, Any]], request_id: Any, caller: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     resources: List[Dict[str, Any]] = [
         {
@@ -340,7 +398,9 @@ async def _method_resources_list(
     return _ok(request_id, {"resources": resources})
 
 
-async def _method_ping(params: Optional[Dict[str, Any]], request_id: Any) -> Dict[str, Any]:
+async def _method_ping(
+    params: Optional[Dict[str, Any]], request_id: Any, caller: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     return _ok(request_id, {"pong": True, "ts": time.time(), "server": SERVER_NAME})
 
 
@@ -439,7 +499,7 @@ async def rpc_endpoint(
         )
 
     try:
-        result = await handler(params, req_id)
+        result = await handler(params, req_id, current_user)
         return JSONResponse(content=result, status_code=200)
     except Exception as exc:
         logger.exception(
