@@ -656,7 +656,12 @@ def _receiver_path(node: ast.expr) -> str | None:
 
 
 def _algorithm_of(node: ast.Call) -> tuple[str, int]:
-    """Shape of a directly-imported `decode(...)` call's algorithms= argument."""
+    """Shape of a `decode(...)` call's `algorithms=` argument.
+
+    Used for both call spellings -- a directly-imported `decode(...)` and a
+    qualified `jwt.decode(...)` / `jose.jwt.decode(...)` -- so the two cannot
+    disagree about what an acceptable allowlist looks like.
+    """
     keyword = next((k for k in node.keywords if k.arg == "algorithms"), None)
     if keyword is None:
         return "no algorithms= argument at all", 0
@@ -670,10 +675,20 @@ def _algorithm_of(node: ast.Call) -> tuple[str, int]:
 def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
     """(line, shape, count) for every JWT decode call in one module.
 
-    `shape` is "pinned" when exactly one algorithm is named as a literal list,
-    and otherwise says what is wrong: an absent `algorithms=` (python-jose then
-    accepts whatever the token asks for), a non-literal the AST cannot read, or
-    a list naming more than one.
+    Two shapes are admissible, and `check_sec_020` accepts exactly these:
+
+    - "literal"   -- one algorithm, written as a string literal in the list
+    - "reference" -- one algorithm, a module-level name the AST can see
+
+    Anything else is a refusal naming what is wrong: an absent `algorithms=`
+    (python-jose then accepts whatever the token asks for), a non-literal list
+    the AST cannot read, a list naming more than one, or a single element that
+    is computed -- a token-derived element is the algorithm-confusion bug the
+    allowlist exists to prevent, so it is rejected rather than counted.
+
+    There is no "pinned" shape. It was replaced by the literal/reference split
+    because "exactly one element" is not the property that matters: one
+    token-derived element pins nothing.
     """
     bound = _jwt_bound_names(tree)
     sites: list[tuple[int, str, int]] = []
@@ -694,15 +709,11 @@ def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
         # any qualified spelling whose segments name a JWT module.
         if not (segments & set(bound) or segments & {"jwt", "jose"}):
             continue
-        keyword = next((k for k in node.keywords if k.arg == "algorithms"), None)
-        if keyword is None:
-            sites.append((node.lineno, "no algorithms= argument at all", 0))
-        elif not isinstance(keyword.value, ast.List):
-            sites.append((node.lineno, "algorithms= is not a literal list", -1))
-        elif len(keyword.value.elts) != 1:
-            sites.append((node.lineno, "algorithms= names more than one", len(keyword.value.elts)))
-        else:
-            sites.append((node.lineno, *_algorithm_shape(keyword.value.elts[0])))
+        # Same analysis as the direct-import branch above, so the same function.
+        # It was a verbatim second copy -- including the three message strings
+        # -- until review pointed out that two copies of an allowlist check can
+        # drift, which is the one thing this checker must not do.
+        sites.append((node.lineno, *_algorithm_of(node)))
     return sites
 
 
