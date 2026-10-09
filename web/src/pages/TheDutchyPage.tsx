@@ -229,10 +229,10 @@ export default function TheDutchyPage() {
                           href={art.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="hover:text-indigo-300 transition-colors flex items-start gap-1 group"
+                          className="hover:text-indigo-300 transition-colors flex items-start gap-1 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm"
                         >
                           <span className="line-clamp-2">{art.title}</span>
-                          <ExternalLink size={11} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+                          <ExternalLink size={11} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" aria-hidden="true" />
                         </a>
                       ) : (
                         <span className="line-clamp-2">{art.title}</span>
