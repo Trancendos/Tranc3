@@ -155,6 +155,9 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
     else:
         import operator
 
+        if len(a) != len(b):
+            return 0.0
+
         # Performance optimization: Uses map(operator.mul) which executes in C,
         # significantly faster than a pure Python loop.
         dot = sum(map(operator.mul, a, b))
