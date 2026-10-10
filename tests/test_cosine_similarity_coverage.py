@@ -1,6 +1,6 @@
-import pytest
-from src.nanoservices.vector_plan_cache.vector_plan_cache import InMemoryVectorStore
 import src.neural.meta_learner as ml
+from src.nanoservices.vector_plan_cache.vector_plan_cache import InMemoryVectorStore
+
 
 def test_vector_plan_cache_cosine_similarity():
     # Test equal vectors
