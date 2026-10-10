@@ -154,6 +154,7 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
         return dot / (norm_a * norm_b)
     else:
         import operator
+
         # Performance optimization: Uses map(operator.mul) which executes in C,
         # significantly faster than a pure Python loop.
         dot = sum(map(operator.mul, a, b))
