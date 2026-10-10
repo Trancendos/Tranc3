@@ -153,14 +153,16 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
             return 0.0
         return dot / (norm_a * norm_b)
     else:
-        # Performance optimization: Single pass loop avoids generator overhead
-        dot = 0.0
-        norm_a_sq = 0.0
-        norm_b_sq = 0.0
-        for x, y in zip(a, b, strict=False):
-            dot += x * y
-            norm_a_sq += x * x
-            norm_b_sq += y * y
+        import operator
+
+        if len(a) != len(b):
+            return 0.0
+
+        # Performance optimization: Uses map(operator.mul) which executes in C,
+        # significantly faster than a pure Python loop.
+        dot = sum(map(operator.mul, a, b))
+        norm_a_sq = sum(map(operator.mul, a, a))
+        norm_b_sq = sum(map(operator.mul, b, b))
         if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
         return dot / math.sqrt(norm_a_sq * norm_b_sq)
