@@ -9,10 +9,14 @@
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260930.2",
     "typescript": "7.0.2",
-    "wrangler": "4.145.0"
+    "wrangler": "^4.149.0"
   },
   "overrides": {
     "esbuild": "0.28.2",
     "ws": "8.21.3"
+  },
+  "dependencies": {
+    "miniflare": "^5.20261006.1-alpha",
+    "sharp": "^0.35.5"
   }
 }

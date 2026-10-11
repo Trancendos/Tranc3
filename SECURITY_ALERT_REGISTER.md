@@ -1720,3 +1720,129 @@ python scripts/pre_deploy_quality_gate.py
 
 **Reasoning:**
 The python-jose library has an open CVE-2026-85394. The project is effectively unmaintained and there is no patched version available beyond `3.5.0` (which we are currently pinned to). Since we rely on it for JWT processing, we must suppress this alert until a fork or upstream patch is available, or until we migrate to an alternative library like `PyJWT` or `jwcrypto`.
+
+### SEC-021 - miniflare unknown
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | unknown |
+| Target | `cloudflare/infinity-void: miniflare unknown` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing unknown vulnerabilities from miniflare.
+
+### SEC-022 - sharp GHSA-wq5f-xc86-pv6w
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GHSA-wq5f-xc86-pv6w |
+| Target | `cloudflare/infinity-void: sharp GHSA-wq5f-xc86-pv6w` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing sharp GHSA-wq5f-xc86-pv6w.
+
+### SEC-023 - wrangler unknown
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | unknown |
+| Target | `cloudflare/infinity-void: wrangler unknown` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing wrangler unknown.
+
+### SEC-024 - source-map-js GHSA-68fv-2mgg-jv7q
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GHSA-68fv-2mgg-jv7q |
+| Target | `.: source-map-js GHSA-68fv-2mgg-jv7q` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing source-map-js GHSA-68fv-2mgg-jv7q.
+
+### SEC-025 - golang.org/x/net GO-2026-6603
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GO-2026-6603 |
+| Target | `aeonmind/go/go.mod: golang.org/x/net GO-2026-6603` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing golang.org/x/net GO-2026-6603.
+
+### SEC-026 - golang.org/x/net GO-2026-6610
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GO-2026-6610 |
+| Target | `aeonmind/go/go.mod: golang.org/x/net GO-2026-6610` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing golang.org/x/net GO-2026-6610.
+
+### SEC-027 - golang.org/x/net GO-2026-6611
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GO-2026-6611 |
+| Target | `aeonmind/go/go.mod: golang.org/x/net GO-2026-6611` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing golang.org/x/net GO-2026-6611.
+
+### SEC-028 - golang.org/x/net GO-2026-6612
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GO-2026-6612 |
+| Target | `aeonmind/go/go.mod: golang.org/x/net GO-2026-6612` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing golang.org/x/net GO-2026-6612.
+
+### SEC-029 - golang.org/x/net GO-2026-6617
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | GO-2026-6617 |
+| Target | `aeonmind/go/go.mod: golang.org/x/net GO-2026-6617` |
+| Scanner | `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+Suppressing golang.org/x/net GO-2026-6617.
