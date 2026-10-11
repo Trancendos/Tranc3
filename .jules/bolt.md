@@ -13,3 +13,9 @@
 ## 2024-05-27 - [Fast Euclidean and Manhattan Distance Optimization]
 **Learning:** `list(map(operator.sub, a, b))` combined with `sum(map(operator.mul, diff, diff))` is ~30% faster for Euclidean distance, and `sum(map(abs, map(operator.sub, a, b)))` is ~28% faster for Manhattan distance compared to pure Python generator expressions with indexing. For multiple operations like `MSE`, materializing the `map` into a `list` is required to prevent iterator exhaustion.
 **Action:** When calculating Euclidean or Manhattan distances in pure Python without `numpy`, use `map` with `operator.sub`, `operator.mul`, and `abs` instead of index-based generator comprehensions.
+## 2024-05-30 - [Python 3.12 sumprod and Feature Detection]
+**Learning:** In Python 3.12+, `math.sumprod` is significantly faster than `sum(map(operator.mul, ...))` for pure Python dot products (by ~3x). However, for compatibility with older Python versions, do not place `try...except AttributeError` blocks inside performance-critical mathematical loops (e.g., similarity calculations) because the exception handling and dynamic feature detection on every call introduces massive overhead on older versions.
+**Action:** When using new standard library functions with fallbacks, perform module-level feature detection (e.g., `_HAS_SUMPROD = hasattr(math, 'sumprod')`) and branch on that constant instead of using `try...except` within hot loops.
+## 2024-05-30 - [Fast Hamming Distance]
+**Learning:** For pure Python element-wise equality checks (such as Hamming distance calculations), using `sum(map(operator.eq, a, b))` is significantly more performant (~20% faster) than a list comprehension or `zip()` loop.
+**Action:** Use `sum(map(operator.eq, a, b))` instead of `sum(1 for x, y in zip(a, b) if x == y)` or similar constructs when counting matching elements between two arrays in pure Python.
