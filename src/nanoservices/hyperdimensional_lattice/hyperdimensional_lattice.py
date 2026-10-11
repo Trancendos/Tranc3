@@ -26,9 +26,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Feature detection for math.sumprod (Python 3.12+)
-_HAS_SUMPROD = hasattr(math, "sumprod")
-
 
 # ─── Enums ──────────────────────────────────────────────────────────────
 
@@ -338,34 +335,22 @@ class HyperdimensionalVectorOps:
             return 0.0
 
         if metric == LatticeTopology.COSINE:
-            if _HAS_SUMPROD:
-                # Python 3.12+ optimization: math.sumprod is ~3x faster than sum(map(operator.mul))
-                dot = math.sumprod(a.data, b.data)  # type: ignore[attr-defined]
-                mag_a = math.sqrt(math.sumprod(a.data, a.data))  # type: ignore[attr-defined]
-                mag_b = math.sqrt(math.sumprod(b.data, b.data))  # type: ignore[attr-defined]
-            else:
-                # Python 3.11 fallback
-                # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
-                dot = sum(map(operator.mul, a.data, b.data))
-                mag_a = math.sqrt(sum(map(operator.mul, a.data, a.data)))
-                mag_b = math.sqrt(sum(map(operator.mul, b.data, b.data)))
-
+            # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
+            dot = sum(map(operator.mul, a.data, b.data))
+            mag_a = math.sqrt(sum(map(operator.mul, a.data, a.data)))
+            mag_b = math.sqrt(sum(map(operator.mul, b.data, b.data)))
             if mag_a == 0 or mag_b == 0:
                 return 0.0
             return dot / (mag_a * mag_b)
 
         elif metric == LatticeTopology.HAMMING:
-            # Optimization: map(operator.eq) is ~20% faster than list comp or zip
-            matches = sum(map(operator.eq, a.data, b.data))
+            matches = sum(1 for i in range(len(a.data)) if a.data[i] == b.data[i])
             return matches / len(a.data)
 
         elif metric == LatticeTopology.EUCLIDEAN:
+            # Optimization: map(operator.sub) combined with map(operator.mul) for MSE is ~30% faster
             diff = list(map(operator.sub, a.data, b.data))
-            if _HAS_SUMPROD:
-                dist = math.sqrt(math.sumprod(diff, diff))  # type: ignore[attr-defined]
-            else:
-                # Optimization: map(operator.sub) combined with map(operator.mul) for MSE is ~30% faster
-                dist = math.sqrt(sum(map(operator.mul, diff, diff)))
+            dist = math.sqrt(sum(map(operator.mul, diff, diff)))
             max_dist = math.sqrt(len(a.data)) * 2
             return max(0.0, 1.0 - dist / max_dist)
 

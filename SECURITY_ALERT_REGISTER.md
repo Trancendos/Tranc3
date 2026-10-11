@@ -1706,3 +1706,17 @@ python scripts/pre_deploy_quality_gate.py
 - Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
   --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
   Forgejo UI.
+
+### SEC-020 - python-jose CVE-2026-85394
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | CVE-2026-85394 |
+| Target | `requirements.txt: python-jose CVE-2026-85394` |
+| Scanner | `pip-audit` / `vulnerability_census.py` |
+| Date | 2026-10-11 |
+| Next review | 2026-11-11 |
+
+**Reasoning:**
+The python-jose library has an open CVE-2026-85394. The project is effectively unmaintained and there is no patched version available beyond `3.5.0` (which we are currently pinned to). Since we rely on it for JWT processing, we must suppress this alert until a fork or upstream patch is available, or until we migrate to an alternative library like `PyJWT` or `jwcrypto`.
