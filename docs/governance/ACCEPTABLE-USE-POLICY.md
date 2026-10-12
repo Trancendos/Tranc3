@@ -101,9 +101,9 @@ Any router gating Location-scoped functionality should depend on
 ```python
 from src.access.routes import require_location_subscription
 
+
 @router.post("/some-location-scoped-endpoint")
-def do_thing(current_user: dict = Depends(require_location_subscription("The Lab"))):
-    ...
+def do_thing(current_user: dict = Depends(require_location_subscription("The Lab"))): ...
 ```
 
 Unsubscribed non-admin callers get `402` (used here for "consent required," not billing) with a
