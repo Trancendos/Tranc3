@@ -848,6 +848,10 @@ def _imported_literal(name: str, tree: ast.AST, source: Path | None) -> bool | N
     chasing a chain of re-exports is dataflow analysis by another name, and the
     bound has to stay somewhere a reader can check.
 
+    The module path is resolved as written, dotted first: a bare basename is
+    only tried when the module name HAS no dots, so a sibling file cannot
+    stand in for a package module of the same leaf name.
+
     Returns True (resolved to a literal), False (resolved to something else) or
     None (could not resolve: no path, module not found, name not bound there).
     None is NOT "fine" -- the caller refuses it, per `IMMUNE-SYSTEM.md`'s rule
@@ -864,13 +868,25 @@ def _imported_literal(name: str, tree: ast.AST, source: Path | None) -> bool | N
     if module is None:
         return None
 
-    # Sibling first (the worker layout), then the repository root.
-    leaf = module.split(".")[-1]
+    # The DOTTED path first, and the bare-basename shortcut only for a module
+    # with no dots at all. It used to try the basename first, which resolved
+    # `from pkg.config import ALG` against any sibling `config.py` -- a
+    # different module, for a different binding. Raised by cubic on #1376 and
+    # reproduced: the sibling bound `ALG = "HS256"`, the real `pkg/config.py`
+    # bound it to `get_unverified_header(t)["alg"]`, and the site was accepted
+    # as `imported`. The checker had measured the wrong file and reported the
+    # answer as if it were the right one.
+    #
+    # `workers/infinity-auth/service.py` does `from config import
+    # JWT_ALGORITHM` -- no dot -- so the shortcut it needs is kept, and only
+    # for the case where the basename IS the module.
+    parts = module.split(".")
     candidates = [
-        source.parent / f"{leaf}.py",
-        source.parent / Path(*module.split(".")).with_suffix(".py"),
-        ROOT / Path(*module.split(".")).with_suffix(".py"),
+        source.parent / Path(*parts).with_suffix(".py"),
+        ROOT / Path(*parts).with_suffix(".py"),
     ]
+    if len(parts) == 1:
+        candidates.append(source.parent / f"{parts[0]}.py")
     for candidate in candidates:
         if not candidate.is_file():
             continue

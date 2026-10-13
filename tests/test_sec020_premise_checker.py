@@ -528,3 +528,48 @@ def test_a_chained_direct_decoder_resolves_however_deep():
 def test_an_unrelated_alias_chain_is_not_claimed_as_a_decode_site():
     """The fixed point must not widen what counts as a JWT module."""
     assert _shapes("import os\na = os.path\nb = a\nb.join(x)\n") == []
+
+
+def test_a_sibling_file_cannot_stand_in_for_a_package_module(tmp_path):
+    """REGRESSION: `from pkg.config import ALG` resolved against any `config.py`.
+
+    The basename shortcut was tried FIRST, so a sibling file for a different
+    binding answered for the real module. Raised by cubic on #1376 and
+    reproduced -- the sibling bound `"HS256"`, the real `pkg/config.py` bound
+    `get_unverified_header(t)["alg"]`, and the site came back `imported`:
+    the checker measured the wrong file and reported the answer as if it were
+    the right one.
+    """
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "config.py").write_text('ALG = "HS256"\n', encoding="utf-8")
+    (tmp_path / "pkg" / "config.py").write_text(
+        'import jwt\nALG = jwt.get_unverified_header(t)["alg"]\n', encoding="utf-8"
+    )
+    service = tmp_path / "service.py"
+    service.write_text(
+        "from pkg.config import ALG\nimport jwt\njwt.decode(t, k, algorithms=[ALG])\n",
+        encoding="utf-8",
+    )
+    shape = cdp._jwt_decode_sites(ast.parse(service.read_text(encoding="utf-8")), service)[0][1]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+    assert "does not bind it to a string literal" in shape, shape
+
+
+def test_an_undotted_import_still_resolves_against_its_sibling(tmp_path):
+    """The shortcut the estate actually needs is kept, bounded to undotted names.
+
+    `workers/infinity-auth/service.py` does `from config import JWT_ALGORITHM`
+    against a sibling `config.py`. Refusing that would be a false alarm, so the
+    basename candidate survives for a module name with no dots -- the case
+    where the basename IS the module.
+    """
+    (tmp_path / "config.py").write_text('JWT_ALGORITHM = "HS256"\n', encoding="utf-8")
+    service = tmp_path / "service.py"
+    service.write_text(
+        "from config import JWT_ALGORITHM\nimport jwt\n"
+        "jwt.decode(t, k, algorithms=[JWT_ALGORITHM])\n",
+        encoding="utf-8",
+    )
+    assert cdp._jwt_decode_sites(ast.parse(service.read_text(encoding="utf-8")), service) == [
+        (3, "imported", 1)
+    ]

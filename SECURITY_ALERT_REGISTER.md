@@ -1597,7 +1597,14 @@ defect in its first version — raised by sourcery, codex, coderabbit and codean
   the **default** is verified, the call sites are not. Four of the twelve sites are this.
 * **imported** — `from config import JWT_ALGORITHM` where that module binds it to a
   string literal. **One hop only.** `workers/infinity-auth/service.py:180` is exactly
-  this, against a sibling `config.py` that sets `"HS256"`.
+  this, against a sibling `config.py` that sets `"HS256"`. The module path is resolved
+  **as written, dotted first**: a bare basename is only tried for a module name with no
+  dots. It used to try the basename first, so `from pkg.config import ALG` resolved
+  against any sibling `config.py` — a different module, for a different binding. Raised
+  by cubic on #1376 and reproduced: the sibling bound `"HS256"`, the real
+  `pkg/config.py` bound `get_unverified_header(t)["alg"]`, and the site was accepted.
+  The checker had measured the wrong file and reported the answer as if it were the
+  right one.
 
 An earlier version of this entry described a single **by reference** shape covering "a
 bare name or dotted attribute resolving to a module constant or a parameter default".
