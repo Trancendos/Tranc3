@@ -47,6 +47,28 @@
 
 name: Supply Chain Watch
 
+# WHY A DYNAMIC RUN NAME
+#
+# Two independent schedules share one workflow, so a run's conclusion is the
+# aggregate of whichever jobs that schedule enabled -- and the Monday run
+# SKIPS the vulnerability census entirely. Measured on 2026-10-13, two runs on
+# the same commit 43 minutes apart:
+#
+#   2026-10-12T13:24:54Z  success  <- obsolescence only; census skipped
+#   2026-10-12T12:41:11Z  failure  <- the census, failing as it has since #969
+#
+# Read down the runs list, the newest entry says "Supply Chain Watch: success".
+# It is a true statement about that run and a false impression of the control:
+# the census had failed every daily run for weeks. A green that means "the job
+# did not run" is this estate's most-repeated defect -- a result reported by
+# something that never measured it -- so the run's NAME now says which census
+# it exercised, and no reader can take one for the other.
+run-name: >-
+  Supply Chain Watch —
+  ${{ (github.event.schedule == '30 5 * * 1' && 'obsolescence only (weekly)')
+   || (github.event_name == 'workflow_dispatch' && 'every census (manual)')
+   || 'vulnerability + immunity (daily)' }}
+
 on:
   schedule:
     - cron: '0 5 * * *'    # Daily 05:00 UTC — vulnerability census
