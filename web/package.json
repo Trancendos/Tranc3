@@ -15,6 +15,7 @@
         "posthog-js": "^1.434.12",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
+        "source-map-js": "1.2.2",
         "zustand": "^5.0.15"
     },
     "devDependencies": {

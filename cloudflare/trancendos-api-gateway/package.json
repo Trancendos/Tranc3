@@ -7,10 +7,13 @@
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "4.145.0"
+    "wrangler": "^4.150.0"
   },
   "overrides": {
     "esbuild": "0.28.2",
     "ws": "8.21.3"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^5.20261013.1"
   }
 }

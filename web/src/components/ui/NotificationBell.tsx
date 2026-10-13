@@ -99,7 +99,7 @@ export default function NotificationBell() {
               {connected && <span className="ux-nano-dot ux-nano-dot--ok" aria-label="Live connected" />}
             </div>
             {totalUnread > 0 && (
-              <button onClick={handleMarkAllRead} className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
+              <button onClick={handleMarkAllRead} className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1 -mr-1">
                 Mark all read
               </button>
             )}
