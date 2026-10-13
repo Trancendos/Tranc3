@@ -479,11 +479,15 @@ def test_the_estates_own_twelve_sites_keep_their_verdicts():
     """
     from collections import Counter
 
+    # `cdp._walk` is the checker's OWN walker, with its own ten-entry skip
+    # list. This test used `rglob` with three exclusions, so it counted a file
+    # set the checker never looks at -- a local `venv/`, `build/` or
+    # `site-packages/` would make the expected count fail while the checker was
+    # perfectly correct. A test that pins a checker's count has to measure the
+    # checker's files. Raised by cubic on #1376.
     root = Path(__file__).resolve().parents[1]
     tally: Counter[str] = Counter()
-    for path in sorted(root.rglob("*.py")):
-        if any(part in {".git", "node_modules", ".venv"} for part in path.parts):
-            continue
+    for path in sorted(cdp._walk(root, {".py"})):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
         except (SyntaxError, UnicodeDecodeError, OSError):

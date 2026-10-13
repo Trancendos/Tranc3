@@ -1639,8 +1639,12 @@ where it matters. Resolution now walks the call's own scope chain innermost-firs
 **stops at the first scope that declares the name**, because that is the binding in
 force at runtime. A parameter therefore shadows a module constant of the same name; a
 closure still reads an enclosing binding, because at runtime it does; and a class
-attribute does **not** resolve a name inside a method, because unqualified that is a
-`NameError` — accepting it would pass code that cannot run.
+attribute does **not** resolve a name inside a method, because an unqualified name in a
+method body skips the class namespace entirely: it resolves to a local, an enclosing
+function's binding, a module global or a builtin, and raises `NameError` only when none
+of those bind it. Either way the class attribute is never what runs, so resolving
+against it would describe a value the code cannot read. (An earlier wording here said
+flatly that it "is a `NameError`", which overstates it — raised by cubic on #1376.)
 
 **The bound is scope-aware resolution, not dataflow.** It reads parameters, assignments,
 annotated assignments and walrus targets. It does not track values through containers,
