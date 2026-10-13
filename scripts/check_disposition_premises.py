@@ -651,7 +651,99 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
     return bound
 
 
-def _algorithm_shape(element: ast.expr) -> tuple[str, int]:
+#: Shapes `check_sec_020` accepts. Named once so the classifier and its
+#: consumer cannot drift: the previous pair was a literal tuple at the call
+#: site and a docstring listing different values.
+_ADMISSIBLE_SHAPES = ("literal", "constant", "parameter", "imported")
+
+
+def _name_bindings(tree: ast.AST) -> dict[str, list[ast.expr]]:
+    """Every value a bare name is bound to in this module.
+
+    Collects plain assignments, annotated assignments and function-parameter
+    defaults -- the three ways the algorithm names in this estate are actually
+    bound. A name with several bindings yields all of them, because the weakest
+    one is what decides the verdict.
+    """
+    bindings: dict[str, list[ast.expr]] = {}
+
+    def _add(name: str, value: ast.expr | None) -> None:
+        if value is not None:
+            bindings.setdefault(name, []).append(value)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    _add(target.id, node.value)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            _add(node.target.id, node.value)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            args = node.args
+            positional = list(args.posonlyargs) + list(args.args)
+            # Defaults align to the END of the positional list.
+            # strict=True: the slice is built to match `defaults` exactly, and
+            # `kw_defaults` is spec'd to align 1:1 with `kwonlyargs`. If either
+            # ever does not, that is a wrong assumption about the AST and should
+            # raise here rather than silently drop the tail -- a dropped default
+            # is a name this checker then reports as unbound.
+            tail = positional[len(positional) - len(args.defaults) :]
+            for arg, default in zip(tail, args.defaults, strict=True):
+                _add(arg.arg, default)
+            for arg, default in zip(args.kwonlyargs, args.kw_defaults, strict=True):
+                _add(arg.arg, default)
+    return bindings
+
+
+def _imported_literal(name: str, tree: ast.AST, source: Path | None) -> bool | None:
+    """Whether `name` is imported from a sibling module that binds it to a literal.
+
+    ONE hop, deliberately. `workers/infinity-auth/service.py` does
+    `from config import JWT_ALGORITHM` and `config.py:21` sets it to `"HS256"`,
+    so the value is knowable and refusing it would be a false alarm -- but
+    chasing a chain of re-exports is dataflow analysis by another name, and the
+    bound has to stay somewhere a reader can check.
+
+    Returns True (resolved to a literal), False (resolved to something else) or
+    None (could not resolve: no path, module not found, name not bound there).
+    None is NOT "fine" -- the caller refuses it, per `IMMUNE-SYSTEM.md`'s rule
+    that a check which could not look must not read as a check that looked.
+    """
+    if source is None:
+        return None
+    module: str | None = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            if any((alias.asname or alias.name) == name for alias in node.names):
+                module = node.module
+                break
+    if module is None:
+        return None
+
+    # Sibling first (the worker layout), then the repository root.
+    leaf = module.split(".")[-1]
+    candidates = [
+        source.parent / f"{leaf}.py",
+        source.parent / Path(*module.split(".")).with_suffix(".py"),
+        ROOT / Path(*module.split(".")).with_suffix(".py"),
+    ]
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            other = ast.parse(candidate.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            return None
+        bindings = _name_bindings(other).get(name)
+        if not bindings:
+            return None
+        return all(isinstance(v, ast.Constant) and isinstance(v.value, str) for v in bindings)
+    return None
+
+
+def _algorithm_shape(
+    element: ast.expr, tree: ast.AST | None = None, source: Path | None = None
+) -> tuple[str, int]:
     """Classify the sole `algorithms=` entry as (shape, count).
 
     Counting AST elements was the first version's defect: it reported
@@ -660,26 +752,92 @@ def _algorithm_shape(element: ast.expr) -> tuple[str, int]:
     holds an asymmetric key. Raised by sourcery, codex, coderabbit and codeant
     on #1376, all correctly, and reproduced before fixing.
 
-    Two shapes are admissible, reported apart because they are not equally
-    strong:
+    The SECOND version had a subtler form of the same defect, raised by codeant
+    on the same PR and reproduced: it accepted ANY bare name as `reference`,
+    having only claimed that such a name resolves to something this code
+    chooses. It did not check. So the rejected attack needed moving up one
+    line to pass:
+
+        alg = jwt.get_unverified_header(t)["alg"]   # the token picks it
+        jwt.decode(t, k, algorithms=[alg])          # -> accepted
+
+    The name is now RESOLVED against the module's own bindings. Three shapes
+    are admissible, reported apart because they are not equally strong:
 
       * `literal`   -- a string constant; the allowlist is in the source.
-      * `reference` -- a bare name or dotted attribute, resolving to a module
-        constant or parameter default. Chosen by this code, never by the token.
+      * `constant`  -- a name bound only to string literals in this module.
+      * `parameter` -- a function parameter whose default is a string literal.
+        Weaker on purpose: the DEFAULT is verified, the call sites are not.
+        Four of this estate's decode sites are of this shape.
 
-    Anything else is rejected: a call, subscript, f-string, starred or computed
-    expression could all take their value from the token.
+    Everything else is rejected, including a name this module does not bind and
+    a dotted attribute, both of which are unresolvable from here. Failing
+    closed on what it cannot see is `IMMUNE-SYSTEM.md`'s rule for sensors,
+    applied to an allowlist check: "I could not look" must never read the same
+    as "I looked and it was fine".
     """
     if isinstance(element, ast.Constant):
         if isinstance(element.value, str):
             return "literal", 1
         return f"algorithm is a non-string constant {element.value!r}", -1
-    root = element
-    while isinstance(root, ast.Attribute):
-        root = root.value
-    if isinstance(root, ast.Name):
-        return "reference", 1
-    return "algorithm is computed, so the token could choose it", -1
+
+    if not isinstance(element, ast.Name):
+        if isinstance(element, ast.Attribute):
+            return (
+                "algorithm is a dotted attribute, which this check cannot "
+                "resolve -- bind it to a module constant instead",
+                -1,
+            )
+        return "algorithm is computed, so the token could choose it", -1
+
+    if tree is None:  # pragma: no cover - every caller passes the tree
+        return "algorithm reference could not be resolved: no module tree", -1
+
+    bindings = _name_bindings(tree).get(element.id)
+    if not bindings:
+        imported = _imported_literal(element.id, tree, source)
+        if imported is True:
+            return "imported", 1
+        if imported is False:
+            return (
+                f"algorithm {element.id!r} is imported from a module that does "
+                "not bind it to a string literal",
+                -1,
+            )
+        return (
+            f"algorithm {element.id!r} is not bound in this module and could "
+            "not be resolved to one it is imported from",
+            -1,
+        )
+
+    # The weakest binding decides. One literal binding does not make a name
+    # safe if another assignment computes it.
+    shape = "constant"
+    for value in bindings:
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            continue
+        return (
+            f"algorithm {element.id!r} is bound to a computed value, so the token could choose it",
+            -1,
+        )
+    if _is_parameter(element.id, tree):
+        shape = "parameter"
+    return shape, 1
+
+
+def _is_parameter(name: str, tree: ast.AST) -> bool:
+    """Whether `name` is a function parameter anywhere in this module."""
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            args = node.args
+            every = list(args.posonlyargs) + list(args.args) + list(args.kwonlyargs)
+            if args.vararg:
+                every.append(args.vararg)
+            if args.kwarg:
+                every.append(args.kwarg)
+            if any(a.arg == name for a in every):
+                return True
+    return False
 
 
 def _receiver_path(node: ast.expr) -> str | None:
@@ -700,7 +858,7 @@ def _receiver_path(node: ast.expr) -> str | None:
     return ".".join(reversed(parts))
 
 
-def _algorithm_of(node: ast.Call) -> tuple[str, int]:
+def _algorithm_of(node: ast.Call, tree: ast.AST, source: Path | None = None) -> tuple[str, int]:
     """Shape of a `decode(...)` call's `algorithms=` argument.
 
     Used for both call spellings -- a directly-imported `decode(...)` and a
@@ -714,16 +872,18 @@ def _algorithm_of(node: ast.Call) -> tuple[str, int]:
         return "algorithms= is not a literal list", -1
     if len(keyword.value.elts) != 1:
         return "algorithms= names more than one", len(keyword.value.elts)
-    return _algorithm_shape(keyword.value.elts[0])
+    return _algorithm_shape(keyword.value.elts[0], tree, source)
 
 
-def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
+def _jwt_decode_sites(tree: ast.AST, source: Path | None = None) -> list[tuple[int, str, int]]:
     """(line, shape, count) for every JWT decode call in one module.
 
-    Two shapes are admissible, and `check_sec_020` accepts exactly these:
+    Three shapes are admissible -- `_ADMISSIBLE_SHAPES`, which `check_sec_020`
+    tests against so the two cannot disagree:
 
     - "literal"   -- one algorithm, written as a string literal in the list
-    - "reference" -- one algorithm, a module-level name the AST can see
+    - "constant"  -- a name bound only to string literals in this module
+    - "parameter" -- a function parameter whose default is a string literal
 
     Anything else is a refusal naming what is wrong: an absent `algorithms=`
     (python-jose then accepts whatever the token asks for), a non-literal list
@@ -742,7 +902,7 @@ def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
             continue
         func = node.func
         if isinstance(func, ast.Name) and func.id in bound["__direct__"]:
-            sites.append((node.lineno, *_algorithm_of(node)))
+            sites.append((node.lineno, *_algorithm_of(node, tree, source)))
             continue
         if not isinstance(func, ast.Attribute) or func.attr != "decode":
             continue
@@ -758,7 +918,7 @@ def _jwt_decode_sites(tree: ast.AST) -> list[tuple[int, str, int]]:
         # It was a verbatim second copy -- including the three message strings
         # -- until review pointed out that two copies of an allowlist check can
         # drift, which is the one thing this checker must not do.
-        sites.append((node.lineno, *_algorithm_of(node)))
+        sites.append((node.lineno, *_algorithm_of(node, tree, source)))
     return sites
 
 
@@ -886,8 +1046,8 @@ def check_sec_020() -> list[str]:
                 "decode site in it is unexamined. The premise covers every site or none."
             )
             continue
-        for line, shape, count in _jwt_decode_sites(tree):
-            if shape in ("literal", "reference"):
+        for line, shape, count in _jwt_decode_sites(tree, path):
+            if shape in _ADMISSIBLE_SHAPES:
                 pinned += 1
                 continue
             detail = f" ({count})" if count > 1 else ""

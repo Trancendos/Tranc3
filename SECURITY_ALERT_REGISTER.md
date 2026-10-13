@@ -1585,14 +1585,34 @@ holding an asymmetric key, so that a public key can be passed off as an HMAC sec
 Every JWT decode site in this repository names **exactly one** algorithm, so a token's
 `alg` either equals that single entry or is rejected before any key is touched.
 
-The checker distinguishes two admissible shapes, because conflating them was a real
+The checker distinguishes four admissible shapes, because conflating them was a real
 defect in its first version — raised by sourcery, codex, coderabbit and codeant on
 #1376, all correctly:
 
 * **literal** — `algorithms=["HS256"]`. The allowlist is in the source.
-* **by reference** — `algorithms=[ALGORITHM]`, a bare name or dotted attribute
-  resolving to a module constant or a parameter default. The value is chosen by this
-  code, never by the token, so algorithm confusion stays unreachable.
+* **constant** — `algorithms=[ALGORITHM]` where this module binds `ALGORITHM` only to
+  string literals. The binding is **read**, not assumed.
+* **parameter** — a function parameter whose default is a string literal, e.g.
+  `def verify(token, key, algorithm="HS256")`. Reported apart and weaker on purpose:
+  the **default** is verified, the call sites are not. Four of the twelve sites are this.
+* **imported** — `from config import JWT_ALGORITHM` where that module binds it to a
+  string literal. **One hop only.** `workers/infinity-auth/service.py:180` is exactly
+  this, against a sibling `config.py` that sets `"HS256"`.
+
+An earlier version of this entry described a single **by reference** shape covering "a
+bare name or dotted attribute resolving to a module constant or a parameter default".
+That was a claim the checker never checked, and it was exploitable: moving the rejected
+attack up one line laundered it through a local and passed.
+
+    alg = jwt.get_unverified_header(token)["alg"]   # the token picks it
+    jwt.decode(token, key, algorithms=[alg])        # -> accepted
+
+A name is now **resolved**, and anything it cannot resolve is refused — an unbound name,
+a dotted attribute, a parameter with no default, an import it cannot follow, and a name
+with several bindings where any one of them is computed (the weakest binding decides).
+Failing closed on what it cannot see is `docs/governance/IMMUNE-SYSTEM.md`'s rule for
+sensors applied to an allowlist check: "I could not look" must never read the same as
+"I looked and it was fine".
 
 What it now **rejects** is the shape that actually carries the vulnerability: a single
 element built from a call, subscript, f-string or starred expression.

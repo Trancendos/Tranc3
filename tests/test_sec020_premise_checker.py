@@ -29,10 +29,25 @@ def test_a_literal_algorithm_is_pinned():
     assert _shapes('jwt.decode(t, k, algorithms=["HS256"])') == ["literal"]
 
 
-def test_a_module_constant_is_pinned_by_reference():
-    """`algorithms=[ALGORITHM]` is chosen by this code, not by the token."""
-    assert _shapes('ALG = "RS256"\njwt.decode(t, k, algorithms=[ALG])') == ["reference"]
-    assert _shapes("jwt.decode(t, k, algorithms=[cfg.ALGORITHM])") == ["reference"]
+def test_a_module_constant_is_resolved_not_merely_assumed():
+    """`algorithms=[ALGORITHM]` is chosen by this code -- now verified, not claimed.
+
+    This test asserted the shape `reference` for both cases below. That shape is
+    retired: it meant "a bare name or dotted attribute, which resolves to
+    something this code chooses", and the checker never resolved anything. The
+    first case is now `constant`, because the binding is read and found to be a
+    string literal.
+
+    The second case CHANGED VERDICT, deliberately. `cfg.ALGORITHM` cannot be
+    resolved from this module, and an unresolvable algorithm is refused rather
+    than assumed safe. No decode site in this estate uses a dotted algorithm --
+    all twelve use bare names -- so the tightening costs nothing today, and the
+    refusal names the fix (bind it to a module constant).
+    """
+    assert _shapes('ALG = "RS256"\njwt.decode(t, k, algorithms=[ALG])') == ["constant"]
+    dotted = _shapes("jwt.decode(t, k, algorithms=[cfg.ALGORITHM])")[0]
+    assert dotted not in cdp._ADMISSIBLE_SHAPES, dotted
+    assert "dotted attribute" in dotted, dotted
 
 
 def test_a_token_derived_algorithm_is_refused():
@@ -226,3 +241,116 @@ def test_the_forms_the_bound_excludes_really_are_unresolved():
         'import jose\n\n\ndef get():\n    return jose.jwt\n\n\nget().decode(t, k, algorithms=["A", "B"])',
     ):
         assert cdp._jwt_decode_sites(ast.parse(src)) == [], src
+
+
+# ---------------------------------------------------------------------------
+# Resolving the algorithm REFERENCE, not just its shape.
+#
+# codeant on #1376: the checker accepted any bare name as `reference`, having
+# only CLAIMED such a name resolves to something this code chooses. It did not
+# check. So the attack it already rejected needed moving up one line to pass:
+#
+#     alg = jwt.get_unverified_header(t)["alg"]    # the token picks it
+#     jwt.decode(t, k, algorithms=[alg])           # -> accepted
+#
+# Reproduced before fixing. The name is now resolved against the module's own
+# bindings, and against ONE hop of `from <module> import <name>`.
+# ---------------------------------------------------------------------------
+
+
+def test_a_token_derived_algorithm_laundered_through_a_local_is_rejected():
+    """REGRESSION: the bypass codeant found, verbatim."""
+    src = 'alg = jwt.get_unverified_header(t)["alg"]\njwt.decode(t, k, algorithms=[alg])'
+    shape = _shapes(src)[0]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+    assert "computed" in shape, shape
+
+
+def test_a_module_constant_resolves_and_is_accepted():
+    assert _shapes('ALGORITHM = "RS256"\njwt.decode(t, k, algorithms=[ALGORITHM])') == ["constant"]
+
+
+def test_a_parameter_default_is_accepted_but_reported_apart():
+    """Weaker than a constant on purpose: the DEFAULT is verified, not the callers."""
+    src = 'def f(token, key, algorithm="HS256"):\n    return jwt.decode(token, key, algorithms=[algorithm])'
+    assert _shapes(src) == ["parameter"]
+
+
+def test_the_weakest_binding_decides():
+    """One literal binding cannot make a name safe if another computes it."""
+    src = 'A = "HS256"\nif x:\n    A = hdr["alg"]\njwt.decode(t, k, algorithms=[A])'
+    shape = _shapes(src)[0]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+
+
+def test_an_unresolvable_name_fails_closed():
+    """ "I could not look" must never read the same as "I looked and it was fine"."""
+    for src in (
+        "jwt.decode(t, k, algorithms=[MYSTERY])",
+        "def f(t, k, algorithm):\n    return jwt.decode(t, k, algorithms=[algorithm])",
+        "hdr = parse(t)\njwt.decode(t, k, algorithms=[hdr.alg])",
+    ):
+        shape = _shapes(src)[0]
+        assert shape not in cdp._ADMISSIBLE_SHAPES, (src, shape)
+
+
+def test_an_imported_constant_resolves_one_hop(tmp_path):
+    """`workers/infinity-auth/service.py` really does this, so refusing it would be a false alarm.
+
+    It imports `JWT_ALGORITHM` from a sibling `config.py` that sets it to
+    `"HS256"`. The stricter check flagged it as unresolvable until the resolver
+    learned this one hop -- which is a real production site, not a hypothetical.
+    """
+    (tmp_path / "config.py").write_text('JWT_ALGORITHM = "HS256"\n', encoding="utf-8")
+    service = tmp_path / "service.py"
+    service.write_text(
+        "from config import JWT_ALGORITHM\n"
+        "payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])\n",
+        encoding="utf-8",
+    )
+    sites = cdp._jwt_decode_sites(ast.parse(service.read_text()), service)
+    assert [shape for _l, shape, _c in sites] == ["imported"]
+
+
+def test_an_import_whose_source_is_not_a_literal_is_rejected(tmp_path):
+    """Resolving the hop must not mean trusting whatever it finds."""
+    (tmp_path / "config.py").write_text(
+        'import os\n\nJWT_ALGORITHM = os.environ["ALG"]\n', encoding="utf-8"
+    )
+    service = tmp_path / "service.py"
+    service.write_text(
+        "from config import JWT_ALGORITHM\n"
+        "payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])\n",
+        encoding="utf-8",
+    )
+    sites = cdp._jwt_decode_sites(ast.parse(service.read_text()), service)
+    shape = sites[0][1]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+    assert "does not bind it to a string literal" in shape, shape
+
+
+def test_an_import_with_no_source_file_fails_closed():
+    """Without a file to resolve against, the answer is "unknown", not "fine"."""
+    src = "from config import JWT_ALGORITHM\njwt.decode(t, k, algorithms=[JWT_ALGORITHM])"
+    shape = cdp._jwt_decode_sites(ast.parse(src), None)[0][1]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+
+
+def test_the_source_file_is_not_confused_with_the_receiver_path(tmp_path):
+    """REGRESSION for a bug I introduced writing this.
+
+    `_jwt_decode_sites` already had a local named `path` holding the dotted
+    RECEIVER string from `_receiver_path` (`"jose.jwt"`). Adding a `path`
+    parameter for the source file shadowed it, so the file argument arrived as
+    the string `"jwt"` and resolution crashed on `'str' has no attribute
+    'parent'`. Renamed to `source`; this test pins that a QUALIFIED receiver
+    and an imported constant work together, which is the combination that broke.
+    """
+    (tmp_path / "settings.py").write_text('ALG = "HS256"\n', encoding="utf-8")
+    service = tmp_path / "svc.py"
+    service.write_text(
+        "import jose\nfrom settings import ALG\njose.jwt.decode(token, key, algorithms=[ALG])\n",
+        encoding="utf-8",
+    )
+    sites = cdp._jwt_decode_sites(ast.parse(service.read_text()), service)
+    assert [shape for _l, shape, _c in sites] == ["imported"], sites
