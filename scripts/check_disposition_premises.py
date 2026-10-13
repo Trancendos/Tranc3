@@ -588,7 +588,9 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
     Resolves: import aliases (`from jose import jwt as verifier`), directly
     imported decoders (`from jose.jwt import decode`), aliased plain imports
     (`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and
-    simple assignment aliases (`verifier = jose.jwt`).
+    simple assignment aliases (`verifier = jose.jwt`), chained to a fixed
+    point so `v3 = v2` / `v2 = v1` / `v1 = jose.jwt` resolves `v3` too, and
+    so does a re-aliased decoder (`d2 = d1` where `d1 = jwt.decode`).
 
     Because the walk enters every statement body, an assignment nested inside
     an `if`, `try`/`except`, `with` or loop is resolved as well. Measured, not
@@ -627,24 +629,47 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
     # defect this checker exists to prevent, so the claim and the capability
     # have to match.
     #
-    # Two passes, because an alias can be defined after another alias it is
-    # built from. Deliberately NOT general dataflow -- this function's own
-    # docstring, above, lists what it does and does not resolve.
-    for _ in range(2):
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
-                continue
-            target = node.targets[0]
-            if not isinstance(target, ast.Name):
-                continue
-            path = _receiver_path(node.value)
-            if path is None:
-                continue
+    # Repeated to a FIXED POINT, because an alias can be defined after another
+    # alias it is built from. It was two passes, which silently stopped one hop
+    # short: `v3 = v2` / `v2 = v1` / `v1 = jose.jwt` left `v3` unresolved, so
+    # `v3.decode(...)` was invisible and could widen its allowlist unseen.
+    # Raised by cubic on #1376 and reproduced. A fixed point needs no stated
+    # cap, which is the point -- the previous cap was a limit the docstring
+    # above did not mention, so the function claimed a coverage it did not have.
+    #
+    # It terminates: every pass only ADDS names, and the candidates are this
+    # module's own assignment targets, a finite set. The assignments are
+    # collected once rather than re-walked per pass.
+    assignments: list[tuple[str, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        path = _receiver_path(node.value)
+        if path is not None:
+            assignments.append((target.id, path))
+
+    while True:
+        before = (len(names), len(direct))
+        for name, path in assignments:
             segments = set(path.split("."))
-            if path.split(".")[-1] == "decode" and (segments & names or segments & {"jwt", "jose"}):
-                direct.add(target.id)
-            elif segments & names or segments & {"jwt", "jose"}:
-                names.add(target.id)
+            # `d2 = d1` where `d1` is already a bound decoder. Found by probing
+            # the fixed point above: it chained module aliases and left this
+            # one hop short, which is the same defect in the other half of the
+            # loop -- `d2(t, k, algorithms=[...])` was invisible.
+            if path in direct:
+                direct.add(name)
+                continue
+            if not (segments & names or segments & {"jwt", "jose"}):
+                continue
+            if path.split(".")[-1] == "decode":
+                direct.add(name)
+            else:
+                names.add(name)
+        if (len(names), len(direct)) == before:
+            break
 
     bound: dict[str, object] = dict.fromkeys(names, True)
     bound["__direct__"] = frozenset(direct)
@@ -657,41 +682,160 @@ def _jwt_bound_names(tree: ast.AST) -> dict[str, object]:
 _ADMISSIBLE_SHAPES = ("literal", "constant", "parameter", "imported")
 
 
-def _name_bindings(tree: ast.AST) -> dict[str, list[ast.expr]]:
-    """Every value a bare name is bound to in this module.
+#: Nodes that introduce a name scope. A comprehension introduces one too, but
+#: its targets are recorded as declarations in the enclosing scope instead
+#: (see `_name_bindings`), which keeps the chain short and still fails closed.
+_SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
 
-    Collects plain assignments, annotated assignments and function-parameter
-    defaults -- the three ways the algorithm names in this estate are actually
-    bound. A name with several bindings yields all of them, because the weakest
-    one is what decides the verdict.
+#: Scopes that have a parameter list.
+_CALLABLE_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+
+
+def _parent_map(tree: ast.AST) -> dict[int, ast.AST]:
+    """Each node's parent, by `id`. Built once per module, not per call site."""
+    parents: dict[int, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[id(child)] = node
+    return parents
+
+
+def _enclosing_scopes(
+    tree: ast.AST, target: ast.AST, parents: dict[int, ast.AST] | None = None
+) -> list[ast.AST]:
+    """`target`'s scope chain, innermost first, ending at the module.
+
+    A class body is a scope only for code written DIRECTLY in it -- a method
+    does not see class-level names unqualified -- so a `ClassDef` is kept only
+    when it is the innermost scope and dropped from the rest of the chain.
+    Keeping it would let a class attribute resolve a name that raises
+    `NameError` at runtime, which is accepting code that cannot run.
     """
-    bindings: dict[str, list[ast.expr]] = {}
+    if parents is None:
+        parents = _parent_map(tree)
+    chain: list[ast.AST] = []
+    node: ast.AST | None = target
+    while node is not None:
+        if isinstance(node, _SCOPE_NODES) or node is tree:
+            chain.append(node)
+        node = parents.get(id(node))
+    if not chain:  # pragma: no cover - the target always comes from this tree
+        return [tree]
+    return [chain[0]] + [s for s in chain[1:] if not isinstance(s, ast.ClassDef)]
+
+
+def _scope_local_nodes(scope: ast.AST) -> list[ast.AST]:
+    """Every node inside `scope`, WITHOUT descending into a nested scope.
+
+    This is the whole point of the function. `ast.walk` over the module sees
+    every function's parameters at once, so an unrelated
+    `def helper(algorithm="HS256")` elsewhere in the file laundered every
+    same-named parameter at every decode site -- the module-global resolution
+    codeant raised on #1376, reproduced before fixing:
+
+        scope leak -> [(6, 'parameter', 1)]
+        isolated   -> [(2, "algorithm 'algorithm' is not bound ...", -1)]
+
+    Statement bodies (`if`, `try`, `with`, `for`, `while`) ARE descended into:
+    they open no scope, and a binding inside one is a binding of this scope.
+    """
+    collected: list[ast.AST] = []
+    stack = list(ast.iter_child_nodes(scope))
+    while stack:
+        node = stack.pop()
+        collected.append(node)
+        if isinstance(node, _SCOPE_NODES):
+            continue
+        stack.extend(ast.iter_child_nodes(node))
+    return collected
+
+
+def _parameter_defaults(args: ast.arguments) -> list[tuple[ast.arg, ast.expr | None]]:
+    """Every parameter of one signature, paired with its default or `None`.
+
+    `None` means "declared, with no value this checker can read". It is
+    returned rather than omitted because a parameter with no default has
+    nothing verified about it at all, and because the name still SHADOWS
+    whatever an enclosing scope holds -- so resolution has to stop at it.
+    """
+    positional = list(args.posonlyargs) + list(args.args)
+    split = len(positional) - len(args.defaults)
+    pairs: list[tuple[ast.arg, ast.expr | None]] = [(arg, None) for arg in positional[:split]]
+    # Defaults align to the END of the positional list.
+    # strict=True: the slice is built to match `defaults` exactly, and
+    # `kw_defaults` is spec'd to align 1:1 with `kwonlyargs`. If either ever
+    # does not, that is a wrong assumption about the AST and should raise here
+    # rather than silently drop the tail -- a dropped default is a name this
+    # checker then reports as unbound.
+    pairs += list(zip(positional[split:], args.defaults, strict=True))
+    pairs += list(zip(args.kwonlyargs, args.kw_defaults, strict=True))
+    pairs += [(extra, None) for extra in (args.vararg, args.kwarg) if extra is not None]
+    return pairs
+
+
+def _name_bindings(scope: ast.AST) -> dict[str, list[ast.expr | None]]:
+    """Every value a bare name is bound to IN ONE SCOPE.
+
+    Collects this scope's own parameters, plain assignments, annotated
+    assignments and walrus targets, plus the binding targets whose value this
+    checker does not read -- loop, `with`, `except` and comprehension targets,
+    augmented assignments, and unpacking. A name with several bindings yields
+    all of them, because the weakest one is what decides the verdict.
+
+    A `None` entry means the name is declared here with no readable value. It
+    is recorded rather than omitted so that resolution STOPS at this scope: at
+    runtime such a binding shadows anything an enclosing scope holds, and
+    quietly looking past it is how the module-global version accepted a name
+    it had never resolved.
+
+    A `global` or `nonlocal` statement records nothing, so resolution continues
+    outward -- which is what happens at runtime.
+    """
+    bindings: dict[str, list[ast.expr | None]] = {}
 
     def _add(name: str, value: ast.expr | None) -> None:
-        if value is not None:
-            bindings.setdefault(name, []).append(value)
+        bindings.setdefault(name, []).append(value)
 
-    for node in ast.walk(tree):
+    def _declare(target: ast.expr | None) -> None:
+        """Record a binding target whose value is not read.
+
+        Only names actually rebound are recorded. `obj.attr = x` and
+        `d[k] = x` bind no name, so they are ignored rather than marking
+        `obj`/`d` unresolvable and causing a false refusal.
+        """
+        if isinstance(target, ast.Name):
+            _add(target.id, None)
+        elif isinstance(target, ast.Starred):
+            _declare(target.value)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            for item in target.elts:
+                _declare(item)
+
+    if isinstance(scope, _CALLABLE_SCOPES):
+        for arg, default in _parameter_defaults(scope.args):
+            _add(arg.arg, default)
+
+    for node in _scope_local_nodes(scope):
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     _add(target.id, node.value)
+                else:
+                    _declare(target)
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             _add(node.target.id, node.value)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            args = node.args
-            positional = list(args.posonlyargs) + list(args.args)
-            # Defaults align to the END of the positional list.
-            # strict=True: the slice is built to match `defaults` exactly, and
-            # `kw_defaults` is spec'd to align 1:1 with `kwonlyargs`. If either
-            # ever does not, that is a wrong assumption about the AST and should
-            # raise here rather than silently drop the tail -- a dropped default
-            # is a name this checker then reports as unbound.
-            tail = positional[len(positional) - len(args.defaults) :]
-            for arg, default in zip(tail, args.defaults, strict=True):
-                _add(arg.arg, default)
-            for arg, default in zip(args.kwonlyargs, args.kw_defaults, strict=True):
-                _add(arg.arg, default)
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            _add(node.target.id, node.value)
+        elif isinstance(node, ast.AugAssign):
+            _declare(node.target)
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            _declare(node.target)
+        elif isinstance(node, ast.comprehension):
+            _declare(node.target)
+        elif isinstance(node, ast.withitem):
+            _declare(node.optional_vars)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            _add(node.name, None)
     return bindings
 
 
@@ -742,7 +886,10 @@ def _imported_literal(name: str, tree: ast.AST, source: Path | None) -> bool | N
 
 
 def _algorithm_shape(
-    element: ast.expr, tree: ast.AST | None = None, source: Path | None = None
+    element: ast.expr,
+    tree: ast.AST | None = None,
+    source: Path | None = None,
+    scopes: list[ast.AST] | None = None,
 ) -> tuple[str, int]:
     """Classify the sole `algorithms=` entry as (shape, count).
 
@@ -770,6 +917,13 @@ def _algorithm_shape(
         Weaker on purpose: the DEFAULT is verified, the call sites are not.
         Four of this estate's decode sites are of this shape.
 
+    The THIRD version fixed where it looks. The second resolved names against
+    the whole module, so an unrelated default elsewhere in the file laundered
+    every same-named parameter -- a bypass of the fix above, raised by codeant
+    and reproduced. Resolution now walks the decode site's own scope chain,
+    innermost first, and stops at the first scope that declares the name,
+    because that is the binding in force at runtime.
+
     Everything else is rejected, including a name this module does not bind and
     a dotted attribute, both of which are unresolvable from here. Failing
     closed on what it cannot see is `IMMUNE-SYSTEM.md`'s rule for sensors,
@@ -792,52 +946,63 @@ def _algorithm_shape(
 
     if tree is None:  # pragma: no cover - every caller passes the tree
         return "algorithm reference could not be resolved: no module tree", -1
+    if not scopes:
+        scopes = [tree]
 
-    bindings = _name_bindings(tree).get(element.id)
-    if not bindings:
-        imported = _imported_literal(element.id, tree, source)
-        if imported is True:
-            return "imported", 1
-        if imported is False:
+    # Innermost scope first, stopping at the first one that DECLARES the name:
+    # that is the binding in force where the decode call sits. Looking past it
+    # into an outer scope is the module-global bypass this version fixes.
+    for scope in scopes:
+        bindings = _name_bindings(scope).get(element.id)
+        if bindings is None:
+            continue
+        # The weakest binding decides. One literal binding does not make a name
+        # safe if another assignment computes it.
+        if all(isinstance(v, ast.Constant) and isinstance(v.value, str) for v in bindings):
+            return ("parameter" if _is_parameter(element.id, scope) else "constant"), 1
+        if all(v is None for v in bindings) and _is_parameter(element.id, scope):
             return (
-                f"algorithm {element.id!r} is imported from a module that does "
-                "not bind it to a string literal",
+                f"algorithm {element.id!r} is a parameter with no default, so its "
+                "callers choose it and this check cannot see what they pass",
                 -1,
             )
-        return (
-            f"algorithm {element.id!r} is not bound in this module and could "
-            "not be resolved to one it is imported from",
-            -1,
-        )
-
-    # The weakest binding decides. One literal binding does not make a name
-    # safe if another assignment computes it.
-    shape = "constant"
-    for value in bindings:
-        if isinstance(value, ast.Constant) and isinstance(value.value, str):
-            continue
+        if any(v is None for v in bindings):
+            return (
+                f"algorithm {element.id!r} is bound to a target this check does "
+                "not read, so the token could choose it",
+                -1,
+            )
         return (
             f"algorithm {element.id!r} is bound to a computed value, so the token could choose it",
             -1,
         )
-    if _is_parameter(element.id, tree):
-        shape = "parameter"
-    return shape, 1
+
+    imported = _imported_literal(element.id, tree, source)
+    if imported is True:
+        return "imported", 1
+    if imported is False:
+        return (
+            f"algorithm {element.id!r} is imported from a module that does "
+            "not bind it to a string literal",
+            -1,
+        )
+    return (
+        f"algorithm {element.id!r} is not bound in this module and could "
+        "not be resolved to one it is imported from",
+        -1,
+    )
 
 
-def _is_parameter(name: str, tree: ast.AST) -> bool:
-    """Whether `name` is a function parameter anywhere in this module."""
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            args = node.args
-            every = list(args.posonlyargs) + list(args.args) + list(args.kwonlyargs)
-            if args.vararg:
-                every.append(args.vararg)
-            if args.kwarg:
-                every.append(args.kwarg)
-            if any(a.arg == name for a in every):
-                return True
-    return False
+def _is_parameter(name: str, scope: ast.AST) -> bool:
+    """Whether `name` is a parameter of THIS scope.
+
+    It used to be "a parameter anywhere in this module", which is the bypass
+    codeant raised on #1376: any one default launders every same-named
+    parameter in the file, including parameters of functions that have none.
+    """
+    if not isinstance(scope, _CALLABLE_SCOPES):
+        return False
+    return any(arg.arg == name for arg, _ in _parameter_defaults(scope.args))
 
 
 def _receiver_path(node: ast.expr) -> str | None:
@@ -858,7 +1023,12 @@ def _receiver_path(node: ast.expr) -> str | None:
     return ".".join(reversed(parts))
 
 
-def _algorithm_of(node: ast.Call, tree: ast.AST, source: Path | None = None) -> tuple[str, int]:
+def _algorithm_of(
+    node: ast.Call,
+    tree: ast.AST,
+    source: Path | None = None,
+    parents: dict[int, ast.AST] | None = None,
+) -> tuple[str, int]:
     """Shape of a `decode(...)` call's `algorithms=` argument.
 
     Used for both call spellings -- a directly-imported `decode(...)` and a
@@ -872,7 +1042,8 @@ def _algorithm_of(node: ast.Call, tree: ast.AST, source: Path | None = None) -> 
         return "algorithms= is not a literal list", -1
     if len(keyword.value.elts) != 1:
         return "algorithms= names more than one", len(keyword.value.elts)
-    return _algorithm_shape(keyword.value.elts[0], tree, source)
+    scopes = _enclosing_scopes(tree, node, parents)
+    return _algorithm_shape(keyword.value.elts[0], tree, source, scopes)
 
 
 def _jwt_decode_sites(tree: ast.AST, source: Path | None = None) -> list[tuple[int, str, int]]:
@@ -896,13 +1067,16 @@ def _jwt_decode_sites(tree: ast.AST, source: Path | None = None) -> list[tuple[i
     token-derived element pins nothing.
     """
     bound = _jwt_bound_names(tree)
+    # One parent map for the whole module: every decode site's scope chain is
+    # read from it, so adding sites does not re-walk the tree per site.
+    parents = _parent_map(tree)
     sites: list[tuple[int, str, int]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
         if isinstance(func, ast.Name) and func.id in bound["__direct__"]:
-            sites.append((node.lineno, *_algorithm_of(node, tree, source)))
+            sites.append((node.lineno, *_algorithm_of(node, tree, source, parents)))
             continue
         if not isinstance(func, ast.Attribute) or func.attr != "decode":
             continue
@@ -918,7 +1092,7 @@ def _jwt_decode_sites(tree: ast.AST, source: Path | None = None) -> list[tuple[i
         # It was a verbatim second copy -- including the three message strings
         # -- until review pointed out that two copies of an allowlist check can
         # drift, which is the one thing this checker must not do.
-        sites.append((node.lineno, *_algorithm_of(node, tree, source)))
+        sites.append((node.lineno, *_algorithm_of(node, tree, source, parents)))
     return sites
 
 

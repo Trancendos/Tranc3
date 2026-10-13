@@ -1608,11 +1608,51 @@ attack up one line laundered it through a local and passed.
     jwt.decode(token, key, algorithms=[alg])        # -> accepted
 
 A name is now **resolved**, and anything it cannot resolve is refused — an unbound name,
-a dotted attribute, a parameter with no default, an import it cannot follow, and a name
-with several bindings where any one of them is computed (the weakest binding decides).
+a dotted attribute, a parameter with no default, an import it cannot follow, a loop /
+`with` / `except` / comprehension / unpacking target, and a name with several bindings
+where any one of them is computed (the weakest binding decides).
 Failing closed on what it cannot see is `docs/governance/IMMUNE-SYSTEM.md`'s rule for
 sensors applied to an allowlist check: "I could not look" must never read the same as
 "I looked and it was fine".
+
+**It resolves in the scope the decode call sits in, and that correction is a second
+bypass of the first.** Resolution was module-wide, so an unrelated default anywhere in
+the file laundered every same-named parameter — raised by codeant on #1376 and
+reproduced:
+
+    def helper(algorithm="HS256"):                        # a decoy, nothing to do with
+        return algorithm                                  # the site below
+
+    def verify(token, key, algorithm):                    # no default at all
+        return jwt.decode(token, key, algorithms=[algorithm])   # -> accepted
+
+The same site in isolation was already refused, so the decoy was the whole bypass —
+which is why it was missed: the case was tested in isolation, not in the configuration
+where it matters. Resolution now walks the call's own scope chain innermost-first and
+**stops at the first scope that declares the name**, because that is the binding in
+force at runtime. A parameter therefore shadows a module constant of the same name; a
+closure still reads an enclosing binding, because at runtime it does; and a class
+attribute does **not** resolve a name inside a method, because unqualified that is a
+`NameError` — accepting it would pass code that cannot run.
+
+**The bound is scope-aware resolution, not dataflow.** It reads parameters, assignments,
+annotated assignments and walrus targets. It does not track values through containers,
+calls, or `global`-mediated writes: a `global` declaration simply resolves outward, as
+it does at runtime.
+
+**Measured both ways.** Across the whole tree before and after the scope fix: **5
+constant, 4 parameter, 2 literal, 1 imported**. Each of the four `parameter` sites has
+its own string default, so none was relying on the leak — the tightening refuses a
+bypass without changing a single verdict in this estate. Pinned as a test, because
+"the fix changed nothing here" is a claim only a count can support.
+
+**Decode-site discovery reaches a fixed point.** The alias pass ran exactly twice, which
+stopped one hop short — `v3 = v2` / `v2 = v1` / `v1 = jose.jwt` left `v3.decode(...)`
+invisible, free to widen its allowlist with the gate green. Raised by cubic on #1376.
+It now repeats until no new name is added (terminating because each pass only adds, from
+the finite set of the module's own assignment targets). Probing that fix found the same
+hole in the other half of the loop: a re-aliased decoder, `d2 = d1` where
+`d1 = jwt.decode`, was not chained either. Both are closed and pinned.
 
 What it now **rejects** is the shape that actually carries the vulnerability: a single
 element built from a call, subscript, f-string or starred expression.

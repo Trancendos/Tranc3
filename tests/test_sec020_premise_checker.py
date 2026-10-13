@@ -217,11 +217,18 @@ def test_an_assignment_inside_a_statement_body_is_resolved():
     take as the `if` statement -- UNDERSTATING the coverage. Raised by cubic on
     #1376. Understating a bound is the same defect as overstating it, pointed
     the other way: either way the entry describes a checker that isn't this one.
+
+    The bound names four statement forms and this test covered two of them --
+    `if` and `try` -- which is the same shortfall one level down, also raised by
+    cubic. All four are exercised here.
     """
     for src in (
         'import jose\nif flag:\n    v = jose.jwt\nv.decode(t, k, algorithms=["A", "B"])',
         "import jose\ntry:\n    v = jose.jwt\nexcept ImportError:\n    v = None\n"
         'v.decode(t, k, algorithms=["A", "B"])',
+        'import jose\nwith lock:\n    v = jose.jwt\nv.decode(t, k, algorithms=["A", "B"])',
+        'import jose\nfor _ in range(1):\n    v = jose.jwt\nv.decode(t, k, algorithms=["A", "B"])',
+        'import jose\nwhile flag:\n    v = jose.jwt\nv.decode(t, k, algorithms=["A", "B"])',
     ):
         sites = cdp._jwt_decode_sites(ast.parse(src))
         assert sites, src
@@ -354,3 +361,170 @@ def test_the_source_file_is_not_confused_with_the_receiver_path(tmp_path):
     )
     sites = cdp._jwt_decode_sites(ast.parse(service.read_text()), service)
     assert [shape for _l, shape, _c in sites] == ["imported"], sites
+
+
+# ---------------------------------------------------------------------------
+# Resolution has to happen in the SCOPE THE DECODE CALL SITS IN.
+#
+# The fix above resolved names against the whole module, so an unrelated
+# default elsewhere in the file laundered every same-named parameter -- a
+# bypass of that very fix, raised by codeant on #1376. Measured before fixing:
+#
+#     scope leak -> [(6, 'parameter', 1)]
+#     isolated   -> [(2, "algorithm 'algorithm' is not bound ...", -1)]
+#
+# The same case passed in isolation and failed in the configuration where it
+# matters, which is why these tests put the decoy in the file.
+# ---------------------------------------------------------------------------
+
+_SCOPE_LEAK = (
+    'def helper(algorithm="HS256"):\n'
+    "    return algorithm\n"
+    "\n"
+    "def verify(token, key, algorithm):\n"
+    "    return jwt.decode(token, key, algorithms=[algorithm])\n"
+)
+
+
+def test_another_functions_default_does_not_launder_this_parameter():
+    """REGRESSION: codeant's bypass, verbatim. `helper`'s default is not `verify`'s."""
+    shape = _shapes(_SCOPE_LEAK)[0]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+    assert "no default" in shape, shape
+
+
+def test_the_decoy_is_what_makes_the_case_fail():
+    """The same site without the decoy was already refused -- the leak was the decoy."""
+    alone = "def verify(token, key, algorithm):\n    return jwt.decode(token, key, algorithms=[algorithm])\n"
+    assert _shapes(alone)[0] not in cdp._ADMISSIBLE_SHAPES
+    assert _shapes(_SCOPE_LEAK)[0] not in cdp._ADMISSIBLE_SHAPES
+
+
+def test_a_parameter_shadows_a_module_constant_of_the_same_name():
+    """The parameter is what runs, so the module constant must not resolve it."""
+    src = 'ALG = "RS256"\ndef f(t, k, ALG):\n    return jwt.decode(t, k, algorithms=[ALG])'
+    shape = _shapes(src)[0]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+
+
+def test_a_nested_function_still_sees_an_enclosing_binding():
+    """Scope-awareness must not become scope-blindness.
+
+    A closure really does read the module constant and the enclosing
+    parameter's default, so refusing them would be a false alarm -- the same
+    defect as the leak, pointed the other way.
+    """
+    assert _shapes(
+        'ALG = "RS256"\ndef outer():\n    def inner(t, k):\n        return jwt.decode(t, k, algorithms=[ALG])\n'
+    ) == ["constant"]
+    assert _shapes(
+        'def outer(alg="HS256"):\n    def inner(t, k):\n        return jwt.decode(t, k, algorithms=[alg])\n'
+    ) == ["parameter"]
+
+
+def test_a_class_attribute_does_not_resolve_a_name_inside_a_method():
+    """A method does not see class-level names unqualified -- that is a NameError.
+
+    Accepting it would mean the checker passed code that cannot run. Written
+    directly in the class body, the same name does resolve.
+    """
+    method = (
+        "class V:\n"
+        '    ALG = "HS256"\n'
+        "    def f(self, t, k):\n"
+        "        return jwt.decode(t, k, algorithms=[ALG])\n"
+    )
+    assert _shapes(method)[0] not in cdp._ADMISSIBLE_SHAPES
+    body = 'class V:\n    ALG = "HS256"\n    x = jwt.decode(t, k, algorithms=[ALG])\n'
+    assert _shapes(body) == ["constant"]
+
+
+def test_a_binding_target_this_check_does_not_read_is_refused():
+    """A loop, `with`, comprehension or unpacking target is computed, not chosen.
+
+    Each of these also SHADOWS a module constant of the same name, so the
+    search has to stop at it rather than resolving the constant behind it.
+    """
+    for src in (
+        'ALG = "HS256"\nfor ALG in algs:\n    jwt.decode(t, k, algorithms=[ALG])',
+        'ALG = "HS256"\nwith open(p) as ALG:\n    jwt.decode(t, k, algorithms=[ALG])',
+        'ALG = "HS256"\n[jwt.decode(t, k, algorithms=[ALG]) for ALG in algs]',
+        'ALG = "HS256"\nALG, other = pick()\njwt.decode(t, k, algorithms=[ALG])',
+    ):
+        shape = _shapes(src)[0]
+        assert shape not in cdp._ADMISSIBLE_SHAPES, (src, shape)
+
+
+def test_assigning_an_attribute_does_not_shadow_the_name():
+    """`obj.ALG = x` rebinds no name, so it must not refuse the real constant."""
+    assert _shapes('ALG = "HS256"\nobj.ALG = x\njwt.decode(t, k, algorithms=[ALG])') == ["constant"]
+
+
+def test_a_global_declaration_resolves_outward():
+    """`global ALG` means the module binding is the one in force."""
+    src = (
+        'ALG = "HS256"\ndef f(t, k):\n    global ALG\n    return jwt.decode(t, k, algorithms=[ALG])'
+    )
+    assert _shapes(src) == ["constant"]
+
+
+def test_the_estates_own_twelve_sites_keep_their_verdicts():
+    """The tightening must not change what this repository already resolves.
+
+    Measured across the tree both before and after the scope fix: 5 constant,
+    4 parameter, 2 literal, 1 imported. Each of the four `parameter` sites has
+    its OWN string default, so none of them was relying on the leak -- which
+    is worth pinning, because "the fix changed nothing here" is a claim about
+    this estate that only a count can support.
+    """
+    from collections import Counter
+
+    root = Path(__file__).resolve().parents[1]
+    tally: Counter[str] = Counter()
+    for path in sorted(root.rglob("*.py")):
+        if any(part in {".git", "node_modules", ".venv"} for part in path.parts):
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            continue
+        for _line, shape, _count in cdp._jwt_decode_sites(tree, path):
+            tally[shape] += 1
+    assert tally == Counter({"constant": 5, "parameter": 4, "literal": 2, "imported": 1}), tally
+
+
+# ---------------------------------------------------------------------------
+# The alias pass reaches a FIXED POINT, not two hops.
+#
+# Raised by cubic on #1376: two passes stopped one hop short, so `v3 = v2` /
+# `v2 = v1` / `v1 = jose.jwt` left `v3` unresolved and `v3.decode(...)` was
+# invisible -- free to widen its allowlist with the gate green. Probing the
+# fixed point then found the same hole in the loop's other half, where a
+# re-aliased decoder (`d2 = d1`) was not chained either.
+# ---------------------------------------------------------------------------
+
+
+def test_a_chained_module_alias_resolves_however_deep():
+    src = (
+        "from jose import jwt\n"
+        "v1 = jwt\n"
+        "v2 = v1\n"
+        "v3 = v2\n"
+        'v3.decode(t, k, algorithms=["HS256", "RS256"])\n'
+    )
+    shape = _shapes(src)[0]
+    assert shape not in cdp._ADMISSIBLE_SHAPES, shape
+    assert "more than one" in shape, shape
+
+
+def test_a_chained_direct_decoder_resolves_however_deep():
+    """Found by probing the fixed point, not reported: `d2 = d1` was not chained."""
+    src = (
+        'from jose import jwt\nd3 = d2\nd2 = d1\nd1 = jwt.decode\nd3(t, k, algorithms=["HS256"])\n'
+    )
+    assert _shapes(src) == ["literal"]
+
+
+def test_an_unrelated_alias_chain_is_not_claimed_as_a_decode_site():
+    """The fixed point must not widen what counts as a JWT module."""
+    assert _shapes("import os\na = os.path\nb = a\nb.join(x)\n") == []
