@@ -351,3 +351,60 @@ def test_a_refusal_states_its_own_reason_and_not_another():
     # Dunder refusals must still say so -- the fix is accuracy, not silence.
     for code in ("().__class__", "x = __builtins__"):
         assert "dunder" in _refuse(code).lower()
+
+
+# ---------------------------------------------------------------------------
+# Class patterns: the attribute read that carries no `ast.Attribute` node.
+# ---------------------------------------------------------------------------
+#
+# Raised by coderabbit on #1378 and confirmed by probe before the fix:
+#
+#     gate verdict: None
+#     kwd_attrs: ['__class__']
+#     Attribute nodes in tree: []
+#
+# `ast.MatchClass.kwd_attrs` holds plain strings, so walking the tree for
+# `ast.Attribute` sees nothing at all -- while at runtime `case C(x=y)` reads
+# the attribute off the subject exactly as `getattr` would. The gate that was
+# added in this PR to close attribute-based reflection was therefore open on
+# the one syntax where the attribute name is not an attribute node.
+
+
+def _match(subject: str, pattern: str) -> str:
+    return f"match {subject}:\n    case {pattern}:\n        pass\n"
+
+
+def test_a_dunder_class_pattern_attribute_is_refused():
+    """REGRESSION: `case tuple(__class__=c)` returned clean from this gate."""
+    refusal = _reflection_refusal(_match("()", "tuple(__class__=c)"))
+    assert refusal is not None, "a class pattern reading __class__ reaches the object graph"
+    assert "__class__" in refusal
+    assert "class-pattern" in refusal
+
+
+def test_a_frame_class_pattern_attribute_is_refused():
+    """The same hole for frame attributes, which lead to the host's builtins."""
+    refusal = _reflection_refusal(_match("obj", "object(gi_frame=f)"))
+    assert refusal is not None
+    assert "gi_frame" in refusal
+    assert "frame" in refusal
+
+
+def test_an_ordinary_keyword_class_pattern_is_not_refused():
+    """The fix must bound itself to dunder and frame attributes.
+
+    A class pattern is ordinary Python used for destructuring. Refusing every
+    one of them would be a gate that reports a result it never measured in the
+    other direction -- a refusal with no reflection behind it.
+    """
+    assert _reflection_refusal(_match("point", "Point(x=a, y=b)")) is None
+
+
+def test_a_positional_class_pattern_is_not_refused():
+    """Positional sub-patterns read no attribute by name; nothing to refuse."""
+    assert _reflection_refusal(_match("point", "Point(a, b)")) is None
+
+
+def test_a_module_with_no_match_statement_is_unaffected():
+    """The MatchClass branch must not change the verdict on ordinary code."""
+    assert _reflection_refusal("x = 1 + 1\ny = [i for i in range(3)]") is None

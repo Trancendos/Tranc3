@@ -135,7 +135,26 @@ def _reflection_refusal(code: str) -> Optional[str]:
         stack.extend((child, depth + 1) for child in ast.iter_child_nodes(node))
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Attribute):
+        if isinstance(node, ast.MatchClass):
+            # A class pattern reads attributes off the subject exactly as
+            # `getattr` would, but `kwd_attrs` is a list of plain STRINGS --
+            # `ast.walk` yields no `ast.Attribute` node for them at all.
+            # Measured: `case tuple(__class__=c)` gave `kwd_attrs == ['__class__']`
+            # and zero Attribute nodes, and this gate returned None for it.
+            # Raised by coderabbit on #1378 with a working probe.
+            for attr in node.kwd_attrs:
+                if attr.startswith(_DUNDER):
+                    return (
+                        f"class-pattern attribute {attr!r} on line {node.lineno} — "
+                        "a match pattern reads attributes like getattr, and dunder "
+                        "access reaches the object graph and escapes the sandbox"
+                    )
+                if attr in _FRAME_ATTRS:
+                    return (
+                        f"class-pattern frame attribute {attr!r} on line "
+                        f"{node.lineno} — a live frame leads to the host's own builtins"
+                    )
+        elif isinstance(node, ast.Attribute):
             if node.attr.startswith(_DUNDER):
                 return (
                     f"attribute {node.attr!r} on line {node.lineno} — dunder "
