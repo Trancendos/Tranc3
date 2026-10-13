@@ -25,6 +25,22 @@ a reason no fix is possible and a trigger for revisiting.
 
 ## Open entries
 
+### SEC-020 — python-jose incomplete fix for HMAC key confusion
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | CVE-2026-85394 |
+| **Scanner** | pip-audit |
+| **Component** | `python-jose==3.5.0` |
+| **Recorded** | 2026-10-13 |
+| **Re-evaluate** | On any `python-jose` release above 3.5.0 that fixes this CVE |
+
+There is no fixed version to upgrade to: 3.5.0 is the latest release. The issue is an incomplete fix for CVE-2024-33663, where `python-jose` fails to properly validate asymmetric keys in HMAC initialization.
+
+Not exploitable as used. The codebase enforces algorithms explicitly during `jwt.decode` (e.g. `algorithms=[ALGORITHM]`), preventing algorithm confusion attacks. Attackers cannot forge HS256 tokens using the public key because the algorithm restriction will reject tokens that don't match the expected asymmetric algorithm.
+
+
 ### SEC-001 — sentencepiece heap overflow
 
 | Field | Value |
