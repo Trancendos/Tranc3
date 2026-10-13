@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -18,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+_HAS_SUMPROD = hasattr(math, "sumprod")
 
 class CacheBackend(Enum):
     """Vector store backend."""
@@ -183,18 +185,24 @@ class InMemoryVectorStore:
         and norms simultaneously instead of three separate generator passes,
         yielding ~30% faster execution in pure Python.
         """
-        import math
-
-        dot = 0.0
-        norm_a_sq = 0.0
-        norm_b_sq = 0.0
-        for x, y in zip(a, b):
-            dot += x * y
-            norm_a_sq += x * x
-            norm_b_sq += y * y
-        if norm_a_sq == 0 or norm_b_sq == 0:
-            return 0.0
-        return dot / math.sqrt(norm_a_sq * norm_b_sq)
+        if _HAS_SUMPROD:
+            dot = math.sumprod(a, b)  # type: ignore[attr-defined]
+            norm_a_sq = math.sumprod(a, a)  # type: ignore[attr-defined]
+            norm_b_sq = math.sumprod(b, b)  # type: ignore[attr-defined]
+            if norm_a_sq == 0 or norm_b_sq == 0:
+                return 0.0
+            return dot / math.sqrt(norm_a_sq * norm_b_sq)
+        else:
+            dot = 0.0
+            norm_a_sq = 0.0
+            norm_b_sq = 0.0
+            for x, y in zip(a, b):
+                dot += x * y
+                norm_a_sq += x * x
+                norm_b_sq += y * y
+            if norm_a_sq == 0 or norm_b_sq == 0:
+                return 0.0
+            return dot / math.sqrt(norm_a_sq * norm_b_sq)
 
 
 class ChromaDBPlanStore:
