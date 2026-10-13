@@ -589,6 +589,22 @@
     },
     {
       "type": "library",
+      "name": "source-map-js",
+      "bom-ref": "pkg:npm/source-map-js",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "tranc3:declared-range",
+          "value": "^1.2.2"
+        },
+        {
+          "name": "tranc3:manifest-field",
+          "value": "dependencies"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "undici",
       "bom-ref": "pkg:npm/undici@8.11.2",
       "scope": "required",
