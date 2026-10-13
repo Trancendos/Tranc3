@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 _HAS_SUMPROD = hasattr(math, "sumprod")
 
+
 class CacheBackend(Enum):
     """Vector store backend."""
 
