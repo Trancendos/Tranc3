@@ -80,7 +80,7 @@ export function PlatformPulse({ className = '' }: { className?: string }) {
           {loading && <span className="text-xs text-slate-500">syncing…</span>}
           <button
             onClick={invalidate}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded px-1 -mr-1"
             aria-label="Refresh platform health"
           >
             ↻
