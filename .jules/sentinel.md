@@ -2,3 +2,7 @@
 **Vulnerability:** Found hardcoded credentials (`icecast_admin_password: str = "hackme"`) and an unconfigurable URL (`icecast_url`) directly within `src/warp_radio/station.py`.
 **Learning:** Hardcoded credentials exposed in source files pose a significant security risk, even if they are default or dummy values. Hardcoding these in the data model's default fields means developers could unintentionally deploy services with known default credentials that could be easily scraped or exploited if unmodified.
 **Prevention:** Always use environment variables (e.g., `os.getenv(...)`) with fallback defaults for configurable sensitive data (like passwords, URLs, or API keys). Ensure secrets can be dynamically injected at runtime, complying with 12-factor application design principles.
+## 2026-08-25 - Authentication Bypass via Fallback Logic
+**Vulnerability:** The application used `except ImportError` blocks that would catch missing dependencies for `python-jose` and silently fall back to an unverified, easily forgeable base64-encoded token format.
+**Learning:** Using `except ImportError` to provide fallback logic for critical security mechanisms (like JWT signing and verification) is highly dangerous. It can allow an attacker to trigger or exploit environment failures to bypass authentication entirely by forging unsigned tokens.
+**Prevention:** Critical security dependencies must not have insecure fallbacks. If a required library for cryptographic operations fails to load, the application must crash or fail securely, rejecting all authentication attempts.
