@@ -9,19 +9,65 @@ had caused. Measured on #1403: `Pytest` red on `5a309946` while every other
 job on the same commit, and `main`, were green.
 
 Each case here plants a file where a submodule would be and asserts the
-control ignores it. The boundary itself is derived from `.gitmodules`, so a
-submodule added later is excluded without anyone remembering to.
+control ignores it. The boundary itself is derived from GITLINKS, so a
+submodule added later is excluded without anyone remembering to -- and a
+`.gitmodules` entry that is only a declaration excludes nothing. That second
+half matters: reading the file alone let a change assert `path = src` and drop
+every file under `src/` out of three ratchets at once (cubic, #1403), so the
+fixtures below build real repositories with real gitlinks rather than writing
+a text file and hoping.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
-from src.immune.repo import inside_submodule, submodule_paths
+from src.immune.repo import (
+    declared_non_gitlinks,
+    declared_paths,
+    inside_submodule,
+    submodule_paths,
+    undeclared_gitlinks,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _repo_with_gitlinks(root: Path, *paths: str, declare: bool = True) -> Path:
+    """A real git repository with a real gitlink at each of `paths`.
+
+    `git update-index --cacheinfo 160000` records a gitlink without needing an
+    actual nested clone, which is exactly the structure `submodule_paths` reads
+    and the thing a `.gitmodules` line cannot fake.
+    """
+    subprocess.run(["git", "init", "-q", str(root)], check=True, timeout=30)
+    for i, path in enumerate(paths):
+        sha = f"{i + 1:040x}"
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                f"160000,{sha},{path}",
+            ],
+            check=True,
+            timeout=30,
+        )
+    if declare:
+        (root / ".gitmodules").write_text(
+            "".join(
+                f'[submodule "{path}"]\n\tpath = {path}\n\turl = https://example.invalid/{i}.git\n'
+                for i, path in enumerate(paths)
+            ),
+            encoding="utf-8",
+        )
+    return root
 
 
 def _load(name: str, relative: str):
@@ -46,18 +92,48 @@ def test_a_tree_with_no_gitmodules_excludes_nothing(tmp_path):
     assert submodule_paths(tmp_path) == frozenset()
 
 
-def test_the_boundary_is_read_from_gitmodules_not_hardcoded(tmp_path):
-    (tmp_path / ".gitmodules").write_text(
-        '[submodule "vendor/thing"]\n\tpath = vendor/thing\n\turl = https://example.invalid/x.git\n',
-        encoding="utf-8",
-    )
+def test_the_boundary_is_derived_not_hardcoded(tmp_path):
+    _repo_with_gitlinks(tmp_path, "vendor/thing")
     assert submodule_paths(tmp_path) == {"vendor/thing"}
 
 
-def test_an_unreadable_gitmodules_excludes_nothing(tmp_path):
-    (tmp_path / ".gitmodules").write_bytes(b'[submodule "x"]\n\tpath = \xff\xfe\n')
-    # Undecodable: the reader returns empty rather than inventing exclusions.
+def test_a_declaration_with_no_gitlink_excludes_nothing(tmp_path):
+    """THE EVASION. `.gitmodules` is repository content; a gitlink is
+    repository structure. Reading the file alone meant a change could name
+    `src` and remove it from the suppression ratchet, the bandit ceiling and
+    the SEC-006/020/021 manifest scans in one line. Raised by cubic on #1403.
+    """
+    _repo_with_gitlinks(tmp_path, "vendor/real")
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "vendor/real"]\n\tpath = vendor/real\n\turl = https://example.invalid/0.git\n'
+        '[submodule "fake"]\n\tpath = src\n\turl = https://example.invalid/fake.git\n',
+        encoding="utf-8",
+    )
+    assert submodule_paths(tmp_path) == {"vendor/real"}
+    assert inside_submodule("src/immune/repo.py", submodule_paths(tmp_path)) is False
+    # Reported, not merely distrusted -- so the shape is visible to a reader.
+    assert declared_non_gitlinks(tmp_path) == {"src"}
+    assert declared_paths(tmp_path) == {"vendor/real", "src"}
+
+
+def test_a_gitlink_with_no_declaration_is_still_a_boundary(tmp_path):
+    """The other direction. Git records it, so it IS another repository; the
+    missing entry is a defect `validate_submodule_pins.py` already fails on,
+    not a reason to start counting its files here."""
+    _repo_with_gitlinks(tmp_path, "vendor/thing", declare=False)
+    assert submodule_paths(tmp_path) == {"vendor/thing"}
+    assert undeclared_gitlinks(tmp_path) == {"vendor/thing"}
+
+
+def test_a_tree_that_is_not_a_repository_excludes_nothing(tmp_path):
+    """No gitlinks to read means no exclusions, never invented ones. A
+    boundary that cannot be established must not become one."""
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "x"]\n\tpath = anything\n\turl = https://example.invalid/x.git\n',
+        encoding="utf-8",
+    )
     assert submodule_paths(tmp_path) == frozenset()
+    assert declared_non_gitlinks(tmp_path) == frozenset()
 
 
 def test_matching_is_segment_wise_not_a_string_prefix():
@@ -78,10 +154,8 @@ def test_the_suppression_ratchet_ignores_a_submodule_file(tmp_path):
     (tmp_path / "pyproject.toml").write_text(
         '[tool.ruff.lint]\nselect = ["E", "F"]\n', encoding="utf-8"
     )
-    (tmp_path / ".gitmodules").write_text(
-        '[submodule "workers/sub"]\n\tpath = workers/sub\n\turl = https://example.invalid/s.git\n',
-        encoding="utf-8",
-    )
+    # A real gitlink, not just a declaration: that is what the boundary reads.
+    _repo_with_gitlinks(tmp_path, "workers/sub")
     (tmp_path / "mine.py").write_text("x = 1  # " + "no" + "qa: ABC001\n", encoding="utf-8")
     sub = tmp_path / "workers" / "sub"
     sub.mkdir(parents=True)
@@ -101,10 +175,8 @@ def test_the_bandit_scope_guard_demands_every_submodule_be_excluded(tmp_path):
     that checks it out, and nowhere else.
     """
     cbc = _load("cbc_boundary", "scripts/check_bandit_coverage.py")
-    (tmp_path / ".gitmodules").write_text(
-        '[submodule "workers/sub"]\n\tpath = workers/sub\n\turl = https://example.invalid/s.git\n',
-        encoding="utf-8",
-    )
+    # A real gitlink, not just a declaration: that is what the boundary reads.
+    _repo_with_gitlinks(tmp_path, "workers/sub")
     problems = cbc.submodule_exclusions(tmp_path, ["src", "workers"], ["tests"])
     assert len(problems) == 1
     assert "workers/sub" in problems[0]
@@ -129,10 +201,8 @@ def test_the_premise_checker_ignores_a_submodules_manifests(tmp_path, monkeypatc
     as runtime declarations of nltk and mcp. Measured by disabling it.
     """
     cdp = _load("cdp_boundary", "scripts/check_disposition_premises.py")
-    (tmp_path / ".gitmodules").write_text(
-        '[submodule "workers/sub"]\n\tpath = workers/sub\n\turl = https://example.invalid/s.git\n',
-        encoding="utf-8",
-    )
+    # A real gitlink, not just a declaration: that is what the boundary reads.
+    _repo_with_gitlinks(tmp_path, "workers/sub")
     sub = tmp_path / "workers" / "sub"
     sub.mkdir(parents=True)
     (sub / "requirements.txt").write_text("mcp==1.29.0\nnltk==3.10.3\n", encoding="utf-8")
@@ -154,10 +224,8 @@ def test_the_premise_checker_ignores_a_submodules_manifests(tmp_path, monkeypatc
 def test_the_premise_checker_still_sees_this_repositorys_own_files(tmp_path, monkeypatch):
     """The control. A boundary that hid everything would pass for free."""
     cdp = _load("cdp_boundary_control", "scripts/check_disposition_premises.py")
-    (tmp_path / ".gitmodules").write_text(
-        '[submodule "workers/sub"]\n\tpath = workers/sub\n\turl = https://example.invalid/s.git\n',
-        encoding="utf-8",
-    )
+    # A real gitlink, not just a declaration: that is what the boundary reads.
+    _repo_with_gitlinks(tmp_path, "workers/sub")
     (tmp_path / "requirements.txt").write_text("mcp==1.29.0\n", encoding="utf-8")
     (tmp_path / "ours.py").write_text("import mcp\n", encoding="utf-8")
 
