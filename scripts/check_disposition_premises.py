@@ -41,6 +41,7 @@ Standard library only: the production gate installs little else.
 from __future__ import annotations
 
 import ast
+import functools
 import re
 import sys
 from pathlib import Path
@@ -203,14 +204,70 @@ _SEC_021_ADVISORY_IDS = frozenset({"CVE-2026-59951", "GHSA-84M7-P3X7-PCFV"})
 _JWT_MODULE_NAMES = {"jwt", "pyjwt", "_jwt", "jose_jwt"}
 
 
+#: Where this script's own code lives. Separate from `ROOT` on purpose: `ROOT`
+#: is the tree being MEASURED and the tests repoint it at a fixture, while the
+#: module this script loads by path is always its own sibling. Conflating the
+#: two made the boundary silently unavailable under test — which is the failure
+#: mode this whole boundary exists to prevent, so it is worth two constants.
+_SOURCE_ROOT = Path(__file__).resolve().parents[1]
+
+
+@functools.lru_cache(maxsize=1)
+def _boundary_reader():
+    """`inside_submodule` and `submodule_paths` from `src/immune/repo.py`.
+
+    Loaded by path for the reason `_census_staleness` gives below: this
+    script's contract is that the production gate installs almost nothing, and
+    importing `src.immune.repo` as a package would execute
+    `src/immune/__init__.py`, which pulls in PyYAML. `repo.py` is stdlib-only.
+
+    On failure the reader excludes nothing — the same answer as a tree with no
+    submodules, and the only honest one available without inventing
+    exclusions.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_repo_for_premises", _SOURCE_ROOT / "src" / "immune" / "repo.py"
+    )
+    if spec is None or spec.loader is None:
+        return (lambda *_: False), (lambda _: frozenset())
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:  # noqa: BLE001 - a missing boundary must not end the run
+        return (lambda *_: False), (lambda _: frozenset())
+    return module.inside_submodule, module.submodule_paths
+
+
+def _in_submodule(relative) -> bool:
+    """Is this path, relative to the measured tree, inside a submodule?"""
+    inside, paths = _boundary_reader()
+    submodules = paths(ROOT)
+    return bool(submodules) and inside(relative, submodules)
+
+
 def _walk(base: Path, suffixes: set[str]):
-    """Repository files under `base` with one of `suffixes`, skipping vendored trees."""
+    """Repository files under `base` with one of `suffixes`, skipping vendored trees.
+
+    And skipping submodules. `workers/cranbania` and `compliance/magna-carta`
+    are separate repositories, checked out by one CI job and not by the others,
+    so a premise measured across them holds or fails depending on the checkout
+    rather than on this repository's code. See `src/immune/repo.py`.
+    """
     if not base.is_dir():
         return
     for path in base.rglob("*"):
         if path.suffix not in suffixes or not path.is_file():
             continue
         if any(part in _SKIP for part in path.parts):
+            continue
+        try:
+            relative = path.relative_to(ROOT)
+        except ValueError:
+            relative = path
+        if _in_submodule(relative):
             continue
         yield path
 
@@ -494,6 +551,8 @@ def _runtime_declarations(package: str) -> list[str]:
     for path in ROOT.rglob("requirements*.txt"):
         if any(part in _SKIP for part in path.parts) or _is_tooling_manifest(path):
             continue
+        if _in_submodule(path.relative_to(ROOT)):
+            continue  # a submodule declares its own dependencies, not ours
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
         except (OSError, UnicodeDecodeError):
@@ -502,14 +561,23 @@ def _runtime_declarations(package: str) -> list[str]:
             if _declares_package(line, package):
                 found.append(f"{path.relative_to(ROOT).as_posix()}:{number}")
 
-    pyproject = ROOT / "pyproject.toml"
-    if pyproject.is_file():
+    # EVERY pyproject.toml, not just the root one. `tranc3-bots/` has its own
+    # with its own dependencies, and so may any sub-project added later, so
+    # reading only the root meant a package could become a declared runtime
+    # dependency of a shipped component while this check stayed green.
+    # Raised by cubic on #1376.
+    for pyproject in sorted(ROOT.rglob("pyproject.toml")):
+        if any(part in _SKIP for part in pyproject.parts):
+            continue
+        if _in_submodule(pyproject.relative_to(ROOT)):
+            continue  # likewise: CranBania's project is not this one
         try:
             import tomllib  # stdlib from 3.11, which CI runs
 
             data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, ValueError, ModuleNotFoundError):
-            data = {}
+            continue
+        shown = pyproject.relative_to(ROOT).as_posix()
         project = data.get("project") or {}
         groups: list[tuple[str, object]] = [("dependencies", project.get("dependencies"))]
         for name, deps in (project.get("optional-dependencies") or {}).items():
@@ -520,7 +588,7 @@ def _runtime_declarations(package: str) -> list[str]:
                 continue
             for entry in deps:
                 if isinstance(entry, str) and _declares_package(entry, package):
-                    found.append(f"pyproject.toml [project.{label}]")
+                    found.append(f"{shown} [project.{label}]")
 
     return found
 
@@ -1386,6 +1454,26 @@ def _pinned_decode_sites() -> int:
     return _SEC_020_PINNED[0] if _SEC_020_PINNED else 0
 
 
+def _dynamic_import_target(node: ast.Call) -> str | None:
+    """The literal module name a dynamic import call names, if any.
+
+    Covers `__import__("x")` and `importlib.import_module("x")`, including the
+    `import importlib` / `from importlib import import_module` spellings. A
+    non-literal first argument returns None: unresolvable, and saying so beats
+    guessing.
+    """
+    callee = node.func
+    dynamic = False
+    if isinstance(callee, ast.Name) and callee.id in {"__import__", "import_module"}:
+        dynamic = True
+    elif isinstance(callee, ast.Attribute) and callee.attr in {"__import__", "import_module"}:
+        dynamic = True
+    if not dynamic or not node.args:
+        return None
+    first = node.args[0]
+    return first.value if isinstance(first, ast.Constant) and isinstance(first.value, str) else None
+
+
 def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
     """(line, description) for every import of the `mcp` package in one module.
 
@@ -1396,7 +1484,17 @@ def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
     """
     found: list[tuple[int, str]] = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
+        if isinstance(node, ast.Call):
+            # `__import__("mcp")` and `importlib.import_module("mcp")` import
+            # the package without an import statement, so an AST guard that
+            # only looked at `Import`/`ImportFrom` could be walked straight
+            # past. Only a literal target is checked: a computed one cannot be
+            # resolved here, and a guard that guessed would be worse than one
+            # whose limit is written down. Raised by cubic on #1376.
+            name = _dynamic_import_target(node)
+            if name is not None and (name == "mcp" or name.startswith("mcp.")):
+                found.append((node.lineno, f"dynamic import of {name}"))
+        elif isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name == "mcp" or alias.name.startswith("mcp."):
                     found.append((node.lineno, f"import {alias.name}"))

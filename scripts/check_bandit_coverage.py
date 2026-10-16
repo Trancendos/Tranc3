@@ -76,6 +76,7 @@ from src.immune.ratchet import (  # noqa: E402  - path set above
     read_ceiling,
     write_ceiling,
 )
+from src.immune.repo import inside_submodule, submodule_paths  # noqa: E402
 
 CEILING = ROOT / "config/immune/bandit_ceiling.txt"
 
@@ -171,6 +172,14 @@ def _run_bandit(root: Path, targets: list[str]) -> tuple[list[dict], str]:
             tail = detail[-1] if detail else "no output"
             return [], f"bandit produced no parseable JSON ({tail})"
 
+    # `json.loads` happily returns a list or a scalar, and `.get` on either
+    # raises AttributeError -- so the checker died instead of reporting UNKNOWN.
+    # Real bandit output is always an object, which is what makes this cheap to
+    # leave unguarded and wrong to leave unguarded: the whole point of this
+    # function is that every way it can fail to see says so. Raised by cubic
+    # and coderabbit independently on #1403.
+    if not isinstance(report, dict):
+        return [], f"bandit JSON was a {type(report).__name__}, not an object"
     results = report.get("results")
     if not isinstance(results, list):
         return [], "bandit JSON had no `results` list"
@@ -248,6 +257,32 @@ def _precommit_bandit_targets(config: Path) -> tuple[str, ...] | None:
     return None
 
 
+def submodule_exclusions(root: Path, targets: list[str], excluded: list[str]) -> list[str]:
+    """Reasons a submodule could be scanned into this repository's counts.
+
+    `[tool.bandit] exclude_dirs` is a static list and `.gitmodules` is the
+    truth, so they drift the moment a submodule is added. The consequence is
+    specific and was measured on #1403: `workers/cranbania` sits under the
+    `workers` target, `ci.yml`'s Pytest job is the only one that checks
+    submodules out, and the ratchet therefore counted a second repository's
+    findings in that job alone. A ceiling that means one thing locally and
+    another in one CI job is not a ceiling.
+    """
+    problems: list[str] = []
+    excluded_set = {name.strip().strip("/") for name in excluded}
+    for submodule in sorted(submodule_paths(root)):
+        if submodule in excluded_set:
+            continue
+        if any(inside_submodule(submodule, frozenset({target.strip("/")})) for target in targets):
+            problems.append(
+                f"the submodule {submodule} is inside a scanned target and is not in "
+                "[tool.bandit] exclude_dirs, so its findings would be counted against "
+                "this repository's ceiling in whichever job checks submodules out. Add "
+                "it to exclude_dirs."
+            )
+    return problems
+
+
 def lane_divergence(root: Path, targets: list[str]) -> list[str]:
     """Reasons the two bandit lanes no longer stand in their recorded relation."""
     problems: list[str] = []
@@ -296,9 +331,10 @@ def main(argv: list[str] | None = None) -> int:
     # split out because without the recorded pair there is nothing to compare
     # it against.
     if args.root.resolve() == ROOT.resolve():
-        divergence = lane_divergence(args.root, targets)
+        divergence = submodule_exclusions(args.root, targets, excluded)
+        divergence += lane_divergence(args.root, targets)
         if divergence:
-            print("\nbandit coverage: FAILED — the two bandit lanes disagree")
+            print("\nbandit coverage: FAILED — the configured scope does not hold")
             for problem in divergence:
                 print(f"  - {problem}")
             return 1

@@ -65,7 +65,15 @@ jobs:
       # reports UNKNOWN instead of clean. Two callers, one implementation,
       # so they cannot disagree about what "holding" means.
       - name: Install bandit
-        run: python3 -m pip install --quiet "bandit[toml]==1.9.4"
+        # PyYAML as well as bandit: `check_bandit_coverage.py` reads
+        # `.pre-commit-config.yaml` to compare the two bandit lanes, and
+        # `bandit[toml]` does not pull YAML support in (bandit ships that as a
+        # separate `yaml` extra). Without it the checker reports the lane
+        # comparison as unreadable and exits 1 -- a job failing on a missing
+        # dependency rather than on a finding. The GitHub copy in ci.yml
+        # already installs it; this one did not, and Forgejo's dormancy is the
+        # only reason that had not been seen. Raised by coderabbit on #1403.
+        run: python3 -m pip install --quiet "bandit[toml]==1.9.4" PyYAML
 
       - name: bandit covers the whole configured surface
         run: python3 scripts/check_bandit_coverage.py

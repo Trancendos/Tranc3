@@ -149,6 +149,11 @@ _EMPTY_REASONS = ("", "n/a", "none", "tbd", "todo", "see above", "as above")
 
 GITHUB_API = "https://api.github.com"
 
+#: The page size every listing here requests. A response of exactly this many
+#: items is indistinguishable from a truncated one without following `Link`,
+#: so it is treated as truncated.
+_PAGE = 100
+
 
 class _NoRedirects(urllib.request.HTTPRedirectHandler):
     """Refuse redirects rather than forward a bearer token to a new host."""
@@ -316,7 +321,18 @@ def _apps_in_comments(repo: str, number: Any, token: str) -> set[str]:
         f"/repos/{repo}/issues/{number}/comments?per_page=100",
         f"/repos/{repo}/pulls/{number}/comments?per_page=100",
     ):
-        for comment in _api(endpoint, token) or []:
+        page = _api(endpoint, token) or []
+        if len(page) >= _PAGE:
+            # A full page means there is almost certainly another, and this
+            # does not follow `Link: rel="next"`. An App appearing only on a
+            # later page would be invisible while `observed_apps` returned a
+            # set that looked complete -- the same overclaim as the swallowed
+            # `HTTPError`, reached by a different route. Not hypothetical: the
+            # register itself records 134 ecc-tools comments across five pull
+            # requests, so one busy PR passes 100 on its own. Raised by
+            # coderabbit on #1403.
+            raise ValueError(f"{endpoint} returned a full page; the sample is truncated")
+        for comment in page:
             slug = _bot_slug((comment.get("user") or {}).get("login") or "")
             if slug:
                 seen.add(slug)
@@ -324,9 +340,19 @@ def _apps_in_comments(repo: str, number: Any, token: str) -> set[str]:
 
 
 def _apps_in_checks(repo: str, head: str, token: str) -> set[str]:
-    """Apps that published a check-run on this head. Raises on failure."""
-    runs = _api(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token)
-    slugs = (((r.get("app") or {}).get("slug")) or "" for r in (runs or {}).get("check_runs", []))
+    """Apps that published a check-run on this head. Raises on failure.
+
+    Check-runs come back with a `total_count`, so truncation is stated rather
+    than inferred from a full page: a head carrying more runs than were
+    returned has Apps this sample cannot see. This repository already runs
+    well over thirty checks per commit.
+    """
+    runs = _api(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token) or {}
+    listed = runs.get("check_runs") or []
+    total = runs.get("total_count")
+    if isinstance(total, int) and total > len(listed):
+        raise ValueError(f"{head} has {total} check-runs and {len(listed)} were returned")
+    slugs = (((r.get("app") or {}).get("slug")) or "" for r in listed)
     return {slug for slug in slugs if slug}
 
 

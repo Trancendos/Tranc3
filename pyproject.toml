@@ -95,7 +95,19 @@ markers = [
 # `tests` stays excluded: B101 (assert) is the whole of what it would report,
 # and B101 is skipped below anyway.
 targets = ["src", "api.py", "scripts", "workers"]
-exclude_dirs = ["tests", "src/nanoservices/genetic_optimizer", "src/evolution"]
+# `workers/cranbania` and `compliance/magna-carta` are git SUBMODULES -- separate
+# repositories with their own reviewers and their own ceilings. `workers` is a
+# target above, and ci.yml's Pytest job is the only one that checks submodules
+# out, so without these two entries bandit scanned CranBania into this repo's
+# ratchet in exactly one job and nowhere else. check_bandit_coverage.py verifies
+# this list still covers every submodule named in .gitmodules.
+exclude_dirs = [
+    "tests",
+    "src/nanoservices/genetic_optimizer",
+    "src/evolution",
+    "workers/cranbania",
+    "compliance/magna-carta",
+]
 severity = "low"
 confidence = "low"
 skips = [

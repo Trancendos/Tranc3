@@ -343,9 +343,18 @@ def test_the_strict_loader_really_is_a_safe_loader():
 def _load(document: str):
     import yaml
 
-    # _StrictLoader subclasses yaml.SafeLoader; it refuses duplicate keys on top
-    # of SafeLoader's own behaviour rather than relaxing anything.
-    return yaml.load(document, Loader=cai._StrictLoader)
+    # A bandit suppression rather than a ruff one: ruff does not select the S
+    # family, so a ruff directive for S506 here silenced nothing and the
+    # inert-suppression ratchet removed it -- which then surfaced the same rule
+    # in CodeFactor, where it IS live. (Spelling that directive out in prose is
+    # also how a file becomes its own subject: ruff parses it.) The rule is
+    # a false positive either way: `_StrictLoader` subclasses `yaml.SafeLoader`
+    # and refuses duplicate keys ON TOP of SafeLoader's behaviour rather than
+    # relaxing anything. Same suppression, same reason, as the call in
+    # scripts/check_app_inventory.py that this exercises.
+    return yaml.load(  # nosec B506 - _StrictLoader subclasses yaml.SafeLoader
+        document, Loader=cai._StrictLoader
+    )
 
 
 def test_a_merge_key_expands_and_an_explicit_value_wins():

@@ -184,8 +184,13 @@ class Verdict:
         # string `"0"`, and `0.5` (truncated to 0). A count that is not a
         # non-negative integer is not a count, and a verdict derived from one
         # must be `unknown` rather than a guess in either direction.
+        # `scanned_ok` is tested for identity with True, not truthiness, for
+        # exactly the reason `_is_count` exists below: the string "false" is
+        # truthy, so a census recording `"scanned_ok": "false"` with zero
+        # fixable findings read as a clean scan. Two clauses of one predicate,
+        # and only one of them had been tightened. Raised by coderabbit on #1403.
         fixable = census.get("fixable_count")
-        if not census.get("scanned_ok", False) or not _is_count(fixable):
+        if census.get("scanned_ok") is not True or not _is_count(fixable):
             outcome = UNKNOWN
         else:
             outcome = "pass" if int(fixable) == 0 else "fail"

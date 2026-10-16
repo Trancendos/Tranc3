@@ -96,6 +96,7 @@ if str(ROOT) not in sys.path:
 from src.immune.ratchet import compare  # noqa: E402  - path set above
 from src.immune.ratchet import read_ceiling as _read_ceiling  # noqa: E402
 from src.immune.ratchet import write_ceiling as _write_ceiling  # noqa: E402
+from src.immune.repo import inside_submodule, submodule_paths  # noqa: E402
 
 CEILING = ROOT / "config/immune/noqa_ceiling.txt"
 
@@ -159,6 +160,43 @@ def ruff_rule_config(pyproject: Path) -> tuple[list[str], set[str], dict[str, li
     return select, ignore, per_file
 
 
+def _glob_match(path: str, pattern: str) -> bool:
+    """Does `path` match `pattern` the way ruff matches per-file-ignores?
+
+    Plain `fnmatch` lets `*` cross `/`, and ruff's globset does not: `tests/*`
+    covers `tests/x.py` and NOT `tests/e2e/x.py`, while `**` is what spans
+    directories. This repository's config relies on the difference -- it writes
+    both `tests/*` and `src/nanoservices/**` -- so matching with `fnmatch`
+    applied the first set of ignores to five nested test files ruff would never
+    apply them to, and a live suppression there was counted as inert. Wrong in
+    the lenient direction, which inflates the ceiling. Raised by coderabbit
+    on #1403.
+
+    A pattern with no separator matches the file NAME at any depth, which is
+    also ruff's rule and is what makes `__init__.py` usable as a pattern.
+    """
+    if "/" not in pattern:
+        return fnmatch.fnmatchcase(path.rsplit("/", 1)[-1], pattern)
+
+    parts = path.split("/")
+    globs = pattern.split("/")
+
+    def walk(i: int, j: int) -> bool:
+        while j < len(globs):
+            if globs[j] == "**":
+                # Zero or more segments: try every split point from here.
+                if j + 1 == len(globs):
+                    return True
+                return any(walk(k, j + 1) for k in range(i, len(parts) + 1))
+            if i >= len(parts) or not fnmatch.fnmatchcase(parts[i], globs[j]):
+                return False
+            i += 1
+            j += 1
+        return i == len(parts)
+
+    return walk(0, 0)
+
+
 def _file_ignores(shown: str, per_file: dict[str, list[str]]) -> set[str]:
     """Codes ruff ignores for THIS file, from `[tool.ruff.lint.per-file-ignores]`.
 
@@ -169,7 +207,7 @@ def _file_ignores(shown: str, per_file: dict[str, list[str]]) -> set[str]:
     """
     codes: set[str] = set()
     for pattern, ignored in per_file.items():
-        if fnmatch.fnmatch(shown, pattern) or fnmatch.fnmatch(shown, pattern.rstrip("/") + "/*"):
+        if _glob_match(shown, pattern):
             codes.update(ignored)
     return codes
 
@@ -197,10 +235,21 @@ def classify(
 
 
 def _python_files(root: Path) -> list[Path]:
+    """This repository's Python files, excluding every submodule.
+
+    A submodule is a different repository with its own reviewers and its own
+    ceilings, and `ci.yml`'s Pytest job is the only one that checks them out
+    (`submodules: recursive`). Counting them here made this ratchet measure a
+    larger tree in that one job than anywhere else, so a ceiling recorded in a
+    normal worktree failed there for a reason nobody's diff caused. See
+    `src/immune/repo.py`.
+    """
+    submodules = submodule_paths(root)
     return [
         path
         for path in sorted(root.rglob("*.py"))
         if not any(part in _SKIP_PARTS for part in path.relative_to(root).parts)
+        and not inside_submodule(path.relative_to(root), submodules)
     ]
 
 
