@@ -91,16 +91,16 @@
     {
       "type": "library",
       "name": "boto3",
-      "bom-ref": "pkg:pypi/boto3@1.43.103",
-      "purl": "pkg:pypi/boto3@1.43.103",
-      "version": "1.43.103"
+      "bom-ref": "pkg:pypi/boto3@1.43.107",
+      "purl": "pkg:pypi/boto3@1.43.107",
+      "version": "1.43.107"
     },
     {
       "type": "library",
       "name": "botocore",
-      "bom-ref": "pkg:pypi/botocore@1.43.103",
-      "purl": "pkg:pypi/botocore@1.43.103",
-      "version": "1.43.103"
+      "bom-ref": "pkg:pypi/botocore@1.43.107",
+      "purl": "pkg:pypi/botocore@1.43.107",
+      "version": "1.43.107"
     },
     {
       "type": "library",
@@ -112,9 +112,9 @@
     {
       "type": "library",
       "name": "duckdb",
-      "bom-ref": "pkg:pypi/duckdb@1.5.5",
-      "purl": "pkg:pypi/duckdb@1.5.5",
-      "version": "1.5.5"
+      "bom-ref": "pkg:pypi/duckdb@1.5.6",
+      "purl": "pkg:pypi/duckdb@1.5.6",
+      "version": "1.5.6"
     }
   ]
 }
