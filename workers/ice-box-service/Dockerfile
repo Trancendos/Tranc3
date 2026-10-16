@@ -2,7 +2,7 @@
 # dockerfile: workers/ice-box-service/Dockerfile) because worker.py imports
 # src.security.ice_box.* and src.security.warp_tunnel.* — those packages must be
 # present in the image alongside worker.py.
-FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
+FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
 
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
