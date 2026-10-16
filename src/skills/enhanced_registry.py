@@ -175,8 +175,8 @@ class EnhancedSkillRegistry:
     def _cosine(self, a: List[float], b: List[float]) -> float:
         # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
         dot = sum(map(operator.mul, a, b))
-        mag_a = math.sqrt(sum(x * x for x in a))
-        mag_b = math.sqrt(sum(y * y for y in b))
+        mag_a = math.sqrt(sum(map(operator.mul, a, a)))
+        mag_b = math.sqrt(sum(map(operator.mul, b, b)))
         if mag_a < 1e-12 or mag_b < 1e-12:
             return 0.0
         return dot / (mag_a * mag_b)
