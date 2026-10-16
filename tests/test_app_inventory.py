@@ -183,3 +183,37 @@ def test_socket_security_is_recorded_as_the_honest_sensor():
 def test_no_registered_row_omits_a_capability_flag(flag):
     for row in yaml.safe_load(cai.REGISTER.read_text(encoding="utf-8"))["apps"]:
         assert isinstance(row.get(flag), bool), f"{row.get('slug')} has no {flag}"
+
+
+# ---------------------------------------------------------------------------
+# The fetch guard, probed rather than asserted.
+#
+# `_api` carries a `# nosec B310` suppression. That suppression is only honest
+# if the check it points at actually refuses something, so these two tests are
+# the probe for it -- the same discipline IMMUNE-SYSTEM.md requires of a
+# sensor. A guard nothing ever tested is indistinguishable from a comment.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "base",
+    [
+        "file:///etc",
+        "http://api.github.com",
+        "https://api.github.com.example.invalid",
+        "https://evil.invalid",
+    ],
+)
+def test_the_fetch_guard_refuses_anything_but_the_github_api_over_https(base, monkeypatch):
+    """`file://` is the one that matters: `urlopen` follows it happily, and it
+    reads local files with whatever the process can read."""
+    monkeypatch.setattr(cai, "GITHUB_API", base)
+    with pytest.raises(ValueError, match="not the GitHub API"):
+        cai._api("/passwd", "token")
+
+
+def test_a_bot_login_normalises_to_its_app_slug():
+    """GitHub names the same App two ways; the register holds one row."""
+    assert cai._bot_slug("coderabbitai[bot]") == "coderabbitai"
+    assert cai._bot_slug("victicnor") == ""
+    assert cai._bot_slug("") == ""

@@ -56,6 +56,7 @@ import argparse
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -74,6 +75,11 @@ DECISIONS = ("keep", "declined", "undecided")
 _EMPTY_REASONS = ("", "n/a", "none", "tbd", "todo", "see above", "as above")
 
 GITHUB_API = "https://api.github.com"
+
+#: Checked in `_api` before every fetch. See its docstring for why a
+#: constant base URL is not on its own a guarantee.
+_ALLOWED_SCHEMES = frozenset({"https"})
+_API_HOST = "api.github.com"
 
 
 def _shown(path: Path) -> str:
@@ -136,48 +142,162 @@ def row_defects(row: dict[str, Any]) -> list[str]:
 
 
 def _api(path: str, token: str) -> Any:
+    """One GitHub read, with the scheme checked rather than asserted.
+
+    `urlopen` will follow `file://`, `data:` and any other scheme the opener
+    knows, so a URL assembled from a variable is a real finding and not a
+    style complaint -- `GITHUB_API` is a constant today, but `--repo` and
+    `$GITHUB_REPOSITORY` both reach `path`. The suppression below is honest
+    only because the two lines above it make it true: an allowlisted scheme
+    and the one host this script is for. A comment claiming "fixed host" and
+    nothing enforcing it is the defect this estate keeps finding in its own
+    controls.
+    """
+    url = f"{GITHUB_API}{path}"
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme not in _ALLOWED_SCHEMES or parsed.netloc != _API_HOST:
+        raise ValueError(
+            f"refusing to fetch {parsed.scheme}://{parsed.netloc} -- not the GitHub API"
+        )
     request = urllib.request.Request(
-        f"{GITHUB_API}{path}",
+        url,
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
             "User-Agent": "tranc3-app-inventory",
         },
     )
-    with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 - fixed host
+    with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310 - scheme+host checked above
         return json.loads(response.read().decode("utf-8"))
 
 
+def _bot_slug(login: str) -> str:
+    """The App slug behind a login, or "" if the login is not a bot.
+
+    GitHub reports the same App two ways: `coderabbitai[bot]` as a comment
+    author, `coderabbitai` as a check-run app slug. Normalising here is what
+    lets the register hold one row per App rather than one per surface.
+    """
+    return login[: -len("[bot]")] if login.endswith("[bot]") else ""
+
+
+def _apps_in_comments(repo: str, number: Any, token: str) -> set[str]:
+    try:
+        comments = _api(f"/repos/{repo}/issues/{number}/comments?per_page=100", token) or []
+    except (urllib.error.URLError, json.JSONDecodeError):
+        return set()
+    logins = ((c.get("user") or {}).get("login") or "" for c in comments)
+    return {slug for slug in map(_bot_slug, logins) if slug}
+
+
+def _apps_in_checks(repo: str, head: str, token: str) -> set[str]:
+    try:
+        runs = _api(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token)
+    except (urllib.error.URLError, json.JSONDecodeError):
+        return set()
+    slugs = (((r.get("app") or {}).get("slug")) or "" for r in (runs or {}).get("check_runs", []))
+    return {slug for slug in slugs if slug}
+
+
 def observed_apps(repo: str, token: str, *, pulls: int = 10) -> set[str]:
-    """Apps seen publishing checks, commenting, or opening pull requests."""
+    """Apps seen publishing checks, commenting, or opening pull requests.
+
+    Three surfaces, because an App is only visible on the ones it uses: a
+    scanner appears solely as a check-run, a review bot solely as comments,
+    and a dependency bot as the author of its own pull requests. Sampling one
+    surface would under-count the register's subject.
+    """
     seen: set[str] = set()
     prs = _api(f"/repos/{repo}/pulls?state=all&per_page={pulls}", token)
     for pr in prs if isinstance(prs, list) else []:
-        number, head = pr.get("number"), (pr.get("head") or {}).get("sha")
-        author = (pr.get("user") or {}).get("login") or ""
-        if author.endswith("[bot]"):
-            seen.add(author[: -len("[bot]")])
-        for endpoint in (f"/repos/{repo}/issues/{number}/comments?per_page=100",):
-            try:
-                for comment in _api(endpoint, token) or []:
-                    login = (comment.get("user") or {}).get("login") or ""
-                    if login.endswith("[bot]"):
-                        seen.add(login[: -len("[bot]")])
-            except (urllib.error.URLError, json.JSONDecodeError):
-                continue
+        author = _bot_slug((pr.get("user") or {}).get("login") or "")
+        if author:
+            seen.add(author)
+        seen |= _apps_in_comments(repo, pr.get("number"), token)
+        head = (pr.get("head") or {}).get("sha")
         if head:
-            try:
-                runs = _api(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token)
-                for run in (runs or {}).get("check_runs", []):
-                    slug = ((run.get("app") or {}).get("slug")) or ""
-                    if slug:
-                        seen.add(slug)
-            except (urllib.error.URLError, json.JSONDecodeError):
-                continue
+            seen |= _apps_in_checks(repo, head, token)
     return seen
 
 
-def main(argv: list[str] | None = None) -> int:
+def register_defects(rows: list[dict[str, Any]]) -> list[str]:
+    """Every reason the register as a whole is not usable.
+
+    Per-row problems come from `row_defects`; this adds the one defect a row
+    cannot see on its own, a slug listed twice. Two rows for one App mean two
+    decisions for one grant of authority, and nothing says which holds.
+    """
+    failures: list[str] = []
+    counts: dict[str, int] = {}
+    for row in rows:
+        slug = str(row.get("slug") or "?")
+        counts[slug] = counts.get(slug, 0) + 1
+        failures.extend(f"{slug}: {problem}" for problem in row_defects(row))
+    failures.extend(f"{slug}: listed {count} times" for slug, count in counts.items() if count > 1)
+    return failures
+
+
+def _print_listing(rows: list[dict[str, Any]]) -> None:
+    for row in sorted(rows, key=lambda r: str(r.get("slug"))):
+        caps = [
+            name
+            for flag, name in (("publishes_checks", "checks"), ("opens_prs", "prs"))
+            if row.get(flag)
+        ]
+        print(f"  {str(row.get('slug')):34s} {str(row.get('decision')):10s} {','.join(caps)}")
+    print(f"\n{len(rows)} apps registered")
+
+
+def _print_shape(rows: list[dict[str, Any]]) -> None:
+    """What the register says about this estate, by authority held."""
+    gating = [r for r in rows if r.get("publishes_checks")]
+    merging = [r for r in rows if str(r.get("slug")) == "mergify"]
+    undecided = [r for r in rows if str(r.get("decision")) == "undecided"]
+    print(f"App register: {len(rows)} apps")
+    print(f"  publish commit checks (can gate a merge): {len(gating)}")
+    print(f"  can merge without a human:                {len(merging)}")
+    print(f"  undecided (a queue, not a failure):       {len(undecided)}")
+    for row in undecided:
+        print(f"      - {row.get('slug')}")
+
+
+def _measure_against_github(repo: str, rows: list[dict[str, Any]]) -> tuple[list[str], bool]:
+    """Compare the register with what GitHub says acted here.
+
+    Returns the failures found and whether the comparison is UNKNOWN. The
+    two are deliberately separate: an unreachable GitHub is not a register
+    defect, and must not be reported as one -- nor as a clean comparison.
+    """
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+    if not token:
+        print(
+            "\nMeasurement: UNKNOWN — no GITHUB_TOKEN, so the register was not "
+            "compared against reality. A register validated offline is well-formed, "
+            "never complete; reporting it as complete here would make this script "
+            "the defect it exists to catch."
+        )
+        return [], True
+    try:
+        observed = observed_apps(repo, token)
+    except (urllib.error.URLError, json.JSONDecodeError) as exc:
+        print(f"\nMeasurement: UNKNOWN — could not reach GitHub ({exc}).")
+        return [], True
+
+    registered = {str(r.get("slug")) for r in rows}
+    print(f"\nMeasurement: {len(observed)} apps observed acting on {repo}")
+    failures = [
+        f"{slug}: acting on this repository but named nowhere in the register"
+        for slug in sorted(observed - registered)
+    ]
+    stale = sorted(registered - observed)
+    if stale:
+        print("  registered but not seen in the sampled window (not a failure):")
+        for slug in stale:
+            print(f"      - {slug}")
+    return failures, False
+
+
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--register", type=Path, default=REGISTER)
     parser.add_argument(
@@ -187,7 +307,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "Trancendos/Tranc3"))
     parser.add_argument("--list", action="store_true", help="print the register and exit")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
 
     rows, fatal = _load_register(args.register)
     if fatal:
@@ -196,69 +320,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.list:
-        for row in sorted(rows, key=lambda r: str(r.get("slug"))):
-            caps = []
-            if row.get("publishes_checks"):
-                caps.append("checks")
-            if row.get("opens_prs"):
-                caps.append("prs")
-            print(f"  {str(row.get('slug')):34s} {str(row.get('decision')):10s} {','.join(caps)}")
-        print(f"\n{len(rows)} apps registered")
+        _print_listing(rows)
         return 0
 
-    failures: list[str] = []
-    seen_slugs: dict[str, int] = {}
-    for row in rows:
-        slug = str(row.get("slug") or "?")
-        seen_slugs[slug] = seen_slugs.get(slug, 0) + 1
-        for problem in row_defects(row):
-            failures.append(f"{slug}: {problem}")
-    for slug, count in seen_slugs.items():
-        if count > 1:
-            failures.append(f"{slug}: listed {count} times")
-
-    gating = [r for r in rows if r.get("publishes_checks")]
-    merging = [r for r in rows if str(r.get("slug")) == "mergify"]
-    undecided = [r for r in rows if str(r.get("decision")) == "undecided"]
-
-    print(f"App register: {len(rows)} apps")
-    print(f"  publish commit checks (can gate a merge): {len(gating)}")
-    print(f"  can merge without a human:                {len(merging)}")
-    print(f"  undecided (a queue, not a failure):       {len(undecided)}")
-    if undecided:
-        for row in undecided:
-            print(f"      - {row.get('slug')}")
+    failures = register_defects(rows)
+    _print_shape(rows)
 
     unknown_measure = False
     if args.measure:
-        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
-        if not token:
-            unknown_measure = True
-            print(
-                "\nMeasurement: UNKNOWN — no GITHUB_TOKEN, so the register was not "
-                "compared against reality. A register validated offline is well-formed, "
-                "never complete; reporting it as complete here would make this script "
-                "the defect it exists to catch."
-            )
-        else:
-            try:
-                observed = observed_apps(args.repo, token)
-            except (urllib.error.URLError, json.JSONDecodeError) as exc:
-                unknown_measure = True
-                print(f"\nMeasurement: UNKNOWN — could not reach GitHub ({exc}).")
-            else:
-                registered = {str(r.get("slug")) for r in rows}
-                unregistered = sorted(observed - registered)
-                print(f"\nMeasurement: {len(observed)} apps observed acting on {args.repo}")
-                for slug in unregistered:
-                    failures.append(
-                        f"{slug}: acting on this repository but named nowhere in the register"
-                    )
-                stale = sorted(registered - observed)
-                if stale:
-                    print("  registered but not seen in the sampled window (not a failure):")
-                    for slug in stale:
-                        print(f"      - {slug}")
+        measured_failures, unknown_measure = _measure_against_github(args.repo, rows)
+        failures.extend(measured_failures)
 
     if failures:
         print("\nApp register: FAILED")
