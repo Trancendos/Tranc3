@@ -85,14 +85,24 @@ apps:
     does: Static analysis across the diff; publishes a pass/fail check-run.
     publishes_checks: true
     opens_prs: false
-    decision: undecided
+    decision: keep
     reason: >-
-      IMMUNE-SYSTEM.md names CodeFactor as one of the four vendors whose job
-      src/immune/ reimplements vendor-free, so this App may be redundant with
-      the estate's own grading. It also reported a byte-identical title
-      ("59 issues fixed. 61 issues found.") on two different heads of #1207
-      across a 13-file change, which suggests it may not have re-analysed at
-      all. Unregistered until now.
+      KEEP, decided 2026-10-16 on measured evidence, having been undecided
+      earlier the same day. It was the only control in this estate that could
+      see a real B310 in scripts/check_app_inventory.py: ruff never raises the
+      security family here (S is absent from [tool.ruff] select), and bandit
+      lists scripts in exclude_dirs and carries B310 in its global skips, so
+      both local lanes were silent by configuration. CodeFactor caught it
+      because it runs bandit with its own config and ignores this
+      repository's. That independence is the property worth keeping -- a
+      second opinion that cannot be switched off by editing pyproject.toml.
+      It also flagged a 90-line main() that the estate's own complexity
+      sensor, baselined at 20, did not. Against it: IMMUNE-SYSTEM.md names
+      CodeFactor among the four vendors src/immune/ reimplements vendor-free,
+      and it reported a byte-identical title ("59 issues fixed. 61 issues
+      found.") on two different heads of #1207 across a 13-file change, so it
+      appears not to re-analyse a diff that large. Keep it for the small
+      diffs it demonstrably reads; do not rely on it for #1207-sized ones.
     reviewed_on: "2026-10-16"
 
   - slug: gitguardian

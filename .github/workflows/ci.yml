@@ -490,6 +490,17 @@ jobs:
       - name: App register is a usable document
         run: python scripts/check_app_inventory.py
 
+      # A suppression that silences nothing still reads as an adjudication.
+      # `S` is absent from [tool.ruff] select, so every `S###` suppression in
+      # the tree suppresses nothing -- 61 of them, each reading as a security
+      # decision. Found by following one CodeFactor B310 finding to its root:
+      # the comment was inert, its stated reason was false, and no lane here
+      # could see either, because bandit excludes scripts/ and skips B310.
+      # Ratcheted rather than refused, because a guard that fails on the
+      # backlog gets bypassed rather than satisfied.
+      - name: Suppressions silence something
+        run: python scripts/check_inert_suppressions.py
+
       # tests/test_immune.py is deliberately NOT run here. It was, for one
       # commit, and failed with "No module named pytest": this job installs the
       # handful of packages its static checks need, not the test stack. The

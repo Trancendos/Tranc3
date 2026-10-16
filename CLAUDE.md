@@ -282,12 +282,38 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   document in the tree: `debricked` (SCA), `gitguardian` (secret scanning),
   `codefactor-io` and `mermaid-diagram-sync-assistant`. Two are security scanners,
   which is precisely what the sentence above says to read this document before
-  adding. `ecc-tools` alone posted 134 comments across five pull requests. Ten rows
-  are `undecided`, and that is a queue the estate owes an answer to rather than a
-  verdict assigned away by judgement — the Backlog Routing Register's rule for
-  `_unrouted_`, applied to Apps. The checker validates the register offline on
+  adding. `ecc-tools` alone posted 134 comments across five pull requests. **Nine**
+  rows are `undecided`, and that is a queue the estate owes an answer to rather
+  than a verdict assigned away by judgement — the Backlog Routing Register's rule
+  for `_unrouted_`, applied to Apps. `codefactor-io` was the tenth and is now
+  `keep`: it was the only control here that could see a real B310 in
+  `scripts/check_app_inventory.py`, because it runs bandit with its own config
+  while ruff never selects the security family and this repo's bandit excludes
+  `scripts/` and skips B310. The checker validates the register offline on
   every PR; proving it *complete* needs `--measure` and a token, and without one it
   reports `unknown` rather than clean
+
+  **Inert suppressions** (`scripts/check_inert_suppressions.py`,
+  `config/immune/noqa_ceiling.txt`, run in `ci.yml`) came out of the App register's
+  own first day: `codefactor-io` flagged a real B310 in the register's checker, and
+  following it found that the suppression on that line silenced nothing. `S` —
+  flake8-bandit, the security family — is **not** in `[tool.ruff] select`, so ruff
+  never raises it here. Probed: a file containing `os.system(user_input)`,
+  `subprocess.call(..., shell=True)`, `exec()` and `eval()` passes this repo's ruff
+  config with "All checks passed!", and reports four findings under `--select S`.
+  Measured: **172 of 803** suppression codes in the tree are inert (21%), **61** of
+  them in the security family, plus **2** bare directives that silence every rule on
+  their line forever. Both counts are ratcheted — they may fall, never rise —
+  following `check_nosec_specificity.py`'s reasoning that a guard failing on the
+  backlog gets bypassed rather than satisfied. The finding surfaced only because
+  CodeFactor runs bandit with its own config while this repo's `[tool.bandit]`
+  excludes `scripts/` and skips `B310`, so an undocumented App was the estate's only
+  working sensor there. **Not decided here:** whether to select `S`. That would raise
+  14,473 findings, 13,425 of them `assert` in tests bandit already skips — and those
+  two move with every test file added, so they are a scale, not a tracked figure. The
+  number that should drive the decision is **263** findings on `scripts/`+`workers/`
+  against **37** on `src/`+`api.py`, in classes bandit does not skip. An owner's call,
+  not a checker's
 - `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — three externally supplied AI
   assessments of Tranc3 checked claim by claim. The rule they establish: **they
   reliably read the issue tracker and reliably invent the aggregates.** Document 3

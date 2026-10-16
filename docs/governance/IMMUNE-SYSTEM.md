@@ -772,7 +772,7 @@ Three things the register makes legible that volume alone hides:
    all, *"to avoid reporting false positives"*. That is the founding rule, obeyed
    unprompted. Its silence should score as honesty, not as a coverage gap.
 
-Ten rows read `decision: undecided`, and the checker reports that count every run
+Nine rows read `decision: undecided`, and the checker reports that count every run
 without failing on it. This follows the Backlog Routing Register, where items
 with no decision stay `_unrouted_` because the count *"is a queue the Town Hall
 owes an answer to rather than a number assigned away by judgement"*. A register
@@ -793,3 +793,93 @@ Its own tests caught exactly that class of bug on the first run: `_load_register
 called `Path.relative_to`, which *raises* for a path outside the repository, so
 the error-reporting branch crashed on any register passed from a temporary
 directory — a check that could not report its own failure.
+
+### Inert suppressions: the comment that adjudicates nothing
+
+The App register earned itself inside a day. `codefactor-io` — one of the four
+Apps it was created for, named in no document before it — reported two findings
+on the register's own commit. Following the first to its root found a third
+class of control outside the founding rule, and it is the purest instance yet.
+
+The line was written in this repository, in the commit that added the register's
+checker:
+
+```python
+with urllib.request.urlopen(request, timeout=30) as response:  # (S310 suppressed) - fixed host
+```
+
+Three things were true of it simultaneously, and none was visible from the line:
+
+1. **The suppression silenced nothing.** `[tool.ruff] select` is
+   `["E", "F", "W", "C", "B", "I"]`. `S` — flake8-bandit, the security family —
+   is absent, so ruff never raises S310 and there was nothing to suppress.
+2. **The written reason was false.** "fixed host" described `GITHUB_API`, a
+   constant. It did not describe the path concatenated onto it, which `--repo`
+   and `$GITHUB_REPOSITORY` both reach.
+3. **No lane here could see either.** bandit is the lane that runs, and
+   `[tool.bandit]` sets `targets = ["src", "api.py"]`, lists `scripts` in
+   `exclude_dirs`, and carries `B310` in its global `skips`. The file was out of
+   scope and the rule was skipped anyway.
+
+Probed rather than inferred. A file containing `os.system(user_input)`,
+`subprocess.call(user_input, shell=True)`, `exec(user_input)` and
+`eval(user_input)` passes this repository's ruff configuration with
+**`All checks passed!`**, and reports four findings under `--select S`.
+
+So the finding surfaced only because CodeFactor runs bandit with its own
+configuration and ignores this repository's. **An App that was in no document
+turned out to be the estate's only working sensor on that surface** — which is
+the argument for the register, made by the register's own first week. Its row is
+now `keep`, and the reason records this rather than a preference.
+
+#### What was measured, and what it is not
+
+| suppression codes in the tree | count |
+|---|---|
+| live — ruff can raise the rule | 631 |
+| **inert** — ruff never raises it | **172** |
+| bare, no code at all — silences every rule on the line, forever | 2 |
+
+172 of 803 is 21%. Eighty are `PLC0415`, nine `SLF001`, and **61 are in the
+security family** — each reading as a security adjudication, none enforced by
+anything. `scripts/check_inert_suppressions.py` now counts both classes and
+ratchets them: the numbers in `config/immune/noqa_ceiling.txt` may fall and may
+never rise. Ratcheted rather than refused, for the reason
+`check_nosec_specificity.py` already states — *"a guard that fails on the backlog
+fails on every pull request, which is how a guard gets bypassed rather than
+satisfied"*.
+
+The checker writes the directive token from two string halves. Written as one
+literal, its source line would be a real suppression and its own count would
+include itself: a measuring instrument inside its own measurement. A test pins
+that property, because it is the file's own subject.
+
+#### The decision this does not make
+
+Selecting `S` is an owner's call with a real cost, so the checker does not make
+it and this document does not recommend it unqualified. The honest figures:
+
+| surface | S findings, excluding classes `[tool.bandit]` already skips | scanned by bandit? |
+|---|---|---|
+| `scripts/` + `workers/` | **263** | no — outside `targets`, `scripts` excluded |
+| `src/` + `api.py` | **37** | yes |
+
+Seven times as many findings on the surface three lanes each decline to look at,
+which is what an unscanned surface looks like. 76 of the 263 are S608 (SQL
+string construction) and 105 are S104 (binding all interfaces) — the latter
+expected in containerised workers and probably benign. **That is the point: the
+estate cannot currently say which, because nothing has ever asked.** This is a
+*coverage* gap in the sense §Vaccination defines — a region never probed — not a
+*sight* failure. Selecting `S` repository-wide would raise 14,473 findings,
+13,425 of them `assert` in tests that bandit already skips as B101 with a written
+reason; so the useful move is narrower than the global switch, and belongs to
+whoever owns the consequence.
+
+Those last two figures were 14,437 and 13,389 when first measured, an hour
+earlier in the same commit — the test file for this very checker added 36
+asserts and moved them. They are a *scale*, not a tracked number, and are
+written here as such: anything that moves whenever a test is added cannot be
+ratcheted, which is precisely why the checker counts **suppressions** rather
+than findings. A figure that drifts between measurement and commit is the
+defect this document exists for, and it is worth recording that it happened
+here, to the person writing the section about it.
