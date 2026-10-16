@@ -246,7 +246,7 @@ Items carried from earlier assessments — verify before working.
 | Git Repository | _unrouted_ | — | Pending | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Historical-PHASE20_SWOT_FORENSIC.md:125` |
 | Extended tasks (this phase) | _unrouted_ | — | In progress | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Historical-PHASE25_PROGRESS_CALCULATION.md:26` |
 | Finalization | _unrouted_ | — | Planned | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Historical-PHASE25_PROGRESS_CALCULATION.md:27` |
-| Current Phase | _unrouted_ | — | In progress | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Historical-PHASE26_DIRECTORY_STRUCTURE.md:545` |
+| Current Phase | _unrouted_ | — | In progress | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Historical-PHASE26_DIRECTORY_STRUCTURE.md:547` |
 | Phase 3 — CF cutover | _unrouted_ | — | Not started | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Historical-PRODUCTION_FORENSIC_ASSESSMENT.md:101` |
 
 ## Epic — Platform engineering
