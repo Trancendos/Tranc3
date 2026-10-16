@@ -104,7 +104,7 @@ jobs:
             --author-url "https://trancendos.ai" || true
 
       - name: Upload Python security reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: python-security-${{ github.run_number }}
@@ -199,7 +199,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload semgrep results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: semgrep-${{ github.run_number }}
@@ -252,7 +252,7 @@ jobs:
             . || true
 
       - name: Upload Trivy reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: trivy-${{ github.run_number }}
@@ -310,7 +310,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload secret detection reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: secret-detection-${{ github.run_number }}
@@ -360,7 +360,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload OSV-Scanner results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: osv-scanner-${{ github.run_number }}
@@ -416,7 +416,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Checkov results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: checkov-${{ github.run_number }}
@@ -493,7 +493,7 @@ jobs:
         # docs/governance/BOM-MATRIX.md for the triage record.
 
       - name: Upload SBOM and grype reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: sbom-${{ github.run_number }}
@@ -585,7 +585,7 @@ jobs:
           echo "NOTE: Safety removed — no longer free for commercial use." | tee -a logs/security-dashboard.txt
 
       - name: Upload dashboard
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: security-dashboard-${{ github.run_number }}
@@ -673,7 +673,7 @@ jobs:
 
       - name: Upload ZAP results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: zap-dast-results
           path: logs/zap-report.*
