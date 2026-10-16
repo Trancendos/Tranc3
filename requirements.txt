@@ -72,7 +72,14 @@ alembic==1.20.0
 psycopg2-binary==2.9.13
 
 # === Web Framework ===
-# Fixes: CVE-2024-33663 (algorithm confusion), CVE-2024-29370 (JWE DoS) via python-jose>=3.4.0
+# CVE-2024-29370 (JWE DoS) is fixed by python-jose>=3.4.0.
+# CVE-2024-33663 (algorithm confusion) is NOT: this line claimed it was until
+# 2026-10-06, when the same GHSA was re-issued as CVE-2026-85394 showing the
+# guard 3.4.0 added can be bypassed with a DER-encoded public key. No release
+# fixes it (every published version is affected). Suppressed as SEC-020 in
+# SECURITY_ALERT_REGISTER.md, on the premise -- enforced by
+# scripts/check_disposition_premises.py -- that every JWT decode site names
+# exactly one algorithm, which makes the confusion unreachable here.
 # python-jose 3.5.0: upgrades pyasn1 constraint to >=0.5.0 (was <0.5.0 in 3.4.0), enabling pyasn1 fix
 # fastapi 0.136.3: pulls starlette 1.1.0 — fixes PYSEC-2026-161, CVE-2025-54121, CVE-2025-62727
 fastapi==0.141.1
