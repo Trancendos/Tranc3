@@ -236,7 +236,11 @@ def _boundary_reader():
     sys.modules[spec.name] = module
     try:
         spec.loader.exec_module(module)
-    except Exception:  # noqa: BLE001 - a missing boundary must not end the run
+    # A broad catch on purpose: a missing or unreadable boundary must not end
+    # the run. No suppression -- BLE is a separate linter from B, so this
+    # repo's `select` does not enable BLE001 and a directive naming it would
+    # silence nothing, which is what check_inert_suppressions.py counts.
+    except Exception:
         return (lambda *_: False), (lambda _: frozenset())
     return module.inside_submodule, module.submodule_paths
 
@@ -375,8 +379,15 @@ def _nltk_path_calls(tree: ast.AST) -> list[tuple[int, str]]:
     return found
 
 
-def _census_staleness(output: Path) -> str:
+def _census_staleness(output: Path, entry_id: str = "SEC-006", package: str = "nltk") -> str:
     """A reason the census is too old to confirm a premise, or "".
+
+    `entry_id` names the register entry whose premises are being confirmed, so
+    the reason reads as that entry's, and `package` names the dependency the
+    premises are about. Both defaulted to SEC-006's values and were hardcoded
+    into every message, which meant SEC-020 and SEC-021 -- which share this
+    freshness rule -- would have reported a stale census as SEC-006's, about
+    nltk, had they called it at all. They now do, which is the point.
 
     `src/immune/verdict.py` already holds the TTL rule and the reasoning for
     it, so this loads that module BY PATH rather than copying the arithmetic.
@@ -391,18 +402,32 @@ def _census_staleness(output: Path) -> str:
     # which is what scripts/check_inert_suppressions.py now counts.)
     import importlib.util
 
+    # _SOURCE_ROOT, not ROOT: this module travels with the checker, whereas
+    # ROOT is the tree being MEASURED and a test may point it at a fixture that
+    # holds no src/ at all. Resolving from ROOT made the freshness rule
+    # unavailable exactly when the subject tree was not this repository -- and
+    # spec_from_file_location happily returns a spec for a path that does not
+    # exist, so the failure surfaced as an uncaught FileNotFoundError from
+    # exec_module rather than as the "could not be loaded" reason below.
+    unavailable = (
+        f"{entry_id}: src/immune/verdict.py could not be loaded, so the census "
+        "freshness could not be established. Not a pass -- an unchecked age "
+        "is not a current answer."
+    )
     spec = importlib.util.spec_from_file_location(
-        "_verdict_for_premises", ROOT / "src" / "immune" / "verdict.py"
+        "_verdict_for_premises", _SOURCE_ROOT / "src" / "immune" / "verdict.py"
     )
     if spec is None or spec.loader is None:
-        return (
-            "SEC-006: src/immune/verdict.py could not be loaded, so the census "
-            "freshness could not be established. Not a pass -- an unchecked age "
-            "is not a current answer."
-        )
+        return unavailable
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    # Broad on purpose, and undirected for the same reason as above: a
+    # missing or broken freshness rule must read as unchecked, not crash.
+    except Exception:
+        sys.modules.pop(spec.name, None)
+        return unavailable
 
     verdict = module.load_verdict(output)
 
@@ -417,12 +442,12 @@ def _census_staleness(output: Path) -> str:
         return ""
     if verdict.outcome == module.UNKNOWN:
         return (
-            f"SEC-006: the census did not complete ({verdict.explain()}), so the "
-            "nltk version and fix-availability premises are unconfirmed. This is "
+            f"{entry_id}: the census did not complete ({verdict.explain()}), so the "
+            f"{package} version and fix-availability premises are unconfirmed. This is "
             "not a failing scan and must not be read as one, nor as a pass."
         )
     return (
-        f"SEC-006: the census is not a current answer ({verdict.explain()}). Its "
+        f"{entry_id}: the census is not a current answer ({verdict.explain()}). Its "
         "premises are about a LIVE advisory feed, so confirming them from an aged "
         "file asserts that nothing has changed since -- the one thing the file "
         "cannot say. Re-run "
@@ -1318,6 +1343,16 @@ def _census_jose_premises() -> list[str]:
     except (json.JSONDecodeError, OSError) as exc:
         return [f"SEC-020: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
 
+    # The SAME shelf life as SEC-006's premises, for the same reason, and it was
+    # missing here: these ask what a LIVE advisory feed currently says about
+    # python-jose's resolved version and its fixed releases. A census file old enough
+    # to predate a new fixed release confirms "no fix exists" from the one
+    # document that cannot know. Three entries now share one freshness rule
+    # rather than one entry having it and two inheriting the gap.
+    stale = _census_staleness(output, "SEC-020", _SEC_020_PACKAGE)
+    if stale:
+        return [stale]
+
     failures: list[str] = []
     seen = False
     for surface in data.get("surfaces") or []:
@@ -1552,6 +1587,16 @@ def _census_mcp_premises() -> list[str]:
         data = json.loads(output.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return [f"SEC-021: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    # The SAME shelf life as SEC-006's premises, for the same reason, and it was
+    # missing here: these ask what a LIVE advisory feed currently says about
+    # mcp's resolved version and its fixed releases. A census file old enough
+    # to predate a new fixed release confirms "no fix exists" from the one
+    # document that cannot know. Three entries now share one freshness rule
+    # rather than one entry having it and two inheriting the gap.
+    stale = _census_staleness(output, "SEC-021", _SEC_021_PACKAGE)
+    if stale:
+        return [stale]
 
     failures: list[str] = []
     seen = False

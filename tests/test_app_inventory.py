@@ -226,7 +226,7 @@ def test_a_bot_login_normalises_to_its_app_slug():
 # ---------------------------------------------------------------------------
 
 
-def test_a_partial_measurement_is_unknown_not_complete(monkeypatch, capsys):
+def test_a_partial_measurement_is_unknown_not_complete(monkeypatch, capsys, tmp_path):
     """REGRESSION. Every per-PR fetch used to swallow `URLError` and continue.
     `HTTPError` SUBCLASSES `URLError`, so a 403 or 429 dropped that PR's Apps,
     `unregistered` came back empty, and main printed PASSED -- a sensor that
@@ -243,11 +243,38 @@ def test_a_partial_measurement_is_unknown_not_complete(monkeypatch, capsys):
     # `if unknown_measure: return 1` branch would keep this test green while
     # the script printed PASSED and exited 0 over a blind measurement -- the
     # one outcome it exists to prevent. Raised by cubic on #1403.
-    code = cai.main(["--measure"])
+    #
+    # Against a SYNTHETIC valid register, not the real one. `main` checks the
+    # register before it looks at the measurement and returns 1 from the
+    # `failures` branch first, so run against the repository's own file this
+    # assertion would be satisfied by any future defect in that file -- and the
+    # `if unknown_measure` branch could then be deleted with the test still
+    # green, which is precisely the failure mode the test was added to close.
+    # Raised by coderabbit on #1403, and the same reasoning one level up.
+    register = tmp_path / "apps.yaml"
+    register.write_text(
+        "apps:\n"
+        "  - slug: only-app\n"
+        "    does: Stands in for a real App so this register is valid.\n"
+        "    publishes_checks: false\n"
+        "    opens_prs: false\n"
+        "    decision: keep\n"
+        "    reason: A fixture, so the register itself contributes no failure.\n"
+        "    reviewed_on: '2026-10-16'\n",
+        encoding="utf-8",
+    )
+
+    # First prove the fixture register is clean, so the 1 below cannot come
+    # from it. Without this the isolation is asserted rather than measured.
+    assert cai.main(["--register", str(register)]) == 0
+    assert "PASSED" in capsys.readouterr().out
+
+    code = cai.main(["--register", str(register), "--measure"])
     out = capsys.readouterr().out
     assert code == 1, "an UNKNOWN measurement must fail the build, not merely be printed"
     assert "UNKNOWN" in out
     assert "PASSED" not in out, "nothing may read as passing when the sensor could not see"
+    assert "FAILED" not in out, "the only cause of the 1 must be the blind measurement"
 
 
 def test_a_rate_limited_fetch_makes_the_whole_observation_none(monkeypatch):

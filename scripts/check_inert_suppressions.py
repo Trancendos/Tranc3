@@ -117,7 +117,10 @@ _NOQA = re.compile(
 )
 
 INERT_NOT_SELECTED = "rule family is not selected, so ruff never raises it"
-INERT_IGNORED = "code is in the global ignore list, so ruff never raises it"
+INERT_IGNORED = "an ignore selector covers it, so ruff never raises it"
+# Not "the global ignore list": this reason is also returned for a per-file
+# ignore, and now for a family selector covering the code, so naming one of
+# the three places it can come from described the other two wrongly.
 
 
 @dataclass(frozen=True)
@@ -212,6 +215,15 @@ def _file_ignores(shown: str, per_file: dict[str, list[str]]) -> set[str]:
     return codes
 
 
+def _matches(code: str, selectors) -> bool:
+    """Whether any selector covers `code`, by ruff's prefix rule.
+
+    One implementation for `select`, `ignore` and per-file ignores, so the
+    three cannot drift apart the way they already had.
+    """
+    return any(code.startswith(prefix) for prefix in selectors)
+
+
 def classify(
     code: str, select: list[str], ignore: set[str], file_ignores: frozenset[str] = frozenset()
 ) -> str:
@@ -220,16 +232,24 @@ def classify(
     `ALL` selects everything, so nothing is inert under it. Otherwise a code
     is reachable when any selected prefix is a prefix of it -- ruff's own
     matching -- and unreachable codes are the subject of this checker.
+
+    EVERY one of the three lists is a list of SELECTORS, not of codes, and
+    each is matched by prefix accordingly. `ignore` was matched exactly here
+    while `select` and the per-file ignores were matched by prefix, which is
+    not a distinction ruff makes: `ignore = ["D"]` suppresses D205 and this
+    function would have called a `# noqa: D205` live. This repository's
+    current `ignore` happens to hold whole codes (`E501`, `B008`, `C901`),
+    where exact and prefix matching agree -- so the defect was latent, not
+    visible, and the fix changes no present count. It changes what happens the
+    first time someone ignores a family.
     """
-    # A per-file ignore matches by PREFIX, as ruff matches it: `["B"]` covers
-    # B008, so a suppression naming B008 in that file silences nothing.
-    if any(code.startswith(prefix) for prefix in file_ignores):
+    if _matches(code, file_ignores):
         return INERT_IGNORED
     if "ALL" in select:
-        return INERT_IGNORED if code in ignore else ""
-    if not any(code.startswith(prefix) for prefix in select):
+        return INERT_IGNORED if _matches(code, ignore) else ""
+    if not _matches(code, select):
         return INERT_NOT_SELECTED
-    if code in ignore:
+    if _matches(code, ignore):
         return INERT_IGNORED
     return ""
 
