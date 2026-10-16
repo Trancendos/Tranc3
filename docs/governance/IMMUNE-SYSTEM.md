@@ -665,3 +665,131 @@ was untracked and the guard reads `git ls-files`, so it scanned nothing and
 reported clean. It is recorded in the test suite because **"guard missed" and
 "probe never ran" produce the same green**, and that is the failure this whole
 subsystem exists to make impossible.
+
+## Where the rule had not reached: the gate, and the Apps
+
+Everything above applies the founding rule — *a sensor that cannot see must not
+report clean* — to **scanners**. Two classes of control sat outside that scope
+and were each measured failing in the way the rule predicts.
+
+### Verdict expiry: a pass is a claim about a moment
+
+`memory.py` gave adjudications an expiry because a decision nobody revisits is
+a leak. The same argument applies with more force one layer up, to the
+**verdicts** this estate gates merges on — and there it had never been made.
+
+The Production merge gate runs `scripts/vulnerability_census.py`, which reads a
+*live* advisory feed. Its answer is a statement about that feed at the moment it
+ran. GitHub records the answer as a check-run conclusion and then satisfies the
+required check from any green on the head commit, however old. When a head stops
+moving, the green stops being re-earned — and nothing noticed it had aged out of
+being true.
+
+Measured 2026-10-13:
+
+| subject | Production merge gate | measured at |
+|---|---|---|
+| `main` | success | 2026-10-05T18:59:40Z |
+| #1372 | success | 2026-10-05T19:10:37Z |
+| #1370 | success | 2026-10-05T18:45:16Z |
+| #1369 | success | 2026-10-05T18:35:51Z |
+| #1365 | success | 2026-10-05T18:27:19Z |
+| #1364 | success | 2026-10-05T18:24:53Z |
+| #1288 | success | 2026-10-05T18:40:31Z |
+| #1271 | success | 2026-10-05T18:30:52Z |
+| #1208 | success | 2026-10-05T18:27:11Z |
+
+Nine subjects, one forty-five-minute window, eight days before they were read,
+every one predating the seventeen advisories that landed in between. Seven also
+reported `mergeable_state: clean`. Nothing was wrong with those check-runs —
+they were true when they ran. What was missing was anything able to tell a pass
+earned an hour ago from one earned eight days ago.
+
+**A verdict expires harder than an adjudication, and the asymmetry is the whole
+design.** An expired *suppression*, left in force, delays a fix. An expired
+*pass*, left in force, authorises a merge. One costs time; the other ships. So a
+stale verdict does not stay a pass: it degrades to `unknown`, which `grade.py`
+already treats as "the estate did not look" and keeps distinct from "looked and
+it was fine".
+
+`src/immune/verdict.py` carries the mechanism. What fails closed: no timestamp,
+an unparseable timestamp, a timestamp in the *future* (a skewed runner clock is
+reachable, and "newer than the TTL, therefore fresh" is actively wrong there), a
+non-positive TTL, and an empty report — because a gate with no verdicts in it is
+the `supply-chain-watch` failure in miniature, where a run that skipped the
+census reported `success` for the workflow.
+
+The 24-hour default is not invented here. `supply-chain-watch.yml` already states
+the estate's own interval and its reason: under CRA Art. 14(1) an actively
+exploited vulnerability must be notified within 24 hours, so the intake runs
+daily. An answer older than the interval the estate committed to re-measuring on
+is, by the estate's own standard, no longer current.
+
+### The App register: the fourth class of control
+
+This estate counts three registers of its controls and fails CI when any drifts:
+
+| register | size | checked by |
+|---|---|---|
+| `.github/workflows/` | 28 files | `check_workflow_inventory.py` |
+| `.forgejo/workflows/` | 33 files | `check_workflow_inventory.py` |
+| `.pre-commit-config.yaml` | 22 hooks | `check_precommit_documented.py` |
+
+Each works because a file on disk can be counted. **An installed GitHub App
+leaves no file.** It is installed in a settings page and appears in this
+repository only as comments and check-runs, so nothing here could be counted and
+nothing was.
+
+Measured 2026-10-16: **22** Apps act on this repository, **11** of them
+publishing commit checks — and four of those eleven were named in no document in
+the tree:
+
+- `debricked` — software composition analysis
+- `gitguardian` — secret scanning
+- `codefactor-io` — static analysis, gates pull requests
+- `mermaid-diagram-sync-assistant` — diagram sync
+
+Two are security scanners. This document's own instruction is to read it before
+adding any scanner to this estate, and CLAUDE.md records the identical lesson
+about workflows: the instruction *"only binds if adding one is visible"*. For
+Apps it was not visible.
+
+Three things the register makes legible that volume alone hides:
+
+1. **`publishes_checks` is the field that matters.** An App that publishes a
+   commit check can gate a merge; one that can only comment cannot, whatever its
+   comment says. `ecc-tools` posted **134** comments across five pull requests —
+   more than any human or agent wrote in the same span — and every one ends
+   *"Check publication was denied or unavailable"*. It gates nothing.
+2. **`mergify` is the highest authority here, because it can merge.** Its two
+   auto-merge rules require Ruff Lint and Pytest and name the Production merge
+   gate in **zero** conditions, so a Renovate pull request can be squash-merged
+   with the platform's own gate red. Latent rather than live today — only one of
+   ten Renovate PRs carries the `dependencies` label the rules need, and it fails
+   on title and tests — but the register is where that fact now lives.
+3. **`socket-security` is the vendor that already obeys this document.** On
+   exceeding its 10,000-dependency scan limit it declined to post a report at
+   all, *"to avoid reporting false positives"*. That is the founding rule, obeyed
+   unprompted. Its silence should score as honesty, not as a coverage gap.
+
+Ten rows read `decision: undecided`, and the checker reports that count every run
+without failing on it. This follows the Backlog Routing Register, where items
+with no decision stay `_unrouted_` because the count *"is a queue the Town Hall
+owes an answer to rather than a number assigned away by judgement"*. A register
+that demanded a verdict on every row the day it was written would have recorded
+one author's guesses as the estate's decisions — which is the defect this whole
+class of file exists to prevent.
+
+**The checker does not overclaim.** `--validate` runs offline on every pull
+request and proves the register is a *usable document*: every row named, with a
+written `does`, a `decision` from a fixed set, a reason that says something its
+own slug does not, and an ISO `reviewed_on`. Proving the register *complete* is a
+different question that needs `--measure` and a token, and without one it reports
+`unknown` and exits non-zero rather than reporting the register complete. A
+register validated offline is well-formed, never complete; saying otherwise would
+make the checker an instance of the defect it was built to catch.
+
+Its own tests caught exactly that class of bug on the first run: `_load_register`
+called `Path.relative_to`, which *raises* for a path outside the repository, so
+the error-reporting branch crashed on any register passed from a temporary
+directory — a check that could not report its own failure.

@@ -475,6 +475,21 @@ jobs:
       - name: Workflow inventory matches CLAUDE.md
         run: python scripts/check_workflow_inventory.py
 
+      # The fourth register. The three above all work because a file on disk
+      # can be counted; an installed GitHub App leaves no file, so nothing
+      # here could be counted and nothing was. Four Apps that PUBLISH COMMIT
+      # CHECKS were running while named in no document in this tree --
+      # `debricked` (SCA), `gitguardian` (secret scanning), `codefactor-io`
+      # and `mermaid-diagram-sync-assistant`. Two are security scanners, and
+      # IMMUNE-SYSTEM.md says to read it before adding one.
+      #
+      # This is the offline half: it proves the register is a usable document,
+      # never that it is complete. Completeness needs `--measure` and a token,
+      # which reports UNKNOWN rather than clean when it has neither -- see the
+      # script's own docstring for why that distinction is the point.
+      - name: App register is a usable document
+        run: python scripts/check_app_inventory.py
+
       # tests/test_immune.py is deliberately NOT run here. It was, for one
       # commit, and failed with "No module named pytest": this job installs the
       # handful of packages its static checks need, not the test stack. The

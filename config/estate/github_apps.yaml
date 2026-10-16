@@ -1,0 +1,345 @@
+# The fourth register: installed GitHub Apps.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# This estate enforces three registers of its controls, all of them file-based
+# and all of them script-checked:
+#
+#   .github/workflows/      28 files   check_workflow_inventory.py
+#   .forgejo/workflows/     33 files   check_workflow_inventory.py
+#   .pre-commit-config.yaml 22 hooks   check_precommit_documented.py
+#
+# Installed GitHub Apps are a FOURTH class of control and had no register at
+# all -- and they are the largest class by volume. Measured 2026-10-16 across
+# recent pull requests and commits: 22 distinct Apps act on this repository.
+# `ecc-tools` alone posted 134 comments across five pull requests, more than
+# any human or agent wrote in the same span.
+#
+# The three existing registers caught drift because a file on disk can be
+# counted. An App leaves no file. Nothing here could be counted, so nothing
+# was -- and four Apps that PUBLISH COMMIT CHECKS were running without being
+# named in any document in this repository:
+#
+#   debricked                       software composition analysis
+#   gitguardian                     secret scanning
+#   codefactor-io                   static analysis, gates PRs
+#   mermaid-diagram-sync-assistant  diagram sync
+#
+# Two of those are security scanners. `docs/governance/IMMUNE-SYSTEM.md` says
+# to read it before adding any scanner to this estate, and CLAUDE.md records
+# the same lesson about workflows: that instruction "only binds if adding one
+# is visible". For Apps it was not visible, because an App is installed in a
+# GitHub settings page and leaves no trace in the tree.
+#
+# WHAT A ROW MUST SAY
+# -------------------
+# `scripts/check_app_inventory.py` requires every row to carry a written
+# `does`, a `decision`, and a `reviewed_on` date. A row cannot be satisfied by
+# restating the App's name.
+#
+# `decision` is one of:
+#   keep       -- deliberately installed, earns its access
+#   declined   -- present but its findings are not acted on; say why
+#   undecided  -- NOBODY HAS DECIDED YET
+#
+# `undecided` is a first-class value on purpose. It follows the Backlog Routing
+# Register's rule for unrouted items: an undecided count "is a queue the Town
+# Hall owes an answer to rather than a number assigned away by judgement". A
+# register that forced a verdict on every row the day it was created would be
+# recording my guesses as the estate's decisions, which is the defect this
+# whole class of file exists to prevent. The checker reports the undecided
+# count every run; it does not fail on it.
+#
+# `publishes_checks` matters more than it looks. An App that publishes a
+# commit check can gate a merge. An App that can only comment cannot, whatever
+# its comment says -- and several here say "Check publication was denied or
+# unavailable" in every comment, which means they gate nothing at all.
+
+apps:
+  # ── Publishes commit checks: can gate a merge ───────────────────────────
+  - slug: github-actions
+    does: Runs this repository's own workflows and publishes their check-runs.
+    publishes_checks: true
+    opens_prs: false
+    decision: keep
+    reason: >-
+      This is the CI itself, not a third party. The 28 workflows it runs are
+      registered separately and checked by check_workflow_inventory.py.
+    reviewed_on: "2026-10-16"
+
+  - slug: github-advanced-security
+    does: GitHub's own code scanning; publishes a check-run per analysis.
+    publishes_checks: true
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      Measured failing on #1376, #1372 and #1373 at "Processing Request (Linux)"
+      with no title, summary or output, succeeding on #1377 and #1378, and
+      absent entirely from some heads. A re-run returns 403 from the proxy.
+      A check that fails with no output is indistinguishable from a check that
+      cannot see, which is exactly what IMMUNE-SYSTEM.md refuses to let a
+      sensor get away with. Needs a decision, not another re-run.
+    reviewed_on: "2026-10-16"
+
+  - slug: codefactor-io
+    does: Static analysis across the diff; publishes a pass/fail check-run.
+    publishes_checks: true
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      IMMUNE-SYSTEM.md names CodeFactor as one of the four vendors whose job
+      src/immune/ reimplements vendor-free, so this App may be redundant with
+      the estate's own grading. It also reported a byte-identical title
+      ("59 issues fixed. 61 issues found.") on two different heads of #1207
+      across a 13-file change, which suggests it may not have re-analysed at
+      all. Unregistered until now.
+    reviewed_on: "2026-10-16"
+
+  - slug: gitguardian
+    does: Secret scanning; publishes a check-run.
+    publishes_checks: true
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      A security scanner nobody wrote down. The estate already runs gitleaks
+      and detect-secrets as pre-commit hooks, so this is a third secret
+      scanner. Read IMMUNE-SYSTEM.md before keeping it, and decide whether
+      three overlapping secret scanners is defence in depth or three chances
+      to learn to scroll past a finding.
+    reviewed_on: "2026-10-16"
+
+  - slug: debricked
+    does: Software composition analysis; publishes a check-run.
+    publishes_checks: true
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      A security scanner nobody wrote down, and it overlaps
+      scripts/vulnerability_census.py, which is this estate's authority for
+      the dependency verdict and is what the Production merge gate blocks on.
+      Two SCA tools with different opinions on the same manifests is how a
+      gate loses credibility. Needs a decision on which one is authoritative.
+    reviewed_on: "2026-10-16"
+
+  - slug: mergify
+    does: >-
+      Merge automation driven by .mergify.yml; publishes checks and can merge
+      pull requests without a human.
+    publishes_checks: true
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      The highest-authority App here -- it can merge. Measured 2026-10-13: its
+      two auto-merge rules require Ruff Lint and Pytest but name the
+      Production merge gate in ZERO conditions, so a Renovate pull request can
+      be squash-merged with the platform's own gate red. Not firing today
+      (only one of ten Renovate PRs carries the `dependencies` label the rules
+      need, and it fails on title and tests), so this is latent. It is also
+      offered as a merge queue on every PR while .mergify.yml defines no
+      queue_rules at all.
+    reviewed_on: "2026-10-16"
+
+  - slug: socket-security
+    does: Dependency supply-chain analysis; publishes a check-run and comments.
+    publishes_checks: true
+    opens_prs: false
+    decision: keep
+    reason: >-
+      The one App measured BEHAVING AS THIS ESTATE ASKS. On exceeding its
+      10,000-dependency scan limit it declined to post a report at all,
+      stating the results would be incomplete "to avoid reporting false
+      positives". That is IMMUNE-SYSTEM.md's founding rule -- a sensor that
+      cannot see must not report clean -- obeyed by a vendor unprompted. Keep
+      it, and note that its abstention should score as honesty rather than as
+      a coverage gap.
+    reviewed_on: "2026-10-16"
+
+  - slug: codecov
+    does: Coverage reporting from ci.yml's Pytest job; publishes checks.
+    publishes_checks: true
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Coverage is produced by ci.yml's Pytest job, which already runs the
+      suite; the retired codecov.yml workflow ran it a second time for the
+      flags alone. This App consumes that output and does not re-run anything.
+    reviewed_on: "2026-10-16"
+
+  - slug: cubic-dev-ai
+    does: AI code review; publishes a check-run and posts review comments.
+    publishes_checks: true
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Measured the most accurate reviewer on this estate: on #1376 it raised
+      five findings and every one was confirmed by probe, including two that
+      were bypasses of fixes earlier in the same pull request (the two-hop
+      alias cap, and GIT_CONFIG_COUNT surviving a scrub written to close
+      exactly that class of hole).
+    reviewed_on: "2026-10-16"
+
+  - slug: sourcery-ai
+    does: AI code review; publishes a check-run and posts review comments.
+    publishes_checks: true
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Raised the nonliteral-allowlist and aliased-decode findings on #1376,
+      both valid and both fixed. One frame-traversal claim was disproved twice
+      by probe (a suspended generator's f_back is None), so treat its reasoning
+      as a lead rather than a conclusion -- which is true of every reviewer
+      here.
+    reviewed_on: "2026-10-16"
+
+  - slug: mermaid-diagram-sync-assistant
+    does: Publishes a check-run related to Mermaid diagram synchronisation.
+    publishes_checks: true
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      Unregistered until now and its purpose here is unclear. It publishes a
+      check, which means it can in principle gate. Nobody has stated what it
+      is for or what action its result should drive.
+    reviewed_on: "2026-10-16"
+
+  # ── Comments only: cannot gate, whatever the comment says ───────────────
+  - slug: ecc-tools
+    does: >-
+      Posts five to seven audit comments per commit (security evidence, risk
+      taxonomy, reference-set readiness, promotion readiness, config and
+      harness audits).
+    publishes_checks: false
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      The largest source of volume in this repository: 134 comments across
+      five pull requests, more than any human or agent wrote in the same span.
+      Every comment ends "Check publication was denied or unavailable", so it
+      gates nothing. Measured self-contradicting within one commit: it
+      reported "0 security-sensitive path(s) changed" while listing three such
+      paths, and reported security evidence missing while its own sibling
+      check on the same commit listed the regression suite as present. It also
+      asks for an "ECC manifest" in CLAUDE.md -- a configuration file for an
+      installed agent, which AGENT-DAEMON-FLEET-DECISION.md treats as a grant
+      of authority rather than a document. Decide whether to grant it checks,
+      quiet it, or remove it.
+    reviewed_on: "2026-10-16"
+
+  - slug: coderabbitai
+    does: AI code review; posts review comments. Configured by .coderabbit.yaml.
+    publishes_checks: false
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Found the ast.MatchClass hole on #1378 that no other reviewer saw, and
+      independently found the same scope leak codeant did on #1376. Rate
+      limited on the free OSS tier (one included review per hour), and skips
+      any PR over 100 files -- which is why #1207 receives no review at all.
+    reviewed_on: "2026-10-16"
+
+  - slug: codeant-ai
+    does: AI code review; posts review comments and a status comment.
+    publishes_checks: false
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Raised the P1 scope leak on #1376 -- a module-global name resolution
+      that let an unrelated parameter default launder every same-named
+      parameter, bypassing a fix earlier in the same PR. Skips PRs over 100
+      files with a stated reason worth quoting: large diffs "drown out
+      anything that actually matters".
+    reviewed_on: "2026-10-16"
+
+  - slug: chatgpt-codex-connector
+    does: AI code review; posts review comments.
+    publishes_checks: false
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Raised four findings on #1376, all valid: the variable-algorithm accept,
+      the fixed-alias-list gap, an unrelated PyJWT advisory ID inside a
+      SUPPRESS entry (which would have registered it as accepted risk), and
+      the --scope core census missing seven worker manifests.
+    reviewed_on: "2026-10-16"
+
+  - slug: qodo-code-review
+    does: AI code review; posts comments.
+    publishes_checks: false
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      One of nine AI reviewers on this estate. No finding from it has been
+      acted on in the measured span. AGENT-DAEMON-FLEET-DECISION.md already
+      declined a tenth on the grounds that it "would be the ninth review bot";
+      that argument applies to the ones already here.
+    reviewed_on: "2026-10-16"
+
+  - slug: devloai
+    does: AI code review; posts comments.
+    publishes_checks: false
+    opens_prs: false
+    decision: undecided
+    reason: >-
+      As above. No acted-on finding in the measured span.
+    reviewed_on: "2026-10-16"
+
+  - slug: llamapreview
+    does: AI code review; posts comments.
+    publishes_checks: false
+    opens_prs: false
+    decision: keep
+    reason: >-
+      Low volume (2 comments measured) but raised the qualified-receiver gap
+      on #1376 -- jose.jwt.decode(...) has an ast.Attribute base, so the site
+      was skipped entirely and a widened allowlist written that way would
+      never have been seen. One good finding per two comments is a better rate
+      than several higher-volume reviewers here.
+    reviewed_on: "2026-10-16"
+
+  - slug: dosubot
+    does: Answers questions on issues and pull requests; also opens PRs.
+    publishes_checks: false
+    opens_prs: true
+    decision: declined
+    reason: >-
+      Authors three open pull requests. Its CLI installer
+      (curl -fsSL https://cli.dosu.dev/install | sh) has been declined
+      repeatedly in this estate: piping a remote script to a shell is not an
+      install path this repository accepts. Its PRs are judged on their diffs
+      like any other, but the tooling is not adopted.
+    reviewed_on: "2026-10-16"
+
+  # ── Opens pull requests ─────────────────────────────────────────────────
+  - slug: dependabot
+    does: Opens dependency-update pull requests; 12 open at time of writing.
+    publishes_checks: false
+    opens_prs: true
+    decision: keep
+    reason: >-
+      One of two dependency bots. The one-bot-per-ecosystem decision is
+      recorded on #1377; until that lands both are active on overlapping
+      ecosystems, which is the duplication this register is meant to surface.
+    reviewed_on: "2026-10-16"
+
+  - slug: renovate
+    does: Opens dependency-update pull requests; 10 open at time of writing.
+    publishes_checks: false
+    opens_prs: true
+    decision: keep
+    reason: >-
+      The second dependency bot, and the only author Mergify's auto-merge
+      rules target. That pairing is why the Mergify row above matters: a bot
+      that opens PRs plus an automation that can merge them without consulting
+      the platform gate is one label away from merging unreviewed.
+    reviewed_on: "2026-10-16"
+
+  - slug: pre-commit-ci
+    does: Pushes autofix commits to pull request branches.
+    publishes_checks: false
+    opens_prs: true
+    decision: undecided
+    reason: >-
+      Measured manufacturing conflicts on 14 dependency bot PRs by rewriting
+      their branches. It holds push access to branches it did not create,
+      which is the highest authority any non-merging App here has.
+    reviewed_on: "2026-10-16"

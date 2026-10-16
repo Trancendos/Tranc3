@@ -256,7 +256,38 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   offer: a sensor that cannot see reports exactly what a clean estate reports,
   so every sensor declares a **probe** — a planted defect it must flag — and one
   that reports clean while failing its own probe is recorded blind. Read it
-  before adding any scanner to this estate
+  before adding any scanner to this estate.
+
+  **Verdict expiry** (`src/immune/verdict.py`, `scripts/check_verdict_freshness.py`,
+  run in both copies of `production-gate.yml`) applies the same rule to the gate
+  rather than only to the scanners under it. The census answers a question about a
+  *live* advisory feed, so its answer has a shelf life the recorded check-run
+  conclusion does not — and GitHub satisfies a required check from any green on the
+  head commit, however old. Measured 2026-10-13: **nine** open pull requests,
+  `main` among them, held a green Production merge gate timestamped inside one
+  forty-five-minute window on 2026-10-05, all predating the seventeen advisories
+  that landed in between; seven also read `mergeable_state: clean`. A stale verdict
+  now degrades to `unknown` rather than staying a pass, because the asymmetry
+  matters: an expired *suppression* delays a fix, an expired *pass* ships. The TTL
+  defaults to 24h, which is not invented — it is the interval
+  `supply-chain-watch.yml` already commits to, for CRA Art. 14(1).
+
+  **The App register** (`config/estate/github_apps.yaml`,
+  `scripts/check_app_inventory.py`, run in `ci.yml`) is the fourth register of
+  controls, after `.github/workflows/` (28), `.forgejo/workflows/` (33) and
+  `.pre-commit-config.yaml` (22 hooks). The first three work because a file on disk
+  can be counted; an installed GitHub App leaves no file, so nothing here could be
+  counted and nothing was. Measured 2026-10-16: **22** Apps act on this repository,
+  **11** publishing commit checks — and four of those eleven were named in no
+  document in the tree: `debricked` (SCA), `gitguardian` (secret scanning),
+  `codefactor-io` and `mermaid-diagram-sync-assistant`. Two are security scanners,
+  which is precisely what the sentence above says to read this document before
+  adding. `ecc-tools` alone posted 134 comments across five pull requests. Ten rows
+  are `undecided`, and that is a queue the estate owes an answer to rather than a
+  verdict assigned away by judgement — the Backlog Routing Register's rule for
+  `_unrouted_`, applied to Apps. The checker validates the register offline on
+  every PR; proving it *complete* needs `--measure` and a token, and without one it
+  reports `unknown` rather than clean
 - `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — three externally supplied AI
   assessments of Tranc3 checked claim by claim. The rule they establish: **they
   reliably read the issue tracker and reliably invent the aggregates.** Document 3
