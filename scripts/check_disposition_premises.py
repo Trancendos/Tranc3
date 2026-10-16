@@ -166,6 +166,35 @@ _SEC_020_MANIFESTS = (
 
 _JOSE_PIN = re.compile(r"^python-jose(?:\[[^\]]*\])?\s*==\s*([0-9][^\s#;]*)", re.MULTILINE)
 
+#: SEC-021 is the register's first `Blocked-by` entry, and it inverts SEC-006's
+#: and SEC-020's version premise rather than repeating it.
+#:
+#: Those two rest on "no patched release exists", so a fix appearing is what
+#: makes them dishonest. This one rests on the opposite: a fix DOES exist
+#: (1.30.0, 2.2.0) and nothing can reach it, because `semgrep` exact-pins
+#: `mcp==1.29.0`. So the failing conditions are mirrored — an *empty*
+#: `fix_versions` means the entry should be a SUPPRESS and not a Blocked-by,
+#: and a resolved version other than 1.29.0 means the pin holding it there has
+#: moved.
+#:
+#: That second condition is what makes the "re-check on every semgrep bump"
+#: trigger checkable offline. semgrep's exact pin is the *only* thing fixing
+#: mcp at 1.29.0 in this tree, so if semgrep relaxes it, the census resolves a
+#: different version — or stops reporting the advisory at all, if the newly
+#: reachable version is a patched one. Either way this fails and the entry gets
+#: re-read. Reading `Requires-Dist: mcp` from semgrep's own metadata would be
+#: more direct and is deliberately not done here: it needs the package index,
+#: and a check that cannot reach the index would report a clean result it never
+#: measured.
+_SEC_021_MEASURED_MCP = "1.29.0"
+_SEC_021_PACKAGE = "mcp"
+
+#: The advisory SEC-021 carries, with its alias. Matched on the id, never on
+#: the package alone — for the reason `_SEC_020_ADVISORY_IDS` records: a
+#: different `mcp` finding standing at 1.29.0 would otherwise read as "already
+#: adjudicated" and this entry would never be re-evaluated.
+_SEC_021_ADVISORY_IDS = frozenset({"CVE-2026-59951", "GHSA-84M7-P3X7-PCFV"})
+
 #: The names a JWT module is bound to at the decode sites in this tree:
 #: `jwt` (python-jose and PyJWT both), `pyjwt`, `_jwt`, `jose_jwt`. The check
 #: covers PyJWT sites too, deliberately: algorithm confusion is not unique to
@@ -356,18 +385,29 @@ def _is_tooling_manifest(path: Path) -> bool:
     return any(marker in path.name.lower() for marker in _TOOLING_MANIFEST_MARKERS)
 
 
-def _declares_nltk(line: str) -> bool:
-    """Is this requirements line a direct `nltk` requirement?"""
+def _declares_package(line: str, package: str) -> bool:
+    """Is this requirements line a direct requirement on `package`?
+
+    Generalised from the nltk-only reader when SEC-021 needed the same
+    question asked about `mcp`. One reader, because two copies of "does this
+    line declare a dependency" is exactly the shape that drifts: the weaker
+    copy is the one a future advisory meets.
+    """
     line = line.split("#", 1)[0].strip()
     if not line or line.startswith("-"):
         return False
     # Strip environment markers, extras and any version specifier.
     name = re.split(r"[<>=!~;\[ ]", line, maxsplit=1)[0].strip()
-    return name.lower().replace("_", "-") == "nltk"
+    return name.lower().replace("_", "-") == package
 
 
-def _runtime_nltk_declarations() -> list[str]:
-    """Runtime manifests that declare nltk directly.
+def _declares_nltk(line: str) -> bool:
+    """Is this requirements line a direct `nltk` requirement?"""
+    return _declares_package(line, "nltk")
+
+
+def _runtime_declarations(package: str) -> list[str]:
+    """Runtime manifests that declare `package` directly.
 
     SEC-006's `Re-evaluate` row names "nltk becoming a declared runtime
     dependency" as a trigger, and said the row was enforced here. It was not
@@ -375,6 +415,12 @@ def _runtime_nltk_declarations() -> list[str]:
     have left this gate green while the entry claimed the opposite. A
     reviewer caught the claim outrunning the code, which is the same defect
     the entries themselves were corrected for.
+
+    Parameterised by package name when SEC-021 brought a second entry resting
+    on the same premise. The tooling-manifest exemption carries over for the
+    same reason it was written: pinning the package in
+    `requirements-security.txt` is how a future advisory gets remediated, and
+    a check that failed on the remediation would push people the wrong way.
     """
     found: list[str] = []
 
@@ -386,7 +432,7 @@ def _runtime_nltk_declarations() -> list[str]:
         except (OSError, UnicodeDecodeError):
             continue
         for number, line in enumerate(lines, start=1):
-            if _declares_nltk(line):
+            if _declares_package(line, package):
                 found.append(f"{path.relative_to(ROOT).as_posix()}:{number}")
 
     pyproject = ROOT / "pyproject.toml"
@@ -406,10 +452,15 @@ def _runtime_nltk_declarations() -> list[str]:
             if not isinstance(deps, list):
                 continue
             for entry in deps:
-                if isinstance(entry, str) and _declares_nltk(entry):
+                if isinstance(entry, str) and _declares_package(entry, package):
                     found.append(f"pyproject.toml [project.{label}]")
 
     return found
+
+
+def _runtime_nltk_declarations() -> list[str]:
+    """Runtime manifests that declare nltk directly."""
+    return _runtime_declarations("nltk")
 
 
 def check_sec_006() -> list[str]:
@@ -1268,8 +1319,145 @@ def _pinned_decode_sites() -> int:
     return _SEC_020_PINNED[0] if _SEC_020_PINNED else 0
 
 
+def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
+    """(line, description) for every import of the `mcp` package in one module.
+
+    Split out from the walk so it can be tested against source strings rather
+    than against whatever happens to be in the tree today — the same shape as
+    `_jwt_decode_sites`, and for the same reason: a premise checker is only
+    worth having if the discrimination it claims can be demonstrated.
+    """
+    found: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "mcp" or alias.name.startswith("mcp."):
+                    found.append((node.lineno, f"import {alias.name}"))
+        elif isinstance(node, ast.ImportFrom):
+            # `level > 0` is a relative import — `from .mcp import x` inside a
+            # package is this repository's own module, not the package. And
+            # `src.mcp` is The Spark, which shares the name and none of the code.
+            module = node.module or ""
+            if node.level == 0 and (module == "mcp" or module.startswith("mcp.")):
+                found.append((node.lineno, f"from {module} import ..."))
+    return found
+
+
+def _mcp_import_sites() -> list[str]:
+    """Every import of the `mcp` PyPI package in this repository.
+
+    SEC-021 rests on the package being installed only into the security
+    tooling and never reached from this code. The name makes that easy to get
+    wrong by eye: `src/mcp/` is this estate's own MCP server (The Spark), and
+    it is imported as `src.mcp`. A bare `import mcp` is the distribution with
+    the advisory, not that package, because Python 3 imports are absolute.
+
+    So the AST is read rather than the text: a string containing "import mcp"
+    in a docstring or a test fixture is not an import, and the register has
+    already been bitten once by a reader that could not tell the difference.
+    """
+    sites: list[str] = []
+    for path in _walk(ROOT, {".py"}):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            continue  # other guards police unparseable files; see check_sec_020
+        relative = path.relative_to(ROOT).as_posix()
+        sites.extend(f"{relative}:{line} ({what})" for line, what in _mcp_imports_in(tree))
+    return sites
+
+
+def _census_mcp_premises() -> list[str]:
+    """What the census resolved for mcp, against what SEC-021 claims.
+
+    Mirrored from `_census_jose_premises`, with the fix-availability test
+    inverted — see `_SEC_021_MEASURED_MCP` for why that inversion is the
+    point of a `Blocked-by` entry rather than an oversight.
+    """
+    import json  # noqa: PLC0415 - only needed on this path
+
+    output = ROOT / _CENSUS_OUTPUT
+    if not output.is_file():
+        return [
+            f"SEC-021: {_CENSUS_OUTPUT} is absent, so the {_SEC_021_PACKAGE} version "
+            "and fix-reachability premises cannot be confirmed. Run "
+            "`python3 scripts/vulnerability_census.py --check --scope core` first."
+        ]
+    try:
+        data = json.loads(output.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f"SEC-021: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    failures: list[str] = []
+    seen = False
+    for surface in data.get("surfaces") or []:
+        for finding in (surface or {}).get("findings") or []:
+            if (finding or {}).get("package") != _SEC_021_PACKAGE:
+                continue
+            identifiers = {
+                str((finding or {}).get("id") or "").upper(),
+                *(str(a).upper() for a in ((finding or {}).get("aliases") or [])),
+            }
+            if not (_SEC_021_ADVISORY_IDS & identifiers):
+                continue  # a different mcp advisory, not this premise
+            seen = True
+            version = finding.get("version")
+            if version != _SEC_021_MEASURED_MCP:
+                failures.append(
+                    f"SEC-021: the census resolved {_SEC_021_PACKAGE} {version}, but the "
+                    f"entry in {REGISTER} is written against {_SEC_021_MEASURED_MCP}. "
+                    "semgrep's exact pin is the only thing holding it there, so this "
+                    "means the pin moved — re-read `Requires-Dist: mcp` and close the "
+                    "entry if a patched release is now reachable."
+                )
+            if not (finding.get("fix_versions") or []):
+                failures.append(
+                    "SEC-021: the advisory no longer names any fixed version. The "
+                    f"`Blocked-by` row in {REGISTER} says a fix exists and cannot be "
+                    "reached; with no fix at all this is a SUPPRESS on SEC-006's terms, "
+                    "and the distinction is what keeps the gate failing the day one ships."
+                )
+    if not seen:
+        failures.append(
+            f"SEC-021: the census no longer reports this {_SEC_021_PACKAGE} advisory. "
+            f"Close the entry in {REGISTER} rather than leaving a blocked-by label on a "
+            "finding that has gone — most likely because semgrep relaxed its pin and a "
+            "patched version resolved, which is the outcome the entry is waiting for."
+        )
+    return failures
+
+
+def check_sec_021() -> list[str]:
+    """mcp stays a security-tooling transitive, unimported and undeclared.
+
+    Three premises, matching the three the register's `Re-evaluate` row claims
+    are enforced here: the resolved version with its fix still unreachable,
+    the absence of any runtime declaration, and the absence of any import of
+    the package anywhere in the tree.
+    """
+    failures = _census_mcp_premises()
+
+    for manifest in _runtime_declarations(_SEC_021_PACKAGE):
+        failures.append(
+            f"SEC-021: {manifest} declares `{_SEC_021_PACKAGE}` as a runtime dependency. "
+            f"The entry in {REGISTER} rests on the package reaching this tree only "
+            "through the security tooling, so it is absent from a production install "
+            "entirely. That is no longer true."
+        )
+
+    for site in _mcp_import_sites():
+        failures.append(
+            f"SEC-021: {site} imports the `{_SEC_021_PACKAGE}` package. The entry in "
+            f"{REGISTER} rests on nothing here importing it — the vulnerable surface is "
+            "the SDK's StreamableHTTP server transport, which this repository never "
+            "starts. An import is how that stops being true."
+        )
+
+    return failures
+
+
 def main() -> int:
-    failures = check_sec_006() + check_sec_007() + check_sec_020()
+    failures = check_sec_006() + check_sec_007() + check_sec_020() + check_sec_021()
     if failures:
         print(
             "[ERROR] A recorded disposition rests on a premise that no longer holds.\n"
@@ -1285,8 +1473,10 @@ def main() -> int:
         "Disposition premises: PASSED — SEC-006 (nltk 3.10.3 with no fix available, "
         "undeclared in runtime manifests, reached lazily, wordnet only, no path call), "
         f"SEC-007 (web/ resolves fflate {fflate}, outside every affected range of "
-        "GHSA-px8p-9vwx-vf98), and SEC-020 (python-jose 3.5.0 with no fix available, "
-        f"{_pinned_decode_sites()} JWT decode sites all naming exactly one algorithm) "
+        "GHSA-px8p-9vwx-vf98), SEC-020 (python-jose 3.5.0 with no fix available, "
+        f"{_pinned_decode_sites()} JWT decode sites all naming exactly one algorithm), "
+        f"and SEC-021 (mcp {_SEC_021_MEASURED_MCP} with a published fix still behind "
+        "semgrep's exact pin, undeclared in runtime manifests, imported nowhere) "
         "all still hold"
     )
     return 0

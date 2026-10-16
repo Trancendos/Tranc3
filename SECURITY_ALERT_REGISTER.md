@@ -1724,6 +1724,50 @@ identifier.
 
 ---
 
+### SEC-021 — mcp StreamableHTTP session accumulation, patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **ACCEPT** |
+| **ID** | CVE-2026-59951 (GHSA-84m7-p3x7-pcfv) |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `mcp==1.29.0` — transitive via `semgrep` (`mcp==1.29.0`, an exact pin), `requirements-security.txt` |
+| **Blocked-by** | `semgrep==1.179.0` requires `mcp==1.29.0` exactly. The patched releases are 1.30.0 and 2.2.0; neither satisfies that pin. Measured against **1.181.0, the latest semgrep release**, by the procedure `requirements-security.txt` prescribes — read `Requires-Dist: mcp` from the distribution metadata — and it still reads `mcp==1.29.0`. No semgrep release exists that permits a patched mcp, so there is no version of this file that both keeps semgrep and takes the fix. An explicit `mcp==1.30.0` override is not a way out either: against an exact-series pin pip reports ResolutionImpossible and resolves a requirements file atomically, so that one line would install nothing from this file at all — the same failure mode the `pyjwt` note above records |
+| **Recorded** | 2026-10-16 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-16 |
+| **Re-evaluate** | On any semgrep bump — re-read `Requires-Dist: mcp` and close this entry the moment a release permits 1.30.0 or later; on the census resolving an mcp version other than 1.29.0; on `mcp` becoming a declared runtime dependency; or on any Python file in this repository importing the `mcp` package. **All four are enforced by `scripts/check_disposition_premises.py`** — three directly, from the census output, the runtime manifests and every Python file, and the semgrep bump by consequence: that exact pin is the only thing holding mcp at 1.29.0 in this tree, so a relaxed pin either resolves a different version or stops the advisory being reported at all, and the checker fails on both. Reading `Requires-Dist: mcp` from semgrep's own metadata would be more direct and is deliberately not done: it needs the package index, and a check that cannot reach the index would report a clean result it never measured. Each of the four has a planted-defect probe behind it — the discipline `docs/governance/IMMUNE-SYSTEM.md` requires of a sensor, applied to a disposition |
+
+**Why a Blocked-by row rather than a SUPPRESS.** The two entries above that decline this
+row decline it because no patched release exists at all, and for them a `Blocked-by`
+would be a lie that keeps the gate quiet the day a fix ships. Here a fix exists and is
+published; what is missing is any route to it that does not remove this repository's SAST
+scanner. That is the case the row was written for, and this is the register's first use of
+it. The census counts and prints a blocked finding separately and never reports a run
+carrying one as clean, so this entry does not buy silence — it buys an accurate label.
+
+**Not exposed as used.** The vulnerable surface is the *server* side of the SDK's
+StreamableHTTP transport, where sessions accumulate without bound and an unauthenticated
+client can exhaust memory. This repository never starts it. `mcp` is installed only into
+the security-tooling environment: it is absent from `requirements.txt` and
+`pyproject.toml`, so it is not present at all on a production install. No Python file here
+imports the package — measured across the tree, there is no `import mcp` or `from mcp …`
+anywhere, and `src/mcp/` is this estate's own MCP server (The Spark), a hand-written
+FastAPI JSON-RPC surface imported as `src.mcp`, which shares the name and none of the
+code. semgrep's own MCP server runs only under `semgrep mcp`; every invocation in this
+repository — `.pre-commit-config.yaml` and `.forgejo/workflows/security-scan.yml` — runs
+`semgrep --config …` as a scanner, and `semgrep mcp` appears nowhere.
+
+**No advisory identifier other than this entry's own appears anywhere in it**, for the
+reason SEC-020 records — and with one addition that matters more here.
+`src/security/accepted_risk_register.py` reads `blocked_ids()` by collecting *every* id in
+a block that carries a `Blocked-by` row, so any second identifier named in this entry
+would be marked unreachable-behind-an-upstream-pin on the strength of a decision made
+about mcp. The advisories that arrived alongside this one are described in the pull
+request that recorded it, never cited here.
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
