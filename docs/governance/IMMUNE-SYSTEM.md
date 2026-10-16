@@ -790,9 +790,19 @@ written `does`, a `decision` from a fixed set, a reason that says something its
 own slug does not, and an ISO `reviewed_on`. Completeness is a different question, and `--measure` does not fully answer it
 either: it samples the ten most recent pull requests and reports the Apps observed
 acting on them. That catches an App active in the recent window and cannot
-enumerate what is installed. Without a token, or if ANY request in the sample
+enumerate what is installed. Without a token, or if any request in the sample
 fails, it reports `unknown` and exits non-zero rather than describing a partial
-observation as a complete one. A
+observation as a complete one. "Any request fails" is a claim about a catch
+clause, so it is worth saying which failures: a network or TLS error, any HTTP
+status (`HTTPError` subclasses `URLError`, which is what made a 403 or a 429 the
+original defect here), a truncated read (`http.client.HTTPException`, which
+`IncompleteRead` is and `URLError` is not), undecodable JSON, and a response that
+decodes but is not the shape the API documents — a list of strings where objects
+were promised reached `.get` on a `str` and ended the run in an
+`AttributeError`. The last two were added on 2026-10-16 after cubic reported
+that this paragraph promised more than the code delivered; the honest residual
+is that an exception class nobody anticipated would still escape, and it would
+escape loudly as a crash rather than quietly as a pass. A
 register validated offline is well-formed, never complete; saying otherwise would
 make the checker an instance of the defect it was built to catch.
 

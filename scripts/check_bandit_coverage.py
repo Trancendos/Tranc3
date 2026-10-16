@@ -124,41 +124,73 @@ def _run_bandit(root: Path, targets: list[str]) -> tuple[list[dict], str]:
     # WARNINGs (e.g. for a nosec comment naming something that is not a test
     # id) onto the same stream as the report, and a checker that parsed stdout
     # would report UNKNOWN whenever one appeared.
-    report_path = Path(tempfile.gettempdir()) / "bandit-coverage.json"
-    argv = [
-        sys.executable,
-        "-m",
-        "bandit",
-        "-c",
-        "pyproject.toml",
-        "-r",
-        *targets,
-        "-f",
-        "json",
-        "-o",
-        str(report_path),
-    ]
-    try:
-        # Fixed argv, no shell, cwd pinned to the repository root.
-        proc = subprocess.run(  # nosec B603 - fixed argv built above, shell=False
-            argv, cwd=root, capture_output=True, text=True, timeout=900, check=False
-        )
-    except FileNotFoundError:
-        return [], "bandit is not installed (pip install 'bandit[toml]')"
-    except subprocess.TimeoutExpired:
-        return [], "bandit did not finish within 900s"
+    #
+    # The file is per-invocation. It used to be a fixed path in the system temp
+    # directory, which meant a run whose bandit failed to write could read a
+    # PREVIOUS run's report and tally it as this one's -- a stale green with no
+    # way to tell, and on a shared runner a second run's report could be read
+    # as the first's. A predictable path in a world-writable directory is also
+    # a file another process can put there. Raised by cubic on #1403.
+    with tempfile.TemporaryDirectory(prefix="bandit-coverage-") as workspace:
+        report_path = Path(workspace) / "report.json"
+        argv = [
+            sys.executable,
+            "-m",
+            "bandit",
+            "-c",
+            "pyproject.toml",
+            "-r",
+            *targets,
+            "-f",
+            "json",
+            "-o",
+            str(report_path),
+        ]
+        try:
+            # Fixed argv, no shell, cwd pinned to the repository root.
+            proc = subprocess.run(  # nosec B603 - fixed argv built above, shell=False
+                argv, cwd=root, capture_output=True, text=True, timeout=900, check=False
+            )
+        except FileNotFoundError:
+            return [], "bandit is not installed (pip install 'bandit[toml]')"
+        except subprocess.TimeoutExpired:
+            return [], "bandit did not finish within 900s"
 
-    # bandit exits 1 when it finds something, which is not an error. Only an
-    # unparseable or absent report is.
-    try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        detail = (proc.stderr or proc.stdout or "").strip().splitlines()
-        tail = detail[-1] if detail else "no output"
-        return [], f"bandit produced no parseable JSON ({tail})"
+        # bandit exits 0 with nothing to report and 1 when it found something.
+        # Neither is an error. Anything else is: 2 is a usage or config failure,
+        # and a scan that never ran properly must not be tallied as a clean one.
+        if proc.returncode not in (0, 1):
+            detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail = detail[-1] if detail else "no output"
+            return [], f"bandit exited {proc.returncode}, which is not a finding count ({tail})"
+
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail = detail[-1] if detail else "no output"
+            return [], f"bandit produced no parseable JSON ({tail})"
+
     results = report.get("results")
     if not isinstance(results, list):
         return [], "bandit JSON had no `results` list"
+
+    # bandit records per-file failures in `errors` and still reports a
+    # `results` list for everything it DID manage to read. Tallying that list
+    # without looking at `errors` is a sensor reporting clean over the files it
+    # could see and saying nothing about the ones it could not -- the exact
+    # thing `docs/governance/IMMUNE-SYSTEM.md` requires a sensor never to do.
+    # A syntax error in one file under `workers/` would have quietly lowered
+    # the count and passed the ratchet. Raised by cubic on #1403.
+    errors = report.get("errors")
+    if not isinstance(errors, list):
+        return [], "bandit JSON had no `errors` list, so per-file failures are unknown"
+    if errors:
+        shown = ", ".join(
+            str(e.get("filename", "?")) if isinstance(e, dict) else "?" for e in errors[:3]
+        )
+        more = f" (+{len(errors) - 3} more)" if len(errors) > 3 else ""
+        return [], f"bandit could not scan {len(errors)} file(s): {shown}{more}"
     return results, ""
 
 
@@ -166,6 +198,80 @@ def tally(results: list[dict]) -> dict[str, int]:
     medium_plus = sum(1 for r in results if r.get("issue_severity") in ("MEDIUM", "HIGH"))
     low = sum(1 for r in results if r.get("issue_severity") == "LOW")
     return {"medium_plus": medium_plus, "low": low}
+
+
+#: The targets the pre-commit bandit hook scans, and why they are fewer than
+#: `[tool.bandit] targets`.
+#:
+#: Expanding the config's targets to `scripts` and `workers` did not expand the
+#: hook, which still names `src` and `api.py` on its own command line — so a
+#: reader of `pyproject.toml` would reasonably believe the local lane covered
+#: four targets when it covered two. Raised by cubic on #1403.
+#:
+#: Measured before deciding which way to resolve it: medium+ findings are
+#: `src` 0, `api.py` 0, `scripts` 4, `workers` 77. The hook runs with `-ll`, so
+#: widening it would fail every local commit in this repository on 81 inherited
+#: findings. "A gate that is red on arrival teaches people to ignore it" is
+#: already this estate's reasoning for leaving `cargo fmt` and `clippy` out of
+#: `rust-nanoservice.yml`, and it applies unchanged here.
+#:
+#: So the narrower hook is deliberate: it is a fast pre-flight over the surface
+#: that is clean, and `check_bandit_coverage.py` in CI is what carries the full
+#: scope and its ratchet. Deliberate is not the same as unstated, which is why
+#: the pair is checked below rather than left to be rediscovered.
+_PRECOMMIT_BANDIT_TARGETS = ("src", "api.py")
+
+
+def _precommit_bandit_targets(config: Path) -> tuple[str, ...] | None:
+    """The targets after `-r` on the pre-commit bandit hook's command line.
+
+    `None` when the hook cannot be found or read, which the caller reports
+    rather than passing over: a drift check that silently finds nothing to
+    compare is the shape of control this file exists to refuse.
+    """
+    try:
+        import yaml  # imported on this path only; the rest of the script needs no YAML
+    except ModuleNotFoundError:
+        return None
+    try:
+        data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return None
+    for repo in (data or {}).get("repos") or []:
+        for hook in (repo or {}).get("hooks") or []:
+            if (hook or {}).get("id") != "bandit":
+                continue
+            args = [str(a) for a in (hook.get("args") or [])]
+            if "-r" not in args:
+                return ()
+            return tuple(args[args.index("-r") + 1 :])
+    return None
+
+
+def lane_divergence(root: Path, targets: list[str]) -> list[str]:
+    """Reasons the two bandit lanes no longer stand in their recorded relation."""
+    problems: list[str] = []
+    hook = _precommit_bandit_targets(root / ".pre-commit-config.yaml")
+    if hook is None:
+        return [
+            "the pre-commit bandit hook could not be read, so its scope was not "
+            "compared with [tool.bandit] targets. Unknown, not agreed."
+        ]
+    if hook != _PRECOMMIT_BANDIT_TARGETS:
+        problems.append(
+            f"the pre-commit bandit hook now scans {list(hook)}, but the recorded "
+            f"divergence is {list(_PRECOMMIT_BANDIT_TARGETS)}. Update "
+            "_PRECOMMIT_BANDIT_TARGETS together with the reason, so the next reader "
+            "learns why the two lanes differ instead of guessing."
+        )
+    outside = [name for name in hook if name not in targets]
+    if outside:
+        problems.append(
+            f"the pre-commit bandit hook scans {outside}, which [tool.bandit] targets "
+            "does not cover. The local lane must be a subset of the gated one, or a "
+            "commit can pass locally over a surface CI never measures."
+        )
+    return problems
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -181,6 +287,25 @@ def main(argv: list[str] | None = None) -> int:
     print(f"bandit scope (from [tool.bandit]): {', '.join(targets) or '(none)'}")
     if excluded:
         print(f"  excluded: {', '.join(excluded)}")
+
+    # Only for this repository. `_PRECOMMIT_BANDIT_TARGETS` records a fact
+    # about THIS tree's hook and the reason it is narrower, so asserting it
+    # against a `--root` somewhere else would be comparing a synthetic repo
+    # with a decision that was never about it -- and the tests build exactly
+    # such roots. The subset half would be safe to apply anywhere; it is not
+    # split out because without the recorded pair there is nothing to compare
+    # it against.
+    if args.root.resolve() == ROOT.resolve():
+        divergence = lane_divergence(args.root, targets)
+        if divergence:
+            print("\nbandit coverage: FAILED — the two bandit lanes disagree")
+            for problem in divergence:
+                print(f"  - {problem}")
+            return 1
+        print(
+            f"  pre-commit hook scans: {', '.join(_PRECOMMIT_BANDIT_TARGETS)} "
+            "(narrower on purpose — see _PRECOMMIT_BANDIT_TARGETS)"
+        )
 
     results, blind = _run_bandit(args.root, targets)
     if blind:

@@ -55,7 +55,13 @@ def read_ceiling(path: Path, *, require: Sequence[str]) -> dict[str, int]:
     """
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
+        # `UnicodeDecodeError` is a ValueError, not an OSError, so a ceiling
+        # file with a stray byte in it used to escape this handler and end the
+        # checker in a traceback. A checker that dies is not a checker that
+        # reports UNKNOWN: CI shows it as broken tooling rather than as an
+        # unestablished verdict, which is the distinction this module exists
+        # to keep. Raised by cubic on #1403.
         return dict(UNRECORDED)
 
     found: dict[str, int] = {}
@@ -74,8 +80,16 @@ def read_ceiling(path: Path, *, require: Sequence[str]) -> dict[str, int]:
     else:
         for line in text.splitlines():
             line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
+            if not line or line.startswith("#"):
                 continue
+            if "=" not in line:
+                # Skipping it was the lenient reading, and leniency here buys
+                # nothing: a file holding the required keys plus arbitrary
+                # other text still became a usable ceiling, so a truncated
+                # write, a merge conflict marker or a pasted diff could leave
+                # a ceiling that LOOKS recorded. There is no such thing as a
+                # partly-valid ceiling. Raised by cubic on #1403.
+                return dict(UNRECORDED)
             key, _, value = line.partition("=")
             try:
                 found[key.strip()] = int(value.strip())
@@ -102,7 +116,22 @@ def compare(now: dict[str, int], ceiling: dict[str, int], *, what: str) -> list[
     different wording, because they need different actions from the reader.
     """
     problems: list[str] = []
-    for key in sorted(now):
+    for key in sorted(set(now) | set(ceiling)):
+        if key not in now:
+            # The fail-open this module was written to prevent, found inside
+            # it. Iterating `now` alone meant a count the ceiling records and
+            # the run did not produce simply vanished -- no rise, no fall, no
+            # complaint -- so dropping a measurement passed the ratchet while
+            # removing a suppression failed it. An absent count is the
+            # `env_unchecked` case from `docs/governance/DOMAIN-MODEL.md`: not
+            # zero, not passing, unknown. Raised by cubic on #1403.
+            problems.append(
+                f"{key}: the ceiling records this count and this run produced no "
+                f"value for it. A {what} nobody measured is not a {what} nobody has: "
+                f"fix the measurement, or drop the key from the ceiling in a commit "
+                f"that says why it is no longer counted."
+            )
+            continue
         limit = ceiling.get(key)
         if limit is None:
             problems.append(f"{key}: no ceiling recorded for this count")

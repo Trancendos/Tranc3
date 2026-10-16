@@ -308,11 +308,8 @@ def test_a_report_does_not_hold_on_a_verdict_with_defects():
     assert VerdictReport(verdicts=[nameless], checked_at=NOW).holds is False
 
 
-def test_the_census_producer_writes_the_commit_the_verdict_reads():
-    """REGRESSION: `from_census` read a `commit` key `build_census()` never
-    wrote, so `subject` was always empty in every real run and the test
-    covering it fabricated the key -- pinning an interface nothing produced.
-    This asserts the two ends agree, by reading the producer."""
+def _census_module():
+    """`scripts/vulnerability_census.py` loaded by path, as the gate runs it."""
     import importlib.util
     import sys as _sys
     from pathlib import Path as _Path
@@ -324,10 +321,43 @@ def test_the_census_producer_writes_the_commit_the_verdict_reads():
     census = importlib.util.module_from_spec(spec)
     _sys.modules[spec.name] = census
     spec.loader.exec_module(census)
+    return census
 
-    head = census._scanned_head()
-    assert head, "the census must record the head it scanned"
-    v = Verdict.from_census(
-        {"scanned_ok": True, "fixable_count": 0, "generated_at": MAIN_GATE_GREEN, "commit": head}
+
+def test_the_census_producer_writes_the_commit_the_verdict_reads(monkeypatch):
+    """REGRESSION, twice over, and the second time is the instructive one.
+
+    First: `from_census` read a `commit` key `build_census()` never wrote, so
+    `subject` was empty in every real run while the test covering it fabricated
+    the key -- pinning an interface nothing produced.
+
+    Then the replacement test did the same thing. It called `_scanned_head()`
+    and hand-assembled a census mapping around the result, which exercises the
+    helper and the reader but never the producer: deleting
+    `"commit": _scanned_head()` from `build_census()` left all 36 tests in this
+    file green. Measured by deleting it. Raised by cubic on #1403.
+
+    So this runs the producer. The sweeps are stubbed because they are network
+    scans and none of them touch provenance; everything that decides what
+    `build_census` RECORDS is the real code path, and its output is handed to
+    the reader untouched.
+    """
+    census = _census_module()
+
+    monkeypatch.setattr(census, "_start_run_budget", lambda: None)
+    monkeypatch.setattr(census, "_registered_ids", lambda: set())
+    monkeypatch.setattr(census, "_blocked_ids", lambda: set())
+    monkeypatch.setattr(census, "_bracketed_sweep", lambda *a, **k: [])
+    monkeypatch.setattr(census, "_native_sweep", lambda *a, **k: [])
+
+    produced = census.build_census(scope="core")
+
+    assert produced.get("commit"), (
+        "build_census must record the head it scanned; without it every verdict "
+        "built from a real census has an empty subject"
     )
-    assert v.subject == head, "the full sha, not a prefix -- callers need the whole thing"
+    verdict = Verdict.from_census(produced)
+    assert verdict.subject == produced["commit"], (
+        "the full sha, not a prefix -- callers need the whole thing"
+    )
+    assert verdict.subject == census._scanned_head(), "and it must be THIS tree's head"

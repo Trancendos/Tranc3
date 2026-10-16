@@ -233,9 +233,21 @@ def test_a_partial_measurement_is_unknown_not_complete(monkeypatch, capsys):
     could not see, reporting clean."""
     monkeypatch.setenv("GITHUB_TOKEN", "x")
     monkeypatch.setattr(cai, "observed_apps", lambda *a, **k: None)
+
     failures, unknown = cai._measure_against_github("o/r", [])
     assert unknown is True and failures == []
     assert "UNKNOWN" in capsys.readouterr().out
+
+    # And the part that decides the build. Asserting only on the helper left
+    # `main` free to compute `unknown_measure` and then ignore it: deleting its
+    # `if unknown_measure: return 1` branch would keep this test green while
+    # the script printed PASSED and exited 0 over a blind measurement -- the
+    # one outcome it exists to prevent. Raised by cubic on #1403.
+    code = cai.main(["--measure"])
+    out = capsys.readouterr().out
+    assert code == 1, "an UNKNOWN measurement must fail the build, not merely be printed"
+    assert "UNKNOWN" in out
+    assert "PASSED" not in out, "nothing may read as passing when the sensor could not see"
 
 
 def test_a_rate_limited_fetch_makes_the_whole_observation_none(monkeypatch):
@@ -319,3 +331,100 @@ def test_the_strict_loader_really_is_a_safe_loader():
     B506 exists to stop arbitrary object instantiation; subclassing SafeLoader
     is what keeps that property while adding duplicate-key detection."""
     assert issubclass(cai._StrictLoader, yaml.SafeLoader)
+
+
+# ---------------------------------------------------------------------------
+# Reported by cubic on #1403. Replacing SafeLoader's mapping constructor
+# dropped two things it does, and the error handler that boasted about
+# catching HTTPError did not catch a response of the wrong shape.
+# ---------------------------------------------------------------------------
+
+
+def _load(document: str):
+    import yaml
+
+    # _StrictLoader subclasses yaml.SafeLoader; it refuses duplicate keys on top
+    # of SafeLoader's own behaviour rather than relaxing anything.
+    return yaml.load(document, Loader=cai._StrictLoader)
+
+
+def test_a_merge_key_expands_and_an_explicit_value_wins():
+    """`<<: *defaults` is legal YAML, and was being rejected as invalid.
+
+    A checker refusing a legitimate register is worse than one too lenient: it
+    blocks the fix. `flatten_mapping` prepends the merged pairs, so the
+    explicit assignment lands last and overrides, exactly as YAML specifies --
+    and overriding a default is the point of the construct, not a row with two
+    answers.
+    """
+    loaded = _load(
+        "defaults: &d\n  decision: keep\n  does: default\nrow:\n  <<: *d\n  does: mine\n"
+    )
+    assert loaded["row"] == {"decision": "keep", "does": "mine"}
+
+
+def test_a_duplicate_key_the_row_actually_wrote_is_still_refused():
+    """The control: merge support must not weaken the duplicate check."""
+    import yaml
+
+    with pytest.raises(yaml.constructor.ConstructorError, match="duplicate key"):
+        _load("row:\n  slug: a\n  slug: b\n")
+
+
+def test_an_unhashable_key_is_an_invalid_register_not_a_traceback():
+    """`? [a, b]` is legal YAML and an illegal dict key.
+
+    Membership-testing it raised a bare `TypeError` and ended the checker in a
+    traceback, so a malformed register read as broken tooling.
+    """
+    import yaml
+
+    with pytest.raises(yaml.constructor.ConstructorError, match="unhashable key"):
+        _load("? [a, b]\n: value\n")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        ["not-an-object"],
+        [{"user": {"login": "x[bot]"}, "number": 1, "head": "deadbeef"}],
+        [{"user": "x[bot]", "number": 1, "head": {"sha": "abc"}}],
+    ],
+    ids=["list-of-strings", "head-as-scalar", "user-as-scalar"],
+)
+def test_a_payload_of_the_wrong_shape_reports_unknown(monkeypatch, payload):
+    """A decodable response that is not the documented shape is still a failure.
+
+    It reached `.get` on a `str` and raised `AttributeError`, which escaped the
+    handler. Same defect as the swallowed `HTTPError` wearing a different coat:
+    the sample is incomplete, so the caller must hear UNKNOWN.
+    """
+    monkeypatch.setattr(cai, "_api", lambda path, token, **k: payload if "/pulls?" in path else [])
+    assert cai.observed_apps("o/r", "tok", pulls=1) is None
+
+
+def test_a_truncated_read_reports_unknown(monkeypatch):
+    """`IncompleteRead` is an `HTTPException`, not a `URLError`."""
+    import http.client
+
+    def truncated(path, token, **kwargs):
+        if "/pulls?" in path:
+            return [{"number": 1, "user": {"login": "x[bot]"}, "head": {"sha": "abc"}}]
+        raise http.client.IncompleteRead(b"partial")
+
+    monkeypatch.setattr(cai, "_api", truncated)
+    assert cai.observed_apps("o/r", "tok", pulls=1) is None
+
+
+def test_a_well_formed_sample_still_observes_its_apps(monkeypatch):
+    """The control. None of the above may turn a good sample into UNKNOWN."""
+    monkeypatch.setattr(
+        cai,
+        "_api",
+        lambda path, token, **k: (
+            [{"user": {"login": "renovate[bot]"}, "number": 1, "head": {"sha": "abc"}}]
+            if "/pulls?" in path
+            else []
+        ),
+    )
+    assert cai.observed_apps("o/r", "tok", pulls=1) == {"renovate"}

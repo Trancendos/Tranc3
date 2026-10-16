@@ -21,9 +21,12 @@ that rule.
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 _SPEC = importlib.util.spec_from_file_location("cbc", REPO / "scripts" / "check_bandit_coverage.py")
@@ -180,3 +183,141 @@ def test_the_real_repository_holds_at_its_recorded_ceiling():
 
         pytest.skip("bandit not installed in this environment")
     assert cbc.main([]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Reported by cubic on #1403: the runner tallied whatever `results` it was
+# handed, so a scan that half-failed reported the half it managed -- and it
+# read its report from a fixed path that a previous or concurrent run could
+# have written.
+# ---------------------------------------------------------------------------
+
+
+class _Completed:
+    def __init__(self, returncode: int) -> None:
+        self.returncode = returncode
+        self.stdout = ""
+        self.stderr = "diagnostic tail"
+
+
+def _runner(report, returncode=1):
+    """A fake `subprocess.run` that writes `report` where bandit would."""
+
+    def run(argv, **kwargs):
+        if report is not None:
+            Path(argv[argv.index("-o") + 1]).write_text(json.dumps(report), encoding="utf-8")
+        return _Completed(returncode)
+
+    return run
+
+
+@pytest.mark.parametrize(
+    ("report", "returncode", "expected"),
+    [
+        ({"results": [], "errors": [{"filename": "workers/x.py"}]}, 1, "could not scan 1 file"),
+        ({"results": []}, 1, "no `errors` list"),
+        ({"results": [], "errors": "boom"}, 1, "no `errors` list"),
+        ({"results": [], "errors": []}, 2, "exited 2"),
+        (None, 1, "no parseable JSON"),
+    ],
+    ids=["per-file-errors", "errors-key-absent", "errors-not-a-list", "usage-error", "no-report"],
+)
+def test_a_scan_that_did_not_fully_run_is_unknown(monkeypatch, report, returncode, expected):
+    """Tallying `results` while ignoring `errors` is a sensor reporting clean
+    over the files it could read and silent about the ones it could not --
+    which `docs/governance/IMMUNE-SYSTEM.md` forbids. A syntax error in one
+    file under `workers/` would have lowered the count and passed the ratchet.
+    """
+    monkeypatch.setattr(cbc.subprocess, "run", _runner(report, returncode))
+    results, blind = cbc._run_bandit(Path("."), ["src"])
+    assert results == []
+    assert expected in blind
+
+
+@pytest.mark.parametrize(
+    ("report", "returncode", "count"),
+    [({"results": [], "errors": []}, 0, 0), ({"results": [{"a": 1}], "errors": []}, 1, 1)],
+    ids=["clean", "findings"],
+)
+def test_a_scan_that_ran_reports_its_findings_with_no_reason(
+    monkeypatch, report, returncode, count
+):
+    """The control, and the distinction the whole function turns on: an empty
+    list with no reason is a clean scan; an empty list with a reason is UNKNOWN.
+    """
+    monkeypatch.setattr(cbc.subprocess, "run", _runner(report, returncode))
+    results, blind = cbc._run_bandit(Path("."), ["src"])
+    assert len(results) == count
+    assert blind == ""
+
+
+def test_the_report_path_is_not_shared_between_runs(monkeypatch):
+    """It was a fixed name in the system temp directory.
+
+    A run whose bandit failed to write could read a PREVIOUS run's report and
+    tally it as its own -- a stale green with nothing to show it -- and on a
+    shared runner two runs raced for one file. A predictable path in a
+    world-writable directory is also one another process can plant.
+    """
+    seen: list[str] = []
+
+    def run(argv, **kwargs):
+        out = argv[argv.index("-o") + 1]
+        seen.append(out)
+        Path(out).write_text(json.dumps({"results": [], "errors": []}), encoding="utf-8")
+        return _Completed(0)
+
+    monkeypatch.setattr(cbc.subprocess, "run", run)
+    cbc._run_bandit(Path("."), ["src"])
+    cbc._run_bandit(Path("."), ["src"])
+    assert len(seen) == 2
+    assert seen[0] != seen[1], "two runs must not write to the same report path"
+    assert not Path(seen[0]).exists(), "and the file must not outlive the run that made it"
+
+
+# --- the two bandit lanes --------------------------------------------------
+
+
+def test_the_configured_and_pre_commit_lanes_stand_as_recorded():
+    """The hook scans fewer targets than `[tool.bandit]`, on purpose.
+
+    Measured medium+ findings are src 0, api.py 0, scripts 4, workers 77, and
+    the hook runs with `-ll`, so widening it would fail every commit here on 81
+    inherited findings. Deliberate is not the same as unstated: this is what
+    holds the pair to the reason written beside them.
+    """
+    root = Path(__file__).resolve().parents[1]
+    targets, _ = cbc.configured_scope(root / "pyproject.toml")
+    assert cbc.lane_divergence(root, targets) == []
+    assert set(cbc._PRECOMMIT_BANDIT_TARGETS) < set(targets), "narrower, and a subset"
+
+
+def test_widening_the_hook_without_recording_it_fails(tmp_path):
+    config = tmp_path / ".pre-commit-config.yaml"
+    config.write_text(
+        "repos:\n  - repo: x\n    hooks:\n      - id: bandit\n"
+        "        args: [-c, pyproject.toml, -r, src, api.py, workers]\n",
+        encoding="utf-8",
+    )
+    problems = cbc.lane_divergence(tmp_path, ["src", "api.py", "workers"])
+    assert len(problems) == 1
+    assert "recorded divergence" in problems[0]
+
+
+def test_a_hook_target_outside_the_gated_scope_fails(tmp_path):
+    """The local lane must be a subset: otherwise a commit can pass locally
+    over a surface CI never measures."""
+    config = tmp_path / ".pre-commit-config.yaml"
+    config.write_text(
+        "repos:\n  - repo: x\n    hooks:\n      - id: bandit\n        args: [-r, src, api.py]\n",
+        encoding="utf-8",
+    )
+    problems = cbc.lane_divergence(tmp_path, ["src"])
+    assert any("does not cover" in p for p in problems)
+
+
+def test_an_unreadable_hook_is_unknown_not_agreed(tmp_path):
+    """No file to compare is not agreement."""
+    problems = cbc.lane_divergence(tmp_path, ["src"])
+    assert len(problems) == 1
+    assert "could not be read" in problems[0]

@@ -117,3 +117,68 @@ def test_describe_marks_each_count_against_its_ceiling():
     assert "=" in out.splitlines()[0]
     assert "v" in out.splitlines()[1]
     assert "—" in out.splitlines()[2], "a count with no ceiling must not read as holding"
+
+
+# ---------------------------------------------------------------------------
+# Reported by cubic on #1403. All three are the same mistake in three places:
+# a ratchet that treats "could not read this" or "did not measure this" as
+# "nothing to complain about" -- in the module written to stop exactly that.
+# ---------------------------------------------------------------------------
+
+
+def test_an_undecodable_ceiling_is_unrecorded_not_a_crash(tmp_path):
+    """`UnicodeDecodeError` is a ValueError, so `except OSError` missed it.
+
+    A ceiling with a stray byte ended the checker in a traceback, which CI
+    reads as broken tooling rather than as an unestablished verdict.
+    """
+    path = tmp_path / "ceiling.txt"
+    path.write_bytes(b"inert=1\nbare=\xff\xfe2\n")
+    assert read_ceiling(path, require=("inert", "bare")) == UNRECORDED
+
+
+def test_a_line_that_is_neither_comment_nor_setting_voids_the_ceiling(tmp_path):
+    """There is no such thing as a partly-valid ceiling.
+
+    Skipping unrecognised lines meant a file holding the required keys plus
+    arbitrary other text still became usable, so a truncated write or a merge
+    conflict marker could leave a ceiling that merely LOOKED recorded.
+    """
+    for content in (
+        "inert=177\nbare=2\nthis line is not a setting\n",
+        "<<<<<<< HEAD\ninert=177\nbare=2\n",
+        "inert=177\nbare=2\n]}\n",
+    ):
+        path = tmp_path / "c.txt"
+        path.write_text(content, encoding="utf-8")
+        assert read_ceiling(path, require=("inert", "bare")) == UNRECORDED, content
+
+
+def test_comments_and_blank_lines_are_still_a_valid_ceiling(tmp_path):
+    """The control. Tightening the reader must not reject the real files."""
+    path = tmp_path / "c.txt"
+    path.write_text("# why this exists\n#\n\ninert=177\nbare=2\n", encoding="utf-8")
+    assert read_ceiling(path, require=("inert", "bare")) == {"inert": 177, "bare": 2}
+
+
+def test_a_ceiling_key_the_run_did_not_measure_fails():
+    """REGRESSION, and the sharpest of the three.
+
+    `compare` iterated `now` alone, so a count the ceiling records and the run
+    did not produce simply vanished: no rise, no fall, no complaint. Dropping a
+    measurement passed the ratchet while removing a suppression failed it. An
+    absent count is `env_unchecked` from `docs/governance/DOMAIN-MODEL.md` --
+    not zero, not passing, unknown.
+    """
+    problems = compare({"inert": 177}, {"inert": 177, "bare": 2}, what="suppression")
+    assert len(problems) == 1
+    assert problems[0].startswith("bare: ")
+    assert "produced no value" in problems[0]
+
+
+def test_the_three_outcomes_it_always_caught_are_unchanged():
+    """The controls, so the new branch cannot be mistaken for a behaviour change."""
+    assert compare({"inert": 177}, {"inert": 177}, what="x") == []
+    assert "ROSE" in compare({"inert": 178}, {"inert": 177}, what="x")[0]
+    assert "FELL" in compare({"inert": 176}, {"inert": 177}, what="x")[0]
+    assert compare({"new": 1}, {}, what="x") == ["new: no ceiling recorded for this count"]

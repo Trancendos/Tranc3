@@ -57,6 +57,7 @@ author's guesses as the estate's decisions.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import urllib.error
@@ -87,16 +88,51 @@ class _StrictLoader(yaml.SafeLoader):
 
 
 def _no_duplicate_keys(loader: yaml.SafeLoader, node: Any, deep: bool = False) -> dict:
+    """SafeLoader's mapping construction, plus a refusal of duplicate keys.
+
+    Replacing the constructor outright dropped two things SafeLoader does, and
+    both were reported by cubic on #1403.
+
+    MERGE KEYS. `flatten_mapping` is what expands `<<: *defaults`, and without
+    it a register using an anchor was rejected as invalid YAML — a checker
+    refusing a legitimate file, which is worse than one too lenient because it
+    blocks the fix. It is called here, before the duplicate check, and the
+    duplicate check then applies only to keys the row WROTE: a merged default
+    that an explicit key overrides is the entire point of the construct, not a
+    row with two answers. `flatten_mapping` prepends the merged pairs, so the
+    explicit assignment lands last and wins, exactly as YAML specifies.
+
+    UNHASHABLE KEYS. `? [a, b]` is legal YAML and an illegal dict key, so
+    membership-testing it raised a bare `TypeError` and ended the checker in a
+    traceback. A malformed register has to come back as a malformed register,
+    not as broken tooling.
+    """
+    explicit = {id(key_node) for key_node, _ in node.value}
+    loader.flatten_mapping(node)
+
     mapping: dict = {}
+    written: set = set()
     for key_node, value_node in node.value:
         key = loader.construct_object(key_node, deep=deep)
-        if key in mapping:
+        try:
+            hash(key)
+        except TypeError as exc:
             raise yaml.constructor.ConstructorError(
                 "while constructing a mapping",
                 node.start_mark,
-                f"found duplicate key {key!r} — one row, two answers, and YAML keeps only the last",
+                f"found unhashable key {key!r} — a register key has to be a plain name",
                 key_node.start_mark,
-            )
+            ) from exc
+        if id(key_node) in explicit:
+            if key in written:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    f"found duplicate key {key!r} — one row, two answers, and YAML "
+                    "keeps only the last",
+                    key_node.start_mark,
+                )
+            written.add(key)
         mapping[key] = loader.construct_object(value_node, deep=deep)
     return mapping
 
@@ -324,7 +360,24 @@ def observed_apps(repo: str, token: str, *, pulls: int = 10) -> set[str] | None:
             head = (pr.get("head") or {}).get("sha")
             if head:
                 seen |= _apps_in_checks(repo, head, token)
-    except (urllib.error.URLError, json.JSONDecodeError, ValueError):
+    except (
+        urllib.error.URLError,
+        # A response truncated mid-read arrives as `http.client.IncompleteRead`,
+        # which is an `HTTPException` and not a `URLError`, so it escaped and
+        # ended the run in a traceback. Catching the base class covers it and
+        # its siblings. Raised by cubic on #1403.
+        http.client.HTTPException,
+        json.JSONDecodeError,
+        ValueError,
+        # A response that decodes but is not the shape the API documents --
+        # a list of strings where objects were promised, `head` as a scalar --
+        # reached `.get` on a `str` and ended the checker in an AttributeError.
+        # That is the same failure as the swallowed `HTTPError` above wearing a
+        # different coat: the sample is incomplete and the caller must hear
+        # UNKNOWN, not a traceback. Raised by cubic on #1403.
+        TypeError,
+        AttributeError,
+    ):
         return None
     return seen
 

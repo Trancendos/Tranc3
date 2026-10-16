@@ -115,13 +115,27 @@ class MultilingualTokenizer:
         # that comment was silencing a live supply-chain finding with a reason
         # that described a mechanism the call did not have.
         #
-        # `tokenizer_revision` is now passed through. When it is set, the
-        # download is pinned and there is nothing to suppress. When it is None,
-        # huggingface_hub resolves the default branch and the risk is real, so
-        # the suppression stays -- with a reason that is true.
-        revision = getattr(config, "tokenizer_revision", None)
+        # `tokenizer_revision` is passed through, and as of 2026-10-16 the
+        # runtime config that `api.py` hands this class actually carries one.
+        # It did not when the pass-through was written, so this read found
+        # nothing and every production start fetched the mutable default
+        # branch regardless -- a true-sounding suppression over an unpinned
+        # download. Raised by cubic on #1403; see api.py's Config for the pin.
+        #
+        # An unset revision is still reachable (a caller with its own config
+        # object, or TOKENIZER_MODEL set without a matching TOKENIZER_REVISION),
+        # so it is logged rather than passed over in silence. The suppression
+        # covers that path and says so.
+        revision = getattr(config, "tokenizer_revision", None) or None
+        if revision is None:
+            logger.warning(
+                "Tokenizer revision is unpinned for %s: the Hub will resolve its "
+                "default branch, so the bytes loaded are whatever that branch holds "
+                "today. Set TOKENIZER_REVISION to a commit sha to pin it.",
+                sanitize_for_log(model_name),
+            )
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 - pinned when config sets tokenizer_revision; unpinned otherwise and recorded as such
+            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 - pinned by config.tokenizer_revision on the api.py path; an unset revision is logged as unpinned above
                 model_name, cache_dir=self.cache_dir, revision=revision
             )
             logger.info("Tokenizer loaded: %s", sanitize_for_log(model_name))
