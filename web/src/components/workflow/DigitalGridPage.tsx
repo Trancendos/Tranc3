@@ -107,6 +107,7 @@ export default function DigitalGridPage() {
             {nameEdit ? (
               <input
                 autoFocus
+                aria-label="Workflow name"
                 className="bg-gray-800 text-white text-sm font-semibold px-2 py-0.5 rounded border border-indigo-500 outline-none w-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 value={workflow.name}
                 onChange={(e) => setWorkflow((wf) => ({ ...wf, name: e.target.value }))}
@@ -169,8 +170,9 @@ export default function DigitalGridPage() {
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Label</label>
+                    <label htmlFor="node-label-input" className="block text-xs text-gray-500 mb-1">Label</label>
                     <input
+                      id="node-label-input"
                       className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
                       value={selectedNode.label}
                       onChange={(e) => setWorkflow((wf) => ({
