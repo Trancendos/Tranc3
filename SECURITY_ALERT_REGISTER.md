@@ -1549,6 +1549,225 @@ becomes unavoidable and should be planned and announced, not slipped in.
 
 ---
 
+### SEC-020 — python-jose algorithm-confusion guard bypassed, no patched release
+
+| Field | Value |
+|---|---|
+| **Disposition** | **SUPPRESS** |
+| **ID** | CVE-2026-85394 (GHSA-3qf3-8w2g-rqmx; aliases CVE-2024-33663, GHSA-6c5p-j8vq-pqhj, PYSEC-2024-232) |
+| **Scanner** | pip-audit, via `scripts/vulnerability_census.py` |
+| **Component** | `python-jose[cryptography]==3.5.0` — declared runtime dependency. Pinned at that version in `requirements.txt` and in **7** worker manifests (`workers/{gateway-service,infinity-one-service,infinity-admin-service,sentinel-station-service,infinity-auth,infinity-portal-service,gbrain-bridge}/requirements-worker.txt`); all eight are read by the premise checker, because the census runs `--scope core` and does not cover the worker manifests. No line number is cited on purpose: this entry's own comment block moved the root pin from line 88 to 95, so a line reference is stale the moment anything above it changes |
+| **Severity** | CVSS 3.1 `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N`; CVSS 4.0 `AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N` |
+| **Recorded** | 2026-10-06 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-06 |
+| **Re-evaluate** | On the census resolving any python-jose version other than 3.5.0; on the advisory naming a fixed version (a SUPPRESS then means declining an available fix); on the census ceasing to report it; or on **any** JWT decode site widening its `algorithms=` beyond a single literal entry, passing a variable, or omitting it. **Every one of these is enforced by `scripts/check_disposition_premises.py` (`check_sec_020`)**, which reads the census output and walks every Python file's AST, rather than relying on anyone remembering |
+
+**No patched release exists.** 3.5.0 is the newest release on PyPI (the full
+published set is 3.0.1, 3.1.0, 3.2.0, 3.3.0, 3.4.0, 3.5.0), and the GHSA range is
+`introduced: 0, last_affected: 3.5.0` — every published release is affected. OSV's
+query endpoint, asked directly whether `python-jose 3.5.0` is affected, returns
+GHSA-3qf3-8w2g-rqmx. There is deliberately **no Blocked-by row**: a fix is not out of
+reach, it does not exist, and that distinction is what makes this entry fail the gate
+again the day one ships.
+
+**This supersedes a claim already in the tree, and that is the more important half of
+this entry.** `requirements.txt` carried the comment "Fixes: CVE-2024-33663 (algorithm
+confusion) … via python-jose>=3.4.0". CVE-2026-85394 *is* CVE-2024-33663 — the same
+GHSA, re-issued — and it says the guard 3.4.0 added can be stepped around with a
+**DER-encoded public key**. So the repository asserted a fix that has since been shown
+bypassable, and went on asserting it for as long as nobody re-read the line. The
+comment is corrected in the same change as this entry.
+
+**Not exploitable as used, and this is the premise under guard.** The vulnerability is
+algorithm confusion: it requires a verifier that will attempt an HMAC algorithm while
+holding an asymmetric key, so that a public key can be passed off as an HMAC secret.
+Every JWT decode site in this repository names **exactly one** algorithm, so a token's
+`alg` either equals that single entry or is rejected before any key is touched.
+
+The checker distinguishes four admissible shapes, because conflating them was a real
+defect in its first version — raised by sourcery, codex, coderabbit and codeant on
+#1376, all correctly:
+
+* **literal** — `algorithms=["HS256"]`. The allowlist is in the source.
+* **constant** — `algorithms=[ALGORITHM]` where this module binds `ALGORITHM` only to
+  string literals. The binding is **read**, not assumed.
+* **parameter** — a function parameter whose default is a string literal, e.g.
+  `def verify(token, key, algorithm="HS256")`. Reported apart and weaker on purpose:
+  the **default** is verified, the call sites are not. Four of the twelve sites are this.
+* **imported** — `from config import JWT_ALGORITHM` where that module binds it to a
+  string literal. **One hop only.** `workers/infinity-auth/service.py:180` is exactly
+  this, against a sibling `config.py` that sets `"HS256"`. The module path is resolved
+  **as written, dotted first**: a bare basename is only tried for a module name with no
+  dots. It used to try the basename first, so `from pkg.config import ALG` resolved
+  against any sibling `config.py` — a different module, for a different binding. Raised
+  by cubic on #1376 and reproduced: the sibling bound `"HS256"`, the real
+  `pkg/config.py` bound `get_unverified_header(t)["alg"]`, and the site was accepted.
+  The checker had measured the wrong file and reported the answer as if it were the
+  right one.
+
+An earlier version of this entry described a single **by reference** shape covering "a
+bare name or dotted attribute resolving to a module constant or a parameter default".
+That was a claim the checker never checked, and it was exploitable: moving the rejected
+attack up one line laundered it through a local and passed.
+
+    alg = jwt.get_unverified_header(token)["alg"]   # the token picks it
+    jwt.decode(token, key, algorithms=[alg])        # -> accepted
+
+A name is now **resolved**, and anything it cannot resolve is refused — an unbound name,
+a dotted attribute, a parameter with no default, an import it cannot follow, a loop /
+`with` / `except` / comprehension / unpacking target, and a name with several bindings
+where any one of them is computed (the weakest binding decides).
+Failing closed on what it cannot see is `docs/governance/IMMUNE-SYSTEM.md`'s rule for
+sensors applied to an allowlist check: "I could not look" must never read the same as
+"I looked and it was fine".
+
+**It resolves in the scope the decode call sits in, and that correction is a second
+bypass of the first.** Resolution was module-wide, so an unrelated default anywhere in
+the file laundered every same-named parameter — raised by codeant on #1376 and
+reproduced:
+
+    def helper(algorithm="HS256"):                        # a decoy, nothing to do with
+        return algorithm                                  # the site below
+
+    def verify(token, key, algorithm):                    # no default at all
+        return jwt.decode(token, key, algorithms=[algorithm])   # -> accepted
+
+The same site in isolation was already refused, so the decoy was the whole bypass —
+which is why it was missed: the case was tested in isolation, not in the configuration
+where it matters. Resolution now walks the call's own scope chain innermost-first and
+**stops at the first scope that declares the name**, because that is the binding in
+force at runtime. A parameter therefore shadows a module constant of the same name; a
+closure still reads an enclosing binding, because at runtime it does; and a class
+attribute does **not** resolve a name inside a method, because an unqualified name in a
+method body skips the class namespace entirely: it resolves to a local, an enclosing
+function's binding, a module global or a builtin, and raises `NameError` only when none
+of those bind it. Either way the class attribute is never what runs, so resolving
+against it would describe a value the code cannot read. (An earlier wording here said
+flatly that it "is a `NameError`", which overstates it — raised by cubic on #1376.)
+
+**The bound is scope-aware resolution, not dataflow.** It reads parameters, assignments,
+annotated assignments and walrus targets. It does not track values through containers,
+calls, or `global`-mediated writes: a `global` declaration simply resolves outward, as
+it does at runtime.
+
+**Measured both ways.** Across the whole tree before and after the scope fix: **5
+constant, 4 parameter, 2 literal, 1 imported**. Each of the four `parameter` sites has
+its own string default, so none was relying on the leak — the tightening refuses a
+bypass without changing a single verdict in this estate. Pinned as a test, because
+"the fix changed nothing here" is a claim only a count can support.
+
+**Decode-site discovery reaches a fixed point.** The alias pass ran exactly twice, which
+stopped one hop short — `v3 = v2` / `v2 = v1` / `v1 = jose.jwt` left `v3.decode(...)`
+invisible, free to widen its allowlist with the gate green. Raised by cubic on #1376.
+It now repeats until no new name is added (terminating because each pass only adds, from
+the finite set of the module's own assignment targets). Probing that fix found the same
+hole in the other half of the loop: a re-aliased decoder, `d2 = d1` where
+`d1 = jwt.decode`, was not chained either. Both are closed and pinned.
+
+What it now **rejects** is the shape that actually carries the vulnerability: a single
+element built from a call, subscript, f-string or starred expression.
+`algorithms=[get_unverified_header(token)["alg"]]` is the attack verbatim, and the first
+version of this checker counted AST elements and reported it as *pinned* — while this
+entry claimed a variable would fail the gate. It did not. Both the checker and the claim
+are fixed.
+
+Counts are produced by the checker on each run, never quoted from this paragraph.
+
+**What the checker resolves, stated as a bound rather than a claim of completeness.**
+It finds decode sites written as import aliases (`from jose import jwt as verifier`),
+directly imported decoders (`from jose.jwt import decode`), aliased plain imports
+(`import jwt as j`), qualified receivers (`jose.jwt.decode(...)`) and **simple assignment
+aliases** (`verifier = jose.jwt`, including one alias built from another). Because the
+scan walks every statement body, an assignment nested inside an `if`, `try`/`except`,
+`with` or loop is resolved too — measured, not assumed.
+
+It does *not* resolve an alias reached through a container (`d = {"j": jose.jwt}`), a
+call (`get().decode(...)`), a comprehension, or a **conditional expression**
+(`v = jose.jwt if flag else None`) — anything requiring real dataflow analysis.
+
+That bound is written here deliberately. Each of those spellings was a gap found by
+review rather than by this entry, and the first version of the entry claimed coverage of
+every decode site while the checker matched four hard-coded receiver names. A disposition
+that overstates what its own check verifies is the failure this register exists to
+prevent, so the claim is now the narrower true one.
+
+The site that would matter most if this slipped is `src/security/security_framework.py`,
+which is the one place that genuinely verifies with an asymmetric public key:
+
+```python
+ALGORITHM = "RS256";  _VERIFY_KEY = _PUBLIC_KEY_PEM   # when RSA keys are configured
+ALGORITHM = "HS256";  _VERIFY_KEY = SECRET_KEY         # fallback
+...
+jwt.decode(token, _VERIFY_KEY, algorithms=[ALGORITHM])
+```
+
+`algorithms=[ALGORITHM]` is a one-element list in both branches, and the key and the
+algorithm are chosen together by the same branch — they cannot be mismatched. Widening
+that list to `["HS256", "RS256"]` would hand an attacker the RSA public key as a
+candidate HMAC secret, which is the attack verbatim. That is precisely the edit
+`check_sec_020` refuses.
+
+The check covers PyJWT decode sites as well as python-jose ones, deliberately:
+algorithm confusion is not unique to this library, and a single-algorithm allowlist is
+the correct posture for both. A site that genuinely needs two algorithms amends this
+entry rather than quietly failing the gate.
+
+**No advisory identifier other than this entry's own appears anywhere in it, and that is
+deliberate.** `src/security/accepted_risk_register.py` collects accepted IDs with
+`ID_PATTERN.findall(block)` over the *whole* entry, not just its ID row. An earlier draft
+of the paragraph above cited PyJWT's own algorithm-confusion CVE as a comparison, which
+would have silently registered that unrelated advisory as an accepted risk here — and
+licensed a `.trivyignore` entry for it. Raised by `chatgpt-codex-connector` on #1376.
+Inside an accepting entry, cite comparable advisories by description, never by
+identifier.
+
+---
+
+### SEC-021 — mcp StreamableHTTP session accumulation, patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **ACCEPT** |
+| **ID** | CVE-2026-59951 (GHSA-84m7-p3x7-pcfv) |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `mcp==1.29.0` — transitive via `semgrep` (`mcp==1.29.0`, an exact pin), `requirements-security.txt` |
+| **Blocked-by** | `semgrep==1.179.0` requires `mcp==1.29.0` exactly. The patched releases are 1.30.0 and 2.2.0; neither satisfies that pin. Measured against **1.181.0, the latest semgrep release**, by the procedure `requirements-security.txt` prescribes — read `Requires-Dist: mcp` from the distribution metadata — and it still reads `mcp==1.29.0`. No semgrep release exists that permits a patched mcp, so there is no version of this file that both keeps semgrep and takes the fix. An explicit `mcp==1.30.0` override is not a way out either: against an exact-series pin pip reports ResolutionImpossible and resolves a requirements file atomically, so that one line would install nothing from this file at all — the same failure mode the `pyjwt` note above records |
+| **Recorded** | 2026-10-16 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-16 |
+| **Re-evaluate** | On any semgrep bump — re-read `Requires-Dist: mcp` and close this entry the moment a release permits 1.30.0 or later; on the census resolving an mcp version other than 1.29.0; on `mcp` becoming a declared runtime dependency; or on any Python file in this repository importing the `mcp` package. **All four are enforced by `scripts/check_disposition_premises.py`** — three directly, from the census output, the runtime manifests and every Python file, and the semgrep bump by consequence: that exact pin is the only thing holding mcp at 1.29.0 in this tree, so a relaxed pin either resolves a different version or stops the advisory being reported at all, and the checker fails on both. Reading `Requires-Dist: mcp` from semgrep's own metadata would be more direct and is deliberately not done: it needs the package index, and a check that cannot reach the index would report a clean result it never measured. Each of the four has a planted-defect probe behind it — the discipline `docs/governance/IMMUNE-SYSTEM.md` requires of a sensor, applied to a disposition |
+
+**Why a Blocked-by row rather than a SUPPRESS.** The two entries above that decline this
+row decline it because no patched release exists at all, and for them a `Blocked-by`
+would be a lie that keeps the gate quiet the day a fix ships. Here a fix exists and is
+published; what is missing is any route to it that does not remove this repository's SAST
+scanner. That is the case the row was written for, and this is the register's first use of
+it. The census counts and prints a blocked finding separately and never reports a run
+carrying one as clean, so this entry does not buy silence — it buys an accurate label.
+
+**Not exposed as used.** The vulnerable surface is the *server* side of the SDK's
+StreamableHTTP transport, where sessions accumulate without bound and an unauthenticated
+client can exhaust memory. This repository never starts it. `mcp` is installed only into
+the security-tooling environment: it is absent from `requirements.txt` and
+`pyproject.toml`, so it is not present at all on a production install. No Python file here
+imports the package — measured across the tree, there is no `import mcp` or `from mcp …`
+anywhere, and `src/mcp/` is this estate's own MCP server (The Spark), a hand-written
+FastAPI JSON-RPC surface imported as `src.mcp`, which shares the name and none of the
+code. semgrep's own MCP server runs only under `semgrep mcp`; every invocation in this
+repository — `.pre-commit-config.yaml` and `.forgejo/workflows/security-scan.yml` — runs
+`semgrep --config …` as a scanner, and `semgrep mcp` appears nowhere.
+
+**No advisory identifier other than this entry's own appears anywhere in it**, for the
+reason SEC-020 records — and with one addition that matters more here.
+`src/security/accepted_risk_register.py` reads `blocked_ids()` by collecting *every* id in
+a block that carries a `Blocked-by` row, so any second identifier named in this entry
+would be marked unreachable-behind-an-upstream-pin on the strength of a decision made
+about mcp. The advisories that arrived alongside this one are described in the pull
+request that recorded it, never cited here.
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for

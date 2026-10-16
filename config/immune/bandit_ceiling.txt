@@ -7,5 +7,5 @@
 # medium_plus is the band the gate blocks on elsewhere; low is tracked
 # so it cannot grow unwatched. See scripts/check_bandit_coverage.py for
 # why this replaced .forgejo/workflows/security-baseline.yml.
-low=189
+low=192
 medium_plus=81

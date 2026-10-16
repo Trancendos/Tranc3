@@ -3,4 +3,4 @@
 # in the same commit that removes the suppressions, so the diff shows
 # the work. See scripts/check_inert_suppressions.py for why.
 bare=2
-inert=177
+inert=174

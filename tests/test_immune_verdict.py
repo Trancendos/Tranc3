@@ -331,11 +331,11 @@ def test_the_census_producer_writes_the_commit_the_verdict_reads(monkeypatch):
     `subject` was empty in every real run while the test covering it fabricated
     the key -- pinning an interface nothing produced.
 
-    Then the replacement test did the same thing. It called `_scanned_head()`
-    and hand-assembled a census mapping around the result, which exercises the
-    helper and the reader but never the producer: deleting
-    `"commit": _scanned_head()` from `build_census()` left all 36 tests in this
-    file green. Measured by deleting it. Raised by cubic on #1403.
+    Then the replacement test did the same thing. It called the provenance
+    helper and hand-assembled a census mapping around the result, which
+    exercises the helper and the reader but never the producer: deleting the
+    `commit` field from `build_census()` left all 36 tests in this file green.
+    Measured by deleting it. Raised by cubic on #1403.
 
     So this runs the producer. The sweeps are stubbed because they are network
     scans and none of them touch provenance; everything that decides what
@@ -360,4 +360,9 @@ def test_the_census_producer_writes_the_commit_the_verdict_reads(monkeypatch):
     assert verdict.subject == produced["commit"], (
         "the full sha, not a prefix -- callers need the whole thing"
     )
-    assert verdict.subject == census._scanned_head(), "and it must be THIS tree's head"
+    expected_commit, expected_state = census._measured_tree()
+    assert verdict.subject == expected_commit, "and it must be THIS tree's head"
+    assert produced.get("tree_state") == expected_state, (
+        "the record must say whether the tree matched that commit: a census taken "
+        "mid-edit describes something that was never a commit"
+    )
