@@ -1,163 +1,98 @@
 # Hybrid Agent Orchestration Architecture
 
-**Status**: Design for v0.9.0 MVP  
-**Location**: `src/agents/`
+**Status**: Design for v0.9.0 MVP (aligned with existing codebase)  
+**Location**: Builds on `src/agents/`
 
 ---
 
-## 1. Design Goals
+## 1. Important Alignment Note
 
-- Keep a **thin Orchestrator** that owns high-level planning and final responsibility.
+TRANC3 already has a mature agent system:
+
+| Existing Component | File | Role |
+|--------------------|------|------|
+| `AgentOrchestrator` | `src/agents/orchestrator.py` | Task queue, SQLite persistence, governance FSM gating |
+| `AgentType` / `AgentProfile` | `src/agents/agent_types.py` | Specialist profiles (GENERAL, RESEARCHER, CODER, PLANNER, ANALYZER, ORCHESTRATOR, GUARDIAN) |
+| Goal management | `src/agents/goal_manager.py` | Goal tracking |
+| Task decomposition | `src/agents/task_decomposer.py` | Breaking goals into subtasks |
+| Memory stream | `src/agents/memory_stream.py` | Episodic memory |
+| Tool bridge | `src/agents/tool_bridge.py` | MCP / tool integration |
+| Runtime | `src/agents/agent_runtime.py` | Agent execution runtime |
+
+**The hybrid design for v0.9.0 does not replace these components.**  
+It evolves them by adding clearer autonomy (accept/decline + short-lived helper roles) and explicit re-planning on staleness/events, while keeping the existing governance, persistence and profile systems.
+
+---
+
+## 2. Design Goals (Unchanged)
+
+- Keep a **thin coordinating layer** that owns high-level planning and final responsibility.
 - Give specialist agents **real autonomy** (accept / decline / invent short-lived helper roles).
 - Trigger re-planning on **events or observation staleness** rather than continuous re-reasoning.
 - Maintain a full **routing / audit path** for every decision.
-- Work cleanly with the existing MCP tool registry and worker set.
-
-This hybrid style (light structure + meaningful autonomy) is supported by recent multi-agent research.
+- Continue to respect the existing AI Governance Constitution escalation FSM.
 
 ---
 
-## 2. High-Level Architecture
+## 3. How the Hybrid Layer Maps to Existing Code
 
 ```
 User / External Goal
         │
         ▼
 ┌──────────────────────────────────────────────────────────┐
-│              Thin Orchestrator (Squad Leader)               │
-│  • create_plan()                                            │
-│  • broadcast_subtasks()                                     │
-│  • on_agent_result()                                        │
-│  • should_replan() / replan()                               │
-│  • owns final responsibility + audit log                    │
-└───────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┐
+│     Existing + Extended Coordinating Layer                    │
+│  • AgentOrchestrator (task queue + governance + persistence)  │
+│  • GoalManager + TaskDecomposer (planning)                    │
+│  • New: accept/decline + helper-role invention + staleness    │
+└──────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┐
              │                               │
              ▼                               ▼
 ┌───────────────────────────┐   ┌───────────────────────────┐
-│   Specialist Agents /      │   │   Worker Groups /          │
-│   Role-capable Agents      │   │   MCP Tool Clusters        │
-│                            │   │                            │
-│  • can_handle() / Bid      │   │  • execute tools           │
-│  • accept / decline        │   │  • report results + conf.  │
-│  • invent_helper_role()    │   │  • request help            │
-│  • execute + reflect       │   │                            │
+│  Specialist Agents             │   │  Existing Workers / MCP     │
+│  (AgentProfile + Runtime)      │   │  Tool Clusters              │
+│  • can accept / decline        │   │  • via tool_bridge           │
+│  • invent short-lived helpers  │   │                            │
+│  • reflect (already present)   │   │                            │
 └───────────────────────────┴──────────────────────────────────────────────────────────┐
                              │
                              ▼
-              Reflection & Re-planning Loop
-              (event-triggered or staleness-based)
+              Reflection + Re-planning on staleness / events
+              (extends existing reflection_enabled flag)
 ```
 
 ---
 
-## 3. Core Interfaces (Python)
+## 4. Evolutionary Interfaces (src/agents/interfaces.py)
 
-```python
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Optional
-from enum import Enum
+The file `src/agents/interfaces.py` introduced in this branch defines clean abstract contracts.  
+These are **not** a competing system. They are intended to:
 
-class TaskStatus(Enum):
-    PENDING = "pending"
-    ACCEPTED = "accepted"
-    DECLINED = "declined"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    FAILED = "failed"
+- Provide a stable, well-typed surface for the hybrid behaviours (accept/decline, helper roles, routing path).
+- Be implemented by (or adapted onto) the existing `AgentOrchestrator` and agent runtimes.
+- Avoid forcing a rewrite of the governance-aware, SQLite-persisted task queue.
 
-@dataclass
-class Subtask:
-    id: str
-    description: str
-    context: dict[str, Any] = field(default_factory=dict)
-    required_capabilities: list[str] = field(default_factory=list)
-    priority: int = 0
-
-@dataclass
-class Bid:
-    agent_id: str
-    confidence: float
-    estimated_cost: float = 0.0
-    notes: str = ""
-
-@dataclass
-class AgentResult:
-    subtask_id: str
-    agent_id: str
-    success: bool
-    output: Any
-    confidence: float
-    observations: list[str] = field(default_factory=list)
-    routing_path: list[str] = field(default_factory=list)  # full audit trail
-    error: Optional[str] = None
-
-@dataclass
-class Plan:
-    goal: str
-    subtasks: list[Subtask]
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-class Orchestrator(ABC):
-    @abstractmethod
-    def create_plan(self, goal: str, context: dict[str, Any] | None = None) -> Plan: ...
-
-    @abstractmethod
-    def broadcast_subtasks(self, plan: Plan) -> None: ...
-
-    @abstractmethod
-    def on_agent_result(self, result: AgentResult) -> None: ...
-
-    @abstractmethod
-    def should_replan(self) -> bool: ...
-
-    @abstractmethod
-    def replan(self) -> Plan: ...
-
-class Agent(ABC):
-    agent_id: str
-    capabilities: list[str]
-
-    @abstractmethod
-    def can_handle(self, subtask: Subtask) -> bool | Bid: ...
-
-    @abstractmethod
-    def accept(self, subtask: Subtask) -> None: ...
-
-    @abstractmethod
-    def decline(self, subtask: Subtask, reason: str) -> None: ...
-
-    @abstractmethod
-    def invent_helper_role(self, need: str) -> "Agent": ...
-
-    @abstractmethod
-    def execute(self, subtask: Subtask) -> AgentResult: ...
-
-    @abstractmethod
-    def reflect(self) -> dict[str, Any]: ...
-```
+Over time the concrete `AgentOrchestrator` can grow to satisfy the richer `Orchestrator` protocol, and agent wrappers can satisfy the `Agent` protocol, without breaking current callers.
 
 ---
 
-## 4. Sequence (Happy Path)
+## 5. Implementation Guidance for v0.9.0 MVP
 
-1. User submits goal.
-2. Orchestrator.create_plan(goal) → Plan with ordered/parallel Subtasks.
-3. Orchestrator.broadcast_subtasks(plan).
-4. Each interested Agent calls can_handle() and returns Bid or False.
-5. Orchestrator assigns (or agents self-accept).
-6. Agents execute (possibly inventing short-lived helpers).
-7. Each Agent returns AgentResult including full routing_path.
-8. Orchestrator.on_agent_result() updates state.
-9. If should_replan() (staleness or failure event) → replan and continue.
-10. When all critical subtasks succeed → final result returned to user.
+1. **Do not replace** `AgentOrchestrator` or `AgentProfile`.
+2. Extend the existing task model with optional fields for:
+   - explicit accept/decline decisions
+   - short-lived helper role metadata
+   - richer routing_path / audit trail
+3. Add a lightweight staleness / event-triggered re-plan hook that calls back into `GoalManager` + `TaskDecomposer`.
+4. Keep the governance FSM gating exactly as it is today.
+5. Use the existing `AgentType.ORCHESTRATOR` and `AgentType.PLANNER` profiles as the natural home for coordinating behaviour.
 
 ---
 
-## 5. Implementation Notes for v0.9.0 MVP
+## 6. Success Criteria (aligned)
 
-- Place core interfaces in `src/agents/interfaces.py`.
-- Implement a simple `SimpleOrchestrator` in `src/agents/orchestrator.py`.
-- Existing workers can be wrapped as Agents.
-- Log every routing decision for auditability.
-- Start with sequential + limited parallel execution; expand later.
+- [ ] Hybrid behaviours (accept/decline + helper roles + staleness re-plan) work on top of the current `AgentOrchestrator`.
+- [ ] No parallel task queue or competing persistence layer is introduced.
+- [ ] Existing governance checks continue to function.
+- [ ] Full routing / decision path is available for audit.
+- [ ] At least one multi-step goal can be completed using the extended hybrid flow.
