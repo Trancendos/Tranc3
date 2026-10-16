@@ -8,6 +8,7 @@
         swarm-run entity-audit ansible-health production-score \
         dependency-audit compliance-check compliance-report compliance-ci compliance-merged \
         security-scan security-install security-full pre-commit-install \
+        regen regen-check \
         gate-check zero-cost-status backup-status backup-all dr-drill dr-verify \
         perf-gate perf-gate-update sbom download-model dev-api dev-web \
         submodules check-env \
@@ -236,6 +237,18 @@ download-model:
 		t = AutoTokenizer.from_pretrained('microsoft/phi-3-mini-4k-instruct'); \
 		m.save_pretrained('./models/phi3-base'); t.save_pretrained('./models/phi3-base'); \
 		print('Model downloaded to ./models/phi3-base')"
+
+# ── Derived registers ───────────────────────────────────────────────────────────
+# Regenerates every committed file that ci.yml's Service Topology job checks
+# for currency. Run this when that job goes red at a `... is current` step --
+# the registers are derived from manifests, compose and the tree, and no bot
+# regenerates them. Does NOT run the check_*/conformance scripts: a failure
+# from one of those is a finding about your change, not a stale artefact.
+regen:
+	$(PYTHON) scripts/regenerate_derived.py
+
+regen-check:
+	$(PYTHON) scripts/regenerate_derived.py --check
 
 # ── Security ──────────────────────────────────────────────────────────────────
 security-scan:
