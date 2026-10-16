@@ -191,6 +191,20 @@ jobs:
       - name: Dependency vulnerability census
         run: python3 scripts/vulnerability_census.py --check --scope core
 
+      # Kept in step with the GitHub copy deliberately -- and this pairing is
+      # the reason that rule exists. The Forgejo copy of this gate had already
+      # lost the census step once, so the two copies of the platform's gate
+      # enforced materially different things, and Forgejo's dormancy is what
+      # hid it: the weaker gate is the one that takes over the day The Workshop
+      # returns. A freshness check present on only one side would recreate that
+      # exact asymmetry.
+      #
+      # The census answers a question about a LIVE advisory feed, so its answer
+      # has a shelf life the recorded conclusion does not. See
+      # src/immune/verdict.py for the nine pull requests this was measured on.
+      - name: Census verdict is still current
+        run: python3 scripts/check_verdict_freshness.py
+
       # Kept in step with the GitHub copy deliberately. A disposition in
       # SECURITY_ALERT_REGISTER.md silences a finding the census would otherwise
       # block on, and two of them are justified by how this repository uses the

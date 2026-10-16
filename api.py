@@ -222,6 +222,14 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger("tranc3.api")
 
 
+#: The tokenizer this platform loads when nothing overrides it, and the Hub
+#: commit that `DEFAULT_TOKENIZER_MODEL` resolved to when it was last measured.
+#: Kept beside each other so the pair cannot drift apart: a revision is only
+#: meaningful against the repository it came from.
+DEFAULT_TOKENIZER_MODEL = "bert-base-multilingual-cased"
+DEFAULT_TOKENIZER_REVISION = "3f076fdb1ab68d5b2880cb87a0886f315b8146f8"
+
+
 # ── Runtime config ────────────────────────────────────────────────────────────
 class Config:
     model_path = os.getenv("MODEL_PATH", "./models/tranc3-base.pt")
@@ -231,6 +239,31 @@ class Config:
     supported_languages = os.getenv("SUPPORTED_LANGUAGES", "en,es,fr,de,zh,ja").split(",")
     enable_emotion = os.getenv("ENABLE_EMOTION", "true").lower() == "true"
     personality_dir = os.getenv("PERSONALITY_DIR", "./src/personality/profiles")
+
+    # The tokenizer's model AND its revision, because naming only the model is
+    # not a pin: `bert-base-multilingual-cased` at main today and in six months
+    # are not the same bytes.
+    #
+    # Both were absent here until 2026-10-16, which made the revision support
+    # added to MultilingualTokenizer on 2026-10-14 inert on the only path that
+    # runs. `lifespan()` passes this class, `getattr(config,
+    # "tokenizer_revision", None)` found nothing, and every production start
+    # resolved the Hub's mutable default branch — under a `nosec B615` whose
+    # wording was true ("pinned when config sets tokenizer_revision") and whose
+    # condition was never met. A suppression justified by a mechanism nothing
+    # reaches is the same defect as one justified by a mechanism that does not
+    # exist, and it is harder to see. Raised by cubic on #1403.
+    #
+    # DEFAULT_TOKENIZER_REVISION is the current head of the default model's Hub
+    # repository, read from the Hub API on 2026-10-16 (`sha` of
+    # google-bert/bert-base-multilingual-cased, last modified 2024-02-19). It is
+    # applied ONLY when the model is the default one: a revision is a commit in
+    # one specific repository, so carrying this sha over to a model someone set
+    # via TOKENIZER_MODEL would pin to a commit that repository does not have.
+    tokenizer_model = os.getenv("TOKENIZER_MODEL", DEFAULT_TOKENIZER_MODEL)
+    tokenizer_revision = os.getenv("TOKENIZER_REVISION", "") or (
+        DEFAULT_TOKENIZER_REVISION if tokenizer_model == DEFAULT_TOKENIZER_MODEL else ""
+    )
     vocab_size = 119547
     hidden_size = 768
     num_layers = 12

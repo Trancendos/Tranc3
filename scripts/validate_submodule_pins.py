@@ -180,6 +180,33 @@ def main() -> int:
     urls = _submodule_urls()
     pins = _recorded_pins()
 
+    # A DECLARATION WITH NO GITLINK, checked before anything else because it is
+    # the one disagreement this script used to walk straight past. The loop
+    # below iterates `pins` -- the gitlinks -- and asks of each whether
+    # `.gitmodules` gives it a URL. The reverse never got asked, so an entry
+    # naming a path that is not a submodule at all sat in `urls` unread.
+    #
+    # That is not cosmetic. `src/immune/repo.py` derives the repository
+    # boundary that the inert-suppression ratchet, the bandit ceiling and the
+    # SEC-006/020/021 manifest scans all walk. Its first version read
+    # `.gitmodules`, so `path = src` would have excluded every file under
+    # `src/` from all of them at once -- measured, by planting that entry. The
+    # boundary now comes from gitlinks instead, and this check closes the other
+    # half: the declaration that would have done it is refused here rather than
+    # merely distrusted there. Raised by cubic on #1403.
+    unbacked = sorted(set(urls) - set(pins))
+    if unbacked:
+        print("Submodule declared in .gitmodules with no gitlink behind it:")
+        for path in unbacked:
+            print(f"  ✗ {path} — declared, but the tree records no submodule there")
+        print()
+        print("A path is a different repository because git records a gitlink at it,")
+        print("not because .gitmodules says so. An entry like this validates nothing")
+        print("here and would widen or narrow any control that trusts the file.")
+        print("Fix: add the submodule properly (`git submodule add`), or remove the")
+        print("entry. See src/immune/repo.py for what reads this boundary.")
+        return 1
+
     if not pins:
         print("No submodule gitlinks found — nothing to validate.")
         return 0

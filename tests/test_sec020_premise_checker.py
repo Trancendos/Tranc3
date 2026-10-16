@@ -10,7 +10,9 @@ version claimed to reject a variable algorithm while reporting it as pinned.
 from __future__ import annotations
 
 import ast
+import datetime
 import importlib.util
+import json
 from pathlib import Path
 
 _SPEC = importlib.util.spec_from_file_location(
@@ -577,3 +579,84 @@ def test_an_undotted_import_still_resolves_against_its_sibling(tmp_path):
     assert cdp._jwt_decode_sites(ast.parse(service.read_text(encoding="utf-8")), service) == [
         (3, "imported", 1)
     ]
+
+
+# --- the census half -----------------------------------------------------
+#
+# Every case above is about the ALGORITHM premise, read from the AST. SEC-020
+# rests on two further premises the census answers -- the resolved version and
+# whether a fix exists -- and those had no test at all, which is how the
+# freshness gap below survived: SEC-006 applied `_census_staleness` and
+# SEC-020 did not, so a census old enough to predate a patched python-jose
+# release could confirm "no fix exists" from the one document that cannot
+# know. Raised by coderabbit on #1403.
+
+
+def _jose_census(tmp_path: Path, *, generated_at: str | None = None, **overrides) -> None:
+    finding = {
+        "package": cdp._SEC_020_PACKAGE,
+        "version": cdp._SEC_020_MEASURED_JOSE,
+        "id": sorted(cdp._SEC_020_ADVISORY_IDS)[0],
+        "aliases": sorted(cdp._SEC_020_ADVISORY_IDS),
+        "fix_versions": [],
+    }
+    finding.update(overrides)
+    out = tmp_path / cdp._CENSUS_OUTPUT
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(
+            {
+                "generated_at": generated_at
+                if generated_at is not None
+                else datetime.datetime.now(datetime.UTC).isoformat(),
+                "scanned_ok": True,
+                "fixable_count": 0,
+                "surfaces": [{"manifest": "requirements.txt", "findings": [finding]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_the_measured_version_with_no_fix_named_passes(tmp_path, monkeypatch):
+    _jose_census(tmp_path)
+    monkeypatch.setattr(cdp, "ROOT", tmp_path)
+    assert cdp._census_jose_premises() == []
+
+
+def test_a_stale_census_cannot_confirm_the_premises(tmp_path, monkeypatch):
+    """A census from before a patched release cannot say no patch exists."""
+    old = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=3)
+    _jose_census(tmp_path, generated_at=old.isoformat())
+    monkeypatch.setattr(cdp, "ROOT", tmp_path)
+    failures = cdp._census_jose_premises()
+    assert len(failures) == 1
+    assert failures[0].startswith("SEC-020:"), "the reason must read as SEC-020's, not SEC-006's"
+    assert cdp._SEC_020_PACKAGE in failures[0] or "current answer" in failures[0]
+
+
+def test_an_incomplete_census_names_this_entrys_own_package(tmp_path, monkeypatch):
+    """REGRESSION. The reason was hardcoded to SEC-006's entry id AND to
+    `nltk`, so SEC-020 would have reported a python-jose premise as an nltk
+    one under another entry's name."""
+    _jose_census(tmp_path)
+    out = tmp_path / cdp._CENSUS_OUTPUT
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    payload["scanned_ok"] = False
+    out.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(cdp, "ROOT", tmp_path)
+    failures = cdp._census_jose_premises()
+    assert len(failures) == 1
+    assert failures[0].startswith("SEC-020:")
+    assert cdp._SEC_020_PACKAGE in failures[0]
+    assert "nltk" not in failures[0]
+
+
+def test_a_named_fix_fails_because_the_entry_says_none_exists(tmp_path, monkeypatch):
+    """The premise SEC-020's SUPPRESS rests on. The moment the advisory names
+    a fixed release, "no patched version exists" is false and the suppression
+    becomes a choice not to take an available fix."""
+    _jose_census(tmp_path, fix_versions=["3.6.0"])
+    monkeypatch.setattr(cdp, "ROOT", tmp_path)
+    failures = cdp._census_jose_premises()
+    assert failures and all(f.startswith("SEC-020:") for f in failures)

@@ -62,6 +62,18 @@ repos:
         # medium+ severity, matching the gate in
         # .forgejo/workflows/security-scan.yml. Low findings are tracked by
         # the ratchet in security-baseline.yml instead of blocking a commit.
+        #
+        # These two targets are NARROWER than [tool.bandit] targets, which also
+        # names scripts and workers, and that is deliberate. Measured medium+
+        # findings: src 0, api.py 0, scripts 4, workers 77 — so with -ll in
+        # place, widening this hook would fail every commit in the repository
+        # on 81 inherited findings, and a gate red on arrival teaches people to
+        # ignore it. The full scope is carried by
+        # scripts/check_bandit_coverage.py in CI, with a ratchet.
+        #
+        # Do not change this list without changing _PRECOMMIT_BANDIT_TARGETS in
+        # that script: it compares the two and fails when they drift, so the
+        # reason above cannot quietly stop being the reason.
         args: [-c, pyproject.toml, -ll, --confidence-level, medium, -r, src, api.py]
         # Scan the configured targets rather than the changed-file list:
         # pre-commit's filenames bypass [tool.bandit] exclude_dirs, which

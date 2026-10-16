@@ -41,6 +41,7 @@ Standard library only: the production gate installs little else.
 from __future__ import annotations
 
 import ast
+import functools
 import re
 import sys
 from pathlib import Path
@@ -203,14 +204,74 @@ _SEC_021_ADVISORY_IDS = frozenset({"CVE-2026-59951", "GHSA-84M7-P3X7-PCFV"})
 _JWT_MODULE_NAMES = {"jwt", "pyjwt", "_jwt", "jose_jwt"}
 
 
+#: Where this script's own code lives. Separate from `ROOT` on purpose: `ROOT`
+#: is the tree being MEASURED and the tests repoint it at a fixture, while the
+#: module this script loads by path is always its own sibling. Conflating the
+#: two made the boundary silently unavailable under test — which is the failure
+#: mode this whole boundary exists to prevent, so it is worth two constants.
+_SOURCE_ROOT = Path(__file__).resolve().parents[1]
+
+
+@functools.lru_cache(maxsize=1)
+def _boundary_reader():
+    """`inside_submodule` and `submodule_paths` from `src/immune/repo.py`.
+
+    Loaded by path for the reason `_census_staleness` gives below: this
+    script's contract is that the production gate installs almost nothing, and
+    importing `src.immune.repo` as a package would execute
+    `src/immune/__init__.py`, which pulls in PyYAML. `repo.py` is stdlib-only.
+
+    On failure the reader excludes nothing — the same answer as a tree with no
+    submodules, and the only honest one available without inventing
+    exclusions.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_repo_for_premises", _SOURCE_ROOT / "src" / "immune" / "repo.py"
+    )
+    if spec is None or spec.loader is None:
+        return (lambda *_: False), (lambda _: frozenset())
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    # A broad catch on purpose: a missing or unreadable boundary must not end
+    # the run. No suppression -- BLE is a separate linter from B, so this
+    # repo's `select` does not enable BLE001 and a directive naming it would
+    # silence nothing, which is what check_inert_suppressions.py counts.
+    except Exception:
+        return (lambda *_: False), (lambda _: frozenset())
+    return module.inside_submodule, module.submodule_paths
+
+
+def _in_submodule(relative) -> bool:
+    """Is this path, relative to the measured tree, inside a submodule?"""
+    inside, paths = _boundary_reader()
+    submodules = paths(ROOT)
+    return bool(submodules) and inside(relative, submodules)
+
+
 def _walk(base: Path, suffixes: set[str]):
-    """Repository files under `base` with one of `suffixes`, skipping vendored trees."""
+    """Repository files under `base` with one of `suffixes`, skipping vendored trees.
+
+    And skipping submodules. `workers/cranbania` and `compliance/magna-carta`
+    are separate repositories, checked out by one CI job and not by the others,
+    so a premise measured across them holds or fails depending on the checkout
+    rather than on this repository's code. See `src/immune/repo.py`.
+    """
     if not base.is_dir():
         return
     for path in base.rglob("*"):
         if path.suffix not in suffixes or not path.is_file():
             continue
         if any(part in _SKIP for part in path.parts):
+            continue
+        try:
+            relative = path.relative_to(ROOT)
+        except ValueError:
+            relative = path
+        if _in_submodule(relative):
             continue
         yield path
 
@@ -318,6 +379,82 @@ def _nltk_path_calls(tree: ast.AST) -> list[tuple[int, str]]:
     return found
 
 
+def _census_staleness(output: Path, entry_id: str = "SEC-006", package: str = "nltk") -> str:
+    """A reason the census is too old to confirm a premise, or "".
+
+    `entry_id` names the register entry whose premises are being confirmed, so
+    the reason reads as that entry's, and `package` names the dependency the
+    premises are about. Both defaulted to SEC-006's values and were hardcoded
+    into every message, which meant SEC-020 and SEC-021 -- which share this
+    freshness rule -- would have reported a stale census as SEC-006's, about
+    nltk, had they called it at all. They now do, which is the point.
+
+    `src/immune/verdict.py` already holds the TTL rule and the reasoning for
+    it, so this loads that module BY PATH rather than copying the arithmetic.
+    Importing `src.immune.verdict` normally would execute `src/immune/__init__.py`,
+    which imports PyYAML -- and this script's contract is that the production
+    gate installs little else. Loading the one stdlib-only module directly keeps
+    both promises: a single implementation of freshness, and no new dependency.
+    """
+    # Imported here, not at module scope: this is the only path that needs it,
+    # and the import is cheap exactly once. (No suppression: PLC0415 is not in
+    # [tool.ruff] select, so a directive naming it would silence nothing --
+    # which is what scripts/check_inert_suppressions.py now counts.)
+    import importlib.util
+
+    # _SOURCE_ROOT, not ROOT: this module travels with the checker, whereas
+    # ROOT is the tree being MEASURED and a test may point it at a fixture that
+    # holds no src/ at all. Resolving from ROOT made the freshness rule
+    # unavailable exactly when the subject tree was not this repository -- and
+    # spec_from_file_location happily returns a spec for a path that does not
+    # exist, so the failure surfaced as an uncaught FileNotFoundError from
+    # exec_module rather than as the "could not be loaded" reason below.
+    unavailable = (
+        f"{entry_id}: src/immune/verdict.py could not be loaded, so the census "
+        "freshness could not be established. Not a pass -- an unchecked age "
+        "is not a current answer."
+    )
+    spec = importlib.util.spec_from_file_location(
+        "_verdict_for_premises", _SOURCE_ROOT / "src" / "immune" / "verdict.py"
+    )
+    if spec is None or spec.loader is None:
+        return unavailable
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    # Broad on purpose, and undirected for the same reason as above: a
+    # missing or broken freshness rule must read as unchecked, not crash.
+    except Exception:
+        sys.modules.pop(spec.name, None)
+        return unavailable
+
+    verdict = module.load_verdict(output)
+
+    # FRESHNESS, not cleanliness. `counts_as_pass()` also requires the census
+    # to have found nothing fixable, and that is the wrong question here: these
+    # premises are about nltk's resolved version and whether a fix exists for
+    # one advisory, which a census reporting seventeen other findings answers
+    # perfectly well. Using counts_as_pass() made this step unsatisfiable while
+    # ANY finding was open anywhere -- caught by probing the fresh case as well
+    # as the stale one, which is the only reason it is not in this commit.
+    if verdict.freshness() == module.LIVE and verdict.outcome != module.UNKNOWN:
+        return ""
+    if verdict.outcome == module.UNKNOWN:
+        return (
+            f"{entry_id}: the census did not complete ({verdict.explain()}), so the "
+            f"{package} version and fix-availability premises are unconfirmed. This is "
+            "not a failing scan and must not be read as one, nor as a pass."
+        )
+    return (
+        f"{entry_id}: the census is not a current answer ({verdict.explain()}). Its "
+        "premises are about a LIVE advisory feed, so confirming them from an aged "
+        "file asserts that nothing has changed since -- the one thing the file "
+        "cannot say. Re-run "
+        "`python3 scripts/vulnerability_census.py --check --scope core`."
+    )
+
+
 def _census_nltk_premises() -> list[str]:
     """What the census actually resolved for nltk, against what SEC-006 claims.
 
@@ -330,7 +467,7 @@ def _census_nltk_premises() -> list[str]:
         "no patched release exists" is false and a SUPPRESS becomes a choice
         not to take an available fix.
     """
-    import json  # noqa: PLC0415 - only needed on this path
+    import json  # imported on this path only
 
     output = ROOT / _CENSUS_OUTPUT
     if not output.is_file():
@@ -344,6 +481,18 @@ def _census_nltk_premises() -> list[str]:
         data = json.loads(output.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return [f"SEC-006: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    # A census answer has a shelf life, and this was the second consumer of the
+    # file not to check it. Measured 2026-10-16: a worktree holding a census
+    # generated 2026-10-13 confirmed SEC-006's premises three days later, from
+    # a file reporting `fixable_count: 17` -- the same seventeen advisories
+    # src/immune/verdict.py was written about. In the production gate the census
+    # runs immediately before this step, which is why it was never visible;
+    # anywhere else -- a local run, a reordered job, a leftover file -- the
+    # answer had unbounded age.
+    stale = _census_staleness(output)
+    if stale:
+        return [stale]
 
     failures: list[str] = []
     seen = False
@@ -427,6 +576,8 @@ def _runtime_declarations(package: str) -> list[str]:
     for path in ROOT.rglob("requirements*.txt"):
         if any(part in _SKIP for part in path.parts) or _is_tooling_manifest(path):
             continue
+        if _in_submodule(path.relative_to(ROOT)):
+            continue  # a submodule declares its own dependencies, not ours
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
         except (OSError, UnicodeDecodeError):
@@ -435,14 +586,23 @@ def _runtime_declarations(package: str) -> list[str]:
             if _declares_package(line, package):
                 found.append(f"{path.relative_to(ROOT).as_posix()}:{number}")
 
-    pyproject = ROOT / "pyproject.toml"
-    if pyproject.is_file():
+    # EVERY pyproject.toml, not just the root one. `tranc3-bots/` has its own
+    # with its own dependencies, and so may any sub-project added later, so
+    # reading only the root meant a package could become a declared runtime
+    # dependency of a shipped component while this check stayed green.
+    # Raised by cubic on #1376.
+    for pyproject in sorted(ROOT.rglob("pyproject.toml")):
+        if any(part in _SKIP for part in pyproject.parts):
+            continue
+        if _in_submodule(pyproject.relative_to(ROOT)):
+            continue  # likewise: CranBania's project is not this one
         try:
-            import tomllib  # noqa: PLC0415 - stdlib from 3.11, which CI runs
+            import tomllib  # stdlib from 3.11, which CI runs
 
             data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, ValueError, ModuleNotFoundError):
-            data = {}
+            continue
+        shown = pyproject.relative_to(ROOT).as_posix()
         project = data.get("project") or {}
         groups: list[tuple[str, object]] = [("dependencies", project.get("dependencies"))]
         for name, deps in (project.get("optional-dependencies") or {}).items():
@@ -453,7 +613,7 @@ def _runtime_declarations(package: str) -> list[str]:
                 continue
             for entry in deps:
                 if isinstance(entry, str) and _declares_package(entry, package):
-                    found.append(f"pyproject.toml [project.{label}]")
+                    found.append(f"{shown} [project.{label}]")
 
     return found
 
@@ -544,7 +704,7 @@ def _locked_versions() -> list[tuple[str, str]] | None:
     is the authoritative installed graph cannot read only part of it.
     (codeant-ai on #1240.)
     """
-    import json  # noqa: PLC0415 - only needed on this path
+    import json  # imported on this path only
 
     lock = ROOT / _WEB_LOCKFILE
     if not lock.is_file():
@@ -1169,7 +1329,7 @@ def _census_jose_premises() -> list[str]:
     Same two premises as SEC-006, for the same reason: a SUPPRESS is only
     honest while the version is the one assessed and no fix exists.
     """
-    import json  # noqa: PLC0415 - only needed on this path
+    import json  # imported on this path only
 
     output = ROOT / _CENSUS_OUTPUT
     if not output.is_file():
@@ -1182,6 +1342,16 @@ def _census_jose_premises() -> list[str]:
         data = json.loads(output.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return [f"SEC-020: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    # The SAME shelf life as SEC-006's premises, for the same reason, and it was
+    # missing here: these ask what a LIVE advisory feed currently says about
+    # python-jose's resolved version and its fixed releases. A census file old enough
+    # to predate a new fixed release confirms "no fix exists" from the one
+    # document that cannot know. Three entries now share one freshness rule
+    # rather than one entry having it and two inheriting the gap.
+    stale = _census_staleness(output, "SEC-020", _SEC_020_PACKAGE)
+    if stale:
+        return [stale]
 
     failures: list[str] = []
     seen = False
@@ -1319,6 +1489,26 @@ def _pinned_decode_sites() -> int:
     return _SEC_020_PINNED[0] if _SEC_020_PINNED else 0
 
 
+def _dynamic_import_target(node: ast.Call) -> str | None:
+    """The literal module name a dynamic import call names, if any.
+
+    Covers `__import__("x")` and `importlib.import_module("x")`, including the
+    `import importlib` / `from importlib import import_module` spellings. A
+    non-literal first argument returns None: unresolvable, and saying so beats
+    guessing.
+    """
+    callee = node.func
+    dynamic = False
+    if isinstance(callee, ast.Name) and callee.id in {"__import__", "import_module"}:
+        dynamic = True
+    elif isinstance(callee, ast.Attribute) and callee.attr in {"__import__", "import_module"}:
+        dynamic = True
+    if not dynamic or not node.args:
+        return None
+    first = node.args[0]
+    return first.value if isinstance(first, ast.Constant) and isinstance(first.value, str) else None
+
+
 def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
     """(line, description) for every import of the `mcp` package in one module.
 
@@ -1329,7 +1519,17 @@ def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
     """
     found: list[tuple[int, str]] = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
+        if isinstance(node, ast.Call):
+            # `__import__("mcp")` and `importlib.import_module("mcp")` import
+            # the package without an import statement, so an AST guard that
+            # only looked at `Import`/`ImportFrom` could be walked straight
+            # past. Only a literal target is checked: a computed one cannot be
+            # resolved here, and a guard that guessed would be worse than one
+            # whose limit is written down. Raised by cubic on #1376.
+            name = _dynamic_import_target(node)
+            if name is not None and (name == "mcp" or name.startswith("mcp.")):
+                found.append((node.lineno, f"dynamic import of {name}"))
+        elif isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name == "mcp" or alias.name.startswith("mcp."):
                     found.append((node.lineno, f"import {alias.name}"))
@@ -1374,7 +1574,7 @@ def _census_mcp_premises() -> list[str]:
     inverted — see `_SEC_021_MEASURED_MCP` for why that inversion is the
     point of a `Blocked-by` entry rather than an oversight.
     """
-    import json  # noqa: PLC0415 - only needed on this path
+    import json  # imported on this path only
 
     output = ROOT / _CENSUS_OUTPUT
     if not output.is_file():
@@ -1387,6 +1587,16 @@ def _census_mcp_premises() -> list[str]:
         data = json.loads(output.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return [f"SEC-021: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    # The SAME shelf life as SEC-006's premises, for the same reason, and it was
+    # missing here: these ask what a LIVE advisory feed currently says about
+    # mcp's resolved version and its fixed releases. A census file old enough
+    # to predate a new fixed release confirms "no fix exists" from the one
+    # document that cannot know. Three entries now share one freshness rule
+    # rather than one entry having it and two inheriting the gap.
+    stale = _census_staleness(output, "SEC-021", _SEC_021_PACKAGE)
+    if stale:
+        return [stale]
 
     failures: list[str] = []
     seen = False
