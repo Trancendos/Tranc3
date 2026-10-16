@@ -351,9 +351,56 @@ async fn get_audit(
     Ok(Json(rows.filter_map(|r| r.ok()).collect()))
 }
 
+use tracing_subscriber::prelude::*;
+
+/// Start Sentry when `SENTRY_DSN` is set, and run uninstrumented when it is not.
+///
+/// The DSN is read from the environment rather than written here on purpose.
+/// This repository is public, and a DSN committed to public source lets anyone
+/// post events into the project and exhaust its quota -- it is not a read
+/// credential, but it is a write one.
+///
+/// `send_default_pii` is left at its default of FALSE, deliberately. This
+/// service sees `Authorization` headers and client IPs; enabling it would send
+/// both to a third party, which is a data-protection decision rather than a
+/// default. Turn it on only after checking it against the Magna Carta rules.
+fn init_sentry() -> Option<sentry::ClientInitGuard> {
+    let dsn = std::env::var("SENTRY_DSN").ok().filter(|d| !d.trim().is_empty())?;
+    Some(sentry::init(
+        sentry::ClientOptions::new()
+            .dsn(&dsn)
+            .maybe_release(sentry::release_name!())
+            // FALSE on purpose -- see the note above. The builder default is
+            // already false; it is stated explicitly so that turning it on is
+            // a visible edit in a diff rather than a silent omission.
+            .send_default_pii(false)
+            // Errors are always captured. Traces are sampled, and the rate is
+            // an env knob so production can turn it down without a rebuild.
+            .traces_sample_rate(
+                std::env::var("SENTRY_TRACES_SAMPLE_RATE")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0.1),
+            ),
+    ))
+}
+
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    // Held for the lifetime of main: on drop it flushes pending events.
+    let _sentry = init_sentry();
+
+    // The Sentry layer is added to the EXISTING subscriber rather than
+    // replacing it, so every `tracing` call already in this service reaches
+    // Sentry with no call site rewritten. Local stderr output is unchanged.
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .with(sentry::integrations::tracing::layer())
+        .init();
 
     let master_key = std::env::var("VAULT_MASTER_KEY")
         .or_else(|_| std::env::var("MASTER_KEY"))

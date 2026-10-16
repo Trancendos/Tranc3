@@ -18,3 +18,4 @@ jsonwebtoken = "11"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3"
+sentry = { version = "0.49.3", features = ["tracing"] }
