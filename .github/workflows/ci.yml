@@ -81,7 +81,12 @@ jobs:
       # policy from the gate criteria, and src/event_bus/types.py, which the
       # PLM imports for its event enum, is built on pydantic.
       - name: Install PyYAML and pydantic
-        run: pip install PyYAML pydantic
+        # bandit is pinned to the SAME version .pre-commit-config.yaml uses,
+        # so the two lanes cannot disagree about what a finding is. It is
+        # invoked as a subprocess by check_bandit_coverage.py, not imported,
+        # so check_ci_job_dependencies.py cannot see this requirement by
+        # walking imports -- do not remove it as unused.
+        run: pip install PyYAML pydantic "bandit[toml]==1.9.4"
 
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
@@ -500,6 +505,22 @@ jobs:
       # backlog gets bypassed rather than satisfied.
       - name: Suppressions silence something
         run: python scripts/check_inert_suppressions.py
+
+      # The Python security lane, over the WHOLE [tool.bandit] targets surface.
+      # Until 2026-10-16 that surface was src/ + api.py, with scripts/ also in
+      # exclude_dirs; measured, it reported 36 Low and ZERO Medium while
+      # scripts/ + workers/ held 79 Medium -- the entire medium-severity
+      # population of the repository, including two unpinned Hugging Face Hub
+      # downloads at HIGH confidence.
+      #
+      # This REPLACES .forgejo/workflows/security-baseline.yml's bandit-ratchet,
+      # which has never run (all four of its jobs pin self-hosted), passed no
+      # -c pyproject.toml (so 248 of the 309 findings it counted were B311/B110,
+      # both already skipped with written reasons), and whose .security-baseline
+      # had drifted from 307 to 309 undetected. That workflow now calls this
+      # same script, so the two cannot disagree.
+      - name: bandit covers the whole configured surface
+        run: python scripts/check_bandit_coverage.py
 
       # tests/test_immune.py is deliberately NOT run here. It was, for one
       # commit, and failed with "No module named pytest": this job installs the

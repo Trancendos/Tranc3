@@ -263,23 +263,36 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   rather than only to the scanners under it. The census answers a question about a
   *live* advisory feed, so its answer has a shelf life the recorded check-run
   conclusion does not — and GitHub satisfies a required check from any green on the
-  head commit, however old. Measured 2026-10-13: **nine** open pull requests,
-  `main` among them, held a green Production merge gate timestamped inside one
+  head commit, however old. Measured 2026-10-13: **eight** open pull requests
+  and `main` itself — nine subjects — held a green Production merge gate timestamped inside one
   forty-five-minute window on 2026-10-05, all predating the seventeen advisories
   that landed in between; seven also read `mergeable_state: clean`. A stale verdict
-  now degrades to `unknown` rather than staying a pass, because the asymmetry
-  matters: an expired *suppression* delays a fix, an expired *pass* ships. The TTL
+  no longer counts as a pass — `freshness()` keeps `stale` distinct from `unknown`,
+  and the gate refuses both — because the asymmetry matters: an expired *suppression* delays a fix, an expired *pass* ships. The TTL
   defaults to 24h, which is not invented — it is the interval
   `supply-chain-watch.yml` already commits to, for CRA Art. 14(1).
 
+  **What this does NOT close, stated plainly** because five reviewers raised it
+  and they are right: the step runs only when the gate runs, immediately after a
+  fresh census. An idle pull request whose head stops moving keeps its recorded
+  green, and GitHub keeps accepting it. This change makes every *new* gate run
+  prove its answer is current; it cannot expire an answer already recorded.
+  Closing it needs a scheduled job that re-evaluates each relied-upon head and
+  publishes a separate commit status beside the aging one — which is exactly what
+  `--github-output` and `immune/census-verdict` were built to feed, and is not in
+  this change
+
   **The App register** (`config/estate/github_apps.yaml`,
   `scripts/check_app_inventory.py`, run in `ci.yml`) is the fourth register of
-  controls, after `.github/workflows/` (28), `.forgejo/workflows/` (33) and
-  `.pre-commit-config.yaml` (22 hooks). The first three work because a file on disk
+  controls, after `.github/workflows/`, `.forgejo/workflows/` and
+  `.pre-commit-config.yaml` — counts deliberately not restated here, because
+  `check_workflow_inventory.py` matches only the original sentences by exact regex,
+  so a second copy would read 28/33/22 forever while CI corrected the first. The
+  first three work because a file on disk
   can be counted; an installed GitHub App leaves no file, so nothing here could be
   counted and nothing was. Measured 2026-10-16: **22** Apps act on this repository,
-  **11** publishing commit checks — and four of those eleven were named in no
-  document in the tree: `debricked` (SCA), `gitguardian` (secret scanning),
+  **11** publishing commit checks — and four of those eleven were not documented
+  as installed commit-check Apps: `debricked` (SCA), `gitguardian` (secret scanning),
   `codefactor-io` and `mermaid-diagram-sync-assistant`. Two are security scanners,
   which is precisely what the sentence above says to read this document before
   adding. `ecc-tools` alone posted 134 comments across five pull requests. **Nine**
@@ -297,11 +310,11 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   `config/immune/noqa_ceiling.txt`, run in `ci.yml`) came out of the App register's
   own first day: `codefactor-io` flagged a real B310 in the register's checker, and
   following it found that the suppression on that line silenced nothing. `S` —
-  flake8-bandit, the security family — is **not** in `[tool.ruff] select`, so ruff
+  flake8-bandit, the security family — is **not** in `[tool.ruff.lint] select`, so ruff
   never raises it here. Probed: a file containing `os.system(user_input)`,
   `subprocess.call(..., shell=True)`, `exec()` and `eval()` passes this repo's ruff
   config with "All checks passed!", and reports four findings under `--select S`.
-  Measured: **172 of 803** suppression codes in the tree are inert (21%), **61** of
+  Measured: **177 of 804** suppression codes in the tree are inert (22%), **61** of
   them in the security family, plus **2** bare directives that silence every rule on
   their line forever. Both counts are ratcheted — they may fall, never rise —
   following `check_nosec_specificity.py`'s reasoning that a guard failing on the
@@ -313,7 +326,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
   two move with every test file added, so they are a scale, not a tracked figure. The
   number that should drive the decision is **263** findings on `scripts/`+`workers/`
   against **37** on `src/`+`api.py`, in classes bandit does not skip. An owner's call,
-  not a checker's
+  not a checker's decision
 - `docs/governance/EXTERNAL-ASSESSMENT-REVIEW.md` — three externally supplied AI
   assessments of Tranc3 checked claim by claim. The rule they establish: **they
   reliably read the issue tracker and reliably invent the aggregates.** Document 3

@@ -44,122 +44,31 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.FORGEJO_TOKEN || github.token }}
 
+      # Delegates to scripts/check_bandit_coverage.py, which GitHub Actions'
+      # ci.yml also runs. This job previously carried ~130 lines of shell
+      # implementing its own ratchet, and it had four problems at once:
+      #
+      #   1. It has never run. All four jobs here pin `runs-on: self-hosted`,
+      #      against an act-runner the cloud-only phase defers.
+      #   2. It passed no `-c pyproject.toml`, so [tool.bandit] skips never
+      #      applied. Of the 309 findings its documented command reports,
+      #      147 are B311 and 101 are B110 -- both skipped in pyproject.toml
+      #      with written reasons. 248 of 309 were already adjudicated.
+      #   3. `.security-baseline` had drifted from 307 to 309 undetected,
+      #      because the workflow that checks drift is this one.
+      #   4. Its scope was `src api.py workers/tateking/main.py` -- one worker
+      #      file out of roughly eighty.
+      #
+      # The shared script fixes all four: scope comes from [tool.bandit]
+      # targets, the config is always loaded, the ceiling lives in
+      # config/immune/bandit_ceiling.txt, and a run that could not scan
+      # reports UNKNOWN instead of clean. Two callers, one implementation,
+      # so they cannot disagree about what "holding" means.
       - name: Install bandit
-        run: python3 -m pip install --quiet "bandit==1.8.3"
+        run: python3 -m pip install --quiet "bandit[toml]==1.9.4"
 
-      - name: Run bandit and count findings
-        id: bandit
-        run: |
-          mkdir -p logs
-          # Run bandit; exit code 1 = findings, exit code 0 = clean.
-          bandit -r src api.py workers/tateking/main.py \
-            --exclude src/nanoservices/genetic_optimizer,src/evolution \
-            -f json -o logs/bandit-full.json 2>/dev/null || true
-
-          # Count findings (excluding already-suppressed nosec lines)
-          FINDINGS=$(python3 -c "
-          import json, sys, os
-          if not os.path.exists('logs/bandit-full.json'):
-              print('Error: logs/bandit-full.json not found', file=sys.stderr)
-              sys.exit(1)
-          try:
-              with open('logs/bandit-full.json') as f:
-                  data = json.load(f)
-              print(len(data.get('results', [])))
-          except Exception as e:
-              print(f'Error parsing bandit output: {e}', file=sys.stderr)
-              sys.exit(1)
-          ")
-          echo "findings=$FINDINGS" >> $GITHUB_OUTPUT
-          echo "Bandit findings: $FINDINGS"
-
-      - name: Read baseline
-        id: baseline
-        run: |
-          # A missing or unparseable baseline used to become 9999, which no
-          # realistic finding count can exceed -- so the ratchet below passed
-          # unconditionally and the gate silently stopped protecting anything.
-          # A security control that cannot fail is not a control. Fail closed
-          # and say why, so the fix is to restore the baseline rather than to
-          # never notice it went.
-          if [ ! -f .security-baseline ]; then
-            echo "::error::.security-baseline is missing -- the bandit ratchet has"
-            echo "::error::no reference point and cannot detect a regression."
-            echo "::error::Restore it, or seed it from a known-good run."
-            exit 1
-          fi
-          # grep returns every match. A file with two bandit_findings= lines
-          # yields two values, and "$BASELINE" then fails every numeric test
-          # below -- which used to mean the ratchet quietly took the pass path.
-          MATCHES=$(grep -c '^bandit_findings=' .security-baseline || true)
-          if [ "$MATCHES" != "1" ]; then
-            echo "::error::.security-baseline has $MATCHES bandit_findings= lines;"
-            echo "::error::exactly one is required. Regenerate it with '>' not '>>'."
-            exit 1
-          fi
-          BASELINE=$(grep '^bandit_findings=' .security-baseline | cut -d= -f2)
-          case "$BASELINE" in
-            ''|*[!0-9]*)
-              echo "::error::.security-baseline has no usable bandit_findings= value"
-              echo "::error::(read: '${BASELINE}'). Refusing to pass a ratchet that"
-              echo "::error::has nothing to ratchet against."
-              exit 1 ;;
-          esac
-          echo "count=$BASELINE" >> $GITHUB_OUTPUT
-          echo "Baseline: $BASELINE"
-
-      - name: Ratchet check
-        run: |
-          CURRENT=${{ steps.bandit.outputs.findings }}
-          BASELINE=${{ steps.baseline.outputs.count }}
-          echo "Current findings: $CURRENT  |  Baseline: $BASELINE"
-          if [ "$CURRENT" -gt "$BASELINE" ]; then
-            echo "❌ REGRESSION: bandit findings increased from $BASELINE to $CURRENT"
-            echo "   Fix new violations or add justified '# nosec BXXX -- reason' annotations."
-            exit 1
-          elif [ "$CURRENT" -lt "$BASELINE" ]; then
-            echo "✅ IMPROVEMENT: findings reduced from $BASELINE to $CURRENT"
-            # Update baseline on main branch pushes
-            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-              sed -i "s/bandit_findings=.*/bandit_findings=$CURRENT/" .security-baseline
-              git config user.email "security-bot@trancendos.com"
-              git config user.name "Tranc3 Security Bot"
-              git add .security-baseline
-              git diff --staged --quiet || git commit -m "security: auto-update bandit baseline to $CURRENT findings [skip ci]"
-              git push origin main || true
-            fi
-          else
-            echo "✅ No regression (findings: $CURRENT)"
-          fi
-
-      - name: Baseline drift check
-        run: |
-          # The ratchet only auto-refreshes the baseline on main pushes. On
-          # feature branches (and in any window between a remediation landing
-          # and the baseline being regenerated) the stored baseline can drift
-          # far from reality. A stale baseline that over-counts findings is
-          # silent: the gate keeps "passing" while providing no real
-          # protection. This step catches that drift and emits a CI warning so
-          # the baseline gets refreshed (see reset recipe in .security-baseline).
-          CURRENT=${{ steps.bandit.outputs.findings }}
-          BASELINE=${{ steps.baseline.outputs.count }}
-          DRIFT_THRESHOLD_PCT=10
-
-          if [ "$BASELINE" -le 0 ]; then
-            echo "Baseline is zero — skipping drift check."
-            exit 0
-          fi
-
-          DELTA=$(( BASELINE - CURRENT ))
-          DELTA_ABS=${DELTA#-}
-          DRIFT=$(( (DELTA_ABS * 100 + BASELINE / 2) / BASELINE ))
-          echo "Measured findings: $CURRENT  |  Stored baseline: $BASELINE  |  Drift: ${DRIFT}%"
-
-          if [ "$DRIFT" -gt "$DRIFT_THRESHOLD_PCT" ]; then
-            echo "::warning::Security baseline drift detected: stored baseline ($BASELINE) differs from measured count ($CURRENT) by ${DRIFT}%. A stale baseline means the ratchet is not providing meaningful protection. Regenerate it with the documented bandit command (see .security-baseline header)."
-          else
-            echo "✅ Baseline within drift tolerance (${DRIFT}% <= ${DRIFT_THRESHOLD_PCT}%)"
-          fi
+      - name: bandit covers the whole configured surface
+        run: python3 scripts/check_bandit_coverage.py
 
   # ──────────────────────────────────────────────────────────────────────
   # Hard gate: no new HIGH/CRITICAL CVEs in runtime requirements

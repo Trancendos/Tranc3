@@ -217,3 +217,105 @@ def test_a_bot_login_normalises_to_its_app_slug():
     assert cai._bot_slug("coderabbitai[bot]") == "coderabbitai"
     assert cai._bot_slug("victicnor") == ""
     assert cai._bot_slug("") == ""
+
+
+# ---------------------------------------------------------------------------
+# Fixes from review. The first is the one that matters: five independent
+# reviewers found that --measure could print PASSED while partially blind,
+# which is the single outcome this script exists to make impossible.
+# ---------------------------------------------------------------------------
+
+
+def test_a_partial_measurement_is_unknown_not_complete(monkeypatch, capsys):
+    """REGRESSION. Every per-PR fetch used to swallow `URLError` and continue.
+    `HTTPError` SUBCLASSES `URLError`, so a 403 or 429 dropped that PR's Apps,
+    `unregistered` came back empty, and main printed PASSED -- a sensor that
+    could not see, reporting clean."""
+    monkeypatch.setenv("GITHUB_TOKEN", "x")
+    monkeypatch.setattr(cai, "observed_apps", lambda *a, **k: None)
+    failures, unknown = cai._measure_against_github("o/r", [])
+    assert unknown is True and failures == []
+    assert "UNKNOWN" in capsys.readouterr().out
+
+
+def test_a_rate_limited_fetch_makes_the_whole_observation_none(monkeypatch):
+    """The propagation half: a 429 anywhere must reach `observed_apps`' caller
+    as None rather than a smaller set."""
+    import urllib.error
+
+    def rate_limited(path, token):
+        if "/pulls?" in path:
+            return [{"number": 1, "user": {"login": "x"}, "head": {"sha": "abc"}}]
+        raise urllib.error.HTTPError(path, 429, "rate limited", {}, None)
+
+    monkeypatch.setattr(cai, "_api", rate_limited)
+    assert cai.observed_apps("o/r", "token") is None
+
+
+def test_review_only_apps_are_sampled_too(monkeypatch):
+    """An App that posts ONLY inline review comments was invisible: the loop
+    read `/issues/{n}/comments` and never `/pulls/{n}/comments`, which are
+    separate GitHub resources. That omission fell exactly on the review bots
+    this register exists to inventory."""
+    seen_paths = []
+
+    def fake(path, token):
+        seen_paths.append(path)
+        if "/pulls?" in path:
+            return [{"number": 7, "user": {"login": "human"}, "head": {"sha": "s"}}]
+        if "/pulls/7/comments" in path:
+            return [{"user": {"login": "reviewonly[bot]"}}]
+        if "/issues/7/comments" in path:
+            return []
+        return {"check_runs": []}
+
+    monkeypatch.setattr(cai, "_api", fake)
+    assert cai.observed_apps("o/r", "t") == {"reviewonly"}
+    assert any("/pulls/7/comments" in p for p in seen_paths)
+
+
+def test_a_non_mapping_row_is_reported_not_filtered_away(tmp_path, capsys):
+    """A bare `- gitguardian` used to vanish from validation while the checker
+    printed PASSED, and `--measure` then called that App unregistered."""
+    p = tmp_path / "r.yaml"
+    p.write_text(yaml.safe_dump({"apps": [GOOD_ROW, "gitguardian", None]}), encoding="utf-8")
+    assert cai.main(["--register", str(p)]) == 1
+    out = capsys.readouterr().out
+    assert "not a mapping" in out
+
+
+def test_duplicate_keys_in_a_row_are_refused(tmp_path, capsys):
+    """PyYAML keeps the LAST value for a repeated key, so a row with two
+    `publishes_checks:` entries validated against whichever came second --
+    the field that decides whether an App can gate a merge, silently
+    discarded."""
+    p = tmp_path / "r.yaml"
+    p.write_text(
+        "apps:\n"
+        "  - slug: x\n"
+        "    does: a thing\n"
+        "    publishes_checks: true\n"
+        "    publishes_checks: false\n"
+        "    opens_prs: false\n"
+        "    decision: keep\n"
+        "    reason: a written reason that is not the slug\n"
+        '    reviewed_on: "2026-10-16"\n',
+        encoding="utf-8",
+    )
+    assert cai.main(["--register", str(p)]) == 1
+    assert "duplicate key" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("field", ["slug", "does", "reason"])
+def test_a_yaml_scalar_does_not_satisfy_a_text_field(field):
+    """`does: true` stringifies to "True" -- a non-empty value that read as a
+    written description."""
+    assert any(field in d for d in cai.row_defects(_row(**{field: True})))
+    assert any(field in d for d in cai.row_defects(_row(**{field: 42})))
+
+
+def test_the_strict_loader_really_is_a_safe_loader():
+    """The suppression on `yaml.load` claims this, so it must be checkable.
+    B506 exists to stop arbitrary object instantiation; subclassing SafeLoader
+    is what keeps that property while adding duplicate-key detection."""
+    assert issubclass(cai._StrictLoader, yaml.SafeLoader)

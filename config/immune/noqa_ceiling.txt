@@ -2,5 +2,5 @@
 # everything. Both numbers may go down and may never go up. Lower one
 # in the same commit that removes the suppressions, so the diff shows
 # the work. See scripts/check_inert_suppressions.py for why.
-inert=172
 bare=2
+inert=177

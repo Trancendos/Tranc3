@@ -71,6 +71,7 @@ the defect this module exists to remove.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -87,6 +88,28 @@ STALE = "stale"
 UNKNOWN = "unknown"
 
 
+def _usable_ttl(hours: float) -> bool:
+    """Whether a TTL can be compared against an age at all.
+
+    Positive and finite. Separated out because three places need the same
+    answer -- `freshness`, `defects` and the report -- and they disagreed
+    before: `defects()` reported a non-positive TTL while `freshness()` still
+    returned LIVE for a zero TTL at age zero, so the gate held on a verdict the
+    module had already called unusable.
+    """
+    return math.isfinite(hours) and hours > 0
+
+
+def _is_count(value: Any) -> bool:
+    """A non-negative integer, with `bool` excluded deliberately.
+
+    `isinstance(True, int)` is True in Python, so `fixable_count: false` would
+    otherwise read as zero findings -- a clean scan conjured from a malformed
+    field.
+    """
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
 def _parse_instant(text: str) -> datetime | None:
     """An ISO-8601 instant, or None when it cannot be read as one.
 
@@ -98,6 +121,13 @@ def _parse_instant(text: str) -> datetime | None:
         return None
     if raw.endswith(("Z", "z")):
         raw = raw[:-1] + "+00:00"
+    # A date with no time is not an instant. `fromisoformat("2026-10-13")`
+    # succeeds and yields midnight, so a census carrying a bare date would read
+    # as measured at 00:00 -- up to a day earlier or later than the truth, and
+    # silently. Freshness is the whole subject here, so an underspecified
+    # timestamp must not be guessed into one.
+    if not any(sep in raw for sep in ("T", "t", " ")):
+        return None
     try:
         parsed = datetime.fromisoformat(raw)
     except ValueError:
@@ -127,7 +157,13 @@ class Verdict:
             name=str(data.get("name") or ""),
             outcome=str(data.get("outcome") or UNKNOWN),
             measured_at=str(data.get("measured_at") or ""),
-            ttl_hours=float(data.get("ttl_hours") or DEFAULT_TTL_HOURS),
+            # `or` would turn an explicit 0 into 24: `0 or 24 == 24`. Zero is
+            # the one TTL this module promises to fail closed on, and it is the
+            # likeliest malformed value since an empty numeric field coerces to
+            # it. Default only when the key is absent or null.
+            ttl_hours=float(
+                DEFAULT_TTL_HOURS if data.get("ttl_hours") is None else data["ttl_hours"]
+            ),
             subject=str(data.get("subject") or ""),
             source=str(data.get("source") or ""),
         )
@@ -143,8 +179,13 @@ class Verdict:
         and conflating the two is how a transient network error would come to
         read as a security finding.
         """
+        # `int(fixable)` accepted anything int() accepts, and three of those
+        # produced a PASS that no clean scan had earned: `False` (int 0), the
+        # string `"0"`, and `0.5` (truncated to 0). A count that is not a
+        # non-negative integer is not a count, and a verdict derived from one
+        # must be `unknown` rather than a guess in either direction.
         fixable = census.get("fixable_count")
-        if not census.get("scanned_ok", False) or fixable is None:
+        if not census.get("scanned_ok", False) or not _is_count(fixable):
             outcome = UNKNOWN
         else:
             outcome = "pass" if int(fixable) == 0 else "fail"
@@ -173,6 +214,13 @@ class Verdict:
             # Measured in the future: a clock disagreement somewhere, and a
             # verdict resting on a clock nobody can reconcile is not live.
             return UNKNOWN
+        if not _usable_ttl(self.ttl_hours):
+            # A non-positive TTL means nothing is ever live, and a non-finite
+            # one makes `timedelta` RAISE -- ValueError for nan, OverflowError
+            # for inf. A freshness check that throws is worse than one that
+            # fails: it takes the whole step down instead of reporting. Both
+            # are UNKNOWN, which is what "cannot establish" means here.
+            return UNKNOWN
         return LIVE if age <= timedelta(hours=self.ttl_hours) else STALE
 
     def counts_as_pass(self, now: datetime | None = None) -> bool:
@@ -195,8 +243,11 @@ class Verdict:
             problems.append("no measured_at -- cannot establish it was measured recently")
         elif _parse_instant(self.measured_at) is None:
             problems.append(f"measured_at {self.measured_at!r} is not an ISO-8601 instant")
-        if self.ttl_hours <= 0:
-            problems.append(f"ttl_hours {self.ttl_hours!r} is not positive -- nothing is ever live")
+        if not _usable_ttl(self.ttl_hours):
+            problems.append(
+                f"ttl_hours {self.ttl_hours!r} is not a positive finite number -- "
+                "nothing could ever be live"
+            )
         return problems
 
     def explain(self, now: datetime | None = None) -> str:
@@ -243,7 +294,9 @@ class VerdictReport:
         passing gate -- that is the `supply-chain-watch` failure in miniature,
         where a run that skipped the census reported success for the workflow.
         """
-        return bool(self.verdicts) and all(v.counts_as_pass(self.checked_at) for v in self.verdicts)
+        return bool(self.verdicts) and all(
+            not v.defects() and v.counts_as_pass(self.checked_at) for v in self.verdicts
+        )
 
     def explain(self) -> str:
         if not self.verdicts:

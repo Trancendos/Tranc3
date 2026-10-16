@@ -12,7 +12,7 @@ repository, in the commit that added it:
 
 Three things were true of it at once, and all three were invisible:
 
-1. **The suppression silenced nothing.** `[tool.ruff] select` here is
+1. **The suppression silenced nothing.** `[tool.ruff.lint] select` here is
    `["E", "F", "W", "C", "B", "I"]`. `S` -- flake8-bandit, the security
    family -- is absent, so ruff never raises S310 and the `noqa` had nothing
    to suppress. Probed rather than inferred: a file containing
@@ -46,9 +46,18 @@ WHAT IT ENFORCES
 
 2. **An INERT code is counted and ceilinged.** A code is inert when ruff
    cannot raise it here: its family is not in `select`/`extend-select`, or
-   the code itself is in `ignore`. Measured 2026-10-16: **172** of the
-   repository's 803 `noqa` codes are inert -- 21% -- including 61 in the
+   the code itself is in `ignore`, or the file's own per-file-ignores cover it.
+   Measured 2026-10-16: **177** of the repository's 804 codes are inert -- 22%
+   -- including 61 in the
    security family and 80 `PLC0415`.
+
+**What the ratchet does not do:** it reads the ceiling from the working tree, so
+raising `noqa_ceiling.txt` in the same commit that adds a suppression passes at
+equality. Comparing against the base revision would close that, and
+`nosec_ceiling.txt` has the identical property -- so it is a decision about the
+pattern rather than this file, and it is recorded here rather than papered over.
+What the ratchet does prevent is the silent case: a suppression added without
+touching the ceiling.
 
 Both are ratcheted rather than refused, which is deliberate and follows
 `check_nosec_specificity.py`'s reasoning verbatim: "a guard that fails on the
@@ -58,8 +67,9 @@ rather than satisfied". The counts may fall and may never rise.
 WHAT IT DOES NOT DO
 -------------------
 It does not decide whether `S` should be selected. Measured, that change
-would raise 14,437 findings, 13,389 of them `assert` in tests, which bandit
-already skips as B101 with a written reason. The number that should drive the
+would raise 14,473 findings, 13,425 of them `assert` in tests, which bandit
+already skips as B101 with a written reason. Both figures move with every test
+file added, so they are a scale rather than a tracked number. The number that should drive the
 decision is narrower: **263** findings on `scripts/` and `workers/` in rule
 classes bandit does *not* globally skip, against **37** on `src/` and
 `api.py` where bandit does look. Seven times as many on the surface three
@@ -70,13 +80,23 @@ decision with a real cost, not a checker's.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import re
+import sys
+import tokenize
 import tomllib
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.immune.ratchet import compare  # noqa: E402  - path set above
+from src.immune.ratchet import read_ceiling as _read_ceiling  # noqa: E402
+from src.immune.ratchet import write_ceiling as _write_ceiling  # noqa: E402
+
 CEILING = ROOT / "config/immune/noqa_ceiling.txt"
 
 #: Directories that are not this repository's Python.
@@ -116,7 +136,7 @@ class Suppression:
         return f"{self.path}:{self.line}: {self.code} — {self.inert_because}"
 
 
-def ruff_rule_config(pyproject: Path) -> tuple[list[str], set[str]]:
+def ruff_rule_config(pyproject: Path) -> tuple[list[str], set[str], dict[str, list[str]]]:
     """The selected prefixes and the globally ignored codes.
 
     Reads `[tool.ruff.lint]` and falls back to `[tool.ruff]`, because ruff
@@ -127,21 +147,46 @@ def ruff_rule_config(pyproject: Path) -> tuple[list[str], set[str]]:
     try:
         data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError):
-        return [], set()
+        return [], set(), {}
     ruff = (data.get("tool") or {}).get("ruff") or {}
     lint = ruff.get("lint") or ruff
     select = list(lint.get("select") or []) + list(lint.get("extend-select") or [])
     ignore = set(lint.get("ignore") or []) | set(lint.get("extend-ignore") or [])
-    return select, ignore
+    per_file = {
+        str(pattern): [str(c) for c in codes]
+        for pattern, codes in (lint.get("per-file-ignores") or {}).items()
+    }
+    return select, ignore, per_file
 
 
-def classify(code: str, select: list[str], ignore: set[str]) -> str:
+def _file_ignores(shown: str, per_file: dict[str, list[str]]) -> set[str]:
+    """Codes ruff ignores for THIS file, from `[tool.ruff.lint.per-file-ignores]`.
+
+    Without this, a suppression in `tests/` naming a `B` rule read as live even
+    though `"tests/*" = ["S", "B", ...]` means ruff never raises it there -- so
+    a whole directory could accumulate inert suppressions under the ceiling.
+    Measured on `tests/test_cryptex.py:144`.
+    """
+    codes: set[str] = set()
+    for pattern, ignored in per_file.items():
+        if fnmatch.fnmatch(shown, pattern) or fnmatch.fnmatch(shown, pattern.rstrip("/") + "/*"):
+            codes.update(ignored)
+    return codes
+
+
+def classify(
+    code: str, select: list[str], ignore: set[str], file_ignores: frozenset[str] = frozenset()
+) -> str:
     """Why ruff cannot raise this code here, or "" if it can.
 
     `ALL` selects everything, so nothing is inert under it. Otherwise a code
     is reachable when any selected prefix is a prefix of it -- ruff's own
     matching -- and unreachable codes are the subject of this checker.
     """
+    # A per-file ignore matches by PREFIX, as ruff matches it: `["B"]` covers
+    # B008, so a suppression naming B008 in that file silences nothing.
+    if any(code.startswith(prefix) for prefix in file_ignores):
+        return INERT_IGNORED
     if "ALL" in select:
         return INERT_IGNORED if code in ignore else ""
     if not any(code.startswith(prefix) for prefix in select):
@@ -159,19 +204,55 @@ def _python_files(root: Path) -> list[Path]:
     ]
 
 
-def scan(root: Path = ROOT) -> tuple[list[Suppression], list[str], int]:
-    """Every inert suppression, every bare directive, and the live count."""
-    select, ignore = ruff_rule_config(root / "pyproject.toml")
+def _comments(path: Path) -> list[tuple[int, str]]:
+    """Every COMMENT token in a file, as (line number, text).
+
+    Tokenizing rather than scanning raw lines, because the directive token
+    appears inside string literals in this repository -- test fixtures that
+    assert on suppressions, and docstrings explaining them. A raw-line scan
+    counted those as real suppressions, so the instrument was measuring its own
+    test data. Measured on `tests/test_test_env_isolation.py:339`.
+
+    Falls back to raw lines when the file does not tokenize (genuinely invalid
+    Python), where a line scan is still better than silence.
+    """
+    try:
+        with tokenize.open(path) as handle:
+            return [
+                (tok.start[0], tok.string)
+                for tok in tokenize.generate_tokens(handle.readline)
+                if tok.type == tokenize.COMMENT
+            ]
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return [
+            (n, line)
+            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+            if "#" in line
+        ]
+
+
+def scan(root: Path = ROOT) -> tuple[list[Suppression], list[str], int, list[str]]:
+    """Inert suppressions, bare directives, the live count, and unreadable files.
+
+    The fourth element is the point. An unreadable file used to be skipped with
+    `continue`, so a file holding a new suppression could drop out of the
+    measurement while the ceiling still held -- a gate passing on a count it
+    did not take. Unreadable is now reported and the caller fails on it.
+    """
+    select, ignore, per_file = ruff_rule_config(root / "pyproject.toml")
     inert: list[Suppression] = []
     bare: list[str] = []
+    unreadable: list[str] = []
     live = 0
     for path in _python_files(root):
         shown = str(path.relative_to(root))
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except (OSError, UnicodeDecodeError):
+            comments = _comments(path)
+        except (OSError, UnicodeDecodeError) as exc:
+            unreadable.append(f"{shown}: {exc}")
             continue
-        for number, text in enumerate(lines, 1):
+        file_ignores = frozenset(_file_ignores(shown, per_file))
+        for number, text in comments:
             match = _NOQA.search(text)
             if not match:
                 continue
@@ -180,48 +261,37 @@ def scan(root: Path = ROOT) -> tuple[list[Suppression], list[str], int]:
                 bare.append(f"{shown}:{number}")
                 continue
             for code in (c.strip().upper() for c in codes.split(",")):
-                because = classify(code, select, ignore)
+                because = classify(code, select, ignore, file_ignores)
                 if because:
                     inert.append(Suppression(shown, number, code, because))
                 else:
                     live += 1
-    return inert, bare, live
+    return inert, bare, live, unreadable
 
 
 def read_ceiling(path: Path = CEILING) -> dict[str, int]:
-    """The recorded ceilings, or {} when none is recorded.
+    """Delegates to `src.immune.ratchet`.
 
-    An unreadable or malformed ceiling returns {} rather than zeros. Zeros
-    would read as "nothing is wrong" and fail every pull request at once;
-    absent reads as "nothing has been recorded", which is the truth.
+    This file had its own copy, which was the third in the estate. The shared
+    module carries the semantics and the argument for them -- an unrecorded
+    ceiling is UNKNOWN rather than zero, and a FALL fails too, so the ceiling
+    is lowered in the commit that does the work. Kept as a named wrapper
+    because the tests pin this name and because the required keys belong here,
+    not in the shared module.
     """
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return {}
-    found: dict[str, int] = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        try:
-            found[key.strip()] = int(value.strip())
-        except ValueError:
-            continue
-    return found if {"inert", "bare"} <= found.keys() else {}
+    return _read_ceiling(path, require=("inert", "bare"))
 
 
 def write_ceiling(inert: int, bare: int, path: Path = CEILING) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "# Suppressions that silence nothing, and suppressions that silence\n"
-        "# everything. Both numbers may go down and may never go up. Lower one\n"
-        "# in the same commit that removes the suppressions, so the diff shows\n"
-        "# the work. See scripts/check_inert_suppressions.py for why.\n"
-        f"inert={inert}\n"
-        f"bare={bare}\n",
-        encoding="utf-8",
+    _write_ceiling(
+        path,
+        {"inert": inert, "bare": bare},
+        header=(
+            "Suppressions that silence nothing, and suppressions that silence\n"
+            "everything. Both numbers may go down and may never go up. Lower one\n"
+            "in the same commit that removes the suppressions, so the diff shows\n"
+            "the work. See scripts/check_inert_suppressions.py for why."
+        ),
     )
 
 
@@ -255,8 +325,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--list", action="store_true", help="print every inert suppression")
     args = parser.parse_args(argv)
 
-    inert, bare, live = scan(args.root)
+    inert, bare, live, unreadable = scan(args.root)
     _report(inert, bare, live)
+
+    if unreadable:
+        print(
+            f"\nInert suppressions: UNKNOWN — {len(unreadable)} Python file(s) could "
+            "not be read,\nso the count below is not of this repository. A ceiling "
+            "that holds against a\npartial scan is not holding against anything."
+        )
+        for problem in unreadable:
+            print(f"  - {problem}")
+        return 1
 
     if args.list:
         print()
@@ -281,27 +361,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    failed = False
-    for name, now, limit in (
-        ("inert", len(inert), ceiling["inert"]),
-        ("bare", len(bare), ceiling["bare"]),
-    ):
-        if now > limit:
-            failed = True
-            print(
-                f"\nInert suppressions: FAILED — {name} rose to {now}, ceiling {limit}.\n"
-                f"A new suppression that silences nothing is a comment claiming an\n"
-                f"adjudication nobody made. Remove it, or select the rule it names."
-            )
-        elif now < limit:
-            failed = True
-            print(
-                f"\nInert suppressions: FAILED — {name} fell to {now} (ceiling {limit}).\n"
-                f"Lower the ceiling in this commit so the diff shows the work:\n"
-                f"  python scripts/check_inert_suppressions.py --set-ceiling"
-            )
-    if failed:
+    problems = compare({"inert": len(inert), "bare": len(bare)}, ceiling, what="inert suppression")
+    if problems:
+        print("\nInert suppressions: FAILED")
+        for problem in problems:
+            print(f"  - {problem}")
         return 1
+
     print(
         f"\nInert suppressions: PASSED — holding at the ceilings "
         f"(inert={ceiling['inert']}, bare={ceiling['bare']})"

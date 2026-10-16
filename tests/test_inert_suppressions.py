@@ -77,10 +77,10 @@ def test_select_all_makes_nothing_inert_except_an_explicit_ignore():
 def test_an_unreadable_pyproject_yields_no_select_rather_than_a_guess(tmp_path):
     """Failing closed here would mark every suppression in the tree inert.
     Returning an empty config is honest, and `scan` reports it as such."""
-    assert cis.ruff_rule_config(tmp_path / "absent.toml") == ([], set())
+    assert cis.ruff_rule_config(tmp_path / "absent.toml") == ([], set(), {})
     bad = tmp_path / "pyproject.toml"
     bad.write_text("this is not = = toml", encoding="utf-8")
-    assert cis.ruff_rule_config(bad) == ([], set())
+    assert cis.ruff_rule_config(bad) == ([], set(), {})
 
 
 def test_the_newer_lint_table_is_read_as_well_as_the_legacy_top_level(tmp_path):
@@ -88,16 +88,16 @@ def test_the_newer_lint_table_is_read_as_well_as_the_legacy_top_level(tmp_path):
     Reading only one would report on a configuration not in force."""
     legacy = tmp_path / "legacy.toml"
     legacy.write_text('[tool.ruff]\nselect = ["E"]\nignore = ["E501"]\n', encoding="utf-8")
-    assert cis.ruff_rule_config(legacy) == (["E"], {"E501"})
+    assert cis.ruff_rule_config(legacy) == (["E"], {"E501"}, {})
     modern = tmp_path / "modern.toml"
     modern.write_text('[tool.ruff.lint]\nselect = ["F"]\nignore = ["F401"]\n', encoding="utf-8")
-    assert cis.ruff_rule_config(modern) == (["F"], {"F401"})
+    assert cis.ruff_rule_config(modern) == (["F"], {"F401"}, {})
 
 
 def test_extend_select_counts_as_selected(tmp_path):
     p = tmp_path / "pyproject.toml"
     p.write_text('[tool.ruff.lint]\nselect = ["E"]\nextend-select = ["S"]\n', encoding="utf-8")
-    select, _ = cis.ruff_rule_config(p)
+    select, _, _ = cis.ruff_rule_config(p)
     assert cis.classify("S310", select, set()) == ""
 
 
@@ -117,31 +117,31 @@ def _tree(tmp_path: Path, body: str) -> Path:
 def test_a_planted_inert_suppression_is_found(tmp_path):
     """The probe. A guard that cannot see a defect it was built for reports
     exactly what a clean tree reports -- IMMUNE-SYSTEM.md's founding rule."""
-    inert, bare, live = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}: S310 - fixed host\n"))
+    inert, bare, live, _ = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}: S310 - fixed host\n"))
     assert [s.code for s in inert] == ["S310"]
     assert inert[0].inert is True
     assert bare == [] and live == 0
 
 
 def test_a_planted_bare_directive_is_found(tmp_path):
-    inert, bare, live = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}\n"))
+    inert, bare, live, _ = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}\n"))
     assert len(bare) == 1 and bare[0].endswith("mod.py:1")
     assert inert == [] and live == 0
 
 
 def test_a_live_suppression_is_counted_live_not_inert(tmp_path):
-    inert, bare, live = cis.scan(_tree(tmp_path, f"import os  # {TOKEN}: F401\n"))
+    inert, bare, live, _ = cis.scan(_tree(tmp_path, f"import os  # {TOKEN}: F401\n"))
     assert live == 1 and inert == [] and bare == []
 
 
 def test_several_codes_on_one_line_are_classified_separately(tmp_path):
-    inert, _, live = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}: F401, S603, E501\n"))
+    inert, _, live, _ = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}: F401, S603, E501\n"))
     assert sorted(s.code for s in inert) == ["E501", "S603"]
     assert live == 1
 
 
 def test_a_clean_tree_reports_nothing(tmp_path):
-    inert, bare, live = cis.scan(_tree(tmp_path, "x = 1\n"))
+    inert, bare, live, _ = cis.scan(_tree(tmp_path, "x = 1\n"))
     assert (inert, bare, live) == ([], [], 0)
 
 
@@ -150,7 +150,7 @@ def test_vendored_directories_are_not_scanned(tmp_path):
     vendored = tree / "node_modules" / "pkg"
     vendored.mkdir(parents=True)
     (vendored / "v.py").write_text(f"x = 1  # {TOKEN}: S310\n", encoding="utf-8")
-    inert, _, _ = cis.scan(tree)
+    inert, _, _, _ = cis.scan(tree)
     assert inert == [], "a vendored suppression is not this repository's decision"
 
 
@@ -179,7 +179,7 @@ def test_a_malformed_ceiling_reads_as_absent_not_as_zero(tmp_path):
     assert cis.read_ceiling(path) == {"inert": 5, "bare": 1}
 
 
-@pytest.mark.parametrize("body,expected", [("x = 1\n", "fell"), (None, "rose")])
+@pytest.mark.parametrize("body,expected", [("x = 1\n", "FELL"), (None, "ROSE")])
 def test_the_ceiling_fails_in_both_directions(tmp_path, capsys, body, expected):
     """Rising hides a new unenforced claim. Falling without lowering the
     ceiling leaves room for one to be added back silently."""
@@ -207,13 +207,70 @@ def test_this_checker_is_not_part_of_its_own_subject():
     """It writes the directive token from parts for exactly this reason. If
     it ever contains one literally, ruff reads its source line as a real
     suppression and the count it reports includes itself."""
-    source = (REPO / "scripts" / "check_inert_suppressions.py").read_text(encoding="utf-8")
-    inert, bare, _ = cis.scan(REPO)
+    inert, bare, _, _ = cis.scan(REPO)
     offenders = [s for s in inert if s.path.endswith("check_inert_suppressions.py")]
-    assert offenders == [], f"the checker reported itself: {offenders}"
+    assert offenders == [], f"the checker reported itself as inert: {offenders}"
     assert not [p for p in bare if "check_inert_suppressions.py" in p]
-    assert f"# {TOKEN}" not in source
+
+    # The precise property, which the earlier "no directive token anywhere"
+    # assertion only approximated: the PATTERN must not be written as a single
+    # literal. The file legitimately carries live E402 suppressions -- its
+    # imports follow a sys.path insertion -- and those are counted live, which
+    # is correct. What must never appear is the pattern itself spelled out,
+    # because ruff would read that line as a directive and the count would
+    # include its own source.
+    source = (REPO / "scripts" / "check_inert_suppressions.py").read_text(encoding="utf-8")
+    assert '_TOKEN = "no" + "qa"' in source, "the token must stay built from parts"
+    assert f'r"#\\s*{TOKEN}' not in source, "the pattern must not be one literal"
 
 
 def test_the_real_tree_holds_at_its_recorded_ceiling():
     assert cis.main([]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Fixes from review, each with the defect it closes.
+# ---------------------------------------------------------------------------
+
+
+def test_a_directive_inside_a_string_literal_is_not_a_suppression(tmp_path):
+    """REGRESSION: a raw-line scan counted this repository's own test fixtures
+    and docstrings as real suppressions, so the instrument measured its own
+    test data. Measured on tests/test_test_env_isolation.py:339."""
+    tree = _tree(tmp_path, f'FIXTURE = "x = 1  # {TOKEN}: S310"\n')
+    inert, bare, live, _ = cis.scan(tree)
+    assert (inert, bare, live) == ([], [], 0), "a string is not a comment"
+
+
+def test_a_per_file_ignored_code_is_inert_in_that_file(tmp_path):
+    """`"tests/*" = ["B"]` means ruff never raises B008 there, so a directive
+    naming it silences nothing. Without this a whole directory could collect
+    inert suppressions under the ceiling. Measured on tests/test_cryptex.py:144."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff.lint]\nselect = ["E", "B"]\n'
+        '[tool.ruff.lint.per-file-ignores]\n"tests/*" = ["B"]\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "t.py").write_text(f"x = 1  # {TOKEN}: B008\n", encoding="utf-8")
+    (tmp_path / "mod.py").write_text(f"x = 1  # {TOKEN}: B008\n", encoding="utf-8")
+    inert, _, live, _ = cis.scan(tmp_path)
+    assert [s.path for s in inert] == ["tests/t.py"], "only the ignored file is inert"
+    assert live == 1, "the same code outside that scope is still live"
+
+
+def test_an_unreadable_file_fails_rather_than_dropping_out(tmp_path, capsys, monkeypatch):
+    """REGRESSION: an unreadable file was skipped with `continue`, so a file
+    holding a new suppression could leave the measurement while the ceiling
+    still held -- a gate passing on a count it never took."""
+    tree = _tree(tmp_path, "x = 1\n")
+    (tree / "config" / "immune").mkdir(parents=True)
+    (tree / "config/immune/noqa_ceiling.txt").write_text("inert=0\nbare=0\n", encoding="utf-8")
+
+    def boom(path):
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(cis, "_comments", boom)
+    assert cis.main(["--root", str(tree)]) == 1
+    out = capsys.readouterr().out
+    assert "UNKNOWN" in out and "could not be read" in out

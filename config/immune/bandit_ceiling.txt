@@ -1,0 +1,11 @@
+# bandit findings over the whole [tool.bandit] targets surface, with
+# -c pyproject.toml so the configured skips apply.
+#
+# Both numbers may go down and may never go up. Lower one in the same
+# commit that fixes the findings, so the diff carries the work.
+#
+# medium_plus is the band the gate blocks on elsewhere; low is tracked
+# so it cannot grow unwatched. See scripts/check_bandit_coverage.py for
+# why this replaced .forgejo/workflows/security-baseline.yml.
+low=189
+medium_plus=81

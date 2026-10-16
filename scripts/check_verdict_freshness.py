@@ -34,6 +34,7 @@ script measures, and a step that measures should not also hold a write token.
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import sys
 from datetime import datetime, timezone
@@ -58,6 +59,27 @@ CENSUS_OUTPUT = REPO / "logs" / "vulnerability_census.json"
 STATUS_CONTEXT = "immune/census-verdict"
 
 
+def _positive_finite_hours(raw: str) -> float:
+    """A TTL argparse can accept without the check later raising.
+
+    `type=float` accepts `nan` and `inf`, and both reach `timedelta(hours=...)`
+    -- ValueError for nan, OverflowError for inf. The failure then came out of
+    the freshness calculation as a traceback rather than a reported state, so a
+    typo took the whole gate step down instead of answering it. Rejected here,
+    where argparse turns it into a usable message.
+    """
+    try:
+        hours = float(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{raw!r} is not a number") from exc
+    if not math.isfinite(hours) or hours <= 0:
+        raise argparse.ArgumentTypeError(
+            f"{raw!r} is not a positive finite number of hours; with it, nothing "
+            "could ever be current"
+        )
+    return hours
+
+
 def _github_state(report: VerdictReport) -> str:
     """A commit-status state for the verdict.
 
@@ -68,6 +90,17 @@ def _github_state(report: VerdictReport) -> str:
     if report.holds:
         return "success"
     if report.unknown or report.malformed:
+        return "error"
+    if report.stale:
+        # An EXPIRED answer is not a failing scan. `failure` would read as "the
+        # census found something", which is a different and more alarming claim
+        # than "this answer is too old to rely on" -- and acting on the wrong
+        # one wastes a reader's time looking for a vulnerability that was never
+        # reported. Stale belongs with unknown: nothing has been established.
+        return "error"
+    if any(v.outcome == UNKNOWN for v in report.verdicts):
+        # Live, but the census could not complete. Same reasoning: a scan that
+        # did not finish is not a scan that failed.
         return "error"
     return "failure"
 
@@ -82,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--max-age-hours",
-        type=float,
+        type=_positive_finite_hours,
         default=DEFAULT_TTL_HOURS,
         help=(
             "how long a census answer stays current. Defaults to the estate's own "

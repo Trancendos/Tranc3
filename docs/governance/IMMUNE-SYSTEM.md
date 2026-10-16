@@ -699,7 +699,7 @@ Measured 2026-10-13:
 | #1271 | success | 2026-10-05T18:30:52Z |
 | #1208 | success | 2026-10-05T18:27:11Z |
 
-Nine subjects, one forty-five-minute window, eight days before they were read,
+Eight pull requests and `main` itself — nine subjects — in one forty-five-minute window, eight days before they were read,
 every one predating the seventeen advisories that landed in between. Seven also
 reported `mergeable_state: clean`. Nothing was wrong with those check-runs —
 they were true when they ran. What was missing was anything able to tell a pass
@@ -708,9 +708,11 @@ earned an hour ago from one earned eight days ago.
 **A verdict expires harder than an adjudication, and the asymmetry is the whole
 design.** An expired *suppression*, left in force, delays a fix. An expired
 *pass*, left in force, authorises a merge. One costs time; the other ships. So a
-stale verdict does not stay a pass: it degrades to `unknown`, which `grade.py`
-already treats as "the estate did not look" and keeps distinct from "looked and
-it was fine".
+stale verdict does not stay a pass. `freshness()` reports it as `stale`, kept
+distinct from `unknown` — "this answer has expired" and "nothing was established"
+are different facts and the gate refuses both, but a reader needs to know which
+one they have. The commit status maps `stale` to `error` rather than `failure`
+for the same reason: an expired answer is not a finding.
 
 `src/immune/verdict.py` carries the mechanism. What fails closed: no timestamp,
 an unparseable timestamp, a timestamp in the *future* (a skewed runner clock is
@@ -737,8 +739,9 @@ This estate counts three registers of its controls and fails CI when any drifts:
 
 Each works because a file on disk can be counted. **An installed GitHub App
 leaves no file.** It is installed in a settings page and appears in this
-repository only as comments and check-runs, so nothing here could be counted and
-nothing was.
+repository as comments, check-runs and App-authored pull requests — the register's
+`opens_prs` column exists for that third one — but leaves no file-based
+installation record to count, so nothing was counted.
 
 Measured 2026-10-16: **22** Apps act on this repository, **11** of them
 publishing commit checks — and four of those eleven were named in no document in
@@ -780,12 +783,16 @@ that demanded a verdict on every row the day it was written would have recorded
 one author's guesses as the estate's decisions — which is the defect this whole
 class of file exists to prevent.
 
-**The checker does not overclaim.** `--validate` runs offline on every pull
-request and proves the register is a *usable document*: every row named, with a
+**The checker does not overclaim.** The default invocation — no flag; there is no
+`--validate` option, and this document claimed one until 2026-10-16 — runs offline
+on every pull request and proves the register is a *usable document*: every row named, with a
 written `does`, a `decision` from a fixed set, a reason that says something its
-own slug does not, and an ISO `reviewed_on`. Proving the register *complete* is a
-different question that needs `--measure` and a token, and without one it reports
-`unknown` and exits non-zero rather than reporting the register complete. A
+own slug does not, and an ISO `reviewed_on`. Completeness is a different question, and `--measure` does not fully answer it
+either: it samples the ten most recent pull requests and reports the Apps observed
+acting on them. That catches an App active in the recent window and cannot
+enumerate what is installed. Without a token, or if ANY request in the sample
+fails, it reports `unknown` and exits non-zero rather than describing a partial
+observation as a complete one. A
 register validated offline is well-formed, never complete; saying otherwise would
 make the checker an instance of the defect it was built to catch.
 
@@ -810,7 +817,7 @@ with urllib.request.urlopen(request, timeout=30) as response:  # (S310 suppresse
 
 Three things were true of it simultaneously, and none was visible from the line:
 
-1. **The suppression silenced nothing.** `[tool.ruff] select` is
+1. **The suppression silenced nothing.** `[tool.ruff.lint] select` is
    `["E", "F", "W", "C", "B", "I"]`. `S` — flake8-bandit, the security family —
    is absent, so ruff never raises S310 and there was nothing to suppress.
 2. **The written reason was false.** "fixed host" described `GITHUB_API`, a
@@ -836,14 +843,19 @@ now `keep`, and the reason records this rather than a preference.
 
 | suppression codes in the tree | count |
 |---|---|
-| live — ruff can raise the rule | 631 |
-| **inert** — ruff never raises it | **172** |
+| live — ruff can raise the rule | 627 |
+| **inert** — ruff never raises it | **177** |
 | bare, no code at all — silences every rule on the line, forever | 2 |
 
-172 of 803 is 21%. Eighty are `PLC0415`, nine `SLF001`, and **61 are in the
+177 of 804 is 22%. Eighty are `PLC0415`, nine `SLF001`, and **61 are in the
 security family** — each reading as a security adjudication, none enforced by
 anything. `scripts/check_inert_suppressions.py` now counts both classes and
-ratchets them: the numbers in `config/immune/noqa_ceiling.txt` may fall and may
+ratchets them. It reads COMMENT tokens rather than raw lines — a line scan
+counted the directive inside this repository's own test fixtures and docstrings,
+so the instrument was measuring its own test data — and it applies
+`per-file-ignores`, without which a suppression in `tests/` naming a `B` rule
+read as live even though ruff never raises it there. Both corrections moved the
+figures above, which is why they are the ones recorded: the numbers in `config/immune/noqa_ceiling.txt` may fall and may
 never rise. Ratcheted rather than refused, for the reason
 `check_nosec_specificity.py` already states — *"a guard that fails on the backlog
 fails on every pull request, which is how a guard gets bypassed rather than

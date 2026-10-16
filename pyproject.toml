@@ -85,8 +85,17 @@ markers = [
 
 # ── bandit ─────────────────────────────────────────────────────────────
 [tool.bandit]
-targets = ["src", "api.py"]
-exclude_dirs = ["tests", "scripts", "src/nanoservices/genetic_optimizer", "src/evolution"]
+# Scope, extended 2026-10-16 to cover scripts/ and workers/. Measured before
+# the change: the old scope (src + api.py, 136,879 lines) reported 36 Low and
+# ZERO Medium at the gate's own -ll --confidence-level medium threshold, while
+# scripts/ + workers/ (85,824 lines) held 79 Medium -- the entire medium-severity
+# population of this repository sat outside the lane, including two unpinned
+# Hugging Face Hub downloads at HIGH confidence. `scripts` was previously in
+# exclude_dirs AND absent from targets, so it was doubly out of scope.
+# `tests` stays excluded: B101 (assert) is the whole of what it would report,
+# and B101 is skipped below anyway.
+targets = ["src", "api.py", "scripts", "workers"]
+exclude_dirs = ["tests", "src/nanoservices/genetic_optimizer", "src/evolution"]
 severity = "low"
 confidence = "low"
 skips = [

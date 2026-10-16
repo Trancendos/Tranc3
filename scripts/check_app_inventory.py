@@ -2,9 +2,9 @@
 """Installed GitHub Apps are a control class, and they had no register.
 
 This estate counts three registers of its controls and fails CI when any of
-them drifts: `.github/workflows/` (28 files), `.forgejo/workflows/` (33), and
-`.pre-commit-config.yaml` (22 hooks). Each works because a file on disk can be
-counted.
+them drifts: `.github/workflows/`, `.forgejo/workflows/`, and `.pre-commit-config.yaml`. Each
+works because a file on disk can be counted. (Counts are not restated here;
+`check_workflow_inventory.py` validates them only where they are first written.)
 
 An App leaves no file. It is installed in a GitHub settings page and appears in
 this repository only as comments and check-runs. So nothing here could be
@@ -25,13 +25,17 @@ than any human or agent wrote in the same span.
 
 TWO MODES, AND WHY THEY ARE SEPARATE
 ------------------------------------
-`--validate` (default) reads `config/estate/github_apps.yaml` and checks the
+The default invocation (no flag; there is no `--validate` option) reads
+`config/estate/github_apps.yaml` and checks the
 register is a usable document: every row named, with a written `does`, a
 `decision` from the fixed set, a non-restating `reason`, and an ISO
 `reviewed_on`. This needs no network and runs in CI on every pull request.
 
-`--measure` asks GitHub which Apps actually acted recently and fails on any
-that the register does not name. It needs a token.
+`--measure` samples the ten most recent pull requests and asks which Apps acted
+on them -- as authors, in either comment surface, or as check-runs -- failing on
+any the register does not name. It needs a token. It is a SAMPLE: it cannot
+enumerate installed Apps, only observe recent activity, and it reports UNKNOWN
+if any request in the sample fails.
 
 Without a token `--measure` reports UNKNOWN and exits non-zero rather than
 reporting that the register is complete. That is the whole point of this file:
@@ -70,11 +74,58 @@ REGISTER = REPO / "config/estate/github_apps.yaml"
 #: module docstring.
 DECISIONS = ("keep", "declined", "undecided")
 
+
+class _StrictLoader(yaml.SafeLoader):
+    """SafeLoader that refuses duplicate mapping keys.
+
+    PyYAML keeps the LAST value for a repeated key, so a row with two
+    `publishes_checks:` entries validated against whichever came second while
+    the other -- possibly the true one -- vanished. `publishes_checks` decides
+    whether an App can gate a merge, so a silently discarded value is the most
+    consequential field in the register going missing without a message.
+    """
+
+
+def _no_duplicate_keys(loader: yaml.SafeLoader, node: Any, deep: bool = False) -> dict:
+    mapping: dict = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                f"found duplicate key {key!r} — one row, two answers, and YAML keeps only the last",
+                key_node.start_mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+_StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _no_duplicate_keys)
+
+#: Fields that must be written prose, not a YAML scalar that merely stringifies.
+#: `does: true` passed as a non-empty description before this existed.
+_TEXT_FIELDS = ("slug", "does", "reason")
+
 #: A `reason` must say something the slug does not. These are the words that
 #: appear in a row that restates its own name instead of justifying it.
 _EMPTY_REASONS = ("", "n/a", "none", "tbd", "todo", "see above", "as above")
 
 GITHUB_API = "https://api.github.com"
+
+
+class _NoRedirects(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects rather than forward a bearer token to a new host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ARG002
+        raise urllib.error.HTTPError(
+            newurl, code, f"refusing to follow a redirect to {newurl}", headers, fp
+        )
+
+
+#: Built once. Every GitHub read goes through it so the no-redirect rule cannot
+#: be bypassed by a caller reaching for `urlopen` directly.
+_OPENER = urllib.request.build_opener(_NoRedirects)
 
 #: Checked in `_api` before every fetch. See its docstring for why a
 #: constant base URL is not on its own a guarantee.
@@ -99,19 +150,45 @@ def _shown(path: Path) -> str:
 def _load_register(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     """Rows and any reason the file itself is unusable."""
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        # B506 flags any `yaml.load` whose Loader is not literally SafeLoader.
+        # `_StrictLoader` SUBCLASSES yaml.SafeLoader and adds only a duplicate-key
+        # constructor, so no arbitrary object can be instantiated -- the property
+        # B506 protects is intact, and `safe_load` is what we had to leave to get
+        # duplicate-key detection at all. Verified: issubclass(_StrictLoader,
+        # yaml.SafeLoader) is True, asserted in tests.
+        data = yaml.load(  # nosec B506 - _StrictLoader subclasses yaml.SafeLoader
+            path.read_text(encoding="utf-8"), Loader=_StrictLoader
+        )
     except OSError:
         return [], [f"{_shown(path)} is missing"]
     except yaml.YAMLError as exc:
         return [], [f"{_shown(path)} is not valid YAML: {exc}"]
     if not isinstance(data, dict) or not isinstance(data.get("apps"), list):
         return [], [f"{_shown(path)} has no top-level `apps:` list"]
-    return [r for r in data["apps"] if isinstance(r, dict)], []
+    # A non-mapping entry is REPORTED, not filtered. Dropping it silently meant
+    # a bare `- gitguardian` disappeared from validation entirely while the
+    # checker printed PASSED -- and `--measure` then called that App
+    # unregistered. A row this file cannot read is a defect in this file.
+    rows = [r for r in data["apps"] if isinstance(r, dict)]
+    malformed = [
+        f"{_shown(path)}: entry {i} is {type(r).__name__}, not a mapping — a row that "
+        "cannot be read is not a row that passed"
+        for i, r in enumerate(data["apps"])
+        if not isinstance(r, dict)
+    ]
+    return rows, malformed
 
 
 def row_defects(row: dict[str, Any]) -> list[str]:
     """Reasons one row is not a usable entry."""
     problems: list[str] = []
+    for field in _TEXT_FIELDS:
+        value = row.get(field)
+        if value is not None and not isinstance(value, str):
+            problems.append(
+                f"{field} is {type(value).__name__}, not text — `{field}: true` "
+                "stringifies to a non-empty value and would pass as prose"
+            )
     slug = str(row.get("slug") or "").strip()
     if not slug:
         problems.append("no slug")
@@ -167,7 +244,13 @@ def _api(path: str, token: str) -> Any:
             "User-Agent": "tranc3-app-inventory",
         },
     )
-    with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310 - scheme+host checked above
+    # The scheme and host check above covers the URL WE build. `urlopen`
+    # follows redirects by default and carries the Authorization header to
+    # wherever it is sent, so a 302 would hand this token to a host nothing
+    # validated -- the check would have been true of the first request and
+    # irrelevant to the one that carried the credential. `_NoRedirects`
+    # refuses instead, so the guarantee covers every request actually made.
+    with _OPENER.open(request, timeout=30) as response:  # nosec B310 - scheme+host checked, redirects refused
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -182,41 +265,67 @@ def _bot_slug(login: str) -> str:
 
 
 def _apps_in_comments(repo: str, number: Any, token: str) -> set[str]:
-    try:
-        comments = _api(f"/repos/{repo}/issues/{number}/comments?per_page=100", token) or []
-    except (urllib.error.URLError, json.JSONDecodeError):
-        return set()
-    logins = ((c.get("user") or {}).get("login") or "" for c in comments)
-    return {slug for slug in map(_bot_slug, logins) if slug}
+    """Apps that commented, across BOTH comment surfaces.
+
+    GitHub stores conversation comments and inline review comments as separate
+    resources. Sampling only `/issues/{n}/comments` missed every App that
+    posts solely inline review comments -- which is most of the review bots
+    this register exists to inventory, so the one omission fell exactly on the
+    subject.
+
+    Raises rather than returning a partial set: see `observed_apps`.
+    """
+    seen: set[str] = set()
+    for endpoint in (
+        f"/repos/{repo}/issues/{number}/comments?per_page=100",
+        f"/repos/{repo}/pulls/{number}/comments?per_page=100",
+    ):
+        for comment in _api(endpoint, token) or []:
+            slug = _bot_slug((comment.get("user") or {}).get("login") or "")
+            if slug:
+                seen.add(slug)
+    return seen
 
 
 def _apps_in_checks(repo: str, head: str, token: str) -> set[str]:
-    try:
-        runs = _api(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token)
-    except (urllib.error.URLError, json.JSONDecodeError):
-        return set()
+    """Apps that published a check-run on this head. Raises on failure."""
+    runs = _api(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token)
     slugs = (((r.get("app") or {}).get("slug")) or "" for r in (runs or {}).get("check_runs", []))
     return {slug for slug in slugs if slug}
 
 
-def observed_apps(repo: str, token: str, *, pulls: int = 10) -> set[str]:
+def observed_apps(repo: str, token: str, *, pulls: int = 10) -> set[str] | None:
     """Apps seen publishing checks, commenting, or opening pull requests.
 
+    `None` when ANY request failed, so the caller reports UNKNOWN instead of a
+    completeness claim built on partial sight.
+
+    REGRESSION, and the defect this whole script was written to prevent. Every
+    per-PR fetch used to swallow `URLError` and continue. `HTTPError` is a
+    SUBCLASS of `URLError`, so a 403 or a 429 -- the likeliest failures when
+    walking ten pull requests' comments and check-runs -- silently dropped that
+    PR's Apps, `unregistered` came back empty, and `main` printed
+    `App register: PASSED`. A sensor that could not see, reporting clean. Five
+    independent reviewers found it; the module docstring already forbade it for
+    the no-token case and the same obligation always applied here.
+
     Three surfaces, because an App is only visible on the ones it uses: a
-    scanner appears solely as a check-run, a review bot solely as comments,
-    and a dependency bot as the author of its own pull requests. Sampling one
-    surface would under-count the register's subject.
+    scanner appears solely as a check-run, a review bot solely as comments, and
+    a dependency bot as the author of its own pull requests.
     """
     seen: set[str] = set()
-    prs = _api(f"/repos/{repo}/pulls?state=all&per_page={pulls}", token)
-    for pr in prs if isinstance(prs, list) else []:
-        author = _bot_slug((pr.get("user") or {}).get("login") or "")
-        if author:
-            seen.add(author)
-        seen |= _apps_in_comments(repo, pr.get("number"), token)
-        head = (pr.get("head") or {}).get("sha")
-        if head:
-            seen |= _apps_in_checks(repo, head, token)
+    try:
+        prs = _api(f"/repos/{repo}/pulls?state=all&per_page={pulls}", token)
+        for pr in prs if isinstance(prs, list) else []:
+            author = _bot_slug((pr.get("user") or {}).get("login") or "")
+            if author:
+                seen.add(author)
+            seen |= _apps_in_comments(repo, pr.get("number"), token)
+            head = (pr.get("head") or {}).get("sha")
+            if head:
+                seen |= _apps_in_checks(repo, head, token)
+    except (urllib.error.URLError, json.JSONDecodeError, ValueError):
+        return None
     return seen
 
 
@@ -277,10 +386,14 @@ def _measure_against_github(repo: str, rows: list[dict[str, Any]]) -> tuple[list
             "the defect it exists to catch."
         )
         return [], True
-    try:
-        observed = observed_apps(repo, token)
-    except (urllib.error.URLError, json.JSONDecodeError) as exc:
-        print(f"\nMeasurement: UNKNOWN — could not reach GitHub ({exc}).")
+    observed = observed_apps(repo, token)
+    if observed is None:
+        print(
+            "\nMeasurement: UNKNOWN — at least one GitHub request failed, so the "
+            "sample is\nincomplete. A partial observation cannot show the register "
+            "is complete, and\nreporting it as though it could is the defect this "
+            "script exists to catch."
+        )
         return [], True
 
     registered = {str(r.get("slug")) for r in rows}

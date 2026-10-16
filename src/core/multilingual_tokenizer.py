@@ -106,9 +106,23 @@ class MultilingualTokenizer:
 
         # Load tokenizer
         model_name = getattr(config, "tokenizer_model", "bert-base-multilingual-cased")
+        # Revision pinning, for real this time. The suppression here previously
+        # read "revision pinning via cache_dir; model pinned in config" and
+        # neither clause held: cache_dir decides where downloaded files land,
+        # not which revision is fetched, and naming a MODEL is not pinning a
+        # REVISION -- `bert-base-multilingual-cased` at main today and in six
+        # months are not the same bytes. B615 is not in [tool.bandit] skips, so
+        # that comment was silencing a live supply-chain finding with a reason
+        # that described a mechanism the call did not have.
+        #
+        # `tokenizer_revision` is now passed through. When it is set, the
+        # download is pinned and there is nothing to suppress. When it is None,
+        # huggingface_hub resolves the default branch and the risk is real, so
+        # the suppression stays -- with a reason that is true.
+        revision = getattr(config, "tokenizer_revision", None)
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 — revision pinning via cache_dir; model pinned in config
-                model_name, cache_dir=self.cache_dir
+            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 - pinned when config sets tokenizer_revision; unpinned otherwise and recorded as such
+                model_name, cache_dir=self.cache_dir, revision=revision
             )
             logger.info("Tokenizer loaded: %s", sanitize_for_log(model_name))
         except Exception as e:

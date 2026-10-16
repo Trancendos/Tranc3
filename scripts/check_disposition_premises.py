@@ -230,6 +230,61 @@ def _nltk_path_calls(tree: ast.AST) -> list[tuple[int, str]]:
     return found
 
 
+def _census_staleness(output: Path) -> str:
+    """A reason the census is too old to confirm a premise, or "".
+
+    `src/immune/verdict.py` already holds the TTL rule and the reasoning for
+    it, so this loads that module BY PATH rather than copying the arithmetic.
+    Importing `src.immune.verdict` normally would execute `src/immune/__init__.py`,
+    which imports PyYAML -- and this script's contract is that the production
+    gate installs little else. Loading the one stdlib-only module directly keeps
+    both promises: a single implementation of freshness, and no new dependency.
+    """
+    # Imported here, not at module scope: this is the only path that needs it,
+    # and the import is cheap exactly once. (No suppression: PLC0415 is not in
+    # [tool.ruff] select, so a directive naming it would silence nothing --
+    # which is what scripts/check_inert_suppressions.py now counts.)
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_verdict_for_premises", ROOT / "src" / "immune" / "verdict.py"
+    )
+    if spec is None or spec.loader is None:
+        return (
+            "SEC-006: src/immune/verdict.py could not be loaded, so the census "
+            "freshness could not be established. Not a pass -- an unchecked age "
+            "is not a current answer."
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    verdict = module.load_verdict(output)
+
+    # FRESHNESS, not cleanliness. `counts_as_pass()` also requires the census
+    # to have found nothing fixable, and that is the wrong question here: these
+    # premises are about nltk's resolved version and whether a fix exists for
+    # one advisory, which a census reporting seventeen other findings answers
+    # perfectly well. Using counts_as_pass() made this step unsatisfiable while
+    # ANY finding was open anywhere -- caught by probing the fresh case as well
+    # as the stale one, which is the only reason it is not in this commit.
+    if verdict.freshness() == module.LIVE and verdict.outcome != module.UNKNOWN:
+        return ""
+    if verdict.outcome == module.UNKNOWN:
+        return (
+            f"SEC-006: the census did not complete ({verdict.explain()}), so the "
+            "nltk version and fix-availability premises are unconfirmed. This is "
+            "not a failing scan and must not be read as one, nor as a pass."
+        )
+    return (
+        f"SEC-006: the census is not a current answer ({verdict.explain()}). Its "
+        "premises are about a LIVE advisory feed, so confirming them from an aged "
+        "file asserts that nothing has changed since -- the one thing the file "
+        "cannot say. Re-run "
+        "`python3 scripts/vulnerability_census.py --check --scope core`."
+    )
+
+
 def _census_nltk_premises() -> list[str]:
     """What the census actually resolved for nltk, against what SEC-006 claims.
 
@@ -256,6 +311,18 @@ def _census_nltk_premises() -> list[str]:
         data = json.loads(output.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return [f"SEC-006: {_CENSUS_OUTPUT} could not be read ({exc}); premises unconfirmed."]
+
+    # A census answer has a shelf life, and this was the second consumer of the
+    # file not to check it. Measured 2026-10-16: a worktree holding a census
+    # generated 2026-10-13 confirmed SEC-006's premises three days later, from
+    # a file reporting `fixable_count: 17` -- the same seventeen advisories
+    # src/immune/verdict.py was written about. In the production gate the census
+    # runs immediately before this step, which is why it was never visible;
+    # anywhere else -- a local run, a reordered job, a leftover file -- the
+    # answer had unbounded age.
+    stale = _census_staleness(output)
+    if stale:
+        return [stale]
 
     failures: list[str] = []
     seen = False

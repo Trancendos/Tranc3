@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from src.immune.verdict import (
     DEFAULT_TTL_HOURS,
     LIVE,
@@ -166,7 +168,10 @@ def test_a_clean_census_is_a_pass_and_carries_its_commit():
         }
     )
     assert v.outcome == "pass"
-    assert v.subject.startswith("2c8549e7")
+    # The WHOLE sha. `startswith` would still pass if `subject` were
+    # truncated to eight characters, and a caller publishing a commit
+    # status needs the full value.
+    assert v.subject == "2c8549e7b8424f74aeeee047753aef7de312b50b"
 
 
 def test_an_absent_census_file_is_unknown(tmp_path):
@@ -224,3 +229,105 @@ def test_explain_states_the_age_a_reader_needs():
     assert "does NOT count as a pass" in line
     assert "stale" in line
     assert "days old" in line
+
+
+# ---------------------------------------------------------------------------
+# Fail-closed gaps found in review. Five independent reviewers converged on
+# most of these, and every one of them was a path to a pass nothing earned.
+# ---------------------------------------------------------------------------
+
+
+def test_a_date_with_no_time_is_not_an_instant():
+    """`fromisoformat("2026-10-13")` succeeds and yields midnight, so a bare
+    date would read as measured at 00:00 -- up to a day from the truth, and
+    silently. Freshness is the whole subject, so it must not be guessed."""
+    v = _verdict(measured_at="2026-10-13")
+    assert v.freshness(NOW) == UNKNOWN
+    assert v.counts_as_pass(NOW) is False
+    assert any("measured_at" in d for d in v.defects())
+
+
+def test_an_explicit_zero_ttl_survives_to_be_reported():
+    """REGRESSION: `float(data.get("ttl_hours") or DEFAULT)` turned an explicit
+    0 into 24, because `0 or 24 == 24`. Zero is the one TTL this module
+    promises to fail closed on, and the likeliest malformed value."""
+    v = Verdict.from_mapping({"name": "x", "outcome": "pass", "ttl_hours": 0})
+    assert v.ttl_hours == 0
+    assert any("ttl_hours" in d for d in v.defects())
+    assert Verdict.from_mapping({"name": "x"}).ttl_hours == DEFAULT_TTL_HOURS
+    assert Verdict.from_mapping({"name": "x", "ttl_hours": None}).ttl_hours == DEFAULT_TTL_HOURS
+
+
+def test_a_zero_ttl_is_not_live_even_at_age_zero():
+    """REGRESSION: `age <= timedelta(hours=0)` is True at age exactly zero, so
+    a verdict `defects()` already called unusable still counted as a pass."""
+    exactly_now = NOW.isoformat().replace("+00:00", "Z")
+    v = _verdict(measured_at=exactly_now, ttl_hours=0)
+    assert v.freshness(NOW) == UNKNOWN
+    assert v.counts_as_pass(NOW) is False
+
+
+@pytest.mark.parametrize("ttl", [float("nan"), float("inf"), float("-inf")])
+def test_a_non_finite_ttl_is_unknown_rather_than_an_exception(ttl):
+    """`timedelta(hours=nan)` raises ValueError and `inf` raises OverflowError.
+    A freshness check that throws takes the gate step down instead of
+    answering it, which is strictly worse than reporting it cannot tell."""
+    v = _verdict(ttl_hours=ttl)
+    assert v.freshness(NOW) == UNKNOWN
+    assert v.counts_as_pass(NOW) is False
+    assert any("ttl_hours" in d for d in v.defects())
+
+
+@pytest.mark.parametrize("bad", [False, True, "0", "3", 0.5, -1, None, [], {}])
+def test_a_fixable_count_that_is_not_a_count_is_unknown(bad):
+    """REGRESSION: `int(fixable)` accepted three values that became a PASS no
+    clean scan had earned -- `False` (int 0), `"0"`, and `0.5` (truncated).
+    `isinstance(True, int)` is True in Python, which is why bool is excluded
+    explicitly rather than assumed away."""
+    v = Verdict.from_census(
+        {"scanned_ok": True, "fixable_count": bad, "generated_at": MAIN_GATE_GREEN}
+    )
+    assert v.outcome == UNKNOWN, f"{bad!r} must not produce a pass or a fail"
+
+
+def test_a_real_integer_count_still_works():
+    """The other half: this must not refuse every valid census."""
+    base = {"scanned_ok": True, "generated_at": MAIN_GATE_GREEN}
+    assert Verdict.from_census({**base, "fixable_count": 0}).outcome == "pass"
+    assert Verdict.from_census({**base, "fixable_count": 17}).outcome == "fail"
+
+
+def test_a_report_does_not_hold_on_a_verdict_with_defects():
+    """A fresh pass with no name passed `counts_as_pass` while `defects()`
+    called it unusable, so a caller could report success for a gate nothing
+    could identify."""
+    recent = (NOW - timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    nameless = Verdict(name="", outcome="pass", measured_at=recent)
+    assert nameless.counts_as_pass(NOW) is True, "the old predicate still passes it"
+    assert nameless.defects(), "but it is unusable"
+    assert VerdictReport(verdicts=[nameless], checked_at=NOW).holds is False
+
+
+def test_the_census_producer_writes_the_commit_the_verdict_reads():
+    """REGRESSION: `from_census` read a `commit` key `build_census()` never
+    wrote, so `subject` was always empty in every real run and the test
+    covering it fabricated the key -- pinning an interface nothing produced.
+    This asserts the two ends agree, by reading the producer."""
+    import importlib.util
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    spec = importlib.util.spec_from_file_location(
+        "_census_for_test", _Path(__file__).resolve().parents[1] / "scripts/vulnerability_census.py"
+    )
+    assert spec and spec.loader
+    census = importlib.util.module_from_spec(spec)
+    _sys.modules[spec.name] = census
+    spec.loader.exec_module(census)
+
+    head = census._scanned_head()
+    assert head, "the census must record the head it scanned"
+    v = Verdict.from_census(
+        {"scanned_ok": True, "fixable_count": 0, "generated_at": MAIN_GATE_GREEN, "commit": head}
+    )
+    assert v.subject == head, "the full sha, not a prefix -- callers need the whole thing"
