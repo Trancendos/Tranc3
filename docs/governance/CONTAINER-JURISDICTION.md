@@ -146,6 +146,10 @@ in the Location the platform already designated for sandbox isolation, rather th
 - `docs/governance/DATA-PLATFORM-STRATEGY.md` — the datastore half of the same CMDB work
 - `docs/governance/IMMUNE-SYSTEM.md` — the sensor model these scanners must register under,
   including the rule that a sensor which cannot see must report that it could not see
+- `docs/architecture/Repository-Derived-CMDB-Automated-Datastore-and-Container-Discovery.md`
+  — how those Configuration Items are discovered by walking the repository, how their
+  SBOMs are generated, and how the currency checks work. This document covers the
+  jurisdiction policy and the SBOM semantics; that one covers the derivation
 - `docs/architecture/ci-register.json` — the generated register
 - `docs/architecture/sbom/` — one CycloneDX document per container
 
