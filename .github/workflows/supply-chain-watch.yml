@@ -106,12 +106,12 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Set up Node 24
         # npm audit reads package-lock.json directly; no install step is needed,
         # and adding one would run lifecycle hooks this repo deliberately blocks.
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
 
@@ -140,7 +140,7 @@ jobs:
 
       - name: Upload vulnerability census
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: vulnerability-census
           # The trend record rides along with the full census. This job checks
@@ -167,7 +167,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Measure dependency obsolescence
         # --fail-on stranded is the strict setting and passes today, because every
@@ -179,7 +179,7 @@ jobs:
 
       - name: Upload obsolescence census
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: obsolescence-census
           path: logs/obsolescence_census.json
@@ -212,7 +212,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Install the sensors being asked to prove themselves
         # The versions this repository declares, at the same pins the gate uses.
@@ -259,7 +259,7 @@ jobs:
 
       - name: Upload the immunity report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: immunity-record
           path: config/immune/immunity.json
