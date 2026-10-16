@@ -17,13 +17,41 @@
 # deserves to be looked at on its own, and burying it in a group of forty patch
 # bumps is how a runtime change gets merged by accident.
 
+#
+# Why every limit below is 0 (added 2026-10-05):
+#
+# Grouping fixed the volume and left the duplication. Renovate (`renovate.json`)
+# sets no `enabledManagers`, so it covers every manager -- pip, npm, dockerfile,
+# docker-compose, github-actions, gomod -- and this file covers pip, npm, docker
+# and github-actions. Two bots proposed the same upgrades and edited the same
+# manifest lines, so their pull requests conflicted with each other by
+# construction. Measured in the open queue on 2026-10-05: vite sat at THREE
+# versions at once (#985 7.3.5->8.2.2, #1361 8.3.1->8.3.2, and Renovate's
+# "Node.js patch updates" group), and GitHub Actions arrived both as individual
+# Dependabot PRs (#1365, #1208, #1205) and as one grouped Renovate PR (#1010).
+#
+# That is why the count kept climbing while pull requests were being merged:
+# two generators were feeding one queue.
+#
+# `open-pull-requests-limit: 0` turns off Dependabot VERSION updates while
+# leaving Dependabot SECURITY updates untouched -- those come from GitHub's
+# advisory database, need no entry here, and are the reason this file stays
+# rather than being deleted (#1148 is one, a grpc advisory in `/aeonmind/go`,
+# a directory this file never declared). So the estate keeps two independent
+# vulnerability sources, GitHub Advisory and OSV via Renovate, and gains one
+# owner for routine upgrades.
+#
+# Renovate owns routine upgrades because its config carries the grouping, the
+# 7-day supply-chain cooldown and the written reason for exempting published
+# CVE fixes from it. Reverting is one value per ecosystem.
+
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -73,7 +101,7 @@ updates:
     directory: "/tranc3-bots"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -123,7 +151,7 @@ updates:
     directory: "/workers"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -173,7 +201,7 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -191,7 +219,7 @@ updates:
     directory: "/web"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -236,7 +264,7 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -283,7 +311,7 @@ updates:
     directory: "/docker"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -330,7 +358,7 @@ updates:
     directory: "/tranc3-bots"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -377,7 +405,7 @@ updates:
     directory: "/web"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty
@@ -446,7 +474,7 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Patch and minor bumps travel together: they are the high-volume, low-risk
       # majority, and one reviewed PR per ecosystem is worth more than thirty

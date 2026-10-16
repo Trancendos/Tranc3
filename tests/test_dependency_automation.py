@@ -130,12 +130,30 @@ def test_major_updates_are_never_grouped(config):
 
 
 def test_open_pr_limit_is_bounded(config):
-    """Grouping reduces PR count; it does not remove the need for a ceiling."""
+    """Grouping reduces PR count; it does not remove the need for a ceiling.
+
+    The lower bound was `0 < limit` until 2026-10-06, which read "every
+    ecosystem must open at least one pull request". That is not the invariant;
+    the invariant is that no ecosystem is *unbounded*. `0` is GitHub's
+    documented value for "disable version updates", and it leaves Dependabot
+    *security* updates untouched -- those come from the advisory database and
+    take no entry in this file. So 0 is the tightest bound available, not the
+    absence of one, and excluding it meant this test forbade turning a
+    duplicated generator off.
+
+    Why that matters here: Renovate sets no `enabledManagers`, so it already
+    covers every manager this file declares. Two bots editing the same manifest
+    lines produced pull requests that conflicted by construction -- vite stood
+    at three versions at once. `0` is how that is resolved, and the ceiling this
+    test exists to defend is unaffected.
+    """
     for entry in config["updates"]:
         limit = entry.get("open-pull-requests-limit")
         # `bool` subclasses `int`, so isinstance(True, int) is True and a stray
-        # `open-pull-requests-limit: true` would satisfy a naive check.
-        assert type(limit) is int and 0 < limit <= 10, (
+        # `open-pull-requests-limit: true` would satisfy a naive check. Note
+        # `type(limit) is int` also rejects `True`, which would otherwise pass
+        # as 1 -- kept deliberately.
+        assert type(limit) is int and 0 <= limit <= 10, (
             f"{_entry_id(entry)} has open-pull-requests-limit={limit!r}; "
             f"an unbounded or missing limit is how 98 PRs happened"
         )
