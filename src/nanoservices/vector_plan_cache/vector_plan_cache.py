@@ -179,19 +179,19 @@ class InMemoryVectorStore:
     def _cosine_similarity(a: List[float], b: List[float]) -> float:
         """Compute cosine similarity between two vectors.
 
-        Performance optimization: Uses a single loop to calculate dot product
-        and norms simultaneously instead of three separate generator passes,
-        yielding ~30% faster execution in pure Python.
+        Performance optimization: Uses map(operator.mul) which executes in C,
+        significantly faster than a pure Python loop.
         """
         import math
+        import operator
 
-        dot = 0.0
-        norm_a_sq = 0.0
-        norm_b_sq = 0.0
-        for x, y in zip(a, b):
-            dot += x * y
-            norm_a_sq += x * x
-            norm_b_sq += y * y
+        if len(a) != len(b):
+            return 0.0
+
+        dot = sum(map(operator.mul, a, b))
+        norm_a_sq = sum(map(operator.mul, a, a))
+        norm_b_sq = sum(map(operator.mul, b, b))
+
         if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
         return dot / math.sqrt(norm_a_sq * norm_b_sq)
