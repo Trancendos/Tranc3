@@ -27,3 +27,6 @@
 ## 2024-05-20 - Submodule git state during code modifications
 **Learning:** Modifying files inside a git submodule (like `workers/cranbania`) during a standard workflow and committing them within the submodule causes the parent repository to track the submodule as modified (`-dirty` or advanced commit pointer). This can block or fail code reviews that expect a clean, self-contained patch for the parent repository.
 **Action:** When asked to make UX/micro-UX improvements, ensure the changes stay within the scope of the parent repository and don’t unintentionally commit submodule state changes unless explicitly intended and handled correctly.
+## 2024-10-25 - [Dynamic Button Text Accessibility]
+**Learning:** Static `aria-label` attributes on dynamic buttons (e.g., buttons whose text changes from "Run workflow" to "Running...") can inadvertently overwrite crucial state information for screen reader users, preventing them from understanding the current state of the application.
+**Action:** Always ensure that `aria-label`s map closely to the current dynamic state (e.g., `aria-label={running ? "Running workflow" : "Run workflow"}`) when the visual text changes to indicate a state transition.
