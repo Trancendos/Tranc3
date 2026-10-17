@@ -168,8 +168,19 @@ def _recorded_pins() -> dict[str, str]:
         return {}
     pins: dict[str, str] = {}
     for line in proc.stdout.splitlines():
-        # <mode> commit <sha>\t<path>   — mode 160000 marks a gitlink
-        m = re.match(r"^160000 commit ([0-9a-f]{40})\t(.+)$", line)
+        # <mode> commit <sha>\t<path>   — mode 160000 marks a gitlink.
+        #
+        # 40 OR 64 hex: an object id is 40 characters under SHA-1 and 64 under
+        # SHA-256 (`git init --object-format=sha256`), and this pattern accepted
+        # only the first until 2026-10-17. Probed on a real SHA-256 repository
+        # holding one gitlink: `_recorded_pins()` returned {} and the
+        # unbacked-declaration check then reported the healthy submodule as
+        # "declared, but the tree records no submodule there" and exited 1 — a
+        # guard against a silent evasion turning into a false refusal nobody
+        # could satisfy. `src/immune/repo.py`'s own gitlink pattern was widened
+        # for the same reason; this is the copy that was missed. Raised by cubic
+        # on #1403.
+        m = re.fullmatch(r"160000 commit ([0-9a-f]{40}(?:[0-9a-f]{24})?)\t(.+)", line, re.DOTALL)
         if m:
             pins[m.group(2)] = m.group(1)
     return pins

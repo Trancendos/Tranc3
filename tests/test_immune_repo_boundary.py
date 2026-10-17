@@ -30,9 +30,12 @@ a text file and hoping.
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 from src.immune.repo import (
     declared_non_gitlinks,
@@ -45,16 +48,28 @@ from src.immune.repo import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _repo_with_gitlinks(root: Path, *paths: str, declare: bool = True) -> Path:
+def _repo_with_gitlinks(
+    root: Path, *paths: str, declare: bool = True, object_format: str = "sha1"
+) -> Path:
     """A real git repository with a real gitlink at each of `paths`.
 
     `git update-index --cacheinfo 160000` records a gitlink without needing an
     actual nested clone, which is exactly the structure `submodule_paths` reads
     and the thing a `.gitmodules` line cannot fake.
+
+    `object_format` exists because an object id is 40 hex characters under
+    SHA-1 and 64 under SHA-256, and both readers of a gitlink parse that id
+    with a pattern. A fixture that can only build SHA-1 repositories cannot
+    catch a pattern that accepts only SHA-1.
     """
-    subprocess.run(["git", "init", "-q", str(root)], check=True, timeout=30)
+    subprocess.run(
+        ["git", "init", "-q", f"--object-format={object_format}", str(root)],
+        check=True,
+        timeout=30,
+    )
+    width = 64 if object_format == "sha256" else 40
     for i, path in enumerate(paths):
-        sha = f"{i + 1:040x}"
+        sha = f"{i + 1:0{width}x}"
         subprocess.run(
             [
                 "git",
@@ -479,7 +494,48 @@ def test_the_pin_validator_normalises_a_trailing_slash_in_a_declaration(
     monkeypatch.setattr(vsp, "ROOT", tmp_path)
     monkeypatch.setattr(sys, "argv", ["validate_submodule_pins.py"])
     assert vsp.main() == 1
-    assert "src" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    # The EXACT reported path, not `"src" in out`: `src/` contains `src`, so
+    # the loose assertion passed whether or not the slash was stripped and
+    # tested nothing it claimed to. Raised by cubic on #1403.
+    assert "✗ src —" in out, out
+    # Scoped to the reported line: the help text below it names
+    # `src/immune/repo.py`, so a bare `"src/" not in out` fails on prose.
+    assert "✗ src/" not in out, out
+
+
+def test_the_validator_reads_a_sha256_repositorys_pins(tmp_path, monkeypatch, capsys):
+    """REGRESSION. `_recorded_pins()` matched `[0-9a-f]{40}` only, so in a
+    SHA-256 repository (`git init --object-format=sha256`, 64-character object
+    ids) it returned an empty map -- and the unbacked-declaration check then
+    reported every healthy submodule as having no gitlink and exited 1.
+    Probed on a real SHA-256 repository before the fix. A guard against a
+    silent evasion had become a false refusal nobody could satisfy; `repo.py`'s
+    own pattern was widened for this and the validator's copy was missed.
+    Raised by cubic on #1403."""
+    vsp = _load("vsp_sha256", "scripts/validate_submodule_pins.py")
+    try:
+        _repo_with_gitlinks(tmp_path, "vendor/real", object_format="sha256")
+    except subprocess.CalledProcessError:  # pragma: no cover - old git
+        pytest.skip("this git does not support --object-format=sha256")
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "vendor/real"]\n\tpath = vendor/real\n\turl = https://example.invalid/0.git\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(vsp, "ROOT", tmp_path)
+
+    pins = vsp._recorded_pins()
+    assert set(pins) == {"vendor/real"}, pins
+    assert len(next(iter(pins.values()))) == 64
+
+    # And the declaration therefore reads as BACKED: no false refusal. Asserted
+    # on the PARSED payload, not on the absence of a prose phrase -- in `--json`
+    # mode that phrase is absent either way, so the looser check would have
+    # passed on the broken code too.
+    monkeypatch.setattr(sys, "argv", ["validate_submodule_pins.py", "--json"])
+    vsp.main()  # exit code depends on reachability of a fake url; the claim is the payload
+    payload = json.loads(capsys.readouterr().out)
+    assert payload.get("unbacked", []) == [], payload
 
 
 def test_the_validators_json_mode_stays_machine_readable(tmp_path, monkeypatch, capsys):
