@@ -73,7 +73,7 @@ services:
 
   # ── Vault (simplified — file backend, auto-unsealed for CI/UAT) ──────────
   vault:
-    image: hashicorp/vault:2.0@sha256:5be49781ecf78bfe775c5309c6a4d9f4e9e040b6c885c99eb2b12fb69855e1a2
+    image: hashicorp/vault:2.1@sha256:c2f666266f383d2cf424d86b8bb8ce7d065562173ffec2b476d762943608bb55
     container_name: tranc3-uat-vault
     <<: *uat-common
     env_file: []
@@ -240,7 +240,7 @@ services:
 
   # ── Prometheus ────────────────────────────────────────────────────────────
   prometheus:
-    image: prom/prometheus:v3.1.0@sha256:6559acbd5d770b15bb3c954629ce190ac3cbbdb2b7f1c30f0385c4e05104e218
+    image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
     container_name: tranc3-uat-prometheus
     <<: *uat-common
     env_file: []
@@ -255,7 +255,7 @@ services:
 
   # ── Grafana ───────────────────────────────────────────────────────────────
   grafana:
-    image: grafana/grafana:13.1.6@sha256:d8276d620291d3aaae3e31dde6d63e6807afee49825f04e8aa7392bbe024216f
+    image: grafana/grafana:13.2.3@sha256:b28bae15e219c998fb0e0424ed724930cc61b1f61fb404d47c862f9a23f9e572
     container_name: tranc3-uat-grafana
     <<: *uat-common
     env_file: []
@@ -288,7 +288,7 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   seed-data:
     <<: *uat-common
-    image: python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
+    image: python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
     container_name: tranc3-uat-seed
     working_dir: /app
     volumes:
