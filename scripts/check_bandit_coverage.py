@@ -263,10 +263,18 @@ def submodule_exclusions(root: Path, targets: list[str], excluded: list[str]) ->
     `[tool.bandit] exclude_dirs` is a static list and `.gitmodules` is the
     truth, so they drift the moment a submodule is added. The consequence is
     specific and was measured on #1403: `workers/cranbania` sits under the
-    `workers` target, `ci.yml`'s Pytest job is the only one that checks
-    submodules out, and the ratchet therefore counted a second repository's
-    findings in that job alone. A ceiling that means one thing locally and
-    another in one CI job is not a ceiling.
+    `workers` target, and the ratchet therefore counted a second repository's
+    findings in the jobs that check submodules out. A ceiling that means one
+    thing locally and another in CI is not a ceiling.
+
+    Which jobs, measured 2026-10-17 rather than remembered: six of the 122
+    checkout steps across both workflow trees pass `submodules: recursive` --
+    `.github`'s `ci.yml/topology` (where this checker runs), `ci.yml/test` and
+    `test.yml/test`, plus three in the dormant `.forgejo` tree. This said
+    "`ci.yml`'s Pytest job is the only one" until that measurement, and the
+    first correction said three because it counted one tree. The set is now
+    derived in
+    `tests/test_immune_repo_boundary.py::test_the_jobs_that_check_out_submodules_are_the_ones_named_here`.
     """
     problems: list[str] = []
     excluded_set = {name.strip().strip("/") for name in excluded}

@@ -1,12 +1,21 @@
 """Where this repository ends, every counting control must stop.
 
-`ci.yml`'s Pytest job is the only one that checks out with
-`submodules: recursive`. So before `src/immune/repo.py` existed, the
-suppression ratchet, the bandit ratchet and the disposition-premise checker
-all measured a larger tree in that one job than anywhere else — and the
-ceilings recorded in a normal worktree failed there for a reason nobody's diff
-had caused. Measured on #1403: `Pytest` red on `5a309946` while every other
-job on the same commit, and `main`, were green.
+Some jobs check out with `submodules: recursive` and most do not. Measured
+across both workflow trees on 2026-10-17: **6 of 122 checkout steps** pass it
+— in `.github` (the tree that actually runs) `ci.yml`'s `topology` and `test`
+jobs and `test.yml`'s `test` job; in the dormant `.forgejo` tree `ci.yml`'s
+`full-suite` and the two CranBania sync workflows. `submodule-pins.yml` sets
+it `false` on purpose. So before `src/immune/repo.py` existed, the suppression
+ratchet, the bandit ratchet and the disposition-premise checker all measured a
+larger tree in those jobs than anywhere else — and the ceilings recorded in a
+normal worktree failed there for a reason nobody's diff had caused. Measured
+on #1403: `Pytest` red on `5a309946` while every other job on the same commit,
+and `main`, were green.
+
+(This file said "`ci.yml`'s Pytest job is the only one" until the set was
+counted, and the first count said three because it globbed one tree. The
+consequence was right both times and the set was not, which is why the set and
+both denominators are now derived in a test rather than written down.)
 
 Each case here plants a file where a submodule would be and asserts the
 control ignores it. The boundary itself is derived from GITLINKS, so a
@@ -346,6 +355,53 @@ def test_resetting_the_cache_re_reads_the_tree(tmp_path, monkeypatch):
     assert repo.submodule_paths(tmp_path) == {"vendor/first", "vendor/second"}
     assert spawns["n"] > after_first, "the reset must make the next call ask git again"
     repo.reset_boundary_cache()
+
+
+def test_the_jobs_that_check_out_submodules_are_the_ones_named_here():
+    """The set named in this file's header, and in the two ratchets, is DERIVED.
+
+    Three documents named it and all three had it wrong the same way --
+    "ci.yml's Pytest job is the only one" -- because nobody had counted. The
+    first attempt at this assertion was ALSO wrong: it said three, having
+    globbed only `.github/workflows`, and this test is what caught that. Both
+    trees matter and job ids collide between them (`ci.yml` exists in each), so
+    the key carries its tree.
+
+    If this fails, the workflows changed: update the three statements rather
+    than the assertion.
+    """
+    import yaml
+
+    found = set()
+    checkouts = {".github/workflows": 0, ".forgejo/workflows": 0}
+    for tree in checkouts:
+        for path in sorted((ROOT / tree).glob("*.yml")):
+            parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
+            if not isinstance(parsed, dict):
+                continue
+            for job_id, job in (parsed.get("jobs") or {}).items():
+                for step in job.get("steps") or []:
+                    if not isinstance(step, dict) or "checkout" not in str(step.get("uses", "")):
+                        continue
+                    checkouts[tree] += 1
+                    if ((step.get("with") or {}).get("submodules")) == "recursive":
+                        found.add(f"{tree.split('/')[0]}:{path.name}/{job_id}")
+
+    assert found == {
+        ".github:ci.yml/topology",
+        ".github:ci.yml/test",
+        ".github:test.yml/test",
+        ".forgejo:ci.yml/full-suite",
+        ".forgejo:matrix-suites-cranbania-sync.yml/sync",
+        ".forgejo:sync-cranbania-submodule.yml/sync",
+    }, (
+        "the set of jobs checking out submodules has changed; three docstrings "
+        "name it (this file's header, check_inert_suppressions._python_files, "
+        f"check_bandit_coverage.submodule_exclusions) and must be updated: {sorted(found)}"
+    )
+    # The denominators the statements quote, so "6 of 122" cannot quietly
+    # become "6 of 300" and still read as a measurement.
+    assert checkouts == {".github/workflows": 44, ".forgejo/workflows": 78}, checkouts
 
 
 # --- the other half: the validator that refuses the evasion --------------

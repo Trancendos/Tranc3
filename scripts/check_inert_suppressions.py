@@ -289,11 +289,23 @@ def _python_files(root: Path) -> list[Path]:
     """This repository's Python files, excluding every submodule.
 
     A submodule is a different repository with its own reviewers and its own
-    ceilings, and `ci.yml`'s Pytest job is the only one that checks them out
-    (`submodules: recursive`). Counting them here made this ratchet measure a
-    larger tree in that one job than anywhere else, so a ceiling recorded in a
-    normal worktree failed there for a reason nobody's diff caused. See
-    `src/immune/repo.py`.
+    ceilings, and only some jobs check them out. Measured across both workflow
+    trees on 2026-10-17: SIX of 122 checkout steps pass `submodules: recursive`
+    -- in `.github`, `ci.yml`'s `topology` and `test` jobs and `test.yml`'s
+    `test` job; in the dormant `.forgejo` tree, `ci.yml`'s `full-suite` and the
+    two CranBania sync workflows. `submodule-pins.yml` sets it `false`
+    deliberately. This docstring said "`ci.yml`'s Pytest job is the only one"
+    until that measurement, and the first correction said three because it
+    counted one tree -- the consequence was right both times, the set was not.
+
+    The set matters because `topology` is where THIS checker runs, and it is
+    one of the six. Counting submodules here made the ratchet measure a
+    larger tree in both of ci.yml's submodule jobs than in any local worktree,
+    so a ceiling recorded normally failed there for a reason nobody's diff
+    caused -- visible first as `Pytest`, because the suite re-measures the real
+    tree. See `src/immune/repo.py`, and
+    `tests/test_immune_repo_boundary.py::test_the_jobs_that_check_out_submodules_are_the_ones_named_here`
+    which keeps the three names honest.
     """
     submodules = submodule_paths(root)
     return [

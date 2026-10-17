@@ -34,6 +34,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from src.immune.repo import declared_paths
+
 REPO = Path(__file__).resolve().parents[2]
 COMPOSE = REPO / "docker-compose.production.yml"
 SBOM_DIR = REPO / "docs" / "architecture" / "sbom"
@@ -264,15 +266,40 @@ def _absent_submodules() -> List[str]:
     modules = REPO / ".gitmodules"
     if not modules.is_file():
         return []
+    # `.gitmodules` holds git-config keys, so a LINE SCAN for `path` gets them
+    # wrong in both directions, and this guard existed in that form until
+    # 2026-10-17. Probed against this repository's own file:
+    #
+    #   PATH = workers/cranbania    git normalises the key to `path` (confirmed
+    #                               with `git config --file`); the scan required
+    #                               lowercase, found nothing, and reported NO
+    #                               absent submodules -- silently disabling the
+    #                               presence check for that submodule, which is
+    #                               the one failure this function exists to stop
+    #   path = "workers/cranbania"  git strips the quotes; the scan did not, so
+    #                               it reported the fully checked-out submodule
+    #                               as `"workers/cranbania"` and raised on a
+    #                               healthy tree -- the register could then not
+    #                               be generated at all
+    #
+    # `declared_paths` delegates the parse to `git config --file`, which is the
+    # only thing that reads the format correctly, and needs no repository --
+    # just the git binary. See `src/immune/repo.py` and the same reasoning in
+    # `scripts/validate_submodule_pins.py`.
+    declared = declared_paths(REPO)
+    if not declared:
+        # A presence guard that cannot read the declarations must not report
+        # "none absent" -- that is the clean-estate answer from a blind sensor,
+        # which IMMUNE-SYSTEM.md names as the failure to avoid, and this module
+        # already raises on a missing PyYAML for the same reason.
+        raise CannotEnumerateContainers(
+            f"{modules} exists but no submodule declaration could be read from it. "
+            "git is required to parse it (`git config --file .gitmodules --list`); "
+            "without that, submodule presence cannot be verified and the register "
+            "would describe whatever happens to be on disk."
+        )
     absent: List[str] = []
-    for line in modules.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("path"):
-            continue
-        _, _, raw = stripped.partition("=")
-        path = raw.strip()
-        if not path:
-            continue
+    for path in sorted(declared):
         target = REPO / path
         if not target.is_dir() or not any(target.iterdir()):
             absent.append(path)
