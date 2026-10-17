@@ -659,4 +659,11 @@ def test_a_named_fix_fails_because_the_entry_says_none_exists(tmp_path, monkeypa
     _jose_census(tmp_path, fix_versions=["3.6.0"])
     monkeypatch.setattr(cdp, "ROOT", tmp_path)
     failures = cdp._census_jose_premises()
-    assert failures and all(f.startswith("SEC-020:") for f in failures)
+    assert len(failures) == 1
+    assert failures[0].startswith("SEC-020:")
+    # The NAMED version, not just "a failure happened". Asserting only the
+    # prefix left this green if the reason came from any other premise, so the
+    # fix_versions handling it exists to cover could have stopped working
+    # without the test noticing. Raised by cubic on #1403.
+    assert "['3.6.0']" in failures[0]
+    assert "no patched release exists" in failures[0]

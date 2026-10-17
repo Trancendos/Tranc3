@@ -63,44 +63,51 @@ import shutil
 import subprocess  # nosec B404 - absolute argv[0], no shell; see _gitlinks
 from pathlib import Path
 
-_PATH_LINE = re.compile(r"^\s*path\s*=\s*(.+?)\s*$", re.MULTILINE)
+# `<mode> <object> <stage>\t<path>` from `ls-files --stage -z`: NUL-separated,
+# so there is no trailing newline and no C-quoting to undo, and matched with
+# `fullmatch` -- see `_gitlinks`.
+_STAGE_RECORD = re.compile(r"160000 [0-9a-f]{40} [0-3]\t(?P<path>.+)", re.DOTALL)
 
-# `<mode> <object> <stage>\t<path>`; 160000 is the gitlink mode.
-_STAGE_LINE = re.compile(r"^160000 [0-9a-f]{40} [0-3]\t(?P<path>.+)$")
 
+def _git(root: Path, *args: str) -> str | None:
+    """Run one git command in `root`, or None if it cannot be run.
 
-def _gitlinks(root: Path) -> frozenset[str]:
-    """Paths git records as gitlinks (mode 160000) in `root`'s index.
-
-    Fixed argv and no shell, so nothing here is interpolated from repository
-    content. A non-repository, a missing git, or any failure reads as "no
-    gitlinks" — see this module's docstring for why that is the safe answer
-    rather than a silent exclusion.
+    argv[0] comes from `shutil.which` rather than a PATH lookup (bandit B607,
+    worth fixing rather than suppressing), the argument list is fixed, and
+    `shell=False`. A missing git, a non-repository, a timeout or a non-zero
+    exit all read as None, which every caller turns into "no boundary" rather
+    than into an exclusion.
     """
-    # Resolved to an absolute path rather than relying on PATH lookup, which is
-    # what bandit's B607 is about and is worth fixing rather than suppressing:
-    # a missing git is answered here, without spawning anything, by the same
-    # "no gitlinks" that every other failure gives.
     git = shutil.which("git")
     if git is None:
-        return frozenset()
+        return None
     try:
-        proc = subprocess.run(  # nosec B603 - absolute argv[0] from shutil.which, shell=False, fixed arguments
-            [git, "-C", str(root), "ls-files", "--stage"],
+        proc = subprocess.run(  # nosec B603 - absolute argv[0] from which, shell=False, fixed args
+            [git, "-C", str(root), *args],
             capture_output=True,
             text=True,
             timeout=30,
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        return frozenset()
-    if proc.returncode != 0:
+        return None
+    return proc.stdout if proc.returncode == 0 else None
+
+
+def _gitlinks(root: Path) -> frozenset[str]:
+    """Paths git records as gitlinks (mode 160000) in `root`'s index."""
+    out = _git(root, "ls-files", "--stage", "-z")
+    if out is None:
         return frozenset()
     found = set()
-    for line in proc.stdout.splitlines():
-        match = _STAGE_LINE.match(line)
-        if match:
-            found.add(match.group("path").strip().strip("/"))
+    for record in out.split("\0"):
+        # `fullmatch`, not `match`: an anchored pattern used with `match`
+        # accepts a trailing newline its own character class forbids, which is
+        # what scripts/check_anchored_validators.py exists to catch -- and it
+        # caught this, in CI, on the commit that introduced it.
+        matched = _STAGE_RECORD.fullmatch(record)
+        if matched:
+            found.add(matched.group("path").strip("/"))
     return frozenset(found)
 
 
@@ -110,14 +117,31 @@ def declared_paths(root: Path) -> frozenset[str]:
     Kept separate from `submodule_paths` deliberately: this is content a change
     can assert, and the whole point of the split is that an assertion is not a
     boundary.
+
+    Parsed by `git config`, not by a regex over the text. `.gitmodules` holds
+    git-config keys, so `PATH =` is as valid as `path =`, values may be quoted,
+    and a path may contain a space or a tab. A line scan keeps the surrounding
+    quotes and mis-reads all three -- raised by cubic on #1403, and measured:
+    `git ls-files` C-quotes a tab-containing path to `"vendor/tab\\todd"`, which
+    no relative path ever equals. It is also the parser
+    `scripts/validate_submodule_pins.py` already uses on this same file, so the
+    two can no longer disagree about what it says.
     """
-    try:
-        text = (root / ".gitmodules").read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
+    if not (root / ".gitmodules").is_file():
         return frozenset()
-    return frozenset(
-        match.group(1).strip().strip("/") for match in _PATH_LINE.finditer(text) if match.group(1)
-    )
+    out = _git(root, "config", "--file", ".gitmodules", "--list", "-z")
+    if out is None:
+        return frozenset()
+    found = set()
+    for record in out.split("\0"):
+        if not record:
+            continue
+        # `git config -z` emits `key\nvalue` per record, so a value holding a
+        # newline cannot be split into two records.
+        key, _, value = record.partition("\n")
+        if key.lower().endswith(".path") and value.strip():
+            found.add(value.strip().strip("/"))
+    return frozenset(found)
 
 
 def submodule_paths(root: Path) -> frozenset[str]:

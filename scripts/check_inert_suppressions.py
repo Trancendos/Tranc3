@@ -220,8 +220,14 @@ def _matches(code: str, selectors) -> bool:
 
     One implementation for `select`, `ignore` and per-file ignores, so the
     three cannot drift apart the way they already had.
+
+    `ALL` is ruff's reserved selector for every rule, not a code prefix, so it
+    is matched as such. `classify` tests `"ALL" in select` separately before it
+    gets here, but `ignore = ["ALL"]` and a per-file `["ALL"]` had no such path
+    -- every suppression would then have read as live and the ceiling would
+    have stopped counting the inert ones. Raised by cubic on #1403.
     """
-    return any(code.startswith(prefix) for prefix in selectors)
+    return any(prefix == "ALL" or code.startswith(prefix) for prefix in selectors)
 
 
 def classify(

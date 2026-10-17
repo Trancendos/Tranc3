@@ -1489,24 +1489,88 @@ def _pinned_decode_sites() -> int:
     return _SEC_020_PINNED[0] if _SEC_020_PINNED else 0
 
 
-def _dynamic_import_target(node: ast.Call) -> str | None:
+def _importlib_bindings(tree: ast.AST) -> tuple[frozenset[str], frozenset[str]]:
+    """(names bound to the importlib MODULE, names bound to import_module).
+
+    Read from the module's own import statements rather than assumed, for the
+    two reasons cubic raised on #1403, both of which hold:
+
+      * matching `.import_module` on ANY receiver treats
+        `self.import_module("mcp")` or `registry.import_module("mcp")` as
+        importlib's. Those are ordinary methods in unrelated code, and a check
+        that cries about what it was told to ignore is the kind that gets
+        switched off -- this same file already says that about
+        `from src.mcp import ...`;
+      * matching only the bare spelling misses
+        `from importlib import import_module as imp`, so an alias walks past
+        a premise SEC-021 rests on.
+
+    Per-module, because a binding in one file says nothing about another.
+    """
+    modules: set[str] = set()
+    functions: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "importlib":
+                    modules.add(alias.asname or "importlib")
+                elif alias.name.startswith("importlib.") and not alias.asname:
+                    # `import importlib.util` also binds `importlib` itself.
+                    # With an asname it binds only the submodule, which has no
+                    # import_module, so that spelling is deliberately skipped.
+                    modules.add("importlib")
+        elif isinstance(node, ast.ImportFrom) and node.module == "importlib":
+            for alias in node.names:
+                if alias.name == "import_module":
+                    functions.add(alias.asname or "import_module")
+                elif alias.name == "*":
+                    # `from importlib import *` binds import_module under its
+                    # own name. The one spelling that reaches it without any
+                    # nameable binding, so it is listed rather than left as a
+                    # hole in the receiver resolution above.
+                    functions.add("import_module")
+    return frozenset(modules), frozenset(functions)
+
+
+def _dynamic_import_target(
+    node: ast.Call,
+    modules: frozenset[str] = frozenset(),
+    functions: frozenset[str] = frozenset(),
+) -> str | None:
     """The literal module name a dynamic import call names, if any.
 
-    Covers `__import__("x")` and `importlib.import_module("x")`, including the
-    `import importlib` / `from importlib import import_module` spellings. A
-    non-literal first argument returns None: unresolvable, and saying so beats
-    guessing.
+    Covers `__import__("x")` and `importlib.import_module("x")` across the
+    `import importlib`, `import importlib as il`,
+    `from importlib import import_module` and `... as imp` spellings, and
+    reads the target from the `name=` keyword as well as the first positional
+    argument. A non-literal target returns None: unresolvable, and saying so
+    beats guessing.
+
+    `modules` and `functions` come from `_importlib_bindings` on the enclosing
+    module. Called without them, only the unambiguous builtin `__import__`
+    spelling is recognised -- the conservative direction, since an unresolved
+    receiver must not be assumed to be importlib's.
     """
     callee = node.func
     dynamic = False
-    if isinstance(callee, ast.Name) and callee.id in {"__import__", "import_module"}:
-        dynamic = True
-    elif isinstance(callee, ast.Attribute) and callee.attr in {"__import__", "import_module"}:
-        dynamic = True
-    if not dynamic or not node.args:
+    if isinstance(callee, ast.Name):
+        # `__import__` is a builtin, so the bare name needs no binding.
+        dynamic = callee.id == "__import__" or callee.id in functions
+    elif isinstance(callee, ast.Attribute):
+        receiver = callee.value
+        named = isinstance(receiver, ast.Name)
+        if callee.attr == "import_module":
+            dynamic = named and receiver.id in modules
+        elif callee.attr == "__import__":
+            dynamic = named and receiver.id == "builtins"
+    if not dynamic:
         return None
-    first = node.args[0]
-    return first.value if isinstance(first, ast.Constant) and isinstance(first.value, str) else None
+    target = node.args[0] if node.args else None
+    if target is None:
+        target = next((kw.value for kw in node.keywords if kw.arg == "name"), None)
+    if not isinstance(target, ast.Constant) or not isinstance(target.value, str):
+        return None
+    return target.value
 
 
 def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
@@ -1518,6 +1582,9 @@ def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
     worth having if the discrimination it claims can be demonstrated.
     """
     found: list[tuple[int, str]] = []
+    # Resolved once for the module, not per call node: `_importlib_bindings`
+    # walks the whole tree, so calling it inside the loop would be quadratic.
+    modules, functions = _importlib_bindings(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             # `__import__("mcp")` and `importlib.import_module("mcp")` import
@@ -1526,7 +1593,7 @@ def _mcp_imports_in(tree: ast.AST) -> list[tuple[int, str]]:
             # past. Only a literal target is checked: a computed one cannot be
             # resolved here, and a guard that guessed would be worse than one
             # whose limit is written down. Raised by cubic on #1376.
-            name = _dynamic_import_target(node)
+            name = _dynamic_import_target(node, modules, functions)
             if name is not None and (name == "mcp" or name.startswith("mcp.")):
                 found.append((node.lineno, f"dynamic import of {name}"))
         elif isinstance(node, ast.Import):

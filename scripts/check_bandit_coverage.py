@@ -64,7 +64,7 @@ import subprocess  # nosec B404 - fixed argv, no shell; see _run_bandit
 import sys
 import tempfile
 import tomllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -270,10 +270,21 @@ def submodule_exclusions(root: Path, targets: list[str], excluded: list[str]) ->
     """
     problems: list[str] = []
     excluded_set = {name.strip().strip("/") for name in excluded}
+    # Targets are normalised before comparison, because `[tool.bandit] targets`
+    # may legitimately say `.` or `./workers` and a raw `strip("/")` turns the
+    # first into "." and the second into "./workers" -- neither of which is a
+    # path prefix of `workers/cranbania`, so the guard would have reported no
+    # scope violation while bandit scanned the submodule anyway. The
+    # whole-repository forms ("", ".") cover every submodule by definition.
+    # Raised by cubic on #1403.
+    normalised = {PurePosixPath(target.strip()).as_posix().strip("/") for target in targets}
+    scans_everything = bool(normalised & {"", "."})
     for submodule in sorted(submodule_paths(root)):
         if submodule in excluded_set:
             continue
-        if any(inside_submodule(submodule, frozenset({target.strip("/")})) for target in targets):
+        if scans_everything or any(
+            inside_submodule(submodule, frozenset({target})) for target in normalised
+        ):
             problems.append(
                 f"the submodule {submodule} is inside a scanned target and is not in "
                 "[tool.bandit] exclude_dirs, so its findings would be counted against "

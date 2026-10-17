@@ -430,3 +430,76 @@ def test_the_freshness_rule_is_read_from_the_checker_not_the_subject(tmp_path, m
     monkeypatch.setattr(cdp, "ROOT", tmp_path)
     assert not (tmp_path / "src" / "immune" / "verdict.py").exists()
     assert cdp._census_mcp_premises() == []
+
+
+# --- the dynamic-import receiver ----------------------------------------
+#
+# cubic raised both halves on #1403: matching `.import_module` on any receiver
+# claims unrelated code, and matching only the bare spelling lets an alias or
+# the `name=` keyword walk past. The bindings are now read from each module's
+# own imports.
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'import importlib as il\nil.import_module("mcp")\n',
+        'from importlib import import_module as imp\nimp("mcp")\n',
+        'from importlib import import_module\nimport_module(name="mcp")\n',
+        'import importlib\nimportlib.import_module(name="mcp.server")\n',
+        'import builtins\nbuiltins.__import__("mcp")\n',
+        'import importlib.util\nimportlib.import_module("mcp")\n',
+        'from importlib import *\nimport_module("mcp")\n',
+    ],
+    ids=[
+        "module-alias",
+        "function-alias",
+        "name-keyword",
+        "name-keyword-dotted",
+        "builtins-dunder",
+        "submodule-import-binds-parent",
+        "wildcard-import",
+    ],
+)
+def test_every_importlib_spelling_is_seen(source):
+    """Each of these reached the `mcp` SDK and none was recognised before."""
+    assert _imports(source), f"bypassed: {source!r}"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'self.import_module("mcp")\n',
+        'registry.import_module("mcp")\n',
+        'loader.import_module("mcp")\n',
+        'import_module("mcp")\n',
+        'il.import_module("mcp")\n',
+        'obj.__import__("mcp")\n',
+    ],
+    ids=[
+        "self-method",
+        "named-receiver",
+        "loader-method",
+        "unbound-bare-name",
+        "unbound-receiver",
+        "dunder-on-object",
+    ],
+)
+def test_an_unrelated_import_module_method_is_not_claimed(source):
+    """`.import_module` is an ordinary method name. Claiming every receiver
+    would have this check firing on code that never touches importlib, and the
+    quickest way to get a noisy check disabled is to have it cry about the
+    thing it was told to ignore."""
+    assert _imports(source) == [], f"false positive: {source!r}"
+
+
+def test_a_locally_defined_import_module_is_not_importlibs():
+    """The whole-module case: a class with its own `import_module`, called on
+    an instance, resolves to no importlib binding and is left alone."""
+    source = (
+        "class Registry:\n"
+        "    def import_module(self, name):\n"
+        "        return name\n"
+        'Registry().import_module("mcp")\n'
+    )
+    assert _imports(source) == []
