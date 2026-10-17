@@ -277,6 +277,20 @@ def submodule_exclusions(root: Path, targets: list[str], excluded: list[str]) ->
     # scope violation while bandit scanned the submodule anyway. The
     # whole-repository forms ("", ".") cover every submodule by definition.
     # Raised by cubic on #1403.
+    # A non-string target is reported, not raised on. `[tool.bandit] targets`
+    # is TOML anyone can edit, and `targets = [1]` is valid TOML; `.strip()`
+    # on it raised AttributeError and took the checker down before it could
+    # say what was wrong. A checker whose job is to report problems must not
+    # become one. Raised by cubic on #1403.
+    wrong_type = [repr(target) for target in targets if not isinstance(target, str)]
+    if wrong_type:
+        return [
+            "[tool.bandit] targets must be strings; found "
+            + ", ".join(wrong_type)
+            + ". Until that is fixed the scanned surface cannot be compared "
+            "against the submodule boundary, so this is reported rather than "
+            "read as no violation."
+        ]
     normalised = {PurePosixPath(target.strip()).as_posix().strip("/") for target in targets}
     scans_everything = bool(normalised & {"", "."})
     for submodule in sorted(submodule_paths(root)):

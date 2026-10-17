@@ -299,16 +299,53 @@ def test_the_boundary_is_read_once_per_root(tmp_path, monkeypatch):
     repo.reset_boundary_cache()
 
 
-def test_resetting_the_cache_re_reads_the_tree():
-    """The cache has a stated lifetime, so the escape hatch has to work -- a
-    cache nobody can clear would make this module untestable against a tree
-    that changes, which is exactly what the fixtures above do."""
+def test_resetting_the_cache_re_reads_the_tree(tmp_path, monkeypatch):
+    """The cache has a stated lifetime, so the escape hatch has to work.
+
+    Asserting the same value either side of the reset proved nothing: a
+    `reset_boundary_cache()` that did nothing at all would pass, because both
+    calls would return the one cached answer. Raised by cubic on #1403. So
+    this counts git invocations across the reset AND changes the tree, which
+    is the only way to tell a cleared cache from a stale one.
+    """
     import src.immune.repo as repo
 
     repo.reset_boundary_cache()
-    assert repo.submodule_paths(ROOT) == {"compliance/magna-carta", "workers/cranbania"}
+    _repo_with_gitlinks(tmp_path, "vendor/first")
+
+    spawns = {"n": 0}
+    real = repo._git
+
+    def counting(root, *args):
+        spawns["n"] += 1
+        return real(root, *args)
+
+    monkeypatch.setattr(repo, "_git", counting)
+
+    assert repo.submodule_paths(tmp_path) == {"vendor/first"}
+    after_first = spawns["n"]
+    assert repo.submodule_paths(tmp_path) == {"vendor/first"}
+    assert spawns["n"] == after_first, "the second call must come from the cache"
+
+    # Add a second gitlink, then clear. A no-op reset would still answer
+    # {"vendor/first"} from the cache and spawn nothing.
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"160000,{2:040x},vendor/second",
+        ],
+        check=True,
+        timeout=30,
+    )
     repo.reset_boundary_cache()
-    assert repo.submodule_paths(ROOT) == {"compliance/magna-carta", "workers/cranbania"}
+    assert repo.submodule_paths(tmp_path) == {"vendor/first", "vendor/second"}
+    assert spawns["n"] > after_first, "the reset must make the next call ask git again"
+    repo.reset_boundary_cache()
 
 
 # --- the other half: the validator that refuses the evasion --------------

@@ -62,12 +62,21 @@ import functools
 import re
 import shutil
 import subprocess  # nosec B404 - absolute argv[0], no shell; see _gitlinks
+import sys
 from pathlib import Path
 
 # `<mode> <object> <stage>\t<path>` from `ls-files --stage -z`: NUL-separated,
 # so there is no trailing newline and no C-quoting to undo, and matched with
 # `fullmatch` -- see `_gitlinks`.
-_STAGE_RECORD = re.compile(r"160000 [0-9a-f]{40} [0-3]\t(?P<path>.+)", re.DOTALL)
+#
+# 40 OR 64 hex, because an object id is SHA-1 in a repository created the old
+# way and SHA-256 in one created with `--object-format=sha256`. Measured: a
+# SHA-256 repository holding a gitlink reported NO submodules at all under the
+# 40-only pattern, so its submodule silently rejoined every count this
+# boundary exists to keep out -- the exact failure this module was written to
+# prevent, in the one repository shape nobody here has. Raised by cubic on
+# #1403. `.+` with DOTALL, because a path may legally hold a newline.
+_STAGE_RECORD = re.compile(r"160000 [0-9a-f]{40}(?:[0-9a-f]{24})? [0-3]\t(?P<path>.+)", re.DOTALL)
 
 
 def _git(root: Path, *args: str) -> str | None:
@@ -78,6 +87,23 @@ def _git(root: Path, *args: str) -> str | None:
     `shell=False`. A missing git, a non-repository, a timeout or a non-zero
     exit all read as None, which every caller turns into "no boundary" rather
     than into an exclusion.
+
+    READ AS BYTES, decoded here. `text=True` was wrong for `-z` output in two
+    ways, both measured on a planted repository and both raised by cubic on
+    #1403:
+
+      * a path git stores as raw bytes that are not valid UTF-8 (`vendor/bad`
+        plus 0xff) raised `UnicodeDecodeError` inside `subprocess.run`. That is
+        a `ValueError`, so the `(OSError, SubprocessError)` guard below never
+        saw it and the whole checker died on one filename;
+      * `text=True` turns on universal newlines, so a path containing a
+        carriage return came back changed: git emits `vendor/cr\rodd` and
+        Python handed over `vendor/cr\nodd`. A boundary that silently renames
+        its own subject cannot match it.
+
+    `surrogateescape` is the filesystem convention: undecodable bytes become
+    lone surrogates that round-trip back to the same bytes, so nothing raises
+    and nothing is rewritten.
     """
     git = shutil.which("git")
     if git is None:
@@ -86,13 +112,14 @@ def _git(root: Path, *args: str) -> str | None:
         proc = subprocess.run(  # nosec B603 - absolute argv[0] from which, shell=False, fixed args
             [git, "-C", str(root), *args],
             capture_output=True,
-            text=True,
             timeout=30,
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return None
-    return proc.stdout if proc.returncode == 0 else None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.decode(sys.getfilesystemencoding(), "surrogateescape")
 
 
 @functools.lru_cache(maxsize=None)

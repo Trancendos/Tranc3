@@ -441,15 +441,27 @@ def test_the_freshness_rule_is_read_from_the_checker_not_the_subject(tmp_path, m
 
 
 @pytest.mark.parametrize(
-    "source",
+    ("source", "expected"),
     [
-        'import importlib as il\nil.import_module("mcp")\n',
-        'from importlib import import_module as imp\nimp("mcp")\n',
-        'from importlib import import_module\nimport_module(name="mcp")\n',
-        'import importlib\nimportlib.import_module(name="mcp.server")\n',
-        'import builtins\nbuiltins.__import__("mcp")\n',
-        'import importlib.util\nimportlib.import_module("mcp")\n',
-        'from importlib import *\nimport_module("mcp")\n',
+        ('import importlib as il\nil.import_module("mcp")\n', [(2, "dynamic import of mcp")]),
+        (
+            'from importlib import import_module as imp\nimp("mcp")\n',
+            [(2, "dynamic import of mcp")],
+        ),
+        (
+            'from importlib import import_module\nimport_module(name="mcp")\n',
+            [(2, "dynamic import of mcp")],
+        ),
+        (
+            'import importlib\nimportlib.import_module(name="mcp.server")\n',
+            [(2, "dynamic import of mcp.server")],
+        ),
+        ('import builtins\nbuiltins.__import__("mcp")\n', [(2, "dynamic import of mcp")]),
+        (
+            'import importlib.util\nimportlib.import_module("mcp")\n',
+            [(2, "dynamic import of mcp")],
+        ),
+        ('from importlib import *\nimport_module("mcp")\n', [(2, "dynamic import of mcp")]),
     ],
     ids=[
         "module-alias",
@@ -461,9 +473,16 @@ def test_the_freshness_rule_is_read_from_the_checker_not_the_subject(tmp_path, m
         "wildcard-import",
     ],
 )
-def test_every_importlib_spelling_is_seen(source):
-    """Each of these reached the `mcp` SDK and none was recognised before."""
-    assert _imports(source), f"bypassed: {source!r}"
+def test_every_importlib_spelling_is_seen(source, expected):
+    """Each of these reached the `mcp` SDK and none was recognised before.
+
+    The EXACT (line, description), not merely a non-empty result. Asserting
+    truthiness let a case pass for the wrong reason: a future false positive
+    on the `importlib` statement on line 1 would satisfy it while the dynamic
+    call on line 2 went back to being missed, which is the regression these
+    cases exist to catch. Raised by cubic on #1403.
+    """
+    assert cdp._mcp_imports_in(ast.parse(source)) == expected
 
 
 @pytest.mark.parametrize(
