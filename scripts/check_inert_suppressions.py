@@ -215,19 +215,33 @@ def _file_ignores(shown: str, per_file: dict[str, list[str]]) -> set[str]:
     return codes
 
 
-def _matches(code: str, selectors) -> bool:
-    """Whether any selector covers `code`, by ruff's prefix rule.
+def _specificity(code: str, selectors) -> int | None:
+    """How specifically `selectors` covers `code`, or None if it does not.
+
+    The number is the length of the LONGEST selector that covers the code,
+    which is what ruff compares when `select` and `ignore` both match: the
+    more specific selector wins, whichever list it is in. `ALL` covers
+    everything at specificity 0, because it is ruff's reserved selector for
+    every rule rather than a code prefix -- so any real prefix beats it, and
+    `ignore = ["ALL"]` or a per-file `["ALL"]` still matches rather than
+    reading as no match at all (that bug would have made every suppression
+    look live and stopped the ceiling counting the inert ones; raised by cubic
+    on #1403).
 
     One implementation for `select`, `ignore` and per-file ignores, so the
     three cannot drift apart the way they already had.
-
-    `ALL` is ruff's reserved selector for every rule, not a code prefix, so it
-    is matched as such. `classify` tests `"ALL" in select` separately before it
-    gets here, but `ignore = ["ALL"]` and a per-file `["ALL"]` had no such path
-    -- every suppression would then have read as live and the ceiling would
-    have stopped counting the inert ones. Raised by cubic on #1403.
     """
-    return any(prefix == "ALL" or code.startswith(prefix) for prefix in selectors)
+    lengths = [
+        0 if prefix == "ALL" else len(prefix)
+        for prefix in selectors
+        if prefix == "ALL" or code.startswith(prefix)
+    ]
+    return max(lengths) if lengths else None
+
+
+def _matches(code: str, selectors) -> bool:
+    """Whether any selector covers `code` at all."""
+    return _specificity(code, selectors) is not None
 
 
 def classify(
@@ -235,27 +249,38 @@ def classify(
 ) -> str:
     """Why ruff cannot raise this code here, or "" if it can.
 
-    `ALL` selects everything, so nothing is inert under it. Otherwise a code
-    is reachable when any selected prefix is a prefix of it -- ruff's own
-    matching -- and unreachable codes are the subject of this checker.
-
     EVERY one of the three lists is a list of SELECTORS, not of codes, and
     each is matched by prefix accordingly. `ignore` was matched exactly here
     while `select` and the per-file ignores were matched by prefix, which is
     not a distinction ruff makes: `ignore = ["D"]` suppresses D205 and this
-    function would have called a `# noqa: D205` live. This repository's
-    current `ignore` happens to hold whole codes (`E501`, `B008`, `C901`),
-    where exact and prefix matching agree -- so the defect was latent, not
-    visible, and the fix changes no present count. It changes what happens the
-    first time someone ignores a family.
+    function would have called a `# noqa: D205` live.
+
+    When `select` and `ignore` BOTH cover a code, ruff does not simply let
+    `ignore` win -- the more specific selector does, whichever list it is in.
+    Measured against the installed ruff, on a file holding one D205:
+
+        --select D205 --ignore D     -> Found 1 error   (select wins)
+        --select D    --ignore D205  -> Found 2 errors  (D205 silenced)
+        --select D205 --ignore D205  -> All checks passed  (tie: ignore wins)
+
+    So a narrower `select` keeps the rule live under a broader `ignore`, and
+    this function compared membership alone until 2026-10-17 -- it called the
+    first of those three inert. Latent for this repository, whose `ignore`
+    entries (`E501`, `B008`, `C901`) are each MORE specific than the families
+    it selects, so the comparison never had to be made; wrong the first time
+    anyone selects a single code. Raised by coderabbit on #1403.
+
+    Per-file ignores are different and are checked first: they are not ranked
+    against `select` at all. Measured: per-file `["D"]` against
+    `select = ["D205"]` reports "All checks passed!".
     """
     if _matches(code, file_ignores):
         return INERT_IGNORED
-    if "ALL" in select:
-        return INERT_IGNORED if _matches(code, ignore) else ""
-    if not _matches(code, select):
+    selected = _specificity(code, select)
+    if selected is None:
         return INERT_NOT_SELECTED
-    if _matches(code, ignore):
+    ignored = _specificity(code, ignore)
+    if ignored is not None and ignored >= selected:
         return INERT_IGNORED
     return ""
 

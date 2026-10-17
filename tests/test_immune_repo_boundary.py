@@ -380,6 +380,52 @@ def test_the_pin_validator_refuses_a_declaration_with_no_gitlink(tmp_path, monke
     assert "src" in out
 
 
+def test_the_pin_validator_refuses_a_declaration_with_a_path_and_no_url(
+    tmp_path, monkeypatch, capsys
+):
+    """REGRESSION. The check above was built from the keys of `_submodule_urls`,
+    which keeps a section only when it has BOTH `path` and `url` -- so
+
+        [submodule "nourl"]
+            path = src
+
+    was dropped before the check could see it and passed silently. Measured by
+    appending exactly that to this repository's own `.gitmodules`: the
+    validator printed the two real submodules and exited 0. The spelling with
+    no url is the cheaper evasion, not the harder one. Raised by coderabbit on
+    #1403."""
+    vsp = _load("vsp_nourl", "scripts/validate_submodule_pins.py")
+    _repo_with_gitlinks(tmp_path, "vendor/real")
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "vendor/real"]\n\tpath = vendor/real\n\turl = https://example.invalid/0.git\n'
+        '[submodule "nourl"]\n\tpath = src\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(vsp, "ROOT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["validate_submodule_pins.py"])
+    assert vsp.main() == 1
+    assert "src" in capsys.readouterr().out
+
+
+def test_the_pin_validator_normalises_a_trailing_slash_in_a_declaration(
+    tmp_path, monkeypatch, capsys
+):
+    """`path = src/` and `path = src` name the same directory, and `repo.py`
+    strips the slash when it compares them. Refusing one spelling and not the
+    other would leave the evasion open under a character nobody reads."""
+    vsp = _load("vsp_slash", "scripts/validate_submodule_pins.py")
+    _repo_with_gitlinks(tmp_path, "vendor/real")
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "vendor/real"]\n\tpath = vendor/real\n\turl = https://example.invalid/0.git\n'
+        '[submodule "slash"]\n\tpath = src/\n\turl = https://example.invalid/s.git\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(vsp, "ROOT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["validate_submodule_pins.py"])
+    assert vsp.main() == 1
+    assert "src" in capsys.readouterr().out
+
+
 def test_the_validators_json_mode_stays_machine_readable(tmp_path, monkeypatch, capsys):
     """REGRESSION. `--json` is documented as machine-readable and the refusal
     above returned before the JSON branch, so a caller parsing the output saw

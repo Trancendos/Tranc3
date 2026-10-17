@@ -41,7 +41,11 @@ assumed. Raised by cubic on #1403 and it is right.
 
 Both halves are closed. That script now REFUSES a declaration with no gitlink,
 so the evasion fails the "Validate submodule pins are reachable" check as well
-as being distrusted here; one place reports the shape, another rejects it.
+as being distrusted here; one place reports the shape, another rejects it. It
+refuses it in EITHER spelling: the first version of that check read the keys of
+its url map, which keeps a section only when it has both `path` and `url`, so a
+section carrying `path = src` alone was dropped before the check ran and passed
+silently — measured by planting it. Raised by coderabbit on #1403.
 
 So the boundary now comes from `git ls-files --stage` mode `160000`: a path is
 a different repository because git records it as one, not because a file says

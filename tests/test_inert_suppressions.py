@@ -74,6 +74,36 @@ def test_select_all_makes_nothing_inert_except_an_explicit_ignore():
     assert cis.classify("S310", ["ALL"], {"S310"}) == cis.INERT_IGNORED
 
 
+def test_a_narrower_select_beats_a_broader_ignore():
+    """ruff ranks the two lists by specificity; it does not just prefer ignore.
+
+    Probed against the installed ruff on a file holding one D205:
+    `--select D205 --ignore D` reports "Found 1 error". A membership test
+    called that suppression inert, which would have been an instruction to
+    delete a comment that is doing its job.
+    """
+    assert cis.classify("D205", ["D205"], {"D"}) == ""
+    assert cis.classify("S310", ["S310"], {"S"}) == ""
+
+
+def test_a_narrower_ignore_beats_a_broader_select():
+    """The other direction, same probe: `--select D --ignore D205` reports
+    two errors and not the D205 one, so the suppression really is inert."""
+    assert cis.classify("D205", ["D"], {"D205"}) == cis.INERT_IGNORED
+
+
+def test_equal_specificity_goes_to_ignore():
+    """`--select D205 --ignore D205` reports "All checks passed!"."""
+    assert cis.classify("D205", ["D205"], {"D205"}) == cis.INERT_IGNORED
+
+
+def test_a_per_file_ignore_outranks_any_select():
+    """Per-file ignores are not ranked against `select` at all. Probed:
+    per-file `["D"]` against `select = ["D205"]` passes cleanly, so the
+    narrower select does NOT win here the way it does above."""
+    assert cis.classify("D205", ["D205"], set(), frozenset({"D"})) == cis.INERT_IGNORED
+
+
 def test_an_unreadable_pyproject_yields_no_select_rather_than_a_guess(tmp_path):
     """Failing closed here would mark every suppression in the tree inert.
     Returning an empty config is honest, and `scan` reports it as such."""

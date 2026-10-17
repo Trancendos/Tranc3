@@ -120,6 +120,42 @@ def _submodule_urls() -> dict[str, str]:
     return {paths[name]: url for name, url in remotes.items() if name in paths}
 
 
+def _declared_paths() -> set[str]:
+    """Every path `.gitmodules` declares, whether or not it also gives a url.
+
+    Deliberately NOT derived from `_submodule_urls()`, which keeps a section
+    only when it has BOTH `path` and `url` -- so a section with a path and no
+    url never reached the caller, and the unbacked-declaration check below
+    could not see it. Measured: appending
+
+        [submodule "nourl"]
+            path = src
+
+    to this repository's `.gitmodules` and running this script printed the two
+    real submodules and exited 0. That spelling is the whole evasion the check
+    exists to refuse, because `path = src` is what would have excluded every
+    file under `src/` from the boundary walks. Raised by coderabbit on #1403.
+
+    Paths are stripped of surrounding whitespace and slashes to match how
+    `src/immune/repo.py` normalises them, so `path = src/` and `path = src`
+    cannot name the same directory and disagree about it.
+    """
+    if not (ROOT / ".gitmodules").is_file():
+        return set()
+    proc = _run(["git", "config", "--file", ".gitmodules", "--list"])
+    if proc.returncode != 0:
+        return set()
+    declared: set[str] = set()
+    for line in proc.stdout.splitlines():
+        key, sep, value = line.partition("=")
+        if not sep:
+            continue
+        _, _, field = key.removeprefix("submodule.").rpartition(".")
+        if field == "path" and value.strip().strip("/"):
+            declared.add(value.strip().strip("/"))
+    return declared
+
+
 def _recorded_pins() -> dict[str, str]:
     """Map submodule path -> pinned SHA, read from the superproject gitlink.
 
@@ -194,7 +230,11 @@ def main() -> int:
     # boundary now comes from gitlinks instead, and this check closes the other
     # half: the declaration that would have done it is refused here rather than
     # merely distrusted there. Raised by cubic on #1403.
-    unbacked = sorted(set(urls) - set(pins))
+    # Built from every declared path, NOT from `urls`: a section with a `path`
+    # and no `url` is dropped before `_submodule_urls` returns, so reading the
+    # keys of `urls` here let exactly that spelling through. See
+    # `_declared_paths`.
+    unbacked = sorted(_declared_paths() - set(pins))
     if unbacked:
         # `--json` is documented as machine-readable, and this early return
         # printed prose through it, so a caller parsing the output could not
