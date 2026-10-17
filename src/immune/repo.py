@@ -58,6 +58,7 @@ a sensor's own scope.
 
 from __future__ import annotations
 
+import functools
 import re
 import shutil
 import subprocess  # nosec B404 - absolute argv[0], no shell; see _gitlinks
@@ -94,9 +95,25 @@ def _git(root: Path, *args: str) -> str | None:
     return proc.stdout if proc.returncode == 0 else None
 
 
-def _gitlinks(root: Path) -> frozenset[str]:
-    """Paths git records as gitlinks (mode 160000) in `root`'s index."""
-    out = _git(root, "ls-files", "--stage", "-z")
+@functools.lru_cache(maxsize=None)
+def _gitlinks_for(resolved: str) -> frozenset[str]:
+    """`_gitlinks` keyed by resolved path, so git is asked once per root.
+
+    MEASURED, because the first version asked per call and that is not a
+    detail: `check_sec_021()` alone calls `_in_submodule` 1,771 times on this
+    tree, each spawning `git ls-files` at ~4ms, and SEC-006 and SEC-020 walk
+    the tree too -- roughly twenty seconds of subprocesses added to the
+    production gate by a function that returns the same two paths every time.
+    Reading `.gitmodules` from disk per call was merely wasteful; spawning a
+    process per call is a latency regression. Raised by cubic on #1403.
+
+    The cache lasts for the process, which is the right lifetime for a checker
+    run -- the tree does not grow a submodule mid-run. A long-lived process
+    that adds one would see the old answer, so `reset_boundary_cache()` exists
+    for that and for tests that need it; nothing in this estate's checkers
+    does, because each is a short-lived command.
+    """
+    out = _git(Path(resolved), "ls-files", "--stage", "-z")
     if out is None:
         return frozenset()
     found = set()
@@ -109,6 +126,39 @@ def _gitlinks(root: Path) -> frozenset[str]:
         if matched:
             found.add(matched.group("path").strip("/"))
     return frozenset(found)
+
+
+def _gitlinks(root: Path) -> frozenset[str]:
+    """Paths git records as gitlinks (mode 160000) in `root`'s index."""
+    return _gitlinks_for(str(Path(root).resolve()))
+
+
+@functools.lru_cache(maxsize=None)
+def _declared_for(resolved: str) -> frozenset[str]:
+    """`declared_paths` keyed by resolved path. Cached for the same reason as
+    `_gitlinks_for`: it also spawns git, and the mismatch reporters call both."""
+    root = Path(resolved)
+    if not (root / ".gitmodules").is_file():
+        return frozenset()
+    out = _git(root, "config", "--file", ".gitmodules", "--list", "-z")
+    if out is None:
+        return frozenset()
+    found = set()
+    for record in out.split("\0"):
+        if not record:
+            continue
+        # `git config -z` emits `key\nvalue` per record, so a value holding a
+        # newline cannot be split into two records.
+        key, _, value = record.partition("\n")
+        if key.lower().endswith(".path") and value.strip():
+            found.add(value.strip().strip("/"))
+    return frozenset(found)
+
+
+def reset_boundary_cache() -> None:
+    """Forget the per-root answers. For a process that outlives a tree change."""
+    _gitlinks_for.cache_clear()
+    _declared_for.cache_clear()
 
 
 def declared_paths(root: Path) -> frozenset[str]:
@@ -127,21 +177,7 @@ def declared_paths(root: Path) -> frozenset[str]:
     `scripts/validate_submodule_pins.py` already uses on this same file, so the
     two can no longer disagree about what it says.
     """
-    if not (root / ".gitmodules").is_file():
-        return frozenset()
-    out = _git(root, "config", "--file", ".gitmodules", "--list", "-z")
-    if out is None:
-        return frozenset()
-    found = set()
-    for record in out.split("\0"):
-        if not record:
-            continue
-        # `git config -z` emits `key\nvalue` per record, so a value holding a
-        # newline cannot be split into two records.
-        key, _, value = record.partition("\n")
-        if key.lower().endswith(".path") and value.strip():
-            found.add(value.strip().strip("/"))
-    return frozenset(found)
+    return _declared_for(str(Path(root).resolve()))
 
 
 def submodule_paths(root: Path) -> frozenset[str]:

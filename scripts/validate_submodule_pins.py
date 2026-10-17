@@ -196,15 +196,27 @@ def main() -> int:
     # merely distrusted there. Raised by cubic on #1403.
     unbacked = sorted(set(urls) - set(pins))
     if unbacked:
-        print("Submodule declared in .gitmodules with no gitlink behind it:")
-        for path in unbacked:
-            print(f"  ✗ {path} — declared, but the tree records no submodule there")
-        print()
-        print("A path is a different repository because git records a gitlink at it,")
-        print("not because .gitmodules says so. An entry like this validates nothing")
-        print("here and would widen or narrow any control that trusts the file.")
-        print("Fix: add the submodule properly (`git submodule add`), or remove the")
-        print("entry. See src/immune/repo.py for what reads this boundary.")
+        # `--json` is documented as machine-readable, and this early return
+        # printed prose through it, so a caller parsing the output could not
+        # see this failure at all -- it would read an empty stream and a
+        # non-zero exit. Raised by cubic on #1403. `unbacked` is a new key
+        # rather than a `results` row, because a declaration with no gitlink
+        # has no pinned SHA to report and inventing one would be the same
+        # defect this check exists to catch.
+        if args.json:
+            print(
+                json.dumps({"results": [], "broken": len(unbacked), "unbacked": unbacked}, indent=2)
+            )
+        else:
+            print("Submodule declared in .gitmodules with no gitlink behind it:")
+            for path in unbacked:
+                print(f"  ✗ {path} — declared, but the tree records no submodule there")
+            print()
+            print("A path is a different repository because git records a gitlink at it,")
+            print("not because .gitmodules says so. An entry like this validates nothing")
+            print("here and would widen or narrow any control that trusts the file.")
+            print("Fix: add the submodule properly (`git submodule add`), or remove the")
+            print("entry. See src/immune/repo.py for what reads this boundary.")
         return 1
 
     if not pins:
