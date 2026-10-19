@@ -1696,8 +1696,10 @@ The site that would matter most if this slipped is `src/security/security_framew
 which is the one place that genuinely verifies with an asymmetric public key:
 
 ```python
-ALGORITHM = "RS256";  _VERIFY_KEY = _PUBLIC_KEY_PEM   # when RSA keys are configured
-ALGORITHM = "HS256";  _VERIFY_KEY = SECRET_KEY         # fallback
+ALGORITHM = "RS256"
+_VERIFY_KEY = _PUBLIC_KEY_PEM  # when RSA keys are configured
+ALGORITHM = "HS256"
+_VERIFY_KEY = SECRET_KEY  # fallback
 ...
 jwt.decode(token, _VERIFY_KEY, algorithms=[ALGORITHM])
 ```
