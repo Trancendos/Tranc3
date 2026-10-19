@@ -261,9 +261,9 @@
     {
       "type": "library",
       "name": "aiohttp",
-      "bom-ref": "pkg:pypi/aiohttp@3.14.3",
-      "purl": "pkg:pypi/aiohttp@3.14.3",
-      "version": "3.14.3"
+      "bom-ref": "pkg:pypi/aiohttp@3.14.4",
+      "purl": "pkg:pypi/aiohttp@3.14.4",
+      "version": "3.14.4"
     },
     {
       "type": "library",
