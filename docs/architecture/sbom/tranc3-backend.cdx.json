@@ -608,38 +608,38 @@
     {
       "type": "library",
       "name": "vite",
-      "bom-ref": "pkg:npm/vite@8.3.1",
+      "bom-ref": "pkg:npm/vite@8.3.2",
       "scope": "required",
       "properties": [
         {
           "name": "tranc3:declared-range",
-          "value": "8.3.1"
+          "value": "8.3.2"
         },
         {
           "name": "tranc3:manifest-field",
           "value": "dependencies"
         }
       ],
-      "version": "8.3.1",
-      "purl": "pkg:npm/vite@8.3.1"
+      "version": "8.3.2",
+      "purl": "pkg:npm/vite@8.3.2"
     },
     {
       "type": "library",
       "name": "ws",
-      "bom-ref": "pkg:npm/ws@8.21.3",
+      "bom-ref": "pkg:npm/ws@8.22.0",
       "scope": "required",
       "properties": [
         {
           "name": "tranc3:declared-range",
-          "value": "8.21.3"
+          "value": "8.22.0"
         },
         {
           "name": "tranc3:manifest-field",
           "value": "dependencies"
         }
       ],
-      "version": "8.21.3",
-      "purl": "pkg:npm/ws@8.21.3"
+      "version": "8.22.0",
+      "purl": "pkg:npm/ws@8.22.0"
     }
   ]
 }
