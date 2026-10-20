@@ -15,9 +15,13 @@ Two primary abstractions:
 import asyncio
 import gc
 import logging
+import math
+import operator
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
+
+_HAS_SUMPROD = hasattr(math, "sumprod")
 
 logger = logging.getLogger(__name__)
 
@@ -412,8 +416,17 @@ class AdaptiveConfigTuner:
         # OLS linear: y = a + b*x  →  optimal is the value at x=n (next step)
         x_mean = sum(xs) / n
         y_mean = sum(values) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+
+        dx = [x - x_mean for x in xs]
+        dy = [y - y_mean for y in values]
+
+        if _HAS_SUMPROD:
+            ss_xy = math.sumprod(dx, dy)  # type: ignore[attr-defined]
+            ss_xx = math.sumprod(dx, dx)  # type: ignore[attr-defined]
+        else:
+            ss_xy = sum(map(operator.mul, dx, dy))
+            ss_xx = sum(map(operator.mul, dx, dx))
+
         if abs(ss_xx) < 1e-12:
             return y_mean
 
@@ -442,18 +455,40 @@ class AdaptiveConfigTuner:
         n = len(values)
         xs = list(range(n))
         y_mean = sum(values) / n
-        ss_tot = sum((y - y_mean) ** 2 for y in values)
+
+        dy = [y - y_mean for y in values]
+
+        if _HAS_SUMPROD:
+            ss_tot = math.sumprod(dy, dy)  # type: ignore[attr-defined]
+        else:
+            ss_tot = sum(map(operator.mul, dy, dy))
+
         if ss_tot < 1e-12:
             return 0.0
 
         x_mean = sum(xs) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+
+        dx = [x - x_mean for x in xs]
+
+        if _HAS_SUMPROD:
+            ss_xy = math.sumprod(dx, dy)  # type: ignore[attr-defined]
+            ss_xx = math.sumprod(dx, dx)  # type: ignore[attr-defined]
+        else:
+            ss_xy = sum(map(operator.mul, dx, dy))
+            ss_xx = sum(map(operator.mul, dx, dx))
+
         if abs(ss_xx) < 1e-12:
             return 0.0
         b = ss_xy / ss_xx
         a = y_mean - b * x_mean
-        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
+
+        d_res = [y - (a + b * x) for x, y in zip(xs, values, strict=False)]
+
+        if _HAS_SUMPROD:
+            ss_res = math.sumprod(d_res, d_res)  # type: ignore[attr-defined]
+        else:
+            ss_res = sum(map(operator.mul, d_res, d_res))
+
         r2 = 1.0 - (ss_res / ss_tot)
 
         # Scale by sample adequacy (fully confident after 50+ samples)
