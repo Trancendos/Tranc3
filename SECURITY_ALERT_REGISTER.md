@@ -1934,7 +1934,6 @@ python scripts/pre_deploy_quality_gate.py
 | **ID** | GHSA-f2ph-cmg5-wxc8 |
 | **Scanner** | npm audit (census `web` surface) |
 | **Component** | `storybook` / `@storybook/addon-vitest` |
-| **Blocked-by** | N/A |
 | **Recorded** | 2026-10-21 |
 | **Owner** | The Guardian |
 | **Next review** | 2027-01-21 |
@@ -1950,7 +1949,6 @@ python scripts/pre_deploy_quality_gate.py
 | **ID** | RUSTSEC-2026-0382, RUSTSEC-2026-0383 |
 | **Scanner** | cargo audit (census `src/nanoservices/rust/tranc3-nanoservice` surface) |
 | **Component** | `rustls-webpki` / `webpki-root-certs` |
-| **Blocked-by** | N/A |
 | **Recorded** | 2026-10-21 |
 | **Owner** | The Guardian |
 | **Next review** | 2027-01-21 |
@@ -1966,7 +1964,6 @@ python scripts/pre_deploy_quality_gate.py
 | **ID** | unknown |
 | **Scanner** | npm audit (census `web` surface) |
 | **Component** | `@vitest/browser`, `@vitest/browser-playwright`, `@vitest/coverage-v8`, `@vitest/mocker`, `vitest`, `@storybook/addon-a11y`, `@storybook/addon-docs`, `@storybook/builder-vite`, `@storybook/react`, `@storybook/react-dom-shim`, `@storybook/react-vite` |
-| **Blocked-by** | N/A |
 | **Recorded** | 2026-10-21 |
 | **Owner** | The Guardian |
 | **Next review** | 2027-01-21 |
@@ -1981,7 +1978,6 @@ python scripts/pre_deploy_quality_gate.py
 | **ID** | GHSA-qxg6-89mg-rqv8, GHSA-xp26-3454-mjgp |
 | **Scanner** | npm audit (census `web` surface) |
 | **Component** | `@vitest/mocker` |
-| **Blocked-by** | N/A |
 | **Recorded** | 2026-10-21 |
 | **Owner** | The Guardian |
 | **Next review** | 2027-01-21 |
@@ -1996,7 +1992,6 @@ python scripts/pre_deploy_quality_gate.py
 | **ID** | GHSA-f2ph-cmg5-wxc8, unknown |
 | **Scanner** | npm audit (census `web` surface) |
 | **Component** | `storybook` / `@storybook/addon-vitest` and dependencies |
-| **Blocked-by** | N/A |
 | **Recorded** | 2026-10-21 |
 | **Owner** | The Guardian |
 | **Next review** | 2027-01-21 |
@@ -2011,7 +2006,6 @@ python scripts/pre_deploy_quality_gate.py
 | **ID** | unknown |
 | **Scanner** | npm audit (census `web` surface) |
 | **Component** | `@storybook/addon-a11y`, `@storybook/addon-docs`, `@storybook/react-vite`, `@vitest/browser`, `@vitest/browser-playwright`, `@vitest/coverage-v8`, `vitest` |
-| **Blocked-by** | N/A |
 | **Recorded** | 2026-10-21 |
 | **Owner** | The Guardian |
 | **Next review** | 2027-01-21 |

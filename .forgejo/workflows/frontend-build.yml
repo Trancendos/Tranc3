@@ -38,13 +38,13 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: web/pnpm-lock.yaml
 
       - name: Install dependencies
         # --ignore-scripts blocks package lifecycle hooks, the step the recent
         # npm supply-chain worms (Shai-Hulud, PhantomRaven) moved their payload
         # into. Verified safe for this tree: the only install scripts in
-        # web/package-lock.json are core-js (a funding banner), fsevents
+        # web/pnpm-lock.yaml are core-js (a funding banner), fsevents
         # (macOS-only, inert on Linux runners) and esbuild -- whose platform
         # binary arrives via optionalDependencies (@esbuild/linux-x64), not via
         # its install script, so the production build is unaffected. Playwright's
