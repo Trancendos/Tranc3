@@ -120,14 +120,20 @@ def rouge_l_score(hypothesis: str, reference: str) -> Dict[str, float]:
 
     # DP LCS
     m, n = len(ref), len(hyp)
-    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    prev = [0] * (n + 1)
+    curr = [0] * (n + 1)
     for i in range(1, m + 1):
+        ref_i = ref[i - 1]
         for j in range(1, n + 1):
-            if ref[i - 1] == hyp[j - 1]:
-                dp[i][j] = dp[i - 1][j - 1] + 1
+            if ref_i == hyp[j - 1]:
+                curr[j] = prev[j - 1] + 1
             else:
-                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
-    lcs_len = dp[m][n]
+                a = prev[j]
+                b = curr[j - 1]
+                curr[j] = a if a > b else b
+        prev, curr = curr, prev
+
+    lcs_len = prev[n]
 
     precision = lcs_len / n if n > 0 else 0.0
     recall = lcs_len / m if m > 0 else 0.0
