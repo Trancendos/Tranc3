@@ -120,6 +120,42 @@ def _submodule_urls() -> dict[str, str]:
     return {paths[name]: url for name, url in remotes.items() if name in paths}
 
 
+def _declared_paths() -> set[str]:
+    """Every path `.gitmodules` declares, whether or not it also gives a url.
+
+    Deliberately NOT derived from `_submodule_urls()`, which keeps a section
+    only when it has BOTH `path` and `url` -- so a section with a path and no
+    url never reached the caller, and the unbacked-declaration check below
+    could not see it. Measured: appending
+
+        [submodule "nourl"]
+            path = src
+
+    to this repository's `.gitmodules` and running this script printed the two
+    real submodules and exited 0. That spelling is the whole evasion the check
+    exists to refuse, because `path = src` is what would have excluded every
+    file under `src/` from the boundary walks. Raised by coderabbit on #1403.
+
+    Paths are stripped of surrounding whitespace and slashes to match how
+    `src/immune/repo.py` normalises them, so `path = src/` and `path = src`
+    cannot name the same directory and disagree about it.
+    """
+    if not (ROOT / ".gitmodules").is_file():
+        return set()
+    proc = _run(["git", "config", "--file", ".gitmodules", "--list"])
+    if proc.returncode != 0:
+        return set()
+    declared: set[str] = set()
+    for line in proc.stdout.splitlines():
+        key, sep, value = line.partition("=")
+        if not sep:
+            continue
+        _, _, field = key.removeprefix("submodule.").rpartition(".")
+        if field == "path" and value.strip().strip("/"):
+            declared.add(value.strip().strip("/"))
+    return declared
+
+
 def _recorded_pins() -> dict[str, str]:
     """Map submodule path -> pinned SHA, read from the superproject gitlink.
 
@@ -132,8 +168,19 @@ def _recorded_pins() -> dict[str, str]:
         return {}
     pins: dict[str, str] = {}
     for line in proc.stdout.splitlines():
-        # <mode> commit <sha>\t<path>   — mode 160000 marks a gitlink
-        m = re.match(r"^160000 commit ([0-9a-f]{40})\t(.+)$", line)
+        # <mode> commit <sha>\t<path>   — mode 160000 marks a gitlink.
+        #
+        # 40 OR 64 hex: an object id is 40 characters under SHA-1 and 64 under
+        # SHA-256 (`git init --object-format=sha256`), and this pattern accepted
+        # only the first until 2026-10-17. Probed on a real SHA-256 repository
+        # holding one gitlink: `_recorded_pins()` returned {} and the
+        # unbacked-declaration check then reported the healthy submodule as
+        # "declared, but the tree records no submodule there" and exited 1 — a
+        # guard against a silent evasion turning into a false refusal nobody
+        # could satisfy. `src/immune/repo.py`'s own gitlink pattern was widened
+        # for the same reason; this is the copy that was missed. Raised by cubic
+        # on #1403.
+        m = re.fullmatch(r"160000 commit ([0-9a-f]{40}(?:[0-9a-f]{24})?)\t(.+)", line, re.DOTALL)
         if m:
             pins[m.group(2)] = m.group(1)
     return pins
@@ -179,6 +226,49 @@ def main() -> int:
 
     urls = _submodule_urls()
     pins = _recorded_pins()
+
+    # A DECLARATION WITH NO GITLINK, checked before anything else because it is
+    # the one disagreement this script used to walk straight past. The loop
+    # below iterates `pins` -- the gitlinks -- and asks of each whether
+    # `.gitmodules` gives it a URL. The reverse never got asked, so an entry
+    # naming a path that is not a submodule at all sat in `urls` unread.
+    #
+    # That is not cosmetic. `src/immune/repo.py` derives the repository
+    # boundary that the inert-suppression ratchet, the bandit ceiling and the
+    # SEC-006/020/021 manifest scans all walk. Its first version read
+    # `.gitmodules`, so `path = src` would have excluded every file under
+    # `src/` from all of them at once -- measured, by planting that entry. The
+    # boundary now comes from gitlinks instead, and this check closes the other
+    # half: the declaration that would have done it is refused here rather than
+    # merely distrusted there. Raised by cubic on #1403.
+    # Built from every declared path, NOT from `urls`: a section with a `path`
+    # and no `url` is dropped before `_submodule_urls` returns, so reading the
+    # keys of `urls` here let exactly that spelling through. See
+    # `_declared_paths`.
+    unbacked = sorted(_declared_paths() - set(pins))
+    if unbacked:
+        # `--json` is documented as machine-readable, and this early return
+        # printed prose through it, so a caller parsing the output could not
+        # see this failure at all -- it would read an empty stream and a
+        # non-zero exit. Raised by cubic on #1403. `unbacked` is a new key
+        # rather than a `results` row, because a declaration with no gitlink
+        # has no pinned SHA to report and inventing one would be the same
+        # defect this check exists to catch.
+        if args.json:
+            print(
+                json.dumps({"results": [], "broken": len(unbacked), "unbacked": unbacked}, indent=2)
+            )
+        else:
+            print("Submodule declared in .gitmodules with no gitlink behind it:")
+            for path in unbacked:
+                print(f"  ✗ {path} — declared, but the tree records no submodule there")
+            print()
+            print("A path is a different repository because git records a gitlink at it,")
+            print("not because .gitmodules says so. An entry like this validates nothing")
+            print("here and would widen or narrow any control that trusts the file.")
+            print("Fix: add the submodule properly (`git submodule add`), or remove the")
+            print("entry. See src/immune/repo.py for what reads this boundary.")
+        return 1
 
     if not pins:
         print("No submodule gitlinks found — nothing to validate.")

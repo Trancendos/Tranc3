@@ -1,3 +1,25 @@
+# ─────────────────────────────────────────────────────────────────────────
+# SCOPE NOTE, added 2026-10-16. This number is NOT the estate's bandit
+# ratchet any more, and it never described what a reader would assume.
+#
+# The authoritative, config-aware ratchet is config/immune/bandit_ceiling.txt,
+# enforced by scripts/check_bandit_coverage.py in .github/workflows/ci.yml --
+# the lane that actually runs. It records medium_plus=81 and low=189 over
+# src/ + api.py + scripts/ + workers/ WITH -c pyproject.toml applied.
+#
+# The 307 below is a different measurement and the two must not be compared:
+# it is taken WITHOUT the config, so it counts rules [tool.bandit] already
+# skips with written reasons. Re-measured 2026-10-16 with bandit 1.9.4 the
+# same command gives 309 (a +2 drift nothing caught, because the workflow
+# that checks drift has never run), and 147 of those are B311 and 101 are
+# B110. With the config loaded, that same scope reports 37, not 309.
+#
+# This file is KEPT because scripts/security_score.py reads it for its own
+# drift dimension and fails neutral when it cannot. It is not deleted and
+# not silently re-pointed; it is labelled, so nobody reads 307 and 81 as two
+# measurements of one thing.
+# ─────────────────────────────────────────────────────────────────────────
+
 # Tranc3 Security Baseline
 # Automatically updated by .forgejo/workflows/security-baseline.yml
 # when finding counts decrease (ratchet: never allowed to increase).
