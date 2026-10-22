@@ -77,23 +77,23 @@
     {
       "type": "library",
       "name": "opentelemetry-sdk",
-      "bom-ref": "pkg:pypi/opentelemetry-sdk@1.45.0",
-      "purl": "pkg:pypi/opentelemetry-sdk@1.45.0",
-      "version": "1.45.0"
+      "bom-ref": "pkg:pypi/opentelemetry-sdk@1.45.1",
+      "purl": "pkg:pypi/opentelemetry-sdk@1.45.1",
+      "version": "1.45.1"
     },
     {
       "type": "library",
       "name": "opentelemetry-instrumentation-fastapi",
-      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b0",
-      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b0",
-      "version": "0.66b0"
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b1",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.66b1",
+      "version": "0.66b1"
     },
     {
       "type": "library",
       "name": "opentelemetry-exporter-otlp-proto-grpc",
-      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.45.0",
-      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.45.0",
-      "version": "1.45.0"
+      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.45.1",
+      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-grpc@1.45.1",
+      "version": "1.45.1"
     }
   ]
 }
