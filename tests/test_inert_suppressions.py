@@ -153,6 +153,39 @@ def test_a_planted_inert_suppression_is_found(tmp_path):
     assert bare == [] and live == 0
 
 
+def test_codes_separated_by_whitespace_are_all_read(tmp_path):
+    """REGRESSION. ruff separates codes with commas OR whitespace, and the
+    pattern allowed commas only — so the second code was never counted.
+
+    Probed against ruff 0.15.8 on `import os, sys` (E401 plus two F401s),
+    writing <D> for the directive token:
+
+        # <D>: F401, E401   -> 0 errors
+        # <D>: F401 E401    -> 0 errors    <-- whitespace, also honoured
+
+    So a whitespace-separated inert code passed the ratchet unseen. Raised by
+    coderabbit on #1403."""
+    inert, bare, live, _ = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}: S310 F401\n"))
+    # S310 is inert here (the S family is not selected); F401 is live.
+    assert [s.code for s in inert] == ["S310"]
+    assert bare == [] and live == 1
+
+
+def test_a_space_before_the_colon_is_code_specific_not_bare(tmp_path):
+    """REGRESSION. ruff allows whitespace between the token and the colon, and
+    still reads the codes. Probed on the same file:
+
+        # <D> : E401        -> 2 errors (the two F401s), E401 suppressed
+        # <D>: E401         -> 2 errors — identical, which is the point
+
+    The pattern required the colon to touch the token, so this spelling was
+    recorded as a BARE directive — counted in the wrong ceiling, and its code
+    never judged for inertness. Raised by coderabbit on #1403."""
+    inert, bare, live, _ = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN} : S310\n"))
+    assert [s.code for s in inert] == ["S310"], "read as bare instead of code-specific"
+    assert bare == [] and live == 0
+
+
 def test_a_planted_bare_directive_is_found(tmp_path):
     inert, bare, live, _ = cis.scan(_tree(tmp_path, f"x = 1  # {TOKEN}\n"))
     assert len(bare) == 1 and bare[0].endswith("mod.py:1")

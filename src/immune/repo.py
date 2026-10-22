@@ -63,6 +63,7 @@ a sensor's own scope.
 from __future__ import annotations
 
 import functools
+import os
 import re
 import shutil
 import subprocess  # nosec B404 - absolute argv[0], no shell; see _gitlinks
@@ -80,6 +81,23 @@ from pathlib import Path
 # boundary exists to keep out -- the exact failure this module was written to
 # prevent, in the one repository shape nobody here has. Raised by cubic on
 # #1403. `.+` with DOTALL, because a path may legally hold a newline.
+#: Git reads these INSTEAD of the directory given with `-C`, so every call
+#: here drops them. The set is git's own repository-location and index
+#: variables; `GIT_CONFIG_*` and the rest stay, because they do not move which
+#: repository is read.
+_GIT_LOCATION_VARS = frozenset(
+    {
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_NAMESPACE",
+        "GIT_PREFIX",
+    }
+)
+
 _STAGE_RECORD = re.compile(r"160000 [0-9a-f]{40}(?:[0-9a-f]{24})? [0-3]\t(?P<path>.+)", re.DOTALL)
 
 
@@ -118,6 +136,17 @@ def _git(root: Path, *args: str) -> str | None:
             capture_output=True,
             timeout=30,
             check=False,
+            # `-C root` DOES NOT WIN against an inherited GIT_DIR. Probed: in an
+            # empty repository, `GIT_DIR=../other/.git git -C . ls-files --stage`
+            # printed the OTHER repository's gitlink. So a caller with those
+            # variables set -- a pre-commit hook is the ordinary case, and
+            # `.pre-commit-config.yaml` runs two of this estate's checkers --
+            # would have had the boundary read from the wrong index, and
+            # `_gitlinks_for` would have CACHED it for the rest of the process.
+            # Downstream that is not cosmetic: an ordinary directory reported as
+            # a gitlink drops its files from the suppression ratchet and from
+            # bandit's scope. Raised by coderabbit on #1403.
+            env={k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARS},
         )
     except (OSError, subprocess.SubprocessError):
         return None

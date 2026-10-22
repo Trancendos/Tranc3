@@ -31,12 +31,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+import src.immune.repo as repo_module
 from src.immune.repo import (
     declared_non_gitlinks,
     declared_paths,
@@ -62,10 +64,18 @@ def _repo_with_gitlinks(
     with a pattern. A fixture that can only build SHA-1 repositories cannot
     catch a pattern that accepts only SHA-1.
     """
+    # SCRUBBED ENV for every git call below. These commands must act on `root`
+    # and nothing else, and `-C`/a path argument does not win against an
+    # inherited GIT_DIR or GIT_INDEX_FILE -- probed in `src/immune/repo.py`.
+    # A pre-commit hook sets exactly those, and `.pre-commit-config.yaml` runs
+    # two of this estate's checkers, so an unscrubbed fixture could have staged
+    # its synthetic gitlinks into the REAL index. Raised by coderabbit on #1403.
+    env = {k: v for k, v in os.environ.items() if k not in repo_module._GIT_LOCATION_VARS}
     subprocess.run(
         ["git", "init", "-q", f"--object-format={object_format}", str(root)],
         check=True,
         timeout=30,
+        env=env,
     )
     width = 64 if object_format == "sha256" else 40
     for i, path in enumerate(paths):
@@ -82,6 +92,7 @@ def _repo_with_gitlinks(
             ],
             check=True,
             timeout=30,
+            env=env,
         )
     # COMMITTED, not merely staged, because the two readers of a gitlink read
     # different places: `src/immune/repo.py` asks the INDEX (`ls-files
@@ -108,6 +119,7 @@ def _repo_with_gitlinks(
         ],
         check=True,
         timeout=30,
+        env=env,
     )
     if declare:
         (root / ".gitmodules").write_text(
@@ -365,11 +377,54 @@ def test_resetting_the_cache_re_reads_the_tree(tmp_path, monkeypatch):
         ],
         check=True,
         timeout=30,
+        # Scrubbed for the same reason as the fixture's own calls.
+        env={k: v for k, v in os.environ.items() if k not in repo_module._GIT_LOCATION_VARS},
     )
     repo.reset_boundary_cache()
     assert repo.submodule_paths(tmp_path) == {"vendor/first", "vendor/second"}
     assert spawns["n"] > after_first, "the reset must make the next call ask git again"
     repo.reset_boundary_cache()
+
+
+def test_an_inherited_git_dir_cannot_redirect_the_boundary(tmp_path, monkeypatch):
+    """REGRESSION. `-C root` DOES NOT WIN against an inherited GIT_DIR.
+
+    Probed before the fix, in an empty repository:
+
+        GIT_DIR=../real/.git git -C . ls-files --stage
+        160000 0a72869d... 0   vendor/REALLINK
+
+    — the OTHER repository's gitlink, reported for a tree that has none. A
+    pre-commit hook exports exactly these variables and
+    `.pre-commit-config.yaml` runs two of this estate's checkers, so the
+    boundary could have been read from the wrong index and `_gitlinks_for`
+    would have cached it for the rest of the process. An ordinary directory
+    reported as a gitlink drops its files from the suppression ratchet and
+    from bandit's scope. Raised by coderabbit on #1403.
+    """
+    import src.immune.repo as repo
+
+    elsewhere = tmp_path / "elsewhere"
+    empty = tmp_path / "empty"
+    _repo_with_gitlinks(elsewhere, "vendor/REALLINK")
+    # `git init` alone, not the fixture: the fixture always commits, and an
+    # empty repository has nothing to commit. `submodule_paths` reads the
+    # INDEX, so an initialised repository with an empty index is exactly the
+    # subject here -- a tree whose honest answer is "no gitlinks".
+    empty.mkdir()
+    subprocess.run(["git", "init", "-q", str(empty)], check=True, timeout=30)
+
+    monkeypatch.setenv("GIT_DIR", str(elsewhere / ".git"))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(elsewhere / ".git" / "index"))
+    repo.reset_boundary_cache()
+    try:
+        assert repo.submodule_paths(empty) == frozenset(), (
+            "the boundary read another repository's index through GIT_DIR"
+        )
+        # And the real one still reads correctly with those variables set.
+        assert repo.submodule_paths(elsewhere) == {"vendor/REALLINK"}
+    finally:
+        repo.reset_boundary_cache()
 
 
 def test_the_jobs_that_check_out_submodules_are_the_ones_named_here():

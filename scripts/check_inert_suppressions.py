@@ -111,10 +111,31 @@ _SKIP_PARTS = ("target", "node_modules", ".git", ".venv", "venv", "build", "dist
 #: measuring instrument that appears in its own measurement is the defect
 #: this file exists to catch, so it must not be one.
 _TOKEN = "no" + "qa"
+#: WHAT RUFF ACTUALLY READS, probed against ruff 0.15.8 rather than assumed.
+#: On `import os, sys` (which raises E401 and two F401s):
+#:
+#: (writing <D> for the directive token, which this file never spells --
+#: see `_TOKEN`: a literal here would make ruff read these comment lines as
+#: real directives, and would make this checker count its own source)
+#:
+#:   # <D>: F401, E401    -> 0 errors   comma-separated
+#:   # <D>: F401 E401     -> 0 errors   WHITESPACE-separated, also honoured
+#:   # <D> : E401         -> 2 errors   the two F401s; so this is CODE-SPECIFIC
+#:   # <D>: E401          -> 2 errors   identical, which is the point
+#:
+#: The old pattern allowed commas only and required the colon to touch the
+#: token, so `<D>: F401 E401` counted ONLY F401 -- an inert E401 was never
+#: counted -- and `<D> : E401` was recorded as a BARE directive rather than as
+#: a code whose inertness could be judged. Both lowered the inert count and
+#: let suppressions through the ratchet unseen, which is the failure this file
+#: exists to prevent. Raised by coderabbit on #1403.
 _NOQA = re.compile(
-    r"#\s*" + _TOKEN + r"(?::\s*(?P<codes>[A-Z]+[0-9]+(?:\s*,\s*[A-Z]+[0-9]+)*))?",
+    r"#\s*" + _TOKEN + r"(?:\s*:\s*(?P<codes>[A-Z]+[0-9]+(?:[\s,]+[A-Z]+[0-9]+)*))?",
     re.IGNORECASE,
 )
+
+#: Codes are separated by commas, whitespace, or both -- see `_NOQA`.
+_CODE_SEPARATOR = re.compile(r"[\s,]+")
 
 INERT_NOT_SELECTED = "rule family is not selected, so ruff never raises it"
 INERT_IGNORED = "an ignore selector covers it, so ruff never raises it"
@@ -375,7 +396,7 @@ def scan(root: Path = ROOT) -> tuple[list[Suppression], list[str], int, list[str
             if not codes:
                 bare.append(f"{shown}:{number}")
                 continue
-            for code in (c.strip().upper() for c in codes.split(",")):
+            for code in (c.upper() for c in _CODE_SEPARATOR.split(codes.strip()) if c):
                 because = classify(code, select, ignore, file_ignores)
                 if because:
                     inert.append(Suppression(shown, number, code, because))
