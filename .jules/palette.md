@@ -1,3 +1,3 @@
-## 2023-10-22 - Keyboard accessibility for hidden secondary actions
+## 2026-10-22 - Keyboard accessibility for hidden secondary actions
 **Learning:** In Tailwind, relying solely on `group-hover:opacity-100` makes secondary actions (like icons or subtle backgrounds) invisible for keyboard users. `focus-within:opacity-100` helps if the child is focusable, but if the parent itself is the focusable element (e.g., an anchor link or button), you must use `group-focus-visible:opacity-100` on the hidden element and ensure the parent has `focus-visible` styles like `focus-visible:ring-2`.
 **Action:** Always pair `group-hover:opacity-100` with `group-focus-visible:opacity-100` and apply `focus-visible` styles to the interactive parent.
