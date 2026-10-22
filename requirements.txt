@@ -149,15 +149,15 @@ prometheus-client==0.26.0
 # Auto-instrument every FastAPI route: http_requests_total, http_request_duration_seconds
 prometheus-fastapi-instrumentator==8.1.0
 opentelemetry-api==1.45.1
-opentelemetry-sdk==1.45.0
-opentelemetry-exporter-otlp-proto-grpc==1.45.0
-opentelemetry-exporter-otlp-proto-http==1.45.0
-opentelemetry-instrumentation-fastapi==0.66b0
-opentelemetry-instrumentation-httpx==0.66b0
-opentelemetry-instrumentation-sqlalchemy==0.66b0
+opentelemetry-sdk==1.45.1
+opentelemetry-exporter-otlp-proto-grpc==1.45.1
+opentelemetry-exporter-otlp-proto-http==1.45.1
+opentelemetry-instrumentation-fastapi==0.66b1
+opentelemetry-instrumentation-httpx==0.66b1
+opentelemetry-instrumentation-sqlalchemy==0.66b1
 # Redis + aiohttp auto-instrumentation (zero-cost span coverage for all workers)
-opentelemetry-instrumentation-redis==0.66b0
-opentelemetry-instrumentation-aiohttp-client==0.66b0
+opentelemetry-instrumentation-redis==0.66b1
+opentelemetry-instrumentation-aiohttp-client==0.66b1
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
