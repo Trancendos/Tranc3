@@ -390,7 +390,11 @@ def test_the_jobs_that_check_out_submodules_are_the_ones_named_here():
     found = set()
     checkouts = {".github/workflows": 0, ".forgejo/workflows": 0}
     for tree in checkouts:
-        for path in sorted((ROOT / tree).glob("*.yml")):
+        # BOTH suffixes: globbing `*.yml` alone let a `.yaml`-suffixed
+        # workflow evade this census silently, which is the same defect class
+        # the test exists to catch. Raised by cubic on #1403.
+        paths = sorted(set((ROOT / tree).glob("*.yml")) | set((ROOT / tree).glob("*.yaml")))
+        for path in paths:
             parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
             if not isinstance(parsed, dict):
                 continue
@@ -516,7 +520,14 @@ def test_the_validator_reads_a_sha256_repositorys_pins(tmp_path, monkeypatch, ca
     vsp = _load("vsp_sha256", "scripts/validate_submodule_pins.py")
     try:
         _repo_with_gitlinks(tmp_path, "vendor/real", object_format="sha256")
-    except subprocess.CalledProcessError:  # pragma: no cover - old git
+    except subprocess.CalledProcessError as exc:  # pragma: no cover - old git
+        # ONLY an unsupported `git init --object-format=sha256` is a skip. The
+        # bare except caught a failing `update-index` or `commit` too, so a
+        # broken fixture would have removed this regression test silently --
+        # a test that cannot run reporting the same nothing as a test that
+        # passed. Raised by cubic on #1403.
+        if "init" not in exc.cmd or "--object-format=sha256" not in exc.cmd:
+            raise
         pytest.skip("this git does not support --object-format=sha256")
     (tmp_path / ".gitmodules").write_text(
         '[submodule "vendor/real"]\n\tpath = vendor/real\n\turl = https://example.invalid/0.git\n',
@@ -532,8 +543,16 @@ def test_the_validator_reads_a_sha256_repositorys_pins(tmp_path, monkeypatch, ca
     # on the PARSED payload, not on the absence of a prose phrase -- in `--json`
     # mode that phrase is absent either way, so the looser check would have
     # passed on the broken code too.
+    #
+    # `_is_reachable` is STUBBED. Past the unbacked check, `main()` fetches
+    # every declared url, and this fixture's url is deliberately fake: the real
+    # call blocks until the validator's 90-second timeout and makes the suite
+    # depend on network behaviour. Observed in this container as a proxy
+    # refusal for `example.invalid:443`. The claim under test is the pin
+    # parsing, not reachability. Raised by cubic on #1403.
+    monkeypatch.setattr(vsp, "_is_reachable", lambda url, sha: (True, ""))
     monkeypatch.setattr(sys, "argv", ["validate_submodule_pins.py", "--json"])
-    vsp.main()  # exit code depends on reachability of a fake url; the claim is the payload
+    vsp.main()
     payload = json.loads(capsys.readouterr().out)
     assert payload.get("unbacked", []) == [], payload
 

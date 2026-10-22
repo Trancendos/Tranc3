@@ -367,18 +367,58 @@ class TestThePartialCheckout:
             containers.REPO = original
             repo.reset_boundary_cache()
 
+    def test_a_submodule_directory_holding_only_dot_git_is_absent(self, tmp_path):
+        """REGRESSION. `any(target.iterdir())` counted a partially initialised
+        submodule -- a directory holding nothing but its `.git` file -- as
+        present, so the guard reported none absent and the register could be
+        generated without any of the evidence files it reads. Probed in exactly
+        that shape before the fix. Raised by cubic on #1403."""
+        import src.cmdb.containers as containers
+        from src.immune import repo
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tpath = workers/cranbania\n',
+            encoding="utf-8",
+        )
+        sub = tmp_path / "workers" / "cranbania"
+        sub.mkdir(parents=True)
+        # What `git submodule init` without a completed `update` leaves behind:
+        # the gitdir pointer and no worktree.
+        (sub / ".git").write_text(
+            "gitdir: ../../.git/modules/workers/cranbania\n", encoding="utf-8"
+        )
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            repo.reset_boundary_cache()
+            assert containers._absent_submodules() == ["workers/cranbania"]
+            # And one real file is enough to make it present again.
+            (sub / "package.json").write_text("{}", encoding="utf-8")
+            repo.reset_boundary_cache()
+            assert containers._absent_submodules() == []
+        finally:
+            containers.REPO = original
+            repo.reset_boundary_cache()
+
     def test_a_guard_that_cannot_read_the_declarations_refuses(self, tmp_path, monkeypatch):
         """A presence guard that cannot parse `.gitmodules` must not answer
         "none absent" -- that is what a clean tree answers, and
         IMMUNE-SYSTEM.md's rule is that a sensor which cannot see must say so.
         This module already raises on a missing PyYAML for the same reason."""
         import src.cmdb.containers as containers
+        import src.immune.repo as repo_module
 
         (tmp_path / ".gitmodules").write_text(
             '[submodule "workers/cranbania"]\n\tpath = workers/cranbania\n',
             encoding="utf-8",
         )
-        monkeypatch.setattr(containers, "declared_paths", lambda _root: frozenset())
+        # Patched at the SOURCE module, not on `containers`: the import is
+        # deliberately lazy there (it must not pull `src.immune` -- and so
+        # PyYAML -- in at module load), so `containers.declared_paths` is no
+        # longer an attribute to replace. The lazy `from ... import` reads this
+        # binding at call time, so this is what reaches the function.
+        monkeypatch.setattr(repo_module, "declared_paths", lambda _root: frozenset())
         original = containers.REPO
         try:
             containers.REPO = tmp_path

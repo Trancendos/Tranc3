@@ -34,7 +34,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from src.immune.repo import declared_paths
+# `src.immune.repo` is imported LAZILY, inside `_absent_submodules`, and not
+# here. `src/immune/__init__.py` imports `memory.py`, which imports yaml at
+# module level, so a top-level import here made `import src.cmdb.containers`
+# itself require PyYAML -- probed: with yaml blocked, the import raised
+# ImportError and `discover()` never ran, so the controlled
+# `CannotEnumerateContainers("PyYAML is not installed...")` below could not
+# fire and the generators emitted a traceback instead. A module whose job is to
+# turn a missing dependency into a diagnostic must not need that dependency to
+# load. Raised by cubic on #1403.
 
 REPO = Path(__file__).resolve().parents[2]
 COMPOSE = REPO / "docker-compose.production.yml"
@@ -286,6 +294,8 @@ def _absent_submodules() -> List[str]:
     # only thing that reads the format correctly, and needs no repository --
     # just the git binary. See `src/immune/repo.py` and the same reasoning in
     # `scripts/validate_submodule_pins.py`.
+    from src.immune.repo import declared_paths  # see the note at the imports
+
     declared = declared_paths(REPO)
     if not declared:
         # A presence guard that cannot read the declarations must not report
@@ -301,7 +311,19 @@ def _absent_submodules() -> List[str]:
     absent: List[str] = []
     for path in sorted(declared):
         target = REPO / path
-        if not target.is_dir() or not any(target.iterdir()):
+        # `.git` ALONE IS NOT A CHECKOUT. `any(target.iterdir())` counted a
+        # directory holding nothing but the submodule's `.git` file or
+        # directory as present -- probed, and it reported no absent submodules
+        # for exactly that shape. That is a partially initialised submodule:
+        # none of the evidence files the register reads
+        # (`workers/cranbania/package.json`) are there, so the register would
+        # have been generated from a smaller estate and reported as the estate,
+        # which is the one failure this function exists to prevent. Raised by
+        # cubic on #1403.
+        if not target.is_dir():
+            absent.append(path)
+            continue
+        if not any(entry.name != ".git" for entry in target.iterdir()):
             absent.append(path)
     return absent
 

@@ -300,7 +300,10 @@ def _python_files(root: Path) -> list[Path]:
 
     The set matters because `topology` is where THIS checker runs, and it is
     one of the six. Counting submodules here made the ratchet measure a
-    larger tree in both of ci.yml's submodule jobs than in any local worktree,
+    larger tree in both of ci.yml's submodule jobs than in a NORMAL local
+    worktree (a local clone with `--recurse-submodules` has them too, and this
+    function excludes them there as well -- the claim is about the default, not
+    a universal),
     so a ceiling recorded normally failed there for a reason nobody's diff
     caused -- visible first as `Pytest`, because the suite re-measures the real
     tree. See `src/immune/repo.py`, and
