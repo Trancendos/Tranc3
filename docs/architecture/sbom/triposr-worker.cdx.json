@@ -63,9 +63,9 @@
     {
       "type": "library",
       "name": "pillow",
-      "bom-ref": "pkg:pypi/pillow@12.3.0",
-      "purl": "pkg:pypi/pillow@12.3.0",
-      "version": "12.3.0"
+      "bom-ref": "pkg:pypi/pillow@13.0.0",
+      "purl": "pkg:pypi/pillow@13.0.0",
+      "version": "13.0.0"
     }
   ]
 }
