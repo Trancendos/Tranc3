@@ -115,7 +115,7 @@ def test_reporter_posts_every_result(tmp_path, chaos_party):
     assert [r["name"] for r in runs] == [r["test"] for r in ROWS]
     # xfailed is an expected failure, not a pass: reporting it as "passed"
     # would let a known-broken test look healthy in the trend data.
-    assert [r["status"] for r in runs] == ["passed", "failed", "skipped"]
+    assert [r["status"] for r in runs] == ["pass", "fail", "skip"]
     assert runs[1]["error_msg"] == "boom"
     assert runs[0]["metadata"]["commit"] == "abc"
 
@@ -166,6 +166,76 @@ def test_ci_invokes_the_reporter():
     # `if: always()` matters: a failing suite is the run most worth reporting.
     assert step.get("if") == "always()"
     assert "CHAOS_PARTY_URL" in step["env"]
+
+
+# ---------------------------------------------------------------------------
+# FLOW-042 contract: the real worker, image and ingress must agree with CI
+# ---------------------------------------------------------------------------
+
+
+def test_chaos_party_image_packages_observatory_bridge():
+    """The optional bridge import cannot work if the module is missing from /app."""
+    dockerfile = (REPO / "workers" / "chaos-party" / "Dockerfile").read_text()
+    assert "COPY observatory_bridge.py ." in dockerfile
+
+
+def test_chaos_party_traefik_strips_external_prefix():
+    """The worker serves /health, while the public route starts /chaos-party."""
+    compose = yaml.safe_load((REPO / "docker-compose.production.yml").read_text())
+    labels = compose["services"]["chaos-party"]["labels"]
+    assert "traefik.http.routers.chaos-party.middlewares=chaos-party-strip" in labels
+    assert "traefik.http.middlewares.chaos-party-strip.stripprefix.prefixes=/chaos-party" in labels
+
+
+@pytest.mark.asyncio
+async def test_chaos_party_reporter_round_trips_into_real_worker_stats(
+    tmp_path, chaos_party, monkeypatch
+):
+    """CI output must be accepted by the real API and produce accurate trends."""
+    server, stub = chaos_party
+    secret = "flow-test-secret-unique-123"
+    proc = _run_reporter(
+        _results_file(tmp_path, ROWS),
+        {"CHAOS_PARTY_URL": f"http://127.0.0.1:{server.server_port}", "INTERNAL_SECRET": secret},
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = stub.received[0]["body"]
+
+    monkeypatch.setenv("INTERNAL_SECRET", secret)
+    worker = import_worker(
+        "chaos_party_wiring_contract_worker",
+        REPO / "workers" / "chaos-party" / "worker.py",
+    )
+    monkeypatch.setattr(worker, "DB_PATH", tmp_path / "chaos.db")
+    worker.init_db()
+    monkeypatch.setattr(worker, "_bridge_forward", None)
+
+    receipt = await worker.record_batch_runs(worker.BatchRunIn(**payload), x_internal_secret=secret)
+    summary = await worker.stats(x_internal_secret=secret)
+    assert receipt["inserted"] == 3
+    assert summary["total_runs"] == 3
+    assert {r["status"]: r["c"] for r in summary["by_status"]} == {
+        "pass": 1, "fail": 1, "skip": 1,
+    }
+    assert summary["pass_rate_pct"] == 33.3
+
+
+@pytest.mark.asyncio
+async def test_chaos_party_rejects_legacy_statuses_before_inserting(tmp_path, monkeypatch):
+    """Never pollute pass-rate and anomaly history with foreign status values."""
+    secret = "flow-test-secret-unique-123"
+    monkeypatch.setenv("INTERNAL_SECRET", secret)
+    worker = import_worker(
+        "chaos_party_invalid_status_contract_worker",
+        REPO / "workers" / "chaos-party" / "worker.py",
+    )
+    monkeypatch.setattr(worker, "DB_PATH", tmp_path / "chaos.db")
+    worker.init_db()
+    batch = worker.BatchRunIn(runs=[worker.TestRunIn(name="legacy", status="passed")])
+    with pytest.raises(worker.HTTPException) as error:
+        await worker.record_batch_runs(batch, x_internal_secret=secret)
+    assert error.value.status_code == 400
+    assert (await worker.stats(x_internal_secret=secret))["total_runs"] == 0
 
 
 # ---------------------------------------------------------------------------
