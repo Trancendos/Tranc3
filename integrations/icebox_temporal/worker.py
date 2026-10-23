@@ -1,4 +1,5 @@
 """Explicitly-started optional Temporal worker, no automatic cloud/network setup."""
+
 from __future__ import annotations
 
 import asyncio
