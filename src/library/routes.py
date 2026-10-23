@@ -144,7 +144,10 @@ async def delete_article(
         return JSONResponse({"error": "Not found"}, status_code=404)
     if not _can_read(art, current_user):
         return JSONResponse({"error": "Forbidden"}, status_code=403)
-    get_library().delete(article_id)
+    if art.legal_hold:
+        return JSONResponse({"error": "Article is under legal hold"}, status_code=409)
+    if not get_library().delete(article_id):
+        return JSONResponse({"error": "Deletion refused"}, status_code=409)
     return {"deleted": article_id}
 
 
