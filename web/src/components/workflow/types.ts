@@ -48,6 +48,9 @@ export interface WorkflowDef {
   id?: string;
   name: string;
   description: string;
+  version?: string;
+  triggers?: string[];
+  metadata?: Record<string, unknown>;
   nodes: GridNode[];
   edges: GridEdge[];
   created_at?: string;
