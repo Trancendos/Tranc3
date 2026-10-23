@@ -8,6 +8,9 @@ on:
       - "integrations/icebox_temporal/**"
       - "workers/ice-box-service/worker.py"
       - "tests/test_ice_box_automation_stdlib.py"
+      - "tests/test_build_topology_sections.py"
+      - "scripts/build_topology_3d.py"
+      - "docs/architecture/topology-3d.json"
       - ".github/workflows/icebox-policy.yml"
   workflow_dispatch:
 
@@ -27,4 +30,6 @@ jobs:
         with:
           python-version: "3.11"
       - name: Verify fail-safe security decisions without installing root dependencies
-        run: PYTHONPATH=. python -m unittest discover -s tests -p 'test_ice_box_automation_stdlib.py' -v
+        run: |
+          PYTHONPATH=. python -m unittest discover -s tests -p 'test_ice_box_automation_stdlib.py' -v
+          PYTHONPATH=. python -m unittest discover -s tests -p 'test_build_topology_sections.py' -v
