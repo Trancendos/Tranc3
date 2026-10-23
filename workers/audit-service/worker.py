@@ -168,9 +168,9 @@ def _init_db() -> None:
     with _connect() as conn:
         conn.execute(_CREATE_AUDIT_LOG)
         # Preserve legacy hashes; existing databases receive a v1 marker.
-        columns = {row['name'] for row in conn.execute('PRAGMA table_info(audit_log)')}
-        if 'hash_version' not in columns:
-            conn.execute('ALTER TABLE audit_log ADD COLUMN hash_version INTEGER NOT NULL DEFAULT 1')
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(audit_log)")}
+        if "hash_version" not in columns:
+            conn.execute("ALTER TABLE audit_log ADD COLUMN hash_version INTEGER NOT NULL DEFAULT 1")
         for idx in _INDEXES:
             conn.execute(idx)
         conn.commit()
@@ -325,16 +325,27 @@ def _expected_row_hash(row: sqlite3.Row) -> Optional[str]:
     version = row["hash_version"]
     if version == 1:
         return _compute_hash(
-            row["prev_hash"], row["event_id"], row["timestamp"],
-            row["service"], row["action"], row["actor"],
-            row["resource"] or "", row["outcome"] or "",
+            row["prev_hash"],
+            row["event_id"],
+            row["timestamp"],
+            row["service"],
+            row["action"],
+            row["actor"],
+            row["resource"] or "",
+            row["outcome"] or "",
         )
     if version == 2:
         return compute_v2_hash(
-            row["prev_hash"], row["event_id"], row["timestamp"],
-            row["service"], row["action"], row["actor"],
-            row["resource"] or "", row["outcome"] or "",
-            row["severity"], row["details_json"],
+            row["prev_hash"],
+            row["event_id"],
+            row["timestamp"],
+            row["service"],
+            row["action"],
+            row["actor"],
+            row["resource"] or "",
+            row["outcome"] or "",
+            row["severity"],
+            row["details_json"],
         )
     return None  # Unknown hash versions must fail closed.
 
@@ -502,17 +513,34 @@ async def append_event(
         conn.execute("BEGIN IMMEDIATE")
         prev = _tail_hash(conn)
         chain_hash = compute_v2_hash(
-            prev, event_id, ts, body.service, body.action, body.actor,
-            body.resource, body.outcome, body.severity, details_json,
+            prev,
+            event_id,
+            ts,
+            body.service,
+            body.action,
+            body.actor,
+            body.resource,
+            body.outcome,
+            body.severity,
+            details_json,
         )
         cur = conn.execute(
             "INSERT INTO audit_log (event_id, timestamp, service, action, actor, resource,"
             " outcome, severity, details_json, prev_hash, hash, hash_version)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                event_id, ts, body.service, body.action, body.actor,
-                body.resource, body.outcome, body.severity, details_json,
-                prev, chain_hash, 2,
+                event_id,
+                ts,
+                body.service,
+                body.action,
+                body.actor,
+                body.resource,
+                body.outcome,
+                body.severity,
+                details_json,
+                prev,
+                chain_hash,
+                2,
             ),
         )
         row_id = cur.lastrowid
