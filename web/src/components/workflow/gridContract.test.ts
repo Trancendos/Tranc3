@@ -17,8 +17,8 @@ const graph: WorkflowDef = {
   triggers: ["demo.started"],
   metadata: { owner: "integration-test" },
   nodes: [
-    { id: "t", type: "trigger", label: "Start", x: 21, y: 34, config: {}, outputs: [{ id: "next", label: "Next" }] },
-    { id: "o", type: "output", label: "Finish", x: 202, y: 98, config: { key: "result" } },
+    { id: "t", type: "trigger", label: "Start", x: 21, y: 34, config: {}, timeout_sec: 20, retry_count: 2, outputs: [{ id: "next", label: "Next" }] },
+    { id: "o", type: "output", label: "Finish", x: 202, y: 98, config: { key: "result" }, timeout_sec: 30, retry_count: 3 },
   ],
   edges: [{ id: "edge-123", sourceId: "t", targetId: "o", sourcePort: "next" }],
 };
