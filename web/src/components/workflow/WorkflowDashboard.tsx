@@ -50,7 +50,7 @@ export default function WorkflowDashboard({ onOpen, onCreate }: Props) {
 
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading workflows…</div>
-        ) : workflows.length === 0 ? (
+        ) : error ? null : workflows.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-4xl mb-3">⚡</div>
             <p className="text-gray-400 font-medium">No workflows yet</p>
