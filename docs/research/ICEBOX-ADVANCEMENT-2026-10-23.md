@@ -167,3 +167,35 @@ The installed skills catalog was enumerated (**2,836** entries), then filtered a
 | Engineering Suite Build | `test-driven-development` | Regression-first delivery and reliable validation. |
 
 An installed skill is an **instruction/workflow capability**, not proof of a deployed integration, reachable software service, or paid entitlement. Other named systems in the request require a documented connection before any live operation.
+
+## 11. Automation integration increment — 2026-10-23
+
+New software added **on this draft PR**, not necessarily deployed:
+
+- `src/security/ice_box/automation_policy.py` provides a deterministic, pure-Python, conservative next-action planner. Clean/non-quarantined content receives a static allow advisory; suspicious/unknown or already-quarantined content requires human review; malicious content receives an urgent isolation-and-review advisory. No branch authorises automatic release or dynamic execution.
+- `workers/ice-box-service/worker.py` returns `advisory_next_action` and `advisory_requires_review` from each existing `POST /scan` path. These fields are **advisory**, not an enforcement point: the pre-existing `allow` field retains its original scanner semantics. Clients should not treat an advisory as a clearance to process a threat.
+- `integrations/icebox_temporal/activities.py` exposes a metadata-only, pure policy evaluation Activity. `worker.py` is an explicitly started, independent Temporal worker. There is no Temporal runtime or production worker configured by this PR, and the primary IceBox worker gains **no Temporal dependency**. If adopted, self-hosted Temporal Server and SDK versions must be checked against the chosen feature set (Standalone Activities requires SDK >=1.23.0 and Server >=1.31.0). Queue name: `icebox-metadata-policy-v1`. Do not submit raw content or customer data to Temporal history. A review workflow with Signal APIs is deferred until human identity and audit boundaries exist.
+- `integrations/icebox_ycloud/alerts.py` constructs **but does not send** a queued static-template WhatsApp request for an urgent event only when the application is enabled, the recipient opted in, and the template is marked approved. Its default is disabled; the builder has no network transport, API key, YCloud account integration or webhook receiver. The template must contain no variables/media; do not put verdicts, case IDs or evidence in the message. The `externalId` is only a correlation ID, not an idempotency guarantee. An operator must independently verify approval, recipient eligibility and the YCloud provider account before real use. `POST https://api.ycloud.com/v2/whatsapp/messages` accepts a queued message, **not** a delivery confirmation. Do not automatically replay ambiguous submissions.
+- `tests/test_ice_box_automation_policy.py` exercises policy outcomes, previously quarantined clean content, unknown and invalid verdict input, opt-in, template approval, safe request fields, and invalid identifiers using synthetic data. Offline tests were run separately; full GitHub CI and live integration evidence still apply.
+
+### NVIDIA Skills routing
+
+The official NVIDIA skill catalog was checked at `https://github.com/NVIDIA/skills`. **CPU-first** remains the deployment posture. Any GPU-based classification is opt-in research; do not upload malware, customer content or incident evidence to a hosted model without explicit security authorization. A future benchmark should compare exact same permitted synthetic corpus, measure false positives, inference latency, GPU memory, energy usage, and fallback parity with CPU analysis. No GPU runtime or CUDA package was added.
+
+### Product Design workflow
+
+Design intent: an IceBox operator experience with a dark-mode, mobile-friendly *quarantine list → case evidence → policy review → human release/retain/purge* journey. The Product Design plugin's full visual workflow is Work-mode-only; no interactive prototype, design screenshot, Figma artifact or published UI was produced by this source PR. The UX design must preserve the existing IAM boundary; a button must never be mistaken for proven authorisation.
+
+### Verifiable limitations and approvals
+
+- No external messages were sent, no provider keys were accessed, and no live API or VM malware execution was invoked.
+- No autonomous release or production action is possible through the new automation policy or optional adapters.
+- The metadata-only Temporal activity and the YCloud request builder are local artifacts, not a live end-to-end orchestration.
+- Existing CI failures must be investigated; production readiness remains **OPEN** until full regression tests, Docker build, non-production acceptance, persistent-store restore and approvals pass.
+
+### Source links
+
+- Temporal standalone activity release: https://temporal.io/changelog/product-area/python-sdk
+- NVIDIA verified skills: https://github.com/NVIDIA/skills
+- YCloud queued message API: https://docs.ycloud.com/reference/whatsapp_message-send
+- YCloud template lifecycle: https://docs.ycloud.com/reference/whatsapp_template-create
