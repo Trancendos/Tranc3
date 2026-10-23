@@ -8,7 +8,7 @@ interface Props {
 
 const PALETTE_GROUPS: { label: string; types: NodeType[] }[] = [
   { label: "Control", types: ["trigger", "condition", "loop", "parallel", "merge"] },
-  { label: "AI / ML", types: ["llm", "ml_predict", "vector_search", "spark_tool"] },
+  { label: "AI / ML", types: ["llm", "ml_predict", "vector_search", "spark_tool", "skill_call"] },
   { label: "Data", types: ["transform", "http", "code"] },
   { label: "Output", types: ["output", "notify", "delay"] },
 ];
