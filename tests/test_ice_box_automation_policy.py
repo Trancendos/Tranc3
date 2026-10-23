@@ -2,12 +2,12 @@
 
 import pytest
 
-from src.security.ice_box.automation_policy import plan_scan
 from integrations.icebox_ycloud.alerts import (
     AlertNotAuthorised,
     YCloudAlertConfig,
     prepare_queued_template,
 )
+from src.security.ice_box.automation_policy import plan_scan
 
 
 @pytest.mark.parametrize(
