@@ -40,6 +40,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from audit_integrity import compute_v2_hash
+
 from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
@@ -138,7 +140,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     severity     TEXT    NOT NULL DEFAULT 'info',
     details_json TEXT    NOT NULL DEFAULT '{}',
     prev_hash    TEXT    NOT NULL,
-    hash         TEXT    NOT NULL
+    hash         TEXT    NOT NULL,
+    hash_version INTEGER NOT NULL DEFAULT 1
 )
 """
 
@@ -164,6 +167,10 @@ def _connect() -> sqlite3.Connection:
 def _init_db() -> None:
     with _connect() as conn:
         conn.execute(_CREATE_AUDIT_LOG)
+        # Preserve legacy hashes; existing databases receive a v1 marker.
+        columns = {row['name'] for row in conn.execute('PRAGMA table_info(audit_log)')}
+        if 'hash_version' not in columns:
+            conn.execute('ALTER TABLE audit_log ADD COLUMN hash_version INTEGER NOT NULL DEFAULT 1')
         for idx in _INDEXES:
             conn.execute(idx)
         conn.commit()
@@ -313,6 +320,25 @@ def _row_to_out(row: sqlite3.Row) -> AuditEventOut:
     )
 
 
+def _expected_row_hash(row: sqlite3.Row) -> Optional[str]:
+    """Verify legacy v1 records as written; hash the full payload for v2."""
+    version = row["hash_version"]
+    if version == 1:
+        return _compute_hash(
+            row["prev_hash"], row["event_id"], row["timestamp"],
+            row["service"], row["action"], row["actor"],
+            row["resource"] or "", row["outcome"] or "",
+        )
+    if version == 2:
+        return compute_v2_hash(
+            row["prev_hash"], row["event_id"], row["timestamp"],
+            row["service"], row["action"], row["actor"],
+            row["resource"] or "", row["outcome"] or "",
+            row["severity"], row["details_json"],
+        )
+    return None  # Unknown hash versions must fail closed.
+
+
 def _spot_check_chain(n: int = 100) -> bool:
     """
     Verify the last `n` entries form a valid chain.
@@ -327,27 +353,17 @@ def _spot_check_chain(n: int = 100) -> bool:
     # rows are DESC; walk them in reverse (oldest first within the window)
     rows = list(reversed(rows))
 
-    # For the oldest entry in our window we need its declared prev_hash to be
-    # whatever was before it — we can't recompute that, so we start verification
-    # from the second entry in the window.
-    for i in range(1, len(rows)):
-        prev_row = rows[i - 1]
-        cur_row = rows[i]
-        # Chain link: cur.prev_hash must equal prev.hash
-        if cur_row["prev_hash"] != prev_row["hash"]:
+    # Check *every* selected row, including the oldest/only one. When the
+    # window begins with the genesis entry, verify the genesis link as well.
+    for i, cur_row in enumerate(rows):
+        if i == 0 and cur_row["id"] == 1 and cur_row["prev_hash"] != GENESIS_HASH:
             return False
-        # Hash integrity: cur.hash must equal recomputed hash
-        expected = _compute_hash(
-            cur_row["prev_hash"],
-            cur_row["event_id"],
-            cur_row["timestamp"],
-            cur_row["service"],
-            cur_row["action"],
-            cur_row["actor"],
-            cur_row["resource"],
-            cur_row["outcome"],
-        )
-        if cur_row["hash"] != expected:
+        if i > 0 and cur_row["prev_hash"] != rows[i - 1]["hash"]:
+            return False
+        try:
+            if _expected_row_hash(cur_row) != cur_row["hash"]:
+                return False
+        except (ValueError, TypeError, KeyError):
             return False
     return True
 
@@ -438,7 +454,7 @@ async def health() -> dict:
         total = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
     chain_valid = _spot_check_chain(100)
     return {
-        "status": "healthy",
+        "status": "healthy" if chain_valid else "degraded",
         "service": WORKER_NAME,
         "port": PORT,
         "db_path": str(DB_PATH),
@@ -479,38 +495,24 @@ async def append_event(
 
     event_id = body.event_id or str(uuid.uuid4())
     ts = body.timestamp or datetime.now(timezone.utc).isoformat()
+    details_json = json.dumps(body.details, allow_nan=False)
     with _chain_lock, _connect() as conn:
         prev = _tail_hash(conn)
+        chain_hash = compute_v2_hash(
+            prev, event_id, ts, body.service, body.action, body.actor,
+            body.resource, body.outcome, body.severity, details_json,
+        )
         cur = conn.execute(
             "INSERT INTO audit_log (event_id, timestamp, service, action, actor, resource,"
-            " outcome, severity, details_json, prev_hash, hash)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            " outcome, severity, details_json, prev_hash, hash, hash_version)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                event_id,
-                ts,
-                body.service,
-                body.action,
-                body.actor,
-                body.resource,
-                body.outcome,
-                body.severity,
-                json.dumps(body.details),
-                prev,
-                "pending",
+                event_id, ts, body.service, body.action, body.actor,
+                body.resource, body.outcome, body.severity, details_json,
+                prev, chain_hash, 2,
             ),
         )
         row_id = cur.lastrowid
-        chain_hash = _compute_hash(
-            prev,
-            event_id,
-            ts,
-            body.service,
-            body.action,
-            body.actor,
-            body.resource,
-            body.outcome,
-        )
-        conn.execute("UPDATE audit_log SET hash=? WHERE id=?", (chain_hash, row_id))
     return AuditEventCreated(
         id=row_id, event_id=event_id, timestamp=ts, hash=chain_hash, prev_hash=prev
     )
@@ -590,17 +592,11 @@ async def verify_chain() -> VerifyResponse:
         # Chain link check
         if row["prev_hash"] != prev_hash:
             return VerifyResponse(valid=False, checked=checked, first_break_at=row["event_id"])
-        # Hash integrity check
-        expected = _compute_hash(
-            row["prev_hash"],
-            row["event_id"],
-            row["timestamp"],
-            row["service"],
-            row["action"],
-            row["actor"],
-            row["resource"] or "",
-            row["outcome"] or "",
-        )
+        # Verify each row with the correct historical algorithm.
+        try:
+            expected = _expected_row_hash(row)
+        except (ValueError, TypeError, KeyError):
+            expected = None
         if row["hash"] != expected:
             return VerifyResponse(valid=False, checked=checked, first_break_at=row["event_id"])
         prev_hash = row["hash"]
