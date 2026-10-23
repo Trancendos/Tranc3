@@ -99,6 +99,28 @@ authenticated decision authority and integration with CranBania remain separate
 requirements under issue #1450. Never treat a preview response as release
 permission.
 
+## PLM transactional outbox (delivery staging)
+
+Every committed PLM stage advancement now inserts a `plm.gate.passed`
+outbox event **inside the same SQLite transaction** as the stage change and
+gate-decision history row. A rollback therefore cannot leave a corresponding
+outbox event, and a process interruption after commit leaves a recoverable
+event row.
+
+`GET /townhall/plm/outbox/pending` provides authenticated admins a read-only
+view of undelivered rows. Programmatic `claim_outbox()` obtains an exclusive
+bounded lease and returns a claim token; `ack_outbox()` only marks delivery
+for the matching unexpired claim. An expired lease can be reclaimed, so
+delivery is designed for **at least once**, not exactly once; downstream
+consumers must deduplicate on the stable outbox event ID.
+
+**Important:** no acknowledgement-aware Observatory publisher is wired yet.
+The legacy best-effort `emit_async` notification still runs after commit and
+is not a delivery receipt. Never call `ack_outbox` solely because a
+fire-and-forget emit returned. No automatic outbox dispatcher is launched by
+this change. A separate audited worker must publish with a genuine success
+acknowledgement, retry with safe backoff, and expose dead-letter metrics.
+
 ## Evidence readiness report (advisory, admin only)
 
 `GET /townhall/plm/deliverables/{deliverable_id}/readiness` reads the existing
