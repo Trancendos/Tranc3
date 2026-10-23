@@ -3,6 +3,7 @@
 No payload bytes, findings text, credentials, personal data or external calls.
 This is policy advice, not an execution or release authorization.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -30,8 +31,8 @@ def plan_scan(verdict: str, *, quarantined: bool) -> AutomationPlan:
     Unknown verdicts must not be interpreted as clean. A quarantine
     record can never be automatically released after a later clean scan.
     """
-    if not isinstance(verdict, str):
-        raise TypeError("verdict must be a string")
+    if not isinstance(verdict, str) or type(quarantined) is not bool:
+        raise TypeError("verdict must be str and quarantined must be bool")
     normalized = verdict.casefold()
     if normalized == "clean" and not quarantined:
         return AutomationPlan("allow_static", False, "none")
