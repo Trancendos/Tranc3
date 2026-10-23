@@ -3,6 +3,7 @@
 No network requests, credentials, target scanning, or infrastructure mutations.
 Run: PYTHONPATH=workers/cryptex python -m unittest discover -s workers/cryptex/tests
 """
+
 from __future__ import annotations
 
 import sys
@@ -55,7 +56,9 @@ class ScanAssuranceTest(unittest.TestCase):
         self.assertEqual(assess_engine_output("clamav", {}).assessment, Assessment.INCONCLUSIVE)
 
     def test_actual_negative_detector_is_clean(self):
-        self.assertEqual(assess_engine_output("clamav", {"threat_found": False}).assessment, Assessment.CLEAN)
+        self.assertEqual(
+            assess_engine_output("clamav", {"threat_found": False}).assessment, Assessment.CLEAN
+        )
 
     def test_incompatible_engine_does_not_make_network_scan_clean(self):
         self.assertEqual(
@@ -64,7 +67,9 @@ class ScanAssuranceTest(unittest.TestCase):
         )
 
     def test_sast_only_routes_to_semgrep(self):
-        self.assertEqual(compatible_engines("sast", ["yara", "semgrep", "offline"]), ["semgrep", "offline"])
+        self.assertEqual(
+            compatible_engines("sast", ["yara", "semgrep", "offline"]), ["semgrep", "offline"]
+        )
 
 
 class ScanRouterIntegrationTest(unittest.IsolatedAsyncioTestCase):
@@ -72,7 +77,9 @@ class ScanRouterIntegrationTest(unittest.IsolatedAsyncioTestCase):
         db = FakeDatabase()
         router = SecurityEngineRouter(db)
         with patch.object(config, "FORCE_ENGINE", "offline"):
-            result = await router.scan(ScanRequest(scan_type=ScanType.file, target="synthetic-file"))
+            result = await router.scan(
+                ScanRequest(scan_type=ScanType.file, target="synthetic-file")
+            )
         self.assertEqual(result.status, ScanStatus.inconclusive)
         self.assertFalse(result.threat_found)
         self.assertEqual(result.engine_used, "offline")
@@ -81,10 +88,14 @@ class ScanRouterIntegrationTest(unittest.IsolatedAsyncioTestCase):
     async def test_working_detector_can_report_clean(self):
         db = FakeDatabase()
         router = SecurityEngineRouter(db)
-        router._engines["clamav"] = FakeEngine({"threat_found": False, "severity": "info", "findings": []})
+        router._engines["clamav"] = FakeEngine(
+            {"threat_found": False, "severity": "info", "findings": []}
+        )
         router._available_engines = lambda preferred=None: ["clamav", "offline"]
         with patch.object(config, "FORCE_ENGINE", ""):
-            result = await router.scan(ScanRequest(scan_type=ScanType.file, target="synthetic-file"))
+            result = await router.scan(
+                ScanRequest(scan_type=ScanType.file, target="synthetic-file")
+            )
         self.assertEqual(result.status, ScanStatus.completed)
         self.assertFalse(result.threat_found)
         self.assertEqual(result.engine_used, "clamav")
@@ -92,14 +103,19 @@ class ScanRouterIntegrationTest(unittest.IsolatedAsyncioTestCase):
     async def test_deferred_vulnerability_scan_remains_inconclusive(self):
         db = FakeDatabase()
         router = SecurityEngineRouter(db)
-        router._engines["openvas"] = FakeEngine({
-            "threat_found": False, "severity": "info",
-            "findings": [{"type": "vulnerability_scan_triggered"}],
-            "scan_performed": False,
-        })
+        router._engines["openvas"] = FakeEngine(
+            {
+                "threat_found": False,
+                "severity": "info",
+                "findings": [{"type": "vulnerability_scan_triggered"}],
+                "scan_performed": False,
+            }
+        )
         router._available_engines = lambda preferred=None: ["openvas", "offline"]
         with patch.object(config, "FORCE_ENGINE", ""):
-            result = await router.scan(ScanRequest(scan_type=ScanType.vulnerability, target="synthetic-host"))
+            result = await router.scan(
+                ScanRequest(scan_type=ScanType.vulnerability, target="synthetic-host")
+            )
         self.assertEqual(result.status, ScanStatus.inconclusive)
         self.assertEqual(result.engine_used, "openvas")
         self.assertEqual(result.findings[0]["type"], "vulnerability_scan_triggered")
@@ -117,16 +133,20 @@ class ScanRouterIntegrationTest(unittest.IsolatedAsyncioTestCase):
     async def test_openvas_target_creation_is_not_scan_completion(self):
         class FakeResponse:
             text = '<create_target_response status="201" />'
+
             def raise_for_status(self):
                 pass
 
         class FakeClient:
             def __init__(self, **kwargs):
                 pass
+
             async def __aenter__(self):
                 return self
+
             async def __aexit__(self, *args):
                 return None
+
             async def post(self, *args, **kwargs):
                 return FakeResponse()
 
