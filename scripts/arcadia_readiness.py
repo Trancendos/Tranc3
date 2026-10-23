@@ -5,6 +5,7 @@ This is a source evidence inventory, not a runtime health check or a security
 scanner. It never makes network requests, loads service modules, or reads .env.
 The source heuristics intentionally report potential risks for human review.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,14 +18,17 @@ SERVICE_PATHS = {
     "bank": "workers/payments-service/worker.py",
     "catalogue": "workers/products-service/worker.py",
 }
-PORT_RE = re.compile(r'WORKER_PORT\s*=\s*int\(os\.(?:getenv|environ\.get)\(["\']PORT["\']\)\s*or\s*["\'](\d+)["\']\)')
+PORT_RE = re.compile(
+    r'WORKER_PORT\s*=\s*int\(os\.(?:getenv|environ\.get)\(["\']PORT["\']\)\s*or\s*["\'](\d+)["\']\)'
+)
 MONEY_FLOAT_RE = re.compile(
-    r'\b(?:amount|balance|price_per_unit|total_price|initial_balance)\s*:\s*float\b'
-    r'|\b(?:balance|total_price|price_per_unit|amount)\s+REAL\b', re.IGNORECASE
+    r"\b(?:amount|balance|price_per_unit|total_price|initial_balance)\s*:\s*float\b"
+    r"|\b(?:balance|total_price|price_per_unit|amount)\s+REAL\b",
+    re.IGNORECASE,
 )
 WILDCARD_CORS_RE = re.compile(r'CORS_ORIGINS["\']\s*,\s*["\']\*["\']')
 ROUTER_GUARD_RE = re.compile(
-    r'APIRouter\(\s*dependencies\s*=\s*\[\s*Depends\(require_internal_auth\)\s*\]', re.MULTILINE
+    r"APIRouter\(\s*dependencies\s*=\s*\[\s*Depends\(require_internal_auth\)\s*\]", re.MULTILINE
 )
 
 
@@ -84,7 +88,9 @@ def strict_exit_code(report: dict) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--strict", action="store_true", help="Exit 2 if findings exist (opt-in CI gate)")
+    parser.add_argument(
+        "--strict", action="store_true", help="Exit 2 if findings exist (opt-in CI gate)"
+    )
     args = parser.parse_args()
     report = inspect(args.root)
     print(json.dumps(report, indent=2, sort_keys=True))
