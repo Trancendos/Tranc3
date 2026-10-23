@@ -1,6 +1,7 @@
 # src/townhall/routes.py
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Query
@@ -68,7 +69,6 @@ async def compliance_check(
 async def townhall_decision_preview(
     intent: DecisionIntent,
     context: Dict[str, Any] = Body(...),
-    actor: Optional[str] = Body(None),
 ):
     """Preview mandatory policy outcomes; never grant release or change authority.
 
@@ -82,16 +82,32 @@ async def townhall_decision_preview(
         results = {policy_id: ComplianceResult.UNKNOWN for policy_id in bundle.policy_ids}
     else:
         try:
+            # Keep user-controlled extras and evidence identifiers out of the
+            # compliance audit summary. Identity must come from trusted auth,
+            # never a caller-controlled JSON field.
+            evaluation_context = {
+                key: context[key]
+                for key in (
+                    "monthly_cost_usd",
+                    "personal_data",
+                    "cross_border_transfer",
+                    "lawful_basis",
+                    "adequacy_decision",
+                )
+                if key in context
+            }
             evaluated = get_townhall().check(
-                context, policy_ids=list(bundle.policy_ids), actor=actor
+                evaluation_context, policy_ids=list(bundle.policy_ids)
             )
         except Exception:
-            # No client context is included in this error; it may hold personal data.
-            import logging
-
+            # Do not log the submitted context: it may contain sensitive data.
             logging.getLogger(__name__).exception(
                 "Townhall decision preview evaluation unavailable"
             )
+            evaluated = {}
+            assessment_error = True
+
+        if not isinstance(evaluated, dict):
             evaluated = {}
             assessment_error = True
 
