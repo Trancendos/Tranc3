@@ -145,3 +145,57 @@ async def test_release_preview_blocks_unimplemented_stage_gate(monkeypatch):
     )
     assert response["overall"] == "fail"
     assert response["authorization_granted"] is False
+
+
+@pytest.mark.asyncio
+async def test_preview_does_not_pass_if_evaluator_omits_mandatory_policy(monkeypatch):
+    from src.townhall import routes
+    from src.townhall.governance import ComplianceResult
+
+    class IncompleteHall:
+        def check(self, context, policy_ids=None, actor=None):
+            return {"zero-cost": ComplianceResult.PASS}
+
+    monkeypatch.setattr(routes, "get_townhall", lambda: IncompleteHall())
+    response = await routes.townhall_decision_preview(
+        DecisionIntent.CHANGE,
+        {"monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False},
+    )
+    assert response["overall"] == "fail"
+    assert response["results"]["gdpr"] == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_preview_normalizes_malformed_policy_result(monkeypatch):
+    from src.townhall import routes
+    from src.townhall.governance import ComplianceResult
+
+    class MalformedHall:
+        def check(self, context, policy_ids=None, actor=None):
+            return {"zero-cost": ComplianceResult.PASS, "gdpr": "pass"}
+
+    monkeypatch.setattr(routes, "get_townhall", lambda: MalformedHall())
+    response = await routes.townhall_decision_preview(
+        DecisionIntent.CHANGE,
+        {"monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False},
+    )
+    assert response["overall"] == "fail"
+    assert response["results"]["gdpr"] == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_preview_policy_evaluator_exception_fails_closed(monkeypatch):
+    from src.townhall import routes
+
+    class BrokenHall:
+        def check(self, context, policy_ids=None, actor=None):
+            raise RuntimeError("system unavailable")
+
+    monkeypatch.setattr(routes, "get_townhall", lambda: BrokenHall())
+    response = await routes.townhall_decision_preview(
+        DecisionIntent.CHANGE,
+        {"monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False},
+    )
+    assert response["overall"] == "fail"
+    assert response["assessment_error"] is True
+    assert response["authorization_granted"] is False
