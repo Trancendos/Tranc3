@@ -40,6 +40,14 @@ describe("Digital Grid API contract", () => {
     expect(loaded.id).toBe("wf-1");
   });
 
+  it("shows existing SKILL_CALL workflow nodes instead of hiding entire workflows", () => {
+    const payload = encodeWorkflow({
+      ...graph, nodes: [{ id: "skill", type: "skill_call", label: "Resolve skill", x: 10, y: 10, config: { skill: "demo" } }], edges: [],
+    });
+    expect(payload.nodes.skill.type).toBe("SKILL_CALL");
+    expect(decodeWorkflow(payload).nodes[0].type).toBe("skill_call");
+  });
+
   it("decodes a canonical list response", () => {
     expect(decodeWorkflowList([encodeWorkflow(graph)])).toHaveLength(1);
     expect(decodeWorkflowList([encodeWorkflow(graph)])[0].nodes[0].x).toBe(21);
