@@ -220,6 +220,22 @@ def test_library_create_and_delete_with_auth():
         _clear_override()
 
 
+def test_library_legal_hold_refuses_delete_for_admin():
+    app.dependency_overrides[get_current_user] = _override("admin", "admin")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={"title": "Preserve me", "body": "Audit evidence", "legal_hold": True},
+        )
+        assert created.status_code == 200
+        article_id = created.json()["id"]
+        response = client.delete(f"/library/articles/{article_id}")
+        assert response.status_code == 409
+        assert client.get(f"/library/articles/{article_id}").status_code == 200
+    finally:
+        _clear_override()
+
+
 def test_library_create_rejects_unknown_classification():
     app.dependency_overrides[get_current_user] = _override("u1")
     try:
