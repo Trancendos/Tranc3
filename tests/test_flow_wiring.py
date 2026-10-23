@@ -217,7 +217,9 @@ async def test_chaos_party_reporter_round_trips_into_real_worker_stats(
     assert {r["status"]: r["c"] for r in summary["by_status"]} == {
         "pass": 1, "fail": 1, "skip": 1,
     }
-    assert summary["pass_rate_pct"] == 33.3
+    assert summary["pass_rate_pct"] == 50.0  # skipped runs are not failed runs
+    health = await worker.health()
+    assert health["pass_rate_pct"] == 50.0
 
 
 @pytest.mark.asyncio
@@ -231,7 +233,10 @@ async def test_chaos_party_rejects_legacy_statuses_before_inserting(tmp_path, mo
     )
     monkeypatch.setattr(worker, "DB_PATH", tmp_path / "chaos.db")
     worker.init_db()
-    batch = worker.BatchRunIn(runs=[worker.TestRunIn(name="legacy", status="passed")])
+    batch = worker.BatchRunIn(runs=[
+        worker.TestRunIn(name="valid_first", status="pass"),
+        worker.TestRunIn(name="legacy", status="passed"),
+    ])
     with pytest.raises(worker.HTTPException) as error:
         await worker.record_batch_runs(batch, x_internal_secret=secret)
     assert error.value.status_code == 400
