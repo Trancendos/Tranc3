@@ -238,6 +238,7 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
             pass
     return None
 
+
 # ── App ─────────────────────────────────────────────────────────
 
 
