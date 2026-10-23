@@ -491,6 +491,18 @@ class PlmService:
                     ON evidence(deliverable_id, criterion_id, recorded_at);
                 CREATE INDEX IF NOT EXISTS idx_decisions_deliverable
                     ON gate_decisions(deliverable_id, decided_at);
+                CREATE TABLE IF NOT EXISTS plm_outbox (
+                    id TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    delivered_at REAL,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    claim_token TEXT,
+                    claimed_until REAL
+                );
+                CREATE INDEX IF NOT EXISTS idx_plm_outbox_pending
+                    ON plm_outbox(delivered_at, claimed_until, created_at);
             """)
             self._conn.commit()
 
@@ -823,6 +835,25 @@ class PlmService:
                             json.dumps(waived),
                         ),
                     )
+                    event_payload = {
+                        "deliverable_id": deliverable_id,
+                        "from_stage": item.stage.value,
+                        "to_stage": following.value,
+                        "decision": decision.value,
+                        "approver": approver,
+                        "waived_criteria": waived,
+                    }
+                    self._conn.execute(
+                        "INSERT INTO plm_outbox "
+                        "(id,event_type,payload,created_at) VALUES (?,?,?,?)",
+                        (
+                            f"OB-{uuid.uuid4().hex.upper()}",
+                            PlatformEventType.PLM_GATE_PASSED.value,
+                            json.dumps(event_payload, sort_keys=True),
+                            now,
+                        ),
+                    )
+                    # Decision and recoverable notification record commit together.
                     self._conn.commit()
             except GateAlreadyPassed:
                 raise
@@ -859,6 +890,89 @@ class PlmService:
         if following is Stage.CLOSED:
             _emit(PlatformEventType.PLM_DELIVERABLE_CLOSED, payload)
         return self.get(deliverable_id)
+
+    def pending_outbox(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Inspect undelivered events, including those on an active lease."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("outbox limit must be from 1 to 500")
+        rows = self._conn.execute(
+            "SELECT id,event_type,payload,created_at,attempt_count "
+            "FROM plm_outbox WHERE delivered_at IS NULL ORDER BY created_at,id LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "event_type": row["event_type"],
+                "payload": json.loads(row["payload"]),
+                "created_at": row["created_at"],
+                "attempt_count": row["attempt_count"],
+            }
+            for row in rows
+        ]
+
+    def claim_outbox(
+        self, limit: int = 20, lease_seconds: int = 120
+    ) -> list[dict[str, Any]]:
+        """Atomically lease events for a future synchronous, acking dispatcher.
+
+        The existing fire-and-forget event bus is NOT a delivery receipt, so
+        callers must not acknowledge a record merely because emit_async ran.
+        """
+        if (
+            isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500
+            or isinstance(lease_seconds, bool) or not isinstance(lease_seconds, int)
+            or not 1 <= lease_seconds <= 600
+        ):
+            raise ValueError("outbox limit/lease outside permitted range")
+        now = time.time()
+        claimed: list[dict[str, Any]] = []
+        with self._lock:
+            try:
+                self._conn.execute("BEGIN IMMEDIATE")
+                rows = self._conn.execute(
+                    "SELECT id,event_type,payload,created_at,attempt_count FROM plm_outbox "
+                    "WHERE delivered_at IS NULL AND "
+                    "(claimed_until IS NULL OR claimed_until<=?) "
+                    "ORDER BY created_at,id LIMIT ?",
+                    (now, limit),
+                ).fetchall()
+                for row in rows:
+                    claim_token = uuid.uuid4().hex
+                    self._conn.execute(
+                        "UPDATE plm_outbox SET claimed_until=?,claim_token=?,"
+                        "attempt_count=attempt_count+1 WHERE id=?",
+                        (now + lease_seconds, claim_token, row["id"]),
+                    )
+                    claimed.append(
+                        {
+                            "id": row["id"],
+                            "event_type": row["event_type"],
+                            "payload": json.loads(row["payload"]),
+                            "created_at": row["created_at"],
+                            "attempt_count": row["attempt_count"] + 1,
+                            "claim_token": claim_token,
+                        }
+                    )
+                self._conn.commit()
+            except BaseException:
+                self._conn.rollback()
+                raise
+        return claimed
+
+    def ack_outbox(self, event_id: str, claim_token: str) -> bool:
+        """Mark delivered only with a matching lease receipt identifier."""
+        if not event_id or not claim_token:
+            return False
+        with self._lock:
+            cursor = self._conn.execute(
+                "UPDATE plm_outbox SET delivered_at=?,claim_token=NULL,"
+                "claimed_until=NULL WHERE id=? AND claim_token=? "
+                "AND delivered_at IS NULL AND claimed_until>?",
+                (time.time(), event_id, claim_token, time.time()),
+            )
+            self._conn.commit()
+        return cursor.rowcount == 1
 
     def history(self, deliverable_id: str) -> list[dict[str, Any]]:
         """Every gate decision made about this deliverable, oldest first."""
