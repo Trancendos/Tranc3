@@ -33,6 +33,8 @@ import httpx
 
 import config
 from database import CryptexDatabase
+from cryptex_assurance import assess_engine_output
+from cryptex_capabilities import compatible_engines
 from models import (
     EngineStatus,
     ScanEngine,
@@ -252,7 +254,7 @@ class OpenVASEngine:
             if 'status="201"' not in t_xml:
                 raise RuntimeError(f"OpenVAS target creation failed: {t_xml[:200]}")
             findings = [{"type": "vulnerability_scan_triggered", "target": req.target}]
-            return {"threat_found": False, "severity": "info", "findings": findings}
+            return {"threat_found": False, "severity": "info", "findings": findings, "scan_performed": False}
 
 
 # ── Tier 5: ClamAV Antivirus ──────────────────────────────────────────────────
@@ -314,6 +316,7 @@ class YARAEngine:
                     "severity": "info",
                     "findings": [],
                     "note": "No YARA rules dir",
+                    "scan_performed": False,
                 }
             rule_files = {
                 f: os.path.join(rules_dir, f)
@@ -321,7 +324,7 @@ class YARAEngine:
                 if f.endswith(".yar") or f.endswith(".yara")
             }
             if not rule_files:
-                return {"threat_found": False, "severity": "info", "findings": []}
+                return {"threat_found": False, "severity": "info", "findings": [], "scan_performed": False}
             rules = yara.compile(filepaths=rule_files)
             matches = rules.match(req.target)
             if matches:
@@ -421,7 +424,8 @@ class OfflineEngine:
             "threat_found": False,
             "severity": "info",
             "findings": [],
-            "note": "Offline stub — no external security engine available",
+            "scan_performed": False,
+            "note": "Inconclusive — no substantive security engine was available",
         }
 
 
@@ -533,11 +537,17 @@ class SecurityEngineRouter:
         candidates = (
             [forced] if forced and forced in self._engines else self._available_engines(preferred)
         )
+        candidates = compatible_engines(req.scan_type.value, candidates)
         if not candidates:
             candidates = [ScanEngine.offline.value]
 
-        top = candidates[:3]
-        chosen = self._pheromone.select(top) if len(top) > 1 else top[0]
+        # Offline is always terminal, never an early ACO pick.
+        substantive = [c for c in candidates if c != ScanEngine.offline.value]
+        top = substantive[:3]
+        chosen = (
+            self._pheromone.select(top) if len(top) > 1
+            else (top[0] if top else ScanEngine.offline.value)
+        )
         fallback_order = [chosen] + [c for c in candidates if c != chosen]
 
         last_error = "no engines attempted"
@@ -553,6 +563,21 @@ class SecurityEngineRouter:
             try:
                 output = await asyncio.wait_for(engine.scan(req), timeout=120)
                 elapsed = time.monotonic() - t0
+                assurance = assess_engine_output(engine_name, output)
+                if not assurance.coverage_confirmed:
+                    last_error = f"Engine {engine_name}: {assurance.reason}"
+                    if engine_name == ScanEngine.offline.value:
+                        result.engine_used = engine_name
+                        result.status = ScanStatus.inconclusive
+                        result.severity = ThreatSeverity.unknown
+                        result.raw_output = output
+                        result.error_message = last_error
+                        result.completed_at = datetime.now(timezone.utc)
+                        self.db.save_result(result)
+                        return result
+                    # A deferred/partial scan does not prove that the engine is unhealthy.
+                    logger.warning("Inconclusive result, trying next engine: %s", last_error)
+                    continue
                 self._pheromone.success(engine_name)
                 self._health[engine_name] = True
                 logger.info("Engine %s completed in %.2fs", engine_name, elapsed)
