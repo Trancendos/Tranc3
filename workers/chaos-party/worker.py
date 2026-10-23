@@ -231,7 +231,7 @@ async def health():
         suites = conn.execute("SELECT COUNT(*) FROM test_suites").fetchone()[0]
         runs = conn.execute("SELECT COUNT(*) FROM test_runs").fetchone()[0]
         pass_rate_row = conn.execute(
-            "SELECT AVG(CASE WHEN status='pass' THEN 1.0 ELSE 0.0 END)*100 FROM test_runs"
+            "SELECT AVG(CASE WHEN status='pass' THEN 1.0 ELSE 0.0 END)*100 FROM test_runs WHERE status IN ('pass','fail','error')"
         ).fetchone()[0]
     return {
         "status": "healthy",
@@ -481,10 +481,11 @@ async def stats(x_internal_secret: str = Header(default="")):
             "SELECT AVG(duration_ms) FROM test_runs WHERE duration_ms IS NOT NULL"
         ).fetchone()[0]
     pass_count = next((r["c"] for r in by_status if r["status"] == "pass"), 0)
+    scored_count = sum(r["c"] for r in by_status if r["status"] in _VALID_RUN_STATUSES and r["status"] != "skip")
     return {
         "total_runs": total,
         "by_status": [dict(r) for r in by_status],
-        "pass_rate_pct": round(pass_count / total * 100, 1) if total else 0,
+        "pass_rate_pct": round(pass_count / scored_count * 100, 1) if scored_count else 0,
         "avg_duration_ms": round(avg_duration, 1) if avg_duration else None,
     }
 
