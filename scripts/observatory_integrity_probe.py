@@ -12,7 +12,8 @@ import json
 import os
 from datetime import datetime, timezone
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 def validate_base_url(url: str) -> str:
@@ -26,12 +27,18 @@ def validate_base_url(url: str) -> str:
     return url.rstrip('/')
 
 
+class _RefuseRedirect(HTTPRedirectHandler):
+    """Never forward a credential-bearing request to a redirected endpoint."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(req.full_url, code, 'Redirect refused', headers, fp)
+
+
 def fetch_json(url: str, *, timeout: float = 5, secret: str | None = None) -> dict:
     headers = {'Accept': 'application/json'}
     if secret:
         headers['X-Internal-Secret'] = secret
     req = Request(url, headers=headers)
-    with urlopen(req, timeout=timeout) as response:  # nosec B310: URL scheme validated by check()
+    with build_opener(_RefuseRedirect()).open(req, timeout=timeout) as response:  # nosec B310: URL scheme validated by check()
         payload = json.load(response)
     if not isinstance(payload, dict):
         raise ValueError('Endpoint returned an unexpected non-object payload')
@@ -39,9 +46,12 @@ def fetch_json(url: str, *, timeout: float = 5, secret: str | None = None) -> di
 
 
 def classify(health: dict, verification: dict) -> dict:
+    checked = verification.get('checked')
+    total = health.get('total_events')
+    counts_plausible = (type(checked) is int and checked >= 0 and
+                        (type(total) is not int or checked >= total))
     safe = (health.get('status') == 'healthy' and health.get('chain_valid') is True
-            and verification.get('valid') is True
-            and isinstance(verification.get('checked'), int))
+            and verification.get('valid') is True and counts_plausible)
     return {'state': 'healthy' if safe else 'critical', 'code': 0 if safe else 1,
             'chain_valid': bool(health.get('chain_valid') is True and verification.get('valid') is True),
             'verified_events': verification.get('checked') if isinstance(verification.get('checked'), int) else None}
