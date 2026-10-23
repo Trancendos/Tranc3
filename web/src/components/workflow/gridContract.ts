@@ -91,6 +91,10 @@ function assertAcyclic(nodeIds: string[], edges: GridEdge[]): void {
   if (visited !== nodeIds.length) throw new Error("Workflow graph contains a cycle");
 }
 
+export function isSupportedNodeType(type: NodeType): boolean {
+  return Object.prototype.hasOwnProperty.call(NODE_TO_SERVER, type);
+}
+
 export function encodeWorkflow(workflow: WorkflowDef): WireWorkflow {
   requiredString(workflow.name, "name");
   if (!workflow.nodes.length) throw new Error("Workflow must contain at least one node");
