@@ -8,7 +8,7 @@
 **Code root:** `src/observability/` · **Worker:** `monitoring` (port 8007) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `70fec6b`
 
-**Audit-ledger migration and monitoring:** [Version 2 integrity and read-only probe](AUDIT-INTEGRITY-V2.md) — review-branch implementation, not yet deployed.
+**Audit-ledger migration and monitoring:** [Version 2 integrity and read-only probe](AUDIT-INTEGRITY-V2.md) · [2026 deep research and release gates](RELEASE-HARDENING-RESEARCH-2026-10-23.md) — review-branch implementation, not yet deployed.
 
 ---
 
