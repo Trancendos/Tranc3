@@ -14,7 +14,8 @@ def _criterion(criterion_id="validation.tested", mandatory=True, supplied_by="Th
 def _status(outcome=None, *, waived=False, mandatory=True, satisfied=None):
     evidence = (
         NS(id="EV-123", outcome=NS(value=outcome), reference="run-123", recorded_by="qa")
-        if outcome is not None else None
+        if outcome is not None
+        else None
     )
     return NS(
         criterion=_criterion(mandatory=mandatory),
@@ -26,7 +27,9 @@ def _status(outcome=None, *, waived=False, mandatory=True, satisfied=None):
 
 
 def _gate(stage="validation", entries=()):
-    return NS(deliverable_id="PLM-1", stage=NS(value=stage), criteria=list(entries), can_advance=False)
+    return NS(
+        deliverable_id="PLM-1", stage=NS(value=stage), criteria=list(entries), can_advance=False
+    )
 
 
 def _item(stage="validation"):
@@ -47,7 +50,9 @@ def test_missing_evidence_is_blocked_and_names_accountable_location():
     assert result["preview_only"] is True
 
 
-@pytest.mark.parametrize("outcome,reason", [("fail", "failed_evidence"), ("pending", "pending_evidence")])
+@pytest.mark.parametrize(
+    "outcome,reason", [("fail", "failed_evidence"), ("pending", "pending_evidence")]
+)
 def test_latest_failed_or_pending_record_remains_blocked(outcome, reason):
     result = summarise_gate_readiness(_item(), _gate(entries=[_status(outcome)]))
     assert result["state"] == "blocked"
@@ -85,7 +90,9 @@ def test_inconsistent_satisfied_without_valid_evidence_blocks():
 
 
 def test_optional_missing_evidence_does_not_block():
-    result = summarise_gate_readiness(_item(), _gate(entries=[_status(mandatory=False), _status("pass")]))
+    result = summarise_gate_readiness(
+        _item(), _gate(entries=[_status(mandatory=False), _status("pass")])
+    )
     assert result["state"] == "recorded_evidence_unverified"
     assert result["blockers"] == []
 
@@ -135,7 +142,9 @@ def readiness_client(tmp_path, monkeypatch):
     app = FastAPI()
     app.include_router(plm_routes.router)
     app.dependency_overrides[get_current_user] = lambda: {
-        "sub": "admin-1", "username": "admin-1", "role": "admin"
+        "sub": "admin-1",
+        "username": "admin-1",
+        "role": "admin",
     }
     yield TestClient(app), app, service, DeliverableKind, get_current_user
     service.close()
@@ -155,9 +164,7 @@ def test_readiness_http_is_read_only_and_never_grants_authority(readiness_client
 def test_readiness_http_reports_recorded_pass_as_unverified(readiness_client):
     client, _, service, kinds, _ = readiness_client
     item = service.create("Demo", kinds.APPLICATION, "The Lab")
-    service.submit_evidence(
-        item.id, "concept.business-case", "BC-1", "pass", recorded_by="qa"
-    )
+    service.submit_evidence(item.id, "concept.business-case", "BC-1", "pass", recorded_by="qa")
     r = client.get(f"/townhall/plm/deliverables/{item.id}/readiness")
     assert r.status_code == 200
     assert r.json()["state"] == "recorded_evidence_unverified"
