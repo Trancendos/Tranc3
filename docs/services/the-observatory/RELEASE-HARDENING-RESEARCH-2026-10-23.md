@@ -1,8 +1,8 @@
 # The Observatory — evidence-backed release hardening research
 
-**Date:** 2026-10-23 · **Project:** PID-OBS / SRV-OBS-001  
-**Scope:** zero-paid-runtime, self-hosted Tranc3 observability and audit paths.  
-**State:** architecture review and implementation guidance; **not live-deployment evidence**.  
+**Date:** 2026-10-23 · **Project:** PID-OBS / SRV-OBS-001
+**Scope:** zero-paid-runtime, self-hosted Tranc3 observability and audit paths.
+**State:** architecture review and implementation guidance; **not live-deployment evidence**.
 **Delivery:** [PR #1438](https://github.com/Trancendos/Tranc3/pull/1438) · [Tracking issue #1434](https://github.com/Trancendos/Tranc3/issues/1434).
 
 ## Executive decisions
