@@ -199,3 +199,12 @@ async def test_preview_policy_evaluator_exception_fails_closed(monkeypatch):
     assert response["overall"] == "fail"
     assert response["assessment_error"] is True
     assert response["authorization_granted"] is False
+
+
+def test_large_integer_cost_never_crashes_context_validation():
+    context = {
+        "monthly_cost_usd": 10**1000,
+        "personal_data": False,
+        "cross_border_transfer": False,
+    }
+    assert validate_context("change", context) == ()
