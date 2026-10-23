@@ -19,6 +19,8 @@ SERVICE_PATHS = {
     "catalogue": "workers/products-service/worker.py",
 }
 PORT_RE = re.compile(
+    
+)
     r'WORKER_PORT\s*=\s*int\(os\.(?:getenv|environ\.get)\(["\']PORT["\']\)\s*or\s*["\'](\d+)["\']\)'
 )
 MONEY_FLOAT_RE = re.compile(
