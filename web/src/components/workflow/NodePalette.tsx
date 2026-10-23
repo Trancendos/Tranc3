@@ -1,5 +1,6 @@
 import React from "react";
 import { NODE_META, type NodeType } from "./types";
+import { isSupportedNodeType } from "./gridContract";
 
 interface Props {
   onDragStart: (type: NodeType) => void;
@@ -23,13 +24,15 @@ export default function NodePalette({ onDragStart }: Props) {
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 px-1">{g.label}</p>
           {g.types.map((type) => {
             const m = NODE_META[type];
+            const supported = isSupportedNodeType(type);
             return (
               <div
                 key={type}
-                draggable
-                onDragStart={() => onDragStart(type)}
-                className="flex items-center gap-2 px-2 py-1.5 mb-1 rounded cursor-grab active:cursor-grabbing hover:bg-gray-700 transition-colors select-none"
-                title={m.description}
+                draggable={supported}
+                aria-disabled={!supported}
+                onDragStart={supported ? () => onDragStart(type) : undefined}
+                className={`flex items-center gap-2 px-2 py-1.5 mb-1 rounded select-none ${supported ? "cursor-grab active:cursor-grabbing hover:bg-gray-700" : "cursor-not-allowed opacity-40"}`}
+                title={supported ? m.description : `${m.label} is not supported by the current workflow engine`}
               >
                 <span
                   className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
@@ -38,7 +41,7 @@ export default function NodePalette({ onDragStart }: Props) {
                   {m.icon}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-200 font-medium truncate">{m.label}</p>
+                  <p className="text-xs text-gray-200 font-medium truncate">{m.label}{!supported && " (unavailable)"}</p>
                 </div>
               </div>
             );
