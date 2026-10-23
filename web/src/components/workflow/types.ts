@@ -15,6 +15,7 @@ export type NodeType =
   | "merge"
   | "output"
   | "spark_tool"
+  | "skill_call"
   | "vector_search"
   | "ml_predict"
   | "delay"
