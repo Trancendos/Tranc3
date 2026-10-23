@@ -55,12 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **ROUTING DEFECT — `/cryptex` has no `stripprefix` and this worker
-  does not serve the prefixed path.** Verified against its own source: every
-  route it registers sits below `/`, not below `/cryptex`, so Traefik
-  forwards `/cryptex/x` unchanged and the worker 404s on all of them.
-  Either add a stripprefix middleware to the compose labels, or give the
-  worker's router the prefix. **Fix this before building anything on it.**
+- **Traefik `stripprefix` is mandatory** for `/cryptex` routing; without the middleware
+  the router matches and the worker 404s on every path. This has bitten the estate
+  before (resonate, imind).
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -105,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik forwards /cryptex unchanged (no stripprefix)
+1. Request arrives  →  Traefik strips /cryptex
 2. The Shield — Configures dynamic firewall rules, blocking network threats live.
 3. The Spear — Automatically performs pen-testing against internal defenses.
 4. Bots fire: Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypot-Bot
@@ -187,6 +184,8 @@ has to name.
     ports: [ "8053:8053" ]
     labels:
       - "traefik.http.routers.cryptex.rule=Host(`trancendos.com`) && PathPrefix(`/cryptex`)"
+      - "traefik.http.routers.cryptex.middlewares=cryptex-strip@docker"
+      - "traefik.http.middlewares.cryptex-strip.stripprefix.prefixes=/cryptex"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -196,9 +195,8 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/cryptex` reach a route the worker actually serves — today they do not, and this epic is that fix.
-- As an implementer, EITHER a stripprefix middleware for `/cryptex` is added to the compose labels, OR the worker's router is given the prefix. One of the two, not neither.
-- As a reviewer, a request through Traefik returns something other than 404.
+- As a client, requests to `/cryptex` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities
 
@@ -206,16 +204,10 @@ actually missing rather than a generic phase 1.
 - As a user, I can exercise: Automated Pen-Testing.
 - As an auditor, every action emits an Observatory event carrying `PID-CRX`.
 
-### Epic 3 — Prove it works
-
-- As a maintainer, `tests/` covers Cryptex's health, status and each ability.
-- As a maintainer, the offline mode above is tested, not assumed.
-
 ## 11. Technical debt — DERIVED where evidenced
 
-| Item | Evidence | Impact |
-|---|---|---|
-| No test files under the code path | filesystem check | Regressions land silently |
+No debt evidenced from the registers for this Location. That means nothing
+was *found*, not that nothing exists — the scanners only see what is recorded.
 
 ## 12. Wireframe — SCAFFOLD
 
@@ -236,7 +228,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 5/10 · Readiness 9/10 → Finish first — above-median dependency, above-median readiness**
+**Criticality 5/10 · Readiness 10/10 → Finish first — above-median dependency, above-median readiness**
 
 Classified against the estate's own medians (criticality 4, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -249,7 +241,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 | Axis | Score | Reasons |
 |---|---|---|
 | Criticality | 5/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); Security pillar — platform-wide blast radius (+2); externally routed via Traefik (+1) |
-| Readiness | 9/10 | status ✅ in CLAUDE.md (+3); code path `workers/cryptex/` exists on disk (+2); three or more Python files present (+2); compose service `cryptex` defined (+2) |
+| Readiness | 10/10 | status ✅ in CLAUDE.md (+3); code path `workers/cryptex/` exists on disk (+2); three or more Python files present (+2); compose service `cryptex` defined (+2); at least one test file present (+1) |
 
 ## 14. Documentation — DERIVED
 
