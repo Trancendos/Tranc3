@@ -13,3 +13,6 @@
 ## 2024-05-27 - [Fast Euclidean and Manhattan Distance Optimization]
 **Learning:** `list(map(operator.sub, a, b))` combined with `sum(map(operator.mul, diff, diff))` is ~30% faster for Euclidean distance, and `sum(map(abs, map(operator.sub, a, b)))` is ~28% faster for Manhattan distance compared to pure Python generator expressions with indexing. For multiple operations like `MSE`, materializing the `map` into a `list` is required to prevent iterator exhaustion.
 **Action:** When calculating Euclidean or Manhattan distances in pure Python without `numpy`, use `map` with `operator.sub`, `operator.mul`, and `abs` instead of index-based generator comprehensions.
+## 2024-05-28 - [Python 3.12+ math.sumprod Optimization]
+**Learning:** In Python 3.12+, `math.sumprod` executes entirely in C and is significantly faster than using `sum(map(operator.mul, a, b))` or a `zip` loop for calculating dot products or vector norms in pure Python.
+**Action:** When calculating dot products or vector norms (cosine similarity, etc.) in pure Python without `numpy`, dynamically check for `hasattr(math, 'sumprod')` at the module level. Use it if available to avoid all iterator and generator overhead.

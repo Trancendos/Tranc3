@@ -14,10 +14,13 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 import operator
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
+
+_HAS_SUMPROD = hasattr(math, "sumprod")
 
 logger = logging.getLogger("tranc3.search.semantic_cache")
 
@@ -78,8 +81,11 @@ class SemanticCache:
 
     @staticmethod
     def _cosine(a: List[float], b: List[float]) -> float:
-        # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
-        dot = sum(map(operator.mul, a, b))
+        # Optimization: math.sumprod executes in C, faster than map(operator.mul) in Python 3.12+
+        if _HAS_SUMPROD:
+            dot = math.sumprod(a, b)  # type: ignore[attr-defined]
+        else:
+            dot = sum(map(operator.mul, a, b))
         # vectors are already L2-normalised when using SentenceTransformer with normalize=True
         return dot
 

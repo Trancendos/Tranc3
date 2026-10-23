@@ -38,6 +38,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
+_HAS_SUMPROD = hasattr(math, "sumprod")
+
 logger = logging.getLogger(__name__)
 
 # Optional numpy for vector operations
@@ -159,12 +161,16 @@ def _dot_product(a: List[float], b: List[float]) -> float:
     """Compute dot product of two vectors."""
     if len(a) != len(b):
         return 0.0
-    # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
+    # Optimization: math.sumprod executes in C, faster than map(operator.mul) in Python 3.12+
+    if _HAS_SUMPROD:
+        return math.sumprod(a, b)  # type: ignore[attr-defined]
     return sum(map(operator.mul, a, b))
 
 
 def _vector_norm(v: List[float]) -> float:
     """Compute L2 norm of a vector."""
+    if _HAS_SUMPROD:
+        return math.sqrt(math.sumprod(v, v))  # type: ignore[attr-defined]
     return math.sqrt(sum(x * x for x in v))
 
 

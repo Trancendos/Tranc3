@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
+_HAS_SUMPROD = hasattr(math, "sumprod")
+
 logger = logging.getLogger(__name__)
 
 
@@ -335,10 +337,15 @@ class HyperdimensionalVectorOps:
             return 0.0
 
         if metric == LatticeTopology.COSINE:
-            # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
-            dot = sum(map(operator.mul, a.data, b.data))
-            mag_a = math.sqrt(sum(map(operator.mul, a.data, a.data)))
-            mag_b = math.sqrt(sum(map(operator.mul, b.data, b.data)))
+            # Optimization: math.sumprod executes in C, faster than map(operator.mul) in Python 3.12+
+            if _HAS_SUMPROD:
+                dot = math.sumprod(a.data, b.data)  # type: ignore[attr-defined]
+                mag_a = math.sqrt(math.sumprod(a.data, a.data))  # type: ignore[attr-defined]
+                mag_b = math.sqrt(math.sumprod(b.data, b.data))  # type: ignore[attr-defined]
+            else:
+                dot = sum(map(operator.mul, a.data, b.data))
+                mag_a = math.sqrt(sum(map(operator.mul, a.data, a.data)))
+                mag_b = math.sqrt(sum(map(operator.mul, b.data, b.data)))
             if mag_a == 0 or mag_b == 0:
                 return 0.0
             return dot / (mag_a * mag_b)
