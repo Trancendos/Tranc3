@@ -151,3 +151,19 @@ Never pass raw threat samples, private source, telemetry, credentials or user co
 The existing `Trancendos/the-ice-box` repository is archived and its README describes cold storage; do not rename, unarchive or overwrite it by assumption. Keep the canonical application in `Tranc3` pending an explicit repository ownership/split decision.
 
 The Google Drive `LOCATION-PROFILE.md` is generated; source-of-truth changes belong in generator inputs, then regenerate. Historical July doc-packs contain stale auth claims; this dated assessment supersedes them only where directly verified.
+
+## 10. Skill discovery, 23 October 2026
+
+The installed skills catalog was enumerated (**2,836** entries), then filtered against IceBox's engineering needs rather than treating every skill as a suitable runtime dependency.
+
+| Discovered skill family | Concrete available skill | Use for IceBox |
+| --- | --- | --- |
+| Temporal | `temporal-developer`, `temporal-ops`, `temporal-cloud-setup`, `temporal-serverless` | Durable review workflows *if* a Temporal runtime is adopted. Installing a skill does not deploy a Temporal server. |
+| NVIDIA | `nvidia-skill-finder` | Live NVIDIA skill-catalog routing for relevant GPU/classification acceleration. Not necessary for baseline static analysis. |
+| Servotab | `servotab`, `plan`, `execute`, `debug`, `review`, `finish` | Bounded, risk-scaled implementation and verification discipline. |
+| Awesome Maintainer Defense | `audit-repository-workflows` | Offline GitHub Actions and workflow trust-boundary audit when full repository checkout is available. |
+| Compound Engineering | `ce-brainstorm`, plus related plan/review capabilities | Architecture alternatives, requirements and release planning. |
+| Product Design | `index`, `audit`, `research`, `ideate`, `share` | Operator UX research and prototypes; this workflow requires Work mode. |
+| Engineering Suite Build | `test-driven-development` | Regression-first delivery and reliable validation. |
+
+An installed skill is an **instruction/workflow capability**, not proof of a deployed integration, reachable software service, or paid entitlement. Other named systems in the request require a documented connection before any live operation.
