@@ -1,5 +1,5 @@
 # The Digital Grid — adjacent repository reuse assessment
-**Date:** 2026-10-23  
+**Date:** 2026-10-23
 **Related review:** [Digital Grid research](./DIGITAL-GRID-DISCOVERY-2026-10-23.md) · [Issue #1431](https://github.com/Trancendos/Tranc3/issues/1431)
 
 This document records a *targeted* code/README review of neighboring repositories. “Present in source” is **not** “deployed, tested, or suitable for direct adoption”.
