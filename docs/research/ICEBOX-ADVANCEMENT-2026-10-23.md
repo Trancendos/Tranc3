@@ -211,3 +211,11 @@ The optional IceBox policy-activity worker reuses `TEMPORAL_HOST` when explicitl
 ## 13. CI observations and scope
 
 In the draft PR, Ruff formatting errors initially surfaced on the added files and were corrected. Root-level CI installation jobs also reported a pre-existing dependency pin conflict: `opentelemetry-sdk==1.45.0` requires `opentelemetry-api==1.45.0`, while root requirements request `opentelemetry-api==1.45.1`. This prevents some test and smoke jobs from reaching test execution. Do not label it an IceBox functional-test failure, or silently change central requirements within this focused PR. Service Topology additionally reports a stale generated topology map requiring its supported `scripts/build_topology_3d.py` regeneration, rather than a hand-edit. Track both as independent repository-wide blockers.
+
+## 14. Independent no-network CI acceptance gate
+
+To preserve a usable security regression signal when the monorepo's central dependency lock is inconsistent, `.github/workflows/icebox-policy.yml` runs on relevant PR edits and can be manually dispatched. It uses pinned official checkout and setup-python actions, a read-only GitHub token scope, and **no pip installs, provider calls, credentials, Temporal connection or malicious content**.
+
+The workflow runs `PYTHONPATH=. python -m unittest discover -s tests -p 'test_ice_box_automation_stdlib.py' -v`. Its seven tests establish only pure policy behaviour and disabled-by-default YCloud payload preparation. This is a **separate, narrow safety gate**; passing it does not override failed root Pytest, failed topology generation, failing production merge gates, or live IceBox service tests. Preserve both gates.
+
+Before any real YCloud integration, separately verify the real provider account, user opt-in, approved template, opt-out/block eligibility, transport-level security, asynchronous status handling, and explicit operator consent to send a test. Current project changes contain no sending transport. Before any real Temporal integration, verify SDK/server versions and existing Digital Grid orchestration contract.
