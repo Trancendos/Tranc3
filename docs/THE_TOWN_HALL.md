@@ -47,6 +47,20 @@ curl -X POST https://tranc3-backend.fly.dev/townhall/documents/templates/add/ren
   -d '{"variables":{"system_name":"tranc3-backend","author":"Tristuran","version":"1.0","date":"2026-05-31","context":"Fly CLOUD_ONLY"}}'
 ```
 
+## Decision safety (fail-closed)
+
+`POST /townhall/check` preserves individual policy results (`pass`, `warn`, `fail`,
+`unknown`). Its **overall** result is `fail` when a required policy is missing,
+not executable, throws, returns an invalid status, or when no policies are evaluated.
+A warning remains `warn` only when all the other evaluated policies pass.
+Do not treat policy metadata scores as proof that an executable check passed.
+
+Because several registry-only policies have no evaluator, the default all-policy
+check may now correctly fail. Callers should explicitly name the implemented,
+required policy IDs and must not use an arbitrary narrower set to bypass the
+applicable release/approval gate. Governance criteria for releases belong in
+the separate evidence-backed PLM gates, not static registry scores.
+
 ## Compliance integration
 
 - Fail/warn results emit to **The Observatory** (`observe(..., category=GOVERNANCE)`).
