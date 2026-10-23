@@ -210,15 +210,12 @@ def init_schema() -> None:
 
 
 async def get_auth_user_id(authorization: str | None) -> str | None:
+    """Only return identities verified by Infinity One; deny all unverified requests."""
     if not authorization or not authorization.startswith("Bearer "):
-        if ENVIRONMENT == "test":
-            return "test-user"
         return None
-    token = authorization[7:]
 
-    if not INFINITY_ONE_URL:
-        if ENVIRONMENT != "production":
-            return "dev-user"
+    token = authorization[7:].strip()
+    if not token or not INFINITY_ONE_URL:
         return None
 
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -233,11 +230,13 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
             )
             if resp.status_code == 200:
                 data = resp.json()
-                return data.get("user_id")
-        except httpx.HTTPError:
+                if isinstance(data, dict):
+                    user_id = data.get("user_id")
+                    if isinstance(user_id, str) and user_id.strip():
+                        return user_id
+        except (httpx.HTTPError, ValueError, TypeError):
             pass
     return None
-
 
 # ── App ─────────────────────────────────────────────────────────
 
