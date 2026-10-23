@@ -119,11 +119,18 @@ async def waive_criterion(
     deliverable_id: str,
     criterion_id: str = Body(...),
     reason: str = Body(...),
+    ttl_seconds: int = Body(86400),
     current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     _require_admin(current_user)
     try:
-        waiver = get_plm().waive(deliverable_id, criterion_id, reason, _actor(current_user))
+        waiver = get_plm().waive(
+            deliverable_id,
+            criterion_id,
+            reason,
+            _actor(current_user),
+            ttl_seconds=ttl_seconds,
+        )
     except UnknownDeliverableError as exc:
         raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
     except UnknownCriterionError as exc:
@@ -131,6 +138,39 @@ async def waive_criterion(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return waiver.to_dict()
+
+
+@router.post("/deliverables/{deliverable_id}/waivers/{criterion_id}/revoke")
+async def revoke_waiver(
+    deliverable_id: str,
+    criterion_id: str,
+    reason: str = Body(...),
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Revoke a currently active exception under authenticated admin authority."""
+    _require_admin(current_user)
+    try:
+        get_plm().revoke_waiver(deliverable_id, criterion_id, reason, _actor(current_user))
+    except UnknownDeliverableError as exc:
+        raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
+    except UnknownCriterionError as exc:
+        raise HTTPException(400, f"no criterion {criterion_id!r}") from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {"revoked": True, "criterion_id": criterion_id}
+
+
+@router.get("/deliverables/{deliverable_id}/waivers/history")
+async def waiver_history(
+    deliverable_id: str, current_user: dict = Depends(get_current_user)
+) -> dict[str, Any]:
+    """Return durable grant/revoke history; never accept caller attribution."""
+    _require_admin(current_user)
+    try:
+        events = get_plm().waiver_history(deliverable_id)
+    except UnknownDeliverableError as exc:
+        raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
+    return {"count": len(events), "events": events}
 
 
 @router.get("/deliverables/{deliverable_id}/gate")
