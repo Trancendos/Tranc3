@@ -3,6 +3,7 @@
 Deploy only as a separate worker with Temporal Python SDK and Temporal Server.
 Does not connect to IceBox, send alerts, or execute files.
 """
+
 from temporalio import activity
 from src.security.ice_box.automation_policy import plan_scan
 
