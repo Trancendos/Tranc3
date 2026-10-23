@@ -497,6 +497,9 @@ async def append_event(
     ts = body.timestamp or datetime.now(timezone.utc).isoformat()
     details_json = json.dumps(body.details, allow_nan=False)
     with _chain_lock, _connect() as conn:
+        # Serialize chain-tip selection across processes, not only threads.
+        # BEGIN IMMEDIATE obtains SQLite's writer lock before SELECT.
+        conn.execute("BEGIN IMMEDIATE")
         prev = _tail_hash(conn)
         chain_hash = compute_v2_hash(
             prev, event_id, ts, body.service, body.action, body.actor,
