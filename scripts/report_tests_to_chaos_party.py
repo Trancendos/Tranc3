@@ -41,8 +41,8 @@ from typing import Any, Iterator
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_RESULTS = REPO / "logs" / "test_results.jsonl"
 
-# pytest outcomes -> Chaos Party run statuses. Anything unrecognised is
-# reported verbatim rather than coerced into "passed".
+# Pytest outcomes -> canonical worker statuses. Unknown outcomes count as
+# errors rather than silently entering metrics under an unrecognised state.
 # The Chaos Party worker and Observatory bridge require pass/fail/skip/error.
 # Preserve the original pytest outcome in metadata for diagnostics.
 _STATUS = {
