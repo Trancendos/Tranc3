@@ -79,7 +79,7 @@ async def townhall_decision_preview(
     input_errors = validate_context(intent, context)
     assessment_error = False
     if input_errors:
-        results = {policy_id: ComplianceResult.UNKNOWN for policy_id in bundle.policy_ids}
+        results = dict.fromkeys(bundle.policy_ids, ComplianceResult.UNKNOWN)
     else:
         try:
             # Keep user-controlled extras and evidence identifiers out of the
@@ -96,9 +96,7 @@ async def townhall_decision_preview(
                 )
                 if key in context
             }
-            evaluated = get_townhall().check(
-                evaluation_context, policy_ids=list(bundle.policy_ids)
-            )
+            evaluated = get_townhall().check(evaluation_context, policy_ids=list(bundle.policy_ids))
         except Exception:
             # Do not log the submitted context: it may contain sensitive data.
             logging.getLogger(__name__).exception(

@@ -96,13 +96,21 @@ async def test_change_preview_uses_server_mandatory_policies(monkeypatch):
     monkeypatch.setattr(routes, "get_townhall", lambda: FakeHall())
     response = await routes.townhall_decision_preview(
         DecisionIntent.CHANGE,
-        {"monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False,
-         "policy_ids": ["zero-cost"], "actor": "spoofed", "secret": "must-not-log"},
+        {
+            "monthly_cost_usd": 0,
+            "personal_data": False,
+            "cross_border_transfer": False,
+            "policy_ids": ["zero-cost"],
+            "actor": "spoofed",
+            "secret": "must-not-log",
+        },
     )
     assert observed["policy_ids"] == ["zero-cost", "gdpr"]
     assert observed["actor"] is None
     assert observed["context"] == {
-        "monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False
+        "monthly_cost_usd": 0,
+        "personal_data": False,
+        "cross_border_transfer": False,
     }
     assert response["overall"] == "pass"
     assert response["authorization_granted"] is False
@@ -142,8 +150,13 @@ async def test_release_preview_blocks_unimplemented_stage_gate(monkeypatch):
     monkeypatch.setattr(routes, "get_townhall", lambda: FakeHall())
     response = await routes.townhall_decision_preview(
         DecisionIntent.RELEASE,
-        {"monthly_cost_usd": 0, "personal_data": False,
-         "cross_border_transfer": False, "build_evidence_id": "a1", "test_evidence_id": "t1"},
+        {
+            "monthly_cost_usd": 0,
+            "personal_data": False,
+            "cross_border_transfer": False,
+            "build_evidence_id": "a1",
+            "test_evidence_id": "t1",
+        },
     )
     assert response["overall"] == "fail"
     assert response["authorization_granted"] is False
