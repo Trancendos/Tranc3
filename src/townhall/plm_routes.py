@@ -39,6 +39,17 @@ def _enum(value: str, enum_cls, label: str):
         raise HTTPException(400, f"unknown {label} {value!r}; expected one of: {valid}") from exc
 
 
+@router.get("/outbox/pending")
+async def pending_plm_events(
+    limit: int = Query(50, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Inspect events awaiting acknowledged delivery; read-only and admin-only."""
+    _require_admin(current_user)
+    events = get_plm().pending_outbox(limit=limit)
+    return {"count": len(events), "events": events, "delivery_verified": False}
+
+
 @router.get("/criteria")
 async def list_criteria(
     kind: Optional[str] = Query(None), stage: Optional[str] = Query(None)
