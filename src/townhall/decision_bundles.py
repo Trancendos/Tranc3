@@ -70,7 +70,7 @@ def validate_context(intent: DecisionIntent | str, context: Mapping[str, Any]) -
             valid = (
                 isinstance(value, (int, float))
                 and not isinstance(value, bool)
-                and math.isfinite(value)
+                and (not isinstance(value, float) or math.isfinite(value))
                 and value >= 0
             )
         elif key in ("personal_data", "cross_border_transfer"):
