@@ -15,11 +15,14 @@ Two primary abstractions:
 import asyncio
 import gc
 import logging
+import math
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+_HAS_SUMPROD = hasattr(math, "sumprod")
 
 
 # ---------------------------------------------------------------------------
@@ -412,8 +415,16 @@ class AdaptiveConfigTuner:
         # OLS linear: y = a + b*x  →  optimal is the value at x=n (next step)
         x_mean = sum(xs) / n
         y_mean = sum(values) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+
+        if _HAS_SUMPROD:
+            diff_x = [x - x_mean for x in xs]
+            diff_y = [y - y_mean for y in values]
+            ss_xy = math.sumprod(diff_x, diff_y)  # type: ignore[attr-defined]
+            ss_xx = math.sumprod(diff_x, diff_x)  # type: ignore[attr-defined]
+        else:
+            ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
+            ss_xx = sum((x - x_mean) ** 2 for x in xs)
+
         if abs(ss_xx) < 1e-12:
             return y_mean
 
@@ -447,13 +458,26 @@ class AdaptiveConfigTuner:
             return 0.0
 
         x_mean = sum(xs) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
-        ss_xx = sum((x - x_mean) ** 2 for x in xs)
+        if _HAS_SUMPROD:
+            diff_x = [x - x_mean for x in xs]
+            diff_y = [y - y_mean for y in values]
+            ss_xy = math.sumprod(diff_x, diff_y)  # type: ignore[attr-defined]
+            ss_xx = math.sumprod(diff_x, diff_x)  # type: ignore[attr-defined]
+        else:
+            ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
+            ss_xx = sum((x - x_mean) ** 2 for x in xs)
+
         if abs(ss_xx) < 1e-12:
             return 0.0
         b = ss_xy / ss_xx
         a = y_mean - b * x_mean
-        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
+
+        if _HAS_SUMPROD:
+            diff_res = [y - (a + b * x) for x, y in zip(xs, values, strict=False)]
+            ss_res = math.sumprod(diff_res, diff_res)  # type: ignore[attr-defined]
+        else:
+            ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
+
         r2 = 1.0 - (ss_res / ss_tot)
 
         # Scale by sample adequacy (fully confident after 50+ samples)
