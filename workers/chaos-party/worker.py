@@ -481,7 +481,9 @@ async def stats(x_internal_secret: str = Header(default="")):
             "SELECT AVG(duration_ms) FROM test_runs WHERE duration_ms IS NOT NULL"
         ).fetchone()[0]
     pass_count = next((r["c"] for r in by_status if r["status"] == "pass"), 0)
-    scored_count = sum(r["c"] for r in by_status if r["status"] in _VALID_RUN_STATUSES and r["status"] != "skip")
+    scored_count = sum(
+        r["c"] for r in by_status if r["status"] in _VALID_RUN_STATUSES and r["status"] != "skip"
+    )
     return {
         "total_runs": total,
         "by_status": [dict(r) for r in by_status],
