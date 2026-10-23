@@ -24,15 +24,35 @@ field, not just HTTP status. The full GET /verify checks the entire chain.
 
 ## Verification required before production
 
-\`\`\`bash
+```bash
 pytest -q tests/test_audit_integrity_v2.py tests/test_observatory_audit_service_v2.py
 pytest -q tests/test_workers_p3.py -k AuditService
 python -m compileall -q workers/audit-service
-\`\`\`
+```
 
 Additionally run the worker container with the sharedcore and observability
 named build contexts; test sequential and multi-process writes, restart,
 database migration, backups, and cross-service consumers in staging.
+
+## Automated read-only integrity probe
+
+A standard-library CLI under `scripts/observatory_integrity_probe.py` is
+provided for scheduled execution by cron, systemd, or a local supervisor.
+
+```bash
+python scripts/observatory_integrity_probe.py --url http://127.0.0.1:8025
+```
+
+Use the actual verified port/listener, not an assumed mapping: the legacy
+Python module documents 8017, while its Dockerfile currently serves 8025.
+Exit codes are 0=healthy, 1=integrity failure, 2=unavailable. JSON output
+contains no raw event payloads or authentication tokens. A configured
+`INTERNAL_SECRET` can be passed through the process environment; remote
+connections carrying it must use HTTPS.
+
+Operators can schedule the command after deployment validation. No schedule,
+secret, notification channel or live server is configured by this PR. The
+probe emits actionable signals but never deletes or repairs forensic records.
 
 ## Security and limitations
 
