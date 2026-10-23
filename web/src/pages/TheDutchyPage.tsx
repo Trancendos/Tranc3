@@ -232,7 +232,7 @@ export default function TheDutchyPage() {
                           className="hover:text-indigo-300 transition-colors flex items-start gap-1 group"
                         >
                           <span className="line-clamp-2">{art.title}</span>
-                          <ExternalLink size={11} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+                          <ExternalLink size={11} className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity" aria-hidden="true" />
                         </a>
                       ) : (
                         <span className="line-clamp-2">{art.title}</span>
