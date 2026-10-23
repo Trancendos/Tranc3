@@ -3850,6 +3850,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.chaos-party.rule=Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)"
+      # Worker routes are unprefixed (/health, /runs, /chaos); strip the external mount path.
+      - "traefik.http.routers.chaos-party.middlewares=chaos-party-strip"
+      - "traefik.http.middlewares.chaos-party-strip.stripprefix.prefixes=/chaos-party"
       - "traefik.http.routers.chaos-party.entrypoints=websecure"
       - "traefik.http.routers.chaos-party.tls=true"
       - "traefik.http.routers.chaos-party.tls.certresolver=letsencrypt"
