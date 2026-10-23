@@ -119,3 +119,61 @@ def test_terminal_empty_gate_does_not_imply_compliance():
 def test_no_hidden_raw_evidence_reference_in_report():
     result = summarise_gate_readiness(_item(), _gate(entries=[_status("pass")]))
     assert "run-123" not in repr(result)
+
+
+@pytest.fixture
+def readiness_client(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from auth import get_current_user
+    from src.townhall import plm_routes
+    from src.townhall.plm import DeliverableKind, PlmService
+
+    service = PlmService(db_path=tmp_path / "readiness.db")
+    monkeypatch.setattr(plm_routes, "get_plm", lambda: service)
+    app = FastAPI()
+    app.include_router(plm_routes.router)
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "admin-1", "username": "admin-1", "role": "admin"
+    }
+    yield TestClient(app), app, service, DeliverableKind, get_current_user
+    service.close()
+
+
+def test_readiness_http_is_read_only_and_never_grants_authority(readiness_client):
+    client, _, service, kinds, _ = readiness_client
+    item = service.create("Demo", kinds.APPLICATION, "The Lab")
+    r = client.get(f"/townhall/plm/deliverables/{item.id}/readiness")
+    assert r.status_code == 200
+    assert r.json()["state"] == "blocked"
+    assert r.json()["authorization_granted"] is False
+    assert service.get(item.id).stage.value == "concept"
+    assert service.history(item.id) == []
+
+
+def test_readiness_http_reports_recorded_pass_as_unverified(readiness_client):
+    client, _, service, kinds, _ = readiness_client
+    item = service.create("Demo", kinds.APPLICATION, "The Lab")
+    service.submit_evidence(
+        item.id, "concept.business-case", "BC-1", "pass", recorded_by="qa"
+    )
+    r = client.get(f"/townhall/plm/deliverables/{item.id}/readiness")
+    assert r.status_code == 200
+    assert r.json()["state"] == "recorded_evidence_unverified"
+    assert r.json()["independent_evidence_verification"] is False
+    assert r.json()["authorization_granted"] is False
+
+
+def test_readiness_http_denies_non_admin(readiness_client):
+    client, app, service, kinds, dependency = readiness_client
+    item = service.create("Demo", kinds.APPLICATION, "The Lab")
+    app.dependency_overrides[dependency] = lambda: {"username": "reader", "role": "viewer"}
+    r = client.get(f"/townhall/plm/deliverables/{item.id}/readiness")
+    assert r.status_code == 403
+
+
+def test_readiness_http_404_for_unknown_deliverable(readiness_client):
+    client, _, _, _, _ = readiness_client
+    r = client.get("/townhall/plm/deliverables/PLM-MISSING/readiness")
+    assert r.status_code == 404
