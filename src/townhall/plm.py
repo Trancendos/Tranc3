@@ -911,17 +911,18 @@ class PlmService:
             for row in rows
         ]
 
-    def claim_outbox(
-        self, limit: int = 20, lease_seconds: int = 120
-    ) -> list[dict[str, Any]]:
+    def claim_outbox(self, limit: int = 20, lease_seconds: int = 120) -> list[dict[str, Any]]:
         """Atomically lease events for a future synchronous, acking dispatcher.
 
         The existing fire-and-forget event bus is NOT a delivery receipt, so
         callers must not acknowledge a record merely because emit_async ran.
         """
         if (
-            isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500
-            or isinstance(lease_seconds, bool) or not isinstance(lease_seconds, int)
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or not 1 <= limit <= 500
+            or isinstance(lease_seconds, bool)
+            or not isinstance(lease_seconds, int)
             or not 1 <= lease_seconds <= 600
         ):
             raise ValueError("outbox limit/lease outside permitted range")
