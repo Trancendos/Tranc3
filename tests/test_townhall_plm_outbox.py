@@ -97,3 +97,32 @@ def test_blocked_gate_never_enqueues_transition(service):
 def test_outbox_payload_does_not_contain_raw_evidence_reference(service):
     _advance_one(service)
     assert "business-case-1" not in repr(service.pending_outbox())
+
+
+def test_pending_outbox_api_requires_admin_and_does_not_ack(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from auth import get_current_user
+    from src.townhall import plm_routes
+
+    service = PlmService(db_path=tmp_path / "api-outbox.db")
+    monkeypatch.setattr(plm_routes, "get_plm", lambda: service)
+    app = FastAPI()
+    app.include_router(plm_routes.router)
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "operator", "role": "admin"
+    }
+    try:
+        _advance_one(service)
+        client = TestClient(app)
+        response = client.get("/townhall/plm/outbox/pending")
+        assert response.status_code == 200
+        assert response.json()["count"] == 1
+        assert response.json()["delivery_verified"] is False
+        assert len(service.pending_outbox()) == 1
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "viewer", "role": "viewer"
+        }
+        assert client.get("/townhall/plm/outbox/pending").status_code == 403
+    finally:
+        service.close()
