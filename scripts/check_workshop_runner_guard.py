@@ -17,7 +17,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN_GUARD = re.compile(r"^github\.ref\s*==\s*(['\"])refs/heads/main\1$")
-UNTRUSTED_EVENTS = {"pull_request_target", "workflow_run", "issue_comment"}
+ALLOWED_EVENTS = {"push", "pull_request", "schedule", "workflow_dispatch"}
 
 
 def _finding(path: str, job: str, code: str, message: str) -> dict[str, str]:
@@ -101,7 +101,13 @@ def audit(root: Path) -> dict:
                         path, str(name), "MISSING_MAIN_GUARD",
                         "deploy-host requires job-level github.ref == 'refs/heads/main'.",
                     ))
-                unsafe = sorted(UNTRUSTED_EVENTS & _events(workflow))
+                events = _events(workflow)
+                unsafe = sorted(events - ALLOWED_EVENTS)
+                if not events:
+                    findings.append(_finding(
+                        path, str(name), "MISSING_TRIGGER",
+                        "Privileged workflow must declare an explicit event trigger.",
+                    ))
                 if unsafe:
                     findings.append(_finding(
                         path, str(name), "UNTRUSTED_TRIGGER",
