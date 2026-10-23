@@ -144,6 +144,11 @@ async def delete_article(
         return JSONResponse({"error": "Not found"}, status_code=404)
     if not _can_read(art, current_user):
         return JSONResponse({"error": "Forbidden"}, status_code=403)
+    # Reading a shared article is not permission to delete it. Only the
+    # original author or an administrator may remove an unheld article.
+    caller_id = current_user.get("id") or current_user.get("sub")
+    if current_user.get("role") != "admin" and caller_id != art.author:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
     if art.legal_hold:
         return JSONResponse({"error": "Article is under legal hold"}, status_code=409)
     if not get_library().delete(article_id):
