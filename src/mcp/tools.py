@@ -29,14 +29,12 @@ _SAFE_BUILTINS = {
         "bytes",
         "chr",
         "dict",
-        "dir",
         "divmod",
         "enumerate",
         "filter",
         "float",
         "format",
         "frozenset",
-        "getattr",
         "hasattr",
         "hash",
         "hex",
@@ -64,7 +62,6 @@ _SAFE_BUILTINS = {
         "str",
         "sum",
         "tuple",
-        "type",
         "zip",
     )
     if (isinstance(__builtins__, dict) and k in __builtins__)
