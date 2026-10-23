@@ -90,18 +90,20 @@ async def test_change_preview_uses_server_mandatory_policies(monkeypatch):
 
     class FakeHall:
         def check(self, context, policy_ids=None, actor=None):
-            observed.update(policy_ids=policy_ids, actor=actor)
+            observed.update(policy_ids=policy_ids, actor=actor, context=context)
             return {"zero-cost": ComplianceResult.PASS, "gdpr": ComplianceResult.PASS}
 
     monkeypatch.setattr(routes, "get_townhall", lambda: FakeHall())
     response = await routes.townhall_decision_preview(
         DecisionIntent.CHANGE,
         {"monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False,
-         "policy_ids": ["zero-cost"]},
-        actor="reviewer",
+         "policy_ids": ["zero-cost"], "actor": "spoofed", "secret": "must-not-log"},
     )
     assert observed["policy_ids"] == ["zero-cost", "gdpr"]
-    assert observed["actor"] == "reviewer"
+    assert observed["actor"] is None
+    assert observed["context"] == {
+        "monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False
+    }
     assert response["overall"] == "pass"
     assert response["authorization_granted"] is False
     assert response["preview_only"] is True
@@ -208,3 +210,20 @@ def test_large_integer_cost_never_crashes_context_validation():
         "cross_border_transfer": False,
     }
     assert validate_context("change", context) == ()
+
+
+@pytest.mark.asyncio
+async def test_preview_handles_unstructured_evaluator_response(monkeypatch):
+    from src.townhall import routes
+
+    class NonMappingHall:
+        def check(self, context, policy_ids=None, actor=None):
+            return None
+
+    monkeypatch.setattr(routes, "get_townhall", lambda: NonMappingHall())
+    response = await routes.townhall_decision_preview(
+        DecisionIntent.CHANGE,
+        {"monthly_cost_usd": 0, "personal_data": False, "cross_border_transfer": False},
+    )
+    assert response["overall"] == "fail"
+    assert response["assessment_error"] is True
