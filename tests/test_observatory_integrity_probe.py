@@ -50,3 +50,20 @@ def test_probe_returns_unavailable_for_connection_failure(monkeypatch):
     assert result['state'] == 'unavailable'
     assert result['code'] == 2
     assert 'down' not in str(result)
+
+
+def test_probe_refuses_redirect_to_other_origin():
+    from urllib.error import HTTPError
+    from urllib.request import Request
+    mod = probe()
+    handler = mod._RefuseRedirect()
+    with pytest.raises(HTTPError):
+        handler.redirect_request(Request('https://observatory.example.org/verify'), None,
+                                 302, 'Moved', {}, 'http://attacker.example.com')
+
+
+def test_probe_detects_dropped_events_between_health_and_verify():
+    mod = probe()
+    result = mod.classify({'status':'healthy','chain_valid':True,'total_events':5},
+                          {'valid':True,'checked':3})
+    assert result['state'] == 'critical'
