@@ -1,4 +1,5 @@
 """Regression tests for the Workshop privileged-runner CI boundary."""
+
 from __future__ import annotations
 
 import json
@@ -20,9 +21,7 @@ class WorkshopRunnerGuardTests(unittest.TestCase):
         self.workflows.mkdir(parents=True)
         self.runner_config = self.root / "deploy/forgejo/act-runner-deploy.yml"
         self.runner_config.parent.mkdir(parents=True)
-        self.runner_config.write_text(
-            'runner:\n  labels: ["deploy-host:host"]\n', encoding="utf-8"
-        )
+        self.runner_config.write_text('runner:\n  labels: ["deploy-host:host"]\n', encoding="utf-8")
 
     def write_workflow(
         self,
@@ -49,9 +48,7 @@ class WorkshopRunnerGuardTests(unittest.TestCase):
         self.write_workflow()
         path = self.workflows / "build.yml"
         path.write_text(
-            path.read_text().replace(
-                "    if: github.ref == 'refs/heads/main'\n", ""
-            ),
+            path.read_text().replace("    if: github.ref == 'refs/heads/main'\n", ""),
             encoding="utf-8",
         )
         self.assertIn("MISSING_MAIN_GUARD", self.codes())
@@ -72,9 +69,7 @@ class WorkshopRunnerGuardTests(unittest.TestCase):
         self.write_workflow()
         path = self.workflows / "build.yml"
         path.write_text(
-            path.read_text().replace(
-                "on:\n  push:\n    branches: [main]\n", ""
-            ),
+            path.read_text().replace("on:\n  push:\n    branches: [main]\n", ""),
             encoding="utf-8",
         )
         self.assertIn("MISSING_TRIGGER", self.codes())

@@ -6,6 +6,7 @@ A deploy-host job is permitted only when it has the exact main-ref guard and
 is not reachable through privileged untrusted event contexts. Branch protection
 and independent reviews remain mandatory; this is defense in depth.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -64,10 +65,14 @@ def audit(root: Path) -> dict:
     findings: list[dict[str, str]] = []
     count = privileged = 0
     if not folder.is_dir():
-        findings.append(_finding(
-            ".forgejo/workflows", "", "MISSING_WORKFLOWS",
-            "Cannot inspect the missing Forgejo workflow directory.",
-        ))
+        findings.append(
+            _finding(
+                ".forgejo/workflows",
+                "",
+                "MISSING_WORKFLOWS",
+                "Cannot inspect the missing Forgejo workflow directory.",
+            )
+        )
     else:
         for file in sorted((*folder.glob("*.yml"), *folder.glob("*.yaml"))):
             count += 1
@@ -75,64 +80,102 @@ def audit(root: Path) -> dict:
             try:
                 workflow = yaml.safe_load(file.read_text(encoding="utf-8"))
             except (OSError, yaml.YAMLError) as exc:
-                findings.append(_finding(
-                    path, "", "INVALID_WORKFLOW", f"Cannot parse workflow: {type(exc).__name__}.",
-                ))
+                findings.append(
+                    _finding(
+                        path,
+                        "",
+                        "INVALID_WORKFLOW",
+                        f"Cannot parse workflow: {type(exc).__name__}.",
+                    )
+                )
                 continue
             if not isinstance(workflow, dict) or not isinstance(workflow.get("jobs"), dict):
-                findings.append(_finding(
-                    path, "", "INVALID_JOBS", "Workflow must define a jobs mapping.",
-                ))
+                findings.append(
+                    _finding(
+                        path,
+                        "",
+                        "INVALID_JOBS",
+                        "Workflow must define a jobs mapping.",
+                    )
+                )
                 continue
             for name, job in sorted(workflow["jobs"].items()):
                 if not isinstance(job, dict):
                     continue
                 explicit, dynamic = _runner(job.get("runs-on"))
                 if dynamic:
-                    findings.append(_finding(
-                        path, str(name), "DYNAMIC_RUNNER",
-                        "Dynamic runner selection mentions deploy-host; use an explicit label.",
-                    ))
+                    findings.append(
+                        _finding(
+                            path,
+                            str(name),
+                            "DYNAMIC_RUNNER",
+                            "Dynamic runner selection mentions deploy-host; use an explicit label.",
+                        )
+                    )
                 if not explicit:
                     continue
                 privileged += 1
                 if not _guarded(job.get("if")):
-                    findings.append(_finding(
-                        path, str(name), "MISSING_MAIN_GUARD",
-                        "deploy-host requires job-level github.ref == 'refs/heads/main'.",
-                    ))
+                    findings.append(
+                        _finding(
+                            path,
+                            str(name),
+                            "MISSING_MAIN_GUARD",
+                            "deploy-host requires job-level github.ref == 'refs/heads/main'.",
+                        )
+                    )
                 events = _events(workflow)
                 unsafe = sorted(events - ALLOWED_EVENTS)
                 if not events:
-                    findings.append(_finding(
-                        path, str(name), "MISSING_TRIGGER",
-                        "Privileged workflow must declare an explicit event trigger.",
-                    ))
+                    findings.append(
+                        _finding(
+                            path,
+                            str(name),
+                            "MISSING_TRIGGER",
+                            "Privileged workflow must declare an explicit event trigger.",
+                        )
+                    )
                 if unsafe:
-                    findings.append(_finding(
-                        path, str(name), "UNTRUSTED_TRIGGER",
-                        "deploy-host cannot run under " + ", ".join(unsafe) + ".",
-                    ))
+                    findings.append(
+                        _finding(
+                            path,
+                            str(name),
+                            "UNTRUSTED_TRIGGER",
+                            "deploy-host cannot run under " + ", ".join(unsafe) + ".",
+                        )
+                    )
     if privileged:
         config = root / "deploy/forgejo/act-runner-deploy.yml"
         try:
             data = yaml.safe_load(config.read_text(encoding="utf-8"))
             labels = (data or {}).get("runner", {}).get("labels", [])
             if "deploy-host:host" not in labels:
-                findings.append(_finding(
-                    "deploy/forgejo/act-runner-deploy.yml", "", "RUNNER_CONFIG",
-                    "Privileged runner label deploy-host:host is missing.",
-                ))
+                findings.append(
+                    _finding(
+                        "deploy/forgejo/act-runner-deploy.yml",
+                        "",
+                        "RUNNER_CONFIG",
+                        "Privileged runner label deploy-host:host is missing.",
+                    )
+                )
         except (OSError, yaml.YAMLError, TypeError, AttributeError) as exc:
-            findings.append(_finding(
-                "deploy/forgejo/act-runner-deploy.yml", "", "RUNNER_CONFIG",
-                f"Cannot validate runner config: {type(exc).__name__}.",
-            ))
+            findings.append(
+                _finding(
+                    "deploy/forgejo/act-runner-deploy.yml",
+                    "",
+                    "RUNNER_CONFIG",
+                    f"Cannot validate runner config: {type(exc).__name__}.",
+                )
+            )
     if count == 0:
-        findings.append(_finding(
-            ".forgejo/workflows", "", "NO_WORKFLOWS",
-            "No workflow evidence to inspect; refusing a green result.",
-        ))
+        findings.append(
+            _finding(
+                ".forgejo/workflows",
+                "",
+                "NO_WORKFLOWS",
+                "No workflow evidence to inspect; refusing a green result.",
+            )
+        )
     return {
         "status": "pass" if not findings else "fail",
         "files_scanned": count,
