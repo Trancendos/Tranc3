@@ -90,9 +90,10 @@ an explicit Boolean `adequacy_decision`. An incomplete or invalid context return
 
 **This endpoint does not authorise anything.** Every response includes
 `preview_only: true` and `authorization_granted: false`, even if the
-preliminary `overall` assessment is `pass`. Supplied values, `actor` and
-evidence IDs are untrusted claims, not independently verified source records or
-human approvals. `prince2` currently has no executable evaluator, so release
+preliminary `overall` assessment is `pass`. Supplied values and evidence IDs are untrusted claims, not independently
+verified source records or human approvals. The preview ignores user-supplied
+`actor`, `policy_ids` and unrelated context fields rather than recording spoofed
+identity or copying arbitrary data into compliance logs. `prince2` currently has no executable evaluator, so release
 previews fail closed. The persistent PLM stage gates, trusted evidence lookup,
 authenticated decision authority and integration with CranBania remain separate
 requirements under issue #1450. Never treat a preview response as release
