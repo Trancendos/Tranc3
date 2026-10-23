@@ -244,11 +244,11 @@ export default function HivePage() {
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {p.status !== 'active' ? (
-                              <button onClick={() => pipelineAction(p.pipeline_id, 'start')} className="text-emerald-400 hover:text-emerald-300 transition-colors" title="Start">
+                              <button onClick={() => pipelineAction(p.pipeline_id, 'start')} className="text-emerald-400 hover:text-emerald-300 transition-colors" title="Start pipeline" aria-label="Start pipeline">
                                 <Play size={13} />
                               </button>
                             ) : (
-                              <button onClick={() => pipelineAction(p.pipeline_id, 'pause')} className="text-amber-400 hover:text-amber-300 transition-colors" title="Pause">
+                              <button onClick={() => pipelineAction(p.pipeline_id, 'pause')} className="text-amber-400 hover:text-amber-300 transition-colors" title="Pause pipeline" aria-label="Pause pipeline">
                                 <Pause size={13} />
                               </button>
                             )}
@@ -285,6 +285,7 @@ export default function HivePage() {
                     onClick={() => dissolveSwarm(s.swarm_id)}
                     className="text-red-400/60 hover:text-red-400 transition-colors"
                     title="Dissolve swarm"
+                    aria-label={`Dissolve swarm ${s.name}`}
                   >
                     <Trash2 size={13} />
                   </button>
