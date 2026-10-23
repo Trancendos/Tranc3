@@ -4,6 +4,7 @@ A threat-intelligence lookup cannot substitute for a file scan or SAST.
 Suricata is an offline stub until an actual log collector is wired.
 Wazuh alert lookups cannot substitute for active vulnerability assessment.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
