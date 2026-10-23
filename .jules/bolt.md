@@ -13,3 +13,6 @@
 ## 2024-05-27 - [Fast Euclidean and Manhattan Distance Optimization]
 **Learning:** `list(map(operator.sub, a, b))` combined with `sum(map(operator.mul, diff, diff))` is ~30% faster for Euclidean distance, and `sum(map(abs, map(operator.sub, a, b)))` is ~28% faster for Manhattan distance compared to pure Python generator expressions with indexing. For multiple operations like `MSE`, materializing the `map` into a `list` is required to prevent iterator exhaustion.
 **Action:** When calculating Euclidean or Manhattan distances in pure Python without `numpy`, use `map` with `operator.sub`, `operator.mul`, and `abs` instead of index-based generator comprehensions.
+## 2024-11-20 - Pure Python Math Optimization
+**Learning:** A single pure Python loop (e.g. using `zip()`) to calculate mathematical vectors has significant bytecode interpretation overhead. Even when multi-pass `map` and `operator.mul` loops are used, they drastically outperform a single pure python `for` loop, as `map` and `sum` with `operator` pass calculations directly to C.
+**Action:** When working in pure Python environments, replace `for` loops in math-intensive code with `sum(map(operator.mul, a, b))`, but ensure explicit length checks exist because multiple map passes require equal length inputs to avoid silent truncation of some calculations vs others.
