@@ -13,7 +13,7 @@ COMPOSE = ROOT / "docker-compose.production.yml"
 
 def _icebox_service(compose: str) -> str:
     start = compose.index("\n  ice-box-service:\n")
-    tail = compose[start + 1:]
+    tail = compose[start + 1 :]
     return tail.split("\n  # ──", 1)[0]
 
 
@@ -32,6 +32,8 @@ def test_icebox_quarantine_db_survives_container_replacement():
     compose = COMPOSE.read_text(encoding="utf-8")
     service = _icebox_service(compose)
     assert "ice-box-quarantine:/app/workers/ice-box-service/data" in service
-    assert "ICE_BOX_QUARANTINE_DB=/app/workers/ice-box-service/data/ice_box_quarantine.db" in service
+    assert (
+        "ICE_BOX_QUARANTINE_DB=/app/workers/ice-box-service/data/ice_box_quarantine.db" in service
+    )
     volumes_section = compose.rsplit("\nvolumes:\n", 1)[1].split("\nnetworks:\n", 1)[0]
     assert "\n  ice-box-quarantine:\n" in volumes_section
