@@ -6,6 +6,7 @@ WORKDIR /app
 COPY --chown=worker:worker requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY --chown=worker:worker worker.py .
+COPY --chown=worker:worker audit_integrity.py .
 RUN mkdir -p /app/data \
     && chown -R worker:worker /app/data
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
