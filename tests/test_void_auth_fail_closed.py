@@ -81,3 +81,34 @@ def test_only_nonblank_string_identity_from_verifier_is_accepted(
 
     monkeypatch.setattr(void_worker.httpx, "AsyncClient", lambda **kwargs: FakeClient())
     assert asyncio.run(void_worker.get_auth_user_id("Bearer synthetic-token")) == expected_user_id
+
+
+@pytest.mark.parametrize("failure", ["server-error", "invalid-json", "connection-error"])
+def test_verifier_failures_never_grant_an_identity(void_worker, monkeypatch, failure):
+    monkeypatch.setattr(void_worker, "INFINITY_ONE_URL", "http://synthetic-auth.invalid")
+
+    class FakeResponse:
+        status_code = 503 if failure == "server-error" else 200
+
+        def json(self):
+            if failure == "invalid-json":
+                raise ValueError("Malformed response")
+            return {"user_id": "must-not-be-granted"}
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json, headers):
+            if failure == "connection-error":
+                raise void_worker.httpx.ConnectError(
+                    "Synthetic connection failure",
+                    request=void_worker.httpx.Request("POST", url),
+                )
+            return FakeResponse()
+
+    monkeypatch.setattr(void_worker.httpx, "AsyncClient", lambda **kwargs: FakeClient())
+    assert asyncio.run(void_worker.get_auth_user_id("Bearer synthetic-token")) is None
