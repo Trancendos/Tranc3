@@ -19,7 +19,10 @@ from src.townhall.governance import (
         ({"gdpr": ComplianceResult.PASS, "cost": ComplianceResult.WARN}, ComplianceResult.WARN),
         ({"gdpr": ComplianceResult.FAIL, "cost": ComplianceResult.WARN}, ComplianceResult.FAIL),
         ({"gdpr": ComplianceResult.UNKNOWN}, ComplianceResult.FAIL),
-        ({"gdpr": ComplianceResult.PASS, "prince2": ComplianceResult.UNKNOWN}, ComplianceResult.FAIL),
+        (
+            {"gdpr": ComplianceResult.PASS, "prince2": ComplianceResult.UNKNOWN},
+            ComplianceResult.FAIL,
+        ),
         ({}, ComplianceResult.FAIL),
         ({"invalid": "pass"}, ComplianceResult.FAIL),
     ],
@@ -38,8 +41,7 @@ def test_unknown_requested_policy_is_not_silently_dropped():
     }
     assert overall_compliance_result(results) is ComplianceResult.FAIL
     assert any(
-        entry.policy_id == "nonexistent-mandatory-gate"
-        and entry.result is ComplianceResult.UNKNOWN
+        entry.policy_id == "nonexistent-mandatory-gate" and entry.result is ComplianceResult.UNKNOWN
         for entry in townhall._history
     )
 
