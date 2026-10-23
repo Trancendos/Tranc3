@@ -12,6 +12,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from auth import get_current_user
+from src.townhall.ci_evidence import configured_run_verification
 from src.townhall.gate_readiness import summarise_gate_readiness
 from src.townhall.plm import (
     CRITERIA,
@@ -163,6 +164,50 @@ async def evidence_readiness(
         raise HTTPException(
             409, "PLM readiness changed during inspection; retry the request"
         ) from exc
+
+
+@router.get("/deliverables/{deliverable_id}/evidence/{criterion_id}/verify-ci")
+async def verify_ci_evidence(
+    deliverable_id: str,
+    criterion_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Independently inspect current test-run evidence; never approve a gate."""
+    _require_admin(current_user)
+    service = get_plm()
+    try:
+        item = service.get(deliverable_id)
+        gate = service.gate_status(deliverable_id)
+    except UnknownDeliverableError as exc:
+        raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
+    if gate.deliverable_id != item.id or gate.stage != item.stage:
+        raise HTTPException(409, "PLM state changed during inspection")
+    matches = [cs for cs in gate.criteria if cs.criterion.id == criterion_id]
+    if len(matches) != 1:
+        raise HTTPException(404, "criterion not applicable to this stage")
+    status = matches[0]
+    if status.criterion.evidence_kind.value != "test_run":
+        raise HTTPException(400, "only test-run evidence is supported")
+    evidence = status.evidence
+    if evidence is None:
+        return {
+            "evidence_id": None,
+            "status": "missing",
+            "authorization_granted": False,
+        }
+    if evidence.outcome is not Outcome.PASS:
+        return {
+            "evidence_id": evidence.id,
+            "status": "rejected",
+            "reason": "recorded_test_not_passed",
+            "authorization_granted": False,
+        }
+    checked = configured_run_verification(evidence.reference)
+    return {
+        "evidence_id": evidence.id,
+        **checked,
+        "authorization_granted": False,
+    }
 
 
 @router.post("/deliverables/{deliverable_id}/advance")
