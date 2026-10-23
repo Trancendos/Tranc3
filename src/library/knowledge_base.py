@@ -172,9 +172,12 @@ class Library:
         return art
 
     def delete(self, article_id: str) -> bool:
-        art = self._articles.pop(article_id, None)
-        if not art:
+        art = self._articles.get(article_id)
+        if not art or art.legal_hold:
+            # A hold protects the authoritative in-process article as well as
+            # any durable copy. Never mutate indexes or emit deletion events.
             return False
+        self._articles.pop(article_id)
         for tag in art.tags:
             ids = self._tag_index.get(tag, [])
             if article_id in ids:
@@ -231,10 +234,15 @@ class Library:
         """Delete articles past their retention_days. Mirrors
         src/artifactory/registry.py's apply_retention(). Returns count removed."""
         now = time.time()
-        expired = [a.id for a in self._articles.values() if a.retention_expired(now)]
+        expired = [
+            a.id
+            for a in self._articles.values()
+            if not a.legal_hold and a.retention_expired(now)
+        ]
+        removed = 0
         for article_id in expired:
-            self.delete(article_id)
-        return len(expired)
+            removed += int(self.delete(article_id))
+        return removed
 
     # ── Stats ─────────────────────────────────────────────────────────────────
 
