@@ -1,6 +1,6 @@
 # Service Doc-Pack — Cryptex
 
-**Standalone worker Phase 1:** [scanner assurance, status contracts, rollout and rollback](../../solution-packs/cryptex-phase1-assurance.md). This is draft integration guidance, not proof that the production worker has been released.
+**Standalone worker Phase 1:** [scanner assurance, status contracts, rollout and rollback](../../security/cryptex-phase1-assurance.md). This is draft integration guidance, not proof that the production worker has been released.
 
 | Field | Value |
 |---|---|
