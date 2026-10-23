@@ -4,6 +4,7 @@ Checks exact run identity, repository, commit SHA, trusted workflow allowlist,
 and successful completion. It does NOT verify build artifacts, security findings,
 release approval or provenance and can NEVER authorise PLM advancement.
 """
+
 from __future__ import annotations
 
 import json
@@ -58,7 +59,8 @@ def verify_run_reference(
         "id": (run.get("id"), run_id, "run_mismatch"),
         "repository": (
             run.get("repository", {}).get("full_name")
-            if isinstance(run.get("repository"), Mapping) else None,
+            if isinstance(run.get("repository"), Mapping)
+            else None,
             trusted_repository,
             "repository_mismatch",
         ),
@@ -135,7 +137,8 @@ def configured_run_verification(reference: str) -> dict[str, Any]:
     raw_ids = os.environ.get("TOWNHALL_GITHUB_EVIDENCE_WORKFLOW_IDS", "")
     try:
         ids = frozenset(
-            int(segment.strip()) for segment in raw_ids.split(",")
+            int(segment.strip())
+            for segment in raw_ids.split(",")
             if segment.strip().isdigit() and int(segment.strip()) > 0
         )
     except (TypeError, ValueError):

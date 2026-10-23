@@ -191,12 +191,14 @@ async def verify_ci_evidence(
     evidence = status.evidence
     if evidence is None:
         return {
-            "evidence_id": None, "status": "missing",
+            "evidence_id": None,
+            "status": "missing",
             "authorization_granted": False,
         }
     if evidence.outcome is not Outcome.PASS:
         return {
-            "evidence_id": evidence.id, "status": "rejected",
+            "evidence_id": evidence.id,
+            "status": "rejected",
             "reason": "recorded_test_not_passed",
             "authorization_granted": False,
         }
