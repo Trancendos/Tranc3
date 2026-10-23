@@ -5,7 +5,6 @@ Run: PYTHONPATH=workers/cryptex python -m unittest discover -s workers/cryptex/t
 """
 from __future__ import annotations
 
-import asyncio
 import sys
 import tempfile
 import types
@@ -102,6 +101,8 @@ class ScanRouterIntegrationTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(config, "FORCE_ENGINE", ""):
             result = await router.scan(ScanRequest(scan_type=ScanType.vulnerability, target="synthetic-host"))
         self.assertEqual(result.status, ScanStatus.inconclusive)
+        self.assertEqual(result.engine_used, "openvas")
+        self.assertEqual(result.findings[0]["type"], "vulnerability_scan_triggered")
         self.assertTrue(router._health["openvas"], "Deferred work is not an engine health failure")
 
     async def test_no_yara_rules_mean_no_assurance(self):
