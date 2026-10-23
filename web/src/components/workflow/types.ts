@@ -33,6 +33,8 @@ export interface GridNode {
   x: number;
   y: number;
   config: Record<string, unknown>;
+  timeout_sec?: number;
+  retry_count?: number;
   inputs?: NodePort[];
   outputs?: NodePort[];
 }
