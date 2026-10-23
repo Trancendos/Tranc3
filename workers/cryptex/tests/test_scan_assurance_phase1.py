@@ -15,11 +15,12 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import config
 from cryptex_assurance import Assessment, assess_engine_output
 from cryptex_capabilities import compatible_engines
-from models import ScanRequest, ScanStatus, ScanType
 from service import OpenVASEngine, SecurityEngineRouter, YARAEngine
+
+import config
+from models import ScanRequest, ScanStatus, ScanType
 
 
 class FakeDatabase:

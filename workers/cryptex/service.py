@@ -30,11 +30,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
+from cryptex_assurance import assess_engine_output
+from cryptex_capabilities import compatible_engines
 
 import config
 from database import CryptexDatabase
-from cryptex_assurance import assess_engine_output
-from cryptex_capabilities import compatible_engines
 from models import (
     EngineStatus,
     ScanEngine,
