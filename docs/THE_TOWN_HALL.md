@@ -99,6 +99,33 @@ authenticated decision authority and integration with CranBania remain separate
 requirements under issue #1450. Never treat a preview response as release
 permission.
 
+## Evidence readiness report (advisory, admin only)
+
+`GET /townhall/plm/deliverables/{deliverable_id}/readiness` reads the existing
+SQLite-backed PLM deliverable and its current gate criteria; it does not create
+new evidence or advance any stage. It requires an authenticated `admin` principal.
+
+The response gives operators bounded diagnostic reason codes for mandatory
+criteria: `missing_evidence`, `failed_evidence`, `pending_evidence`,
+`invalid_evidence` and `inconsistent_evidence`. It also identifies the
+Location responsible for missing evidence, lists recorded evidence IDs (not
+raw reference values) and surfaces waivers separately for manual review.
+
+The `state` can be `blocked`, `waiver_review`,
+`recorded_evidence_unverified` or `no_current_gate`. **A recorded PASS is
+an operator assertion, not independently verified CI, Artifactory or security
+evidence.** Even a fully recorded gate never creates an authorisation:
+`authorization_granted: false` and `preview_only: true` are unconditional.
+At the release stage the response lists the server-owned release policy IDs
+as `evaluated: false`; it does not silently convert registry metadata into
+compliance.
+
+The snapshot is non-atomic across deliverable and gate reads and is unsuitable
+for enforcement. The authoritative `advance` transaction must re-check
+latest evidence and approval under its existing SQLite lock. This endpoint
+does not provide the independent evidence attestation, authenticated waiver
+expiry, transactional outbox or CranBania integration tracked in issue #1450.
+
 ## Compliance integration
 
 - Fail/warn results emit to **The Observatory** (`observe(..., category=GOVERNANCE)`).
