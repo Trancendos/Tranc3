@@ -77,16 +77,31 @@ async def townhall_decision_preview(
     """
     bundle = get_bundle(intent)
     input_errors = validate_context(intent, context)
+    assessment_error = False
     if input_errors:
         results = {policy_id: ComplianceResult.UNKNOWN for policy_id in bundle.policy_ids}
     else:
-        evaluated = get_townhall().check(
-            context, policy_ids=list(bundle.policy_ids), actor=actor
-        )
-        # Even a defective evaluator which omits a required policy cannot
-        # accidentally turn an incomplete bundle into an overall PASS.
+        try:
+            evaluated = get_townhall().check(
+                context, policy_ids=list(bundle.policy_ids), actor=actor
+            )
+        except Exception:
+            # No client context is included in this error; it may hold personal data.
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Townhall decision preview evaluation unavailable"
+            )
+            evaluated = {}
+            assessment_error = True
+
+        # A missing or malformed mandatory result is always UNKNOWN, never PASS.
         results = {
-            policy_id: evaluated.get(policy_id, ComplianceResult.UNKNOWN)
+            policy_id: (
+                evaluated[policy_id]
+                if isinstance(evaluated.get(policy_id), ComplianceResult)
+                else ComplianceResult.UNKNOWN
+            )
             for policy_id in bundle.policy_ids
         }
 
@@ -98,6 +113,7 @@ async def townhall_decision_preview(
         "overall": overall.value,
         "results": {policy_id: status.value for policy_id, status in results.items()},
         "input_errors": list(input_errors),
+        "assessment_error": assessment_error,
         "preview_only": True,
         "authorization_granted": False,
     }
