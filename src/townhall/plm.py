@@ -508,9 +508,7 @@ class PlmService:
             """)
             # Existing indefinite waivers cannot silently continue granting
             # authority after upgrade. NULL expiry is treated as INACTIVE.
-            cols = {
-                row["name"] for row in self._conn.execute("PRAGMA table_info(waivers)")
-            }
+            cols = {row["name"] for row in self._conn.execute("PRAGMA table_info(waivers)")}
             if "expires_at" not in cols:
                 self._conn.execute("ALTER TABLE waivers ADD COLUMN expires_at REAL")
             if "revoked_at" not in cols:

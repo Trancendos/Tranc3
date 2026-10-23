@@ -1,4 +1,5 @@
 """Waiver expiry, revocation and durable history must fail closed."""
+
 from __future__ import annotations
 
 import pytest
@@ -9,6 +10,7 @@ from src.townhall.plm import DeliverableKind, GateBlocked, PlmService
 @pytest.fixture
 def service(tmp_path, monkeypatch):
     import src.townhall.plm as mod
+
     monkeypatch.setattr(mod.time, "time", lambda: 1000000.0)
     plm = PlmService(db_path=tmp_path / "plm.sqlite")
     yield plm, mod
@@ -95,6 +97,7 @@ def test_legacy_indefinite_waivers_do_not_open_gate(service):
 
 def test_expiry_survives_restart(tmp_path, monkeypatch):
     import src.townhall.plm as mod
+
     monkeypatch.setattr(mod.time, "time", lambda: 1000000.0)
     path = tmp_path / "plm.sqlite"
     first = PlmService(db_path=path)
@@ -113,6 +116,7 @@ def test_expiry_survives_restart(tmp_path, monkeypatch):
 
 def test_migration_old_sqlite_schema_is_fail_closed(tmp_path, monkeypatch):
     import sqlite3
+
     import src.townhall.plm as mod
 
     monkeypatch.setattr(mod.time, "time", lambda: 1000000.0)
@@ -156,9 +160,7 @@ def test_revocation_persists_after_restart(tmp_path, monkeypatch):
     second = PlmService(db_path=path)
     try:
         assert not second.gate_status(item.id).can_advance
-        assert [e["event"] for e in second.waiver_history(item.id)] == [
-            "granted", "revoked"
-        ]
+        assert [e["event"] for e in second.waiver_history(item.id)] == ["granted", "revoked"]
     finally:
         second.close()
 
@@ -167,6 +169,7 @@ def test_revocation_persists_after_restart(tmp_path, monkeypatch):
 def http_client(tmp_path, monkeypatch):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
+
     from auth import get_current_user
     from src.townhall import plm_routes
 
@@ -175,7 +178,9 @@ def http_client(tmp_path, monkeypatch):
     app = FastAPI()
     app.include_router(plm_routes.router)
     app.dependency_overrides[get_current_user] = lambda: {
-        "sub": "admin", "username": "admin", "role": "admin"
+        "sub": "admin",
+        "username": "admin",
+        "role": "admin",
     }
     yield TestClient(app), app, plm, get_current_user
     plm.close()

@@ -125,7 +125,10 @@ async def waive_criterion(
     _require_admin(current_user)
     try:
         waiver = get_plm().waive(
-            deliverable_id, criterion_id, reason, _actor(current_user),
+            deliverable_id,
+            criterion_id,
+            reason,
+            _actor(current_user),
             ttl_seconds=ttl_seconds,
         )
     except UnknownDeliverableError as exc:
