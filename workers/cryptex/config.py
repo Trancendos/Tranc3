@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 WORKER_NAME = "cryptex"
-WORKER_PORT = int(os.environ.get("CRYPTEX_PORT", "8039"))
+WORKER_PORT = int(os.environ.get("CRYPTEX_PORT", "8053"))
 DB_PATH = os.environ.get("CRYPTEX_DB_PATH", "/data/cryptex.db")
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
@@ -41,5 +41,6 @@ ACO_DECAY = float(os.environ.get("ACO_DECAY", "0.9"))
 FORCE_ENGINE = os.environ.get("CRYPTEX_FORCE_ENGINE", "")
 
 # ── TLS ────────────────────────────────────────────────────────────────────────
-# Self-hosted services often use self-signed certs; set to "1" to enable strict TLS.
-TLS_VERIFY = os.environ.get("CRYPTEX_TLS_VERIFY", "0") != "0"
+# TLS verification is on by default. Install the internal CA chain for self-hosted HTTPS.
+# CRYPTEX_TLS_VERIFY=0 is a temporary, explicitly approved development exception only.
+TLS_VERIFY = os.environ.get("CRYPTEX_TLS_VERIFY", "1").strip().lower() not in {"0", "false", "no"}

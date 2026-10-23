@@ -44,6 +44,7 @@ class ScanStatus(str, Enum):
     running = "running"
     completed = "completed"
     failed = "failed"
+    inconclusive = "inconclusive"
 
 
 class ScanRequest(BaseModel):
