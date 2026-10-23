@@ -28,6 +28,7 @@ from Dimensionals.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8063")
 WORKER_NAME = "chaos-party"
+_VALID_RUN_STATUSES = frozenset(("pass", "fail", "skip", "error"))
 DB_PATH = Path(__file__).parent / "data" / "chaos.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -308,7 +309,7 @@ async def list_suites(
 @_router.post("/runs", status_code=201)
 async def record_run(body: TestRunIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
-    if body.status not in ("pass", "fail", "skip", "error"):
+    if body.status not in _VALID_RUN_STATUSES:
         raise HTTPException(status_code=400, detail="status must be: pass, fail, skip, error")
     now = time.time()
     with get_conn() as conn:
@@ -345,6 +346,10 @@ async def record_run(body: TestRunIn, x_internal_secret: str = Header(default=""
 @_router.post("/runs/batch", status_code=201)
 async def record_batch_runs(body: BatchRunIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
+    # Reject invalid batches atomically before writing any of their rows.
+    for run in body.runs:
+        if run.status not in _VALID_RUN_STATUSES:
+            raise HTTPException(status_code=400, detail="status must be: pass, fail, skip, error")
     now = time.time()
     results = []
     with get_conn() as conn:
