@@ -12,6 +12,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from auth import get_current_user
+from src.townhall.gate_readiness import summarise_gate_readiness
 from src.townhall.plm import (
     CRITERIA,
     DeliverableKind,
@@ -138,6 +139,30 @@ async def gate(deliverable_id: str) -> dict[str, Any]:
         return get_plm().gate_status(deliverable_id).to_dict()
     except UnknownDeliverableError as exc:
         raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
+
+
+@router.get("/deliverables/{deliverable_id}/readiness")
+async def evidence_readiness(
+    deliverable_id: str, current_user: dict = Depends(get_current_user)
+) -> dict[str, Any]:
+    """Read advisory evidence gaps; this does not evaluate or cross a lifecycle gate.
+
+    The existing PLM service owns evidence and stage transitions. These two
+    reads are not an atomic snapshot; a mixed-stage result is refused, and a
+    consistent result remains advisory rather than conferring authorisation.
+    """
+    _require_admin(current_user)
+    service = get_plm()
+    try:
+        item = service.get(deliverable_id)
+        status = service.gate_status(deliverable_id)
+        return summarise_gate_readiness(item, status)
+    except UnknownDeliverableError as exc:
+        raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
+    except ValueError as exc:
+        raise HTTPException(
+            409, "PLM readiness changed during inspection; retry the request"
+        ) from exc
 
 
 @router.post("/deliverables/{deliverable_id}/advance")
