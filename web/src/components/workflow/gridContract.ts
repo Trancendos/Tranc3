@@ -19,6 +19,7 @@ const NODE_TO_SERVER: Partial<Record<NodeType, string>> = {
   merge: "MERGE",
   output: "OUTPUT",
   spark_tool: "SPARK_TOOL",
+  skill_call: "SKILL_CALL",
   vector_search: "VECTOR_SEARCH",
   ml_predict: "ML_PREDICT",
 };
