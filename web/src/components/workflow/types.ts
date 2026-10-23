@@ -89,7 +89,7 @@ export const NODE_META: Record<
     label: "Code",
     color: "#059669",
     icon: "{ }",
-    description: "Execute Python code",
+    description: "Evaluate a restricted expression (not arbitrary Python)",
   },
   condition: {
     label: "Condition",
