@@ -3,6 +3,7 @@
 No network client, provider API key, customer data reads or send capability.
 Operator-owned provider submission must be implemented/reviewed separately.
 """
+
 from __future__ import annotations
 
 import re
@@ -44,13 +45,15 @@ def prepare_queued_template(
         raise AlertNotAuthorised("external channel not enabled and fully approved")
     if plan.priority != "urgent" or not plan.review_required:
         raise AlertNotAuthorised("notification is limited to urgent human-review events")
-    if not all((
-        _E164.fullmatch(config.sender_e164),
-        _E164.fullmatch(config.recipient_e164),
-        _TEMPLATE.fullmatch(config.template_name),
-        _LANGUAGE.fullmatch(config.language_code),
-        _CORRELATION.fullmatch(correlation_id),
-    )):
+    if not all(
+        (
+            _E164.fullmatch(config.sender_e164),
+            _E164.fullmatch(config.recipient_e164),
+            _TEMPLATE.fullmatch(config.template_name),
+            _LANGUAGE.fullmatch(config.language_code),
+            _CORRELATION.fullmatch(correlation_id),
+        )
+    ):
         raise AlertNotAuthorised("invalid provider alert configuration")
     return {
         "from": config.sender_e164,
