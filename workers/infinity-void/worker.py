@@ -235,7 +235,8 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
                     if isinstance(user_id, str) and user_id.strip():
                         return user_id
         except (httpx.HTTPError, ValueError, TypeError):
-            pass
+            # Identity verification failed: refuse access, never invent a user.
+            return None
     return None
 
 
