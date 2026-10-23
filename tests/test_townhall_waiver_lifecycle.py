@@ -109,3 +109,98 @@ def test_expiry_survives_restart(tmp_path, monkeypatch):
         assert second.waiver_history(item.id)[0]["event"] == "granted"
     finally:
         second.close()
+
+
+def test_migration_old_sqlite_schema_is_fail_closed(tmp_path, monkeypatch):
+    import sqlite3
+    import src.townhall.plm as mod
+
+    monkeypatch.setattr(mod.time, "time", lambda: 1000000.0)
+    path = tmp_path / "old-plm.sqlite"
+    db = sqlite3.connect(path)
+    db.execute(
+        "CREATE TABLE waivers (deliverable_id TEXT NOT NULL, criterion_id TEXT NOT NULL, "
+        "reason TEXT NOT NULL, approver TEXT NOT NULL, waived_at REAL NOT NULL, "
+        "PRIMARY KEY(deliverable_id, criterion_id))"
+    )
+    db.commit()
+    db.close()
+    plm = PlmService(db_path=path)
+    try:
+        item = _item(plm)
+        with plm._lock:
+            plm._conn.execute(
+                "INSERT INTO waivers (deliverable_id,criterion_id,reason,approver,waived_at) "
+                "VALUES (?,?,?,?,?)",
+                (item.id, "concept.business-case", "legacy", "admin", 0),
+            )
+            plm._conn.commit()
+        assert not plm.gate_status(item.id).can_advance
+        waiver = plm.waive(item.id, "concept.business-case", "renewed", "admin")
+        assert waiver.expires_at == 1086400.0
+        assert plm.gate_status(item.id).can_advance
+    finally:
+        plm.close()
+
+
+def test_revocation_persists_after_restart(tmp_path, monkeypatch):
+    import src.townhall.plm as mod
+
+    monkeypatch.setattr(mod.time, "time", lambda: 1000000.0)
+    path = tmp_path / "plm.sqlite"
+    first = PlmService(db_path=path)
+    item = _item(first)
+    first.waive(item.id, "concept.business-case", "exception", "admin")
+    first.revoke_waiver(item.id, "concept.business-case", "withdrawn", "security")
+    first.close()
+    second = PlmService(db_path=path)
+    try:
+        assert not second.gate_status(item.id).can_advance
+        assert [e["event"] for e in second.waiver_history(item.id)] == [
+            "granted", "revoked"
+        ]
+    finally:
+        second.close()
+
+
+@pytest.fixture
+def http_client(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from auth import get_current_user
+    from src.townhall import plm_routes
+
+    plm = PlmService(db_path=tmp_path / "api-plm.sqlite")
+    monkeypatch.setattr(plm_routes, "get_plm", lambda: plm)
+    app = FastAPI()
+    app.include_router(plm_routes.router)
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "admin", "username": "admin", "role": "admin"
+    }
+    yield TestClient(app), app, plm, get_current_user
+    plm.close()
+
+
+def test_revoke_route_uses_authenticated_actor(http_client):
+    client, _, plm, _ = http_client
+    item = _item(plm)
+    r = client.post(
+        f"/townhall/plm/deliverables/{item.id}/waivers",
+        json={"criterion_id": "concept.business-case", "reason": "temporary", "ttl_seconds": 60},
+    )
+    assert r.status_code == 201
+    r2 = client.post(
+        f"/townhall/plm/deliverables/{item.id}/waivers/concept.business-case/revoke",
+        json={"reason": "withdrawn", "actor": "spoofed"},
+    )
+    assert r2.status_code == 200
+    assert plm.waiver_history(item.id)[-1]["actor"] == "admin"
+    assert not plm.gate_status(item.id).can_advance
+
+
+def test_waiver_history_requires_admin(http_client):
+    client, app, plm, dependency = http_client
+    item = _item(plm)
+    app.dependency_overrides[dependency] = lambda: {"sub": "viewer", "role": "viewer"}
+    r = client.get(f"/townhall/plm/deliverables/{item.id}/waivers/history")
+    assert r.status_code == 403
