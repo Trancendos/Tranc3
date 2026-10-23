@@ -239,6 +239,51 @@ def test_library_create_and_delete_with_auth():
         _clear_override()
 
 
+def test_library_other_authenticated_user_cannot_delete_article():
+    app.dependency_overrides[get_current_user] = _override("original-author")
+    try:
+        created = client.post(
+            "/library/articles", json={"title": "Owned knowledge", "body": "Keep it"}
+        )
+        assert created.status_code == 200
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("other-user")
+    try:
+        # Read permission is not permission to destroy another author's record.
+        assert client.get(f"/library/articles/{article_id}").status_code == 200
+        assert client.delete(f"/library/articles/{article_id}").status_code == 403
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("original-author")
+    try:
+        assert client.get(f"/library/articles/{article_id}").status_code == 200
+        assert client.delete(f"/library/articles/{article_id}").status_code == 200
+    finally:
+        _clear_override()
+
+
+def test_library_admin_can_delete_another_authors_unheld_article():
+    app.dependency_overrides[get_current_user] = _override("original-author")
+    try:
+        created = client.post(
+            "/library/articles", json={"title": "Admin cleanup", "body": "Keep it"}
+        )
+        assert created.status_code == 200
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        assert client.delete(f"/library/articles/{article_id}").status_code == 200
+    finally:
+        _clear_override()
+
+
 def test_library_legal_hold_refuses_delete_for_admin():
     app.dependency_overrides[get_current_user] = _override("admin", "admin")
     try:
