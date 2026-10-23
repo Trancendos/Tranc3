@@ -338,6 +338,8 @@ class Waiver:
     reason: str
     approver: str
     waived_at: float = field(default_factory=time.time)
+    expires_at: Optional[float] = None
+    revoked_at: Optional[float] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -345,6 +347,8 @@ class Waiver:
             "reason": self.reason,
             "approver": self.approver,
             "waived_at": self.waived_at,
+            "expires_at": self.expires_at,
+            "revoked_at": self.revoked_at,
         }
 
 
@@ -491,7 +495,26 @@ class PlmService:
                     ON evidence(deliverable_id, criterion_id, recorded_at);
                 CREATE INDEX IF NOT EXISTS idx_decisions_deliverable
                     ON gate_decisions(deliverable_id, decided_at);
+                CREATE TABLE IF NOT EXISTS waiver_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    deliverable_id TEXT NOT NULL,
+                    criterion_id TEXT NOT NULL,
+                    event TEXT NOT NULL,
+                    actor TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    recorded_at REAL NOT NULL,
+                    expires_at REAL
+                );
             """)
+            # Existing indefinite waivers cannot silently continue granting
+            # authority after upgrade. NULL expiry is treated as INACTIVE.
+            cols = {
+                row["name"] for row in self._conn.execute("PRAGMA table_info(waivers)")
+            }
+            if "expires_at" not in cols:
+                self._conn.execute("ALTER TABLE waivers ADD COLUMN expires_at REAL")
+            if "revoked_at" not in cols:
+                self._conn.execute("ALTER TABLE waivers ADD COLUMN revoked_at REAL")
             self._conn.commit()
 
     # ── deliverables ────────────────────────────────────────────────────────
@@ -640,33 +663,112 @@ class PlmService:
         _emit(PlatformEventType.PLM_EVIDENCE_RECORDED, ev.to_dict())
         return ev
 
-    def waive(self, deliverable_id: str, criterion_id: str, reason: str, approver: str) -> Waiver:
-        """Excuse one criterion, on the record.
+    def waive(
+        self,
+        deliverable_id: str,
+        criterion_id: str,
+        reason: str,
+        approver: str,
+        ttl_seconds: int | float = 86400,
+    ) -> Waiver:
+        """Grant a bounded exception, with grant history committed atomically.
 
-        Both a reason and an approver are required. A waiver with neither is
-        indistinguishable from the work having been done, which is the state
-        this whole module exists to prevent.
+        The 24h default keeps existing callers working. Unlimited or legacy
+        null-expiry waivers cannot satisfy an approval gate.
         """
         self.get(deliverable_id)
         if criterion_id not in _CRITERIA_BY_ID:
             raise UnknownCriterionError(criterion_id)
-        if not reason.strip():
+        if not isinstance(reason, str) or not reason.strip():
             raise ValueError("a waiver needs a written reason")
-        if not approver.strip():
+        if not isinstance(approver, str) or not approver.strip():
             raise ValueError("a waiver needs a named approver")
-        waiver = Waiver(criterion_id=criterion_id, reason=reason, approver=approver)
+        if (
+            isinstance(ttl_seconds, bool)
+            or not isinstance(ttl_seconds, (int, float))
+            or not 0 < ttl_seconds <= 30 * 86400
+        ):
+            raise ValueError("waiver duration must be greater than 0 and at most 30 days")
+        now = time.time()
+        expires_at = now + ttl_seconds
+        waiver = Waiver(
+            criterion_id=criterion_id,
+            reason=reason,
+            approver=approver,
+            waived_at=now,
+            expires_at=expires_at,
+        )
         with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO waivers "
-                "(deliverable_id, criterion_id, reason, approver, waived_at) VALUES (?,?,?,?,?)",
-                (deliverable_id, criterion_id, reason, approver, waiver.waived_at),
-            )
-            self._conn.commit()
+            try:
+                self._conn.execute("BEGIN IMMEDIATE")
+                self._conn.execute(
+                    "INSERT INTO waivers "
+                    "(deliverable_id, criterion_id, reason, approver, waived_at, "
+                    "expires_at, revoked_at) VALUES (?,?,?,?,?,?,NULL) "
+                    "ON CONFLICT(deliverable_id,criterion_id) DO UPDATE SET "
+                    "reason=excluded.reason,approver=excluded.approver,"
+                    "waived_at=excluded.waived_at,expires_at=excluded.expires_at,"
+                    "revoked_at=NULL",
+                    (deliverable_id, criterion_id, reason, approver, now, expires_at),
+                )
+                self._conn.execute(
+                    "INSERT INTO waiver_history "
+                    "(deliverable_id,criterion_id,event,actor,reason,recorded_at,expires_at) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (deliverable_id, criterion_id, "granted", approver, reason, now, expires_at),
+                )
+                self._conn.commit()
+            except BaseException:
+                self._conn.rollback()
+                raise
         _emit(
             PlatformEventType.PLM_CRITERION_WAIVED,
             dict(waiver.to_dict(), deliverable_id=deliverable_id),
         )
         return waiver
+
+    def revoke_waiver(
+        self, deliverable_id: str, criterion_id: str, reason: str, actor: str
+    ) -> None:
+        """Revoke a currently active grant; preserve an auditable history row."""
+        self.get(deliverable_id)
+        if criterion_id not in _CRITERIA_BY_ID:
+            raise UnknownCriterionError(criterion_id)
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("a revocation needs a written reason")
+        if not isinstance(actor, str) or not actor.strip():
+            raise ValueError("a revocation needs a named actor")
+        now = time.time()
+        with self._lock:
+            try:
+                self._conn.execute("BEGIN IMMEDIATE")
+                cursor = self._conn.execute(
+                    "UPDATE waivers SET revoked_at=? WHERE deliverable_id=? "
+                    "AND criterion_id=? AND revoked_at IS NULL AND expires_at>?",
+                    (now, deliverable_id, criterion_id, now),
+                )
+                if cursor.rowcount != 1:
+                    raise ValueError("there is no active waiver to revoke")
+                self._conn.execute(
+                    "INSERT INTO waiver_history "
+                    "(deliverable_id,criterion_id,event,actor,reason,recorded_at,expires_at) "
+                    "VALUES (?,?,?,?,?,?,NULL)",
+                    (deliverable_id, criterion_id, "revoked", actor, reason, now),
+                )
+                self._conn.commit()
+            except BaseException:
+                self._conn.rollback()
+                raise
+
+    def waiver_history(self, deliverable_id: str) -> list[dict[str, Any]]:
+        """All grant and revoke actions for a deliverable in insertion order."""
+        self.get(deliverable_id)
+        rows = self._conn.execute(
+            "SELECT criterion_id,event,actor,reason,recorded_at,expires_at "
+            "FROM waiver_history WHERE deliverable_id=? ORDER BY id",
+            (deliverable_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
     def _latest_evidence(self, deliverable_id: str, criterion_id: str) -> Optional[Evidence]:
         """The most recent evidence wins, so a failing re-run un-satisfies."""
@@ -690,8 +792,9 @@ class PlmService:
 
     def _waiver(self, deliverable_id: str, criterion_id: str) -> Optional[Waiver]:
         row = self._conn.execute(
-            "SELECT * FROM waivers WHERE deliverable_id=? AND criterion_id=?",
-            (deliverable_id, criterion_id),
+            "SELECT * FROM waivers WHERE deliverable_id=? AND criterion_id=? "
+            "AND expires_at>? AND revoked_at IS NULL",
+            (deliverable_id, criterion_id, time.time()),
         ).fetchone()
         if row is None:
             return None
@@ -700,6 +803,8 @@ class PlmService:
             reason=row["reason"],
             approver=row["approver"],
             waived_at=row["waived_at"],
+            expires_at=row["expires_at"],
+            revoked_at=row["revoked_at"],
         )
 
     # ── the gate ────────────────────────────────────────────────────────────
