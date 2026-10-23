@@ -200,6 +200,24 @@ def test_artifactory_create_list_and_delete_with_auth():
         _clear_override()
 
 
+def test_library_apply_retention_requires_admin():
+    app.dependency_overrides[get_current_user] = _override("ordinary-user")
+    try:
+        response = client.post("/library/retention/apply")
+        assert response.status_code == 403
+        assert response.json()["error"] == "Forbidden"
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        response = client.post("/library/retention/apply")
+        assert response.status_code == 200
+        assert "articles_removed" in response.json()
+    finally:
+        _clear_override()
+
+
 def test_library_create_and_delete_with_auth():
     app.dependency_overrides[get_current_user] = _override("u1")
     try:
@@ -212,7 +230,8 @@ def test_library_create_and_delete_with_auth():
 
         assert client.get(f"/library/articles/{article_id}").status_code == 200
         assert client.get("/library/articles/search", params={"q": "Test"}).status_code == 200
-        assert client.post("/library/retention/apply").status_code == 200
+        # Bulk retention is an administrator-only destructive operation.
+        assert client.post("/library/retention/apply").status_code == 403
 
         deleted = client.delete(f"/library/articles/{article_id}")
         assert deleted.status_code == 200
