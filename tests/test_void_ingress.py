@@ -27,7 +27,9 @@ def test_void_router_strips_external_prefix_before_fastapi():
     labels = _labels("infinity-void")
     assert "PathPrefix(`/api/void`)" in labels["traefik.http.routers.infinity-void.rule"]
     assert labels["traefik.http.routers.infinity-void.middlewares"] == "strip-infinity-void"
-    assert labels["traefik.http.middlewares.strip-infinity-void.stripprefix.prefixes"] == "/api/void"
+    assert (
+        labels["traefik.http.middlewares.strip-infinity-void.stripprefix.prefixes"] == "/api/void"
+    )
 
 
 def test_void_route_priority_exceeds_generic_api_gateway():
