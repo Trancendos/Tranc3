@@ -2,3 +2,8 @@
 **Vulnerability:** Found hardcoded credentials (`icecast_admin_password: str = "hackme"`) and an unconfigurable URL (`icecast_url`) directly within `src/warp_radio/station.py`.
 **Learning:** Hardcoded credentials exposed in source files pose a significant security risk, even if they are default or dummy values. Hardcoding these in the data model's default fields means developers could unintentionally deploy services with known default credentials that could be easily scraped or exploited if unmodified.
 **Prevention:** Always use environment variables (e.g., `os.getenv(...)`) with fallback defaults for configurable sensitive data (like passwords, URLs, or API keys). Ensure secrets can be dynamically injected at runtime, complying with 12-factor application design principles.
+
+## 2024-05-24 - Insecure JWT Fallback Mechanism
+**Vulnerability:** The application's core authentication library (`src/auth/tokens.py`) contained a silent fallback mechanism: if the `python-jose` library was missing (`ImportError`), it degraded to simply base64-encoding the JWT payload instead of cryptographically signing and verifying it.
+**Learning:** Never use `except ImportError` blocks to silently fall back to insecure implementations (such as unverified base64 encoding instead of properly signed JWTs) when a critical security dependency is missing. This introduces a severe authentication bypass vulnerability, as attackers can forge unsigned tokens that the application will mistakenly trust.
+**Prevention:** Applications must fail securely and raise an error rather than allowing authentication bypasses. Critical security dependencies must be explicit, and missing them should cause a hard crash, preventing the application from running in a vulnerable state.
