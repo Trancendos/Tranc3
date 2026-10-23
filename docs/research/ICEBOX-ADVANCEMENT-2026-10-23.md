@@ -199,3 +199,15 @@ Design intent: an IceBox operator experience with a dark-mode, mobile-friendly *
 - NVIDIA verified skills: https://github.com/NVIDIA/skills
 - YCloud queued message API: https://docs.ycloud.com/reference/whatsapp_message-send
 - YCloud template lifecycle: https://docs.ycloud.com/reference/whatsapp_template-create
+
+## 12. Reuse of existing Tranc3 orchestration — source inspection
+
+There is already an **orchestration layer** in Tranc3. In `workers/the-grid/service.py`, `TemporalEngine` uses the Python SDK client to start a named Workflow from Digital Grid definitions. `workers/the-grid/config.py` defaults `TEMPORAL_HOST` to `temporalite:7233`; `docker-compose.production.yml` declares a `temporalite` service and volume; a separate `docker-compose.oss-foundations.yml` also declares a Temporal server. These declarations are **not proof** of running services, correct versions, or compatibility.
+
+The optional IceBox policy-activity worker reuses `TEMPORAL_HOST` when explicitly present (or the SDK's explicit client configuration). It is not automatically started and adds no Temporal SDK to the IceBox production image. Register its task queue with the Digital Grid only after contract and identity review. In particular, the Digital Grid's `OfflineEngine` can return *synthetic success*; for IceBox security decisions that must **never** be interpreted as a completed scan or safe verdict.
+
+**Compatibility gate:** Do not connect the Standalone Activities implementation to the repo's unpinned `temporalio/temporalite:latest` without checking actual server capabilities and SDK compatibility. The Temporal Developer Kit lists standalone Activity support for Server >=1.31.0 and Python SDK >=1.23.0. Prefer using an existing supported self-hosted Temporal server over deploying a duplicate. If unsupported, keep the optional Activity disabled or design a conventional Workflow-based adapter after review.
+
+## 13. CI observations and scope
+
+In the draft PR, Ruff formatting errors initially surfaced on the added files and were corrected. Root-level CI installation jobs also reported a pre-existing dependency pin conflict: `opentelemetry-sdk==1.45.0` requires `opentelemetry-api==1.45.0`, while root requirements request `opentelemetry-api==1.45.1`. This prevents some test and smoke jobs from reaching test execution. Do not label it an IceBox functional-test failure, or silently change central requirements within this focused PR. Service Topology additionally reports a stale generated topology map requiring its supported `scripts/build_topology_3d.py` regeneration, rather than a hand-edit. Track both as independent repository-wide blockers.
