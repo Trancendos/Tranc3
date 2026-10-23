@@ -294,6 +294,23 @@ class TestArticleClassificationAndRetention:
         assert removed == 1
         assert lib.get(art.id) is None
 
+    def test_apply_retention_preserves_held_expired_articles(self):
+        lib = Library()
+        held = lib.create(
+            title="Expired but preserved",
+            body="Content",
+            retention_days=1,
+            legal_hold=True,
+        )
+        ordinary = lib.create(title="Expired and removable", body="Content", retention_days=1)
+        held.created_at = ordinary.created_at = time.time() - (2 * 86400)
+
+        removed = lib.apply_retention()
+
+        assert removed == 1
+        assert lib.get(held.id) is held
+        assert lib.get(ordinary.id) is None
+
     def test_apply_retention_keeps_non_expired_articles(self):
         lib = Library()
         art = lib.create(title="Fresh", body="Content", retention_days=365)
@@ -336,13 +353,13 @@ class TestJurisdictionAndLegalHold:
         assert art.jurisdiction == Jurisdiction.UK
         assert art.legal_hold is True
 
-    def test_delete_still_works_for_held_article(self):
-        # The in-process delete is unaffected by the hold — only the bridge's
-        # delete *propagation* is suppressed (see bridge tests below).
+    def test_delete_refuses_held_article(self):
+        # A legal hold protects the authoritative source, not only its
+        # separately-governed durable worker copy.
         lib = Library()
         art = lib.create(title="Held", body="Content", legal_hold=True)
-        assert lib.delete(art.id) is True
-        assert lib.get(art.id) is None
+        assert lib.delete(art.id) is False
+        assert lib.get(art.id) is art
 
 
 class TestBridgeForwardGates:
@@ -419,7 +436,8 @@ class TestBridgeForwardGates:
         monkeypatch.setattr(bridge, "forward_delete", lambda aid: called.append(aid))
         lib = Library()
         art = lib.create(title="Held", body="Content", legal_hold=True)
-        lib.delete(art.id)
+        assert lib.delete(art.id) is False
+        assert lib.get(art.id) is art
         assert called == []
 
     def test_unheld_article_delete_is_propagated(self, monkeypatch):
