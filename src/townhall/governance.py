@@ -33,6 +33,25 @@ class ComplianceResult(str, Enum):
     UNKNOWN = "unknown"
 
 
+def overall_compliance_result(results: Dict[str, ComplianceResult]) -> ComplianceResult:
+    """Summarise evaluated policies; missing or indeterminate evidence must never approve.
+
+    An empty evaluation, UNKNOWN status, or malformed evaluator result is a
+    denial for gating purposes, even if a different policy returned PASS.
+    Individual results are preserved for diagnostic clients.
+    """
+    if not results or any(
+        not isinstance(result, ComplianceResult) or result is ComplianceResult.UNKNOWN
+        for result in results.values()
+    ):
+        return ComplianceResult.FAIL
+    if any(result is ComplianceResult.FAIL for result in results.values()):
+        return ComplianceResult.FAIL
+    if any(result is ComplianceResult.WARN for result in results.values()):
+        return ComplianceResult.WARN
+    return ComplianceResult.PASS
+
+
 @dataclass
 class Policy:
     id: str
@@ -48,7 +67,11 @@ class Policy:
         if self.check is None:
             return ComplianceResult.UNKNOWN
         try:
-            return self.check(context)
+            result = self.check(context)
+            if not isinstance(result, ComplianceResult):
+                logger.warning("policy %s returned an invalid evaluation result", self.id)
+                return ComplianceResult.UNKNOWN
+            return result
         except Exception as exc:
             logger.warning("policy %s check error: %s", self.id, exc)
             return ComplianceResult.UNKNOWN
@@ -139,6 +162,20 @@ class TownHall:
                 except Exception:
                     pass  # nosec B110 — graceful degradation; error logged upstream
 
+        # An explicit, unregistered policy must not silently disappear from
+        # the decision. Record UNKNOWN so the API will deny the overall gate.
+        if policy_ids:
+            for policy_id in policy_ids:
+                if policy_id not in self._policies:
+                    results[policy_id] = ComplianceResult.UNKNOWN
+                    self._history.append(
+                        GovernanceEvent(
+                            policy_id=policy_id,
+                            result=ComplianceResult.UNKNOWN,
+                            actor=actor,
+                            context_summary="requested policy is not registered",
+                        )
+                    )
         return results
 
     def overall_score(self) -> float:
