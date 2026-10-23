@@ -8,6 +8,8 @@
 **Code root:** `src/observability/` · **Worker:** `monitoring` (port 8007) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `70fec6b`
 
+**Audit-ledger migration and monitoring:** [Version 2 integrity and read-only probe](AUDIT-INTEGRITY-V2.md) — review-branch implementation, not yet deployed.
+
 ---
 
 ## 1. Service Governance Charter (GOV)
