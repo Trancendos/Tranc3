@@ -125,7 +125,13 @@ def test_mismatch_aborts_without_deleting_source(old_db):
         return httpx.Response(200, json={"plaintext": "wrong-value"})
 
     with pytest.raises(mig.MigrationError, match="readback mismatch"):
-        mig.migrate(str(path), master_key=master, execute=True, bearer_token="synthetic", transport=httpx.MockTransport(respond))
+        mig.migrate(
+            str(path),
+            master_key=master,
+            execute=True,
+            bearer_token="synthetic",
+            transport=httpx.MockTransport(respond),
+        )
     assert path.exists()
     conn = sqlite3.connect(path)
     assert conn.execute("SELECT COUNT(*) FROM secrets WHERE is_active=1").fetchone()[0] == 1
