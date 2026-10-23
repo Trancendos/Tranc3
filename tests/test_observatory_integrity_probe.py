@@ -2,6 +2,7 @@
 
 import importlib.util
 from pathlib import Path
+
 import pytest
 
 PATH = Path(__file__).resolve().parents[1] / "scripts" / "observatory_integrity_probe.py"

@@ -12,8 +12,8 @@ import argparse
 import json
 import os
 from datetime import datetime, timezone
-from urllib.parse import urlparse
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
