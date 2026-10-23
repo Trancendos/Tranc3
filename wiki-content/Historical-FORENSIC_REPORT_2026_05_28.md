@@ -22,6 +22,7 @@ The `vault-service` worker uses XOR cipher for "encryption":
 ```python
 XOR_KEY = os.environ.get("VAULT_XOR_KEY", "Tranc3Vault2024!ZeroCostCrypto")
 
+
 def _xor_encrypt(plaintext: str) -> str:
     key_bytes = XOR_KEY.encode()
     plain_bytes = plaintext.encode()
