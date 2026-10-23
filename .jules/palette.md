@@ -1,0 +1,3 @@
+## 2024-10-23 - Keyboard Accessibility for Hover-Revealed Icons
+**Learning:** When using `group-hover:opacity-100` to reveal secondary information (like external link icons) on hover, keyboard users miss out on this context unless `group-focus-visible:opacity-100` is also applied to the hidden element, along with a visible focus ring on the interactive parent.
+**Action:** Always pair `group-hover:opacity-100` with `group-focus-visible:opacity-100` on hidden decorative/informative icons, and ensure the parent container has `focus-visible` styles to provide equivalent context and graceful keyboard focus.
