@@ -97,9 +97,10 @@ export default function DigitalGridPage() {
           <div className="flex items-center gap-3 px-4 py-2 bg-gray-900 border-b border-gray-700 flex-shrink-0">
             <button
               onClick={() => setView("dashboard")}
+              aria-label="Back to Workflows Dashboard"
               className="text-gray-400 hover:text-gray-200 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded"
             >
-              ← Workflows
+              <span aria-hidden="true">←</span> Workflows
             </button>
 
             <div className="w-px h-4 bg-gray-700" />
@@ -117,6 +118,7 @@ export default function DigitalGridPage() {
               <button
                 className="text-sm font-semibold text-white hover:text-indigo-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded px-1 -ml-1"
                 onClick={() => setNameEdit(true)}
+                aria-label="Edit workflow name"
               >
                 {workflow.name}
               </button>
@@ -131,6 +133,7 @@ export default function DigitalGridPage() {
             <button
               onClick={handleSave}
               disabled={saving}
+              aria-label="Save workflow"
               className="px-3 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {saving ? "Saving…" : "Save"}
@@ -139,9 +142,10 @@ export default function DigitalGridPage() {
             <button
               onClick={handleRun}
               disabled={running || saving}
+              aria-label={running ? "Running workflow" : "Run workflow"}
               className="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
-              {running ? "Running…" : "▶ Run"}
+              {running ? "Running…" : <><span aria-hidden="true">▶</span> Run</>}
             </button>
           </div>
 
@@ -198,6 +202,7 @@ export default function DigitalGridPage() {
                         }));
                         setSelectedId(null);
                       }}
+                      aria-label={`Delete ${NODE_META[selectedNode.type].label} node`}
                       className="w-full py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:border-red-800 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
                     >
                       Delete Node
