@@ -566,10 +566,13 @@ class SecurityEngineRouter:
                 assurance = assess_engine_output(engine_name, output)
                 if not assurance.coverage_confirmed:
                     last_error = f"Engine {engine_name}: {assurance.reason}"
-                    if engine_name == ScanEngine.offline.value:
+                    # Preserve evidence of OpenVAS target registration; its scan
+                    # has not completed, but the downstream follow-up is traceable.
+                    if engine_name in (ScanEngine.offline.value, ScanEngine.openvas.value):
                         result.engine_used = engine_name
                         result.status = ScanStatus.inconclusive
                         result.severity = ThreatSeverity.unknown
+                        result.findings = output.get("findings", [])
                         result.raw_output = output
                         result.error_message = last_error
                         result.completed_at = datetime.now(timezone.utc)
