@@ -18,7 +18,7 @@ function emptyWorkflow(): WorkflowDef {
 }
 
 export default function DigitalGridPage() {
-  const { saveWorkflow, runWorkflow } = useGridApi();
+  const { saveWorkflow, runWorkflow, error } = useGridApi();
 
   const [view, setView] = useState<View>("dashboard");
   const [workflow, setWorkflow] = useState<WorkflowDef>(emptyWorkflow());
@@ -144,6 +144,12 @@ export default function DigitalGridPage() {
               {running ? "Running…" : "▶ Run"}
             </button>
           </div>
+
+          {error && (
+            <div role="alert" className="px-4 py-3 text-sm text-red-200 bg-red-950/70 border-y border-red-800">
+              Workflow not saved or started: {error}
+            </div>
+          )}
 
           {/* Editor area */}
           <div className="flex-1 flex overflow-hidden">
