@@ -99,6 +99,33 @@ authenticated decision authority and integration with CranBania remain separate
 requirements under issue #1450. Never treat a preview response as release
 permission.
 
+## Independent GitHub Actions run verification (read-only)
+
+`GET /townhall/plm/deliverables/{id}/evidence/validation.tested/verify-ci`
+requires an authenticated `admin`. It reads the latest recorded test-run
+evidence for the deliverable's **current validation stage**, then queries the
+GitHub Actions REST API only when the local record itself says PASS.
+
+Supported evidence reference: `gha:<positive_run_id>:<40_hex_commit_sha>`.
+The server verifies the exact GitHub run ID, repository, commit SHA,
+allowed workflow ID, completed status and successful conclusion. The
+reference cannot supply a hostname or arbitrary repository.
+
+Server-side configuration (no defaults that accidentally trust any workflow):
+- `TOWNHALL_GITHUB_EVIDENCE_REPO`: a canonical `owner/repo`, for example
+  `Trancendos/Tranc3`.
+- `TOWNHALL_GITHUB_EVIDENCE_WORKFLOW_IDS`: comma-separated numeric workflow
+  IDs that the governance team explicitly approves for test evidence.
+- `TOWNHALL_GITHUB_EVIDENCE_TOKEN`: securely provisioned read-only GitHub
+  token with Actions read access; **never** store the token in Drive or Git.
+
+If the token, allowlist, provider or proof is unavailable, the answer is
+`unavailable`, `unsupported` or `rejected`, never `verified`.
+All responses retain `authorization_granted: false` and never call the
+PLM advance operation. Success verifies **only this specific GitHub Actions
+run's status**, not artifact provenance, a security scan, test correctness or
+authorization to deploy. The PLM evidence record remains unchanged.
+
 ## Evidence readiness report (advisory, admin only)
 
 `GET /townhall/plm/deliverables/{deliverable_id}/readiness` reads the existing
