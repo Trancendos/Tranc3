@@ -2,6 +2,7 @@
 
 A security engine that did not substantively run MUST NOT report a clean result.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,9 +28,17 @@ def assess_engine_output(engine: str, output: Mapping[str, Any]) -> ScanAssuranc
     if not isinstance(output, Mapping):
         return ScanAssurance(Assessment.INCONCLUSIVE, "Malformed engine output", False)
     if engine == "offline" or output.get("scan_performed") is False:
-        return ScanAssurance(Assessment.INCONCLUSIVE, "No substantive security scan completed", False)
+        return ScanAssurance(
+            Assessment.INCONCLUSIVE, "No substantive security scan completed", False
+        )
     if not isinstance(output.get("threat_found"), bool):
-        return ScanAssurance(Assessment.INCONCLUSIVE, "Engine did not report a validated threat result", False)
+        return ScanAssurance(
+            Assessment.INCONCLUSIVE, "Engine did not report a validated threat result", False
+        )
     if output["threat_found"]:
-        return ScanAssurance(Assessment.THREAT, "Positive detection returned by security engine", True)
-    return ScanAssurance(Assessment.CLEAN, "Security engine executed and returned no detection", True)
+        return ScanAssurance(
+            Assessment.THREAT, "Positive detection returned by security engine", True
+        )
+    return ScanAssurance(
+        Assessment.CLEAN, "Security engine executed and returned no detection", True
+    )
