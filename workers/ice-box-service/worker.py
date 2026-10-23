@@ -29,6 +29,7 @@ from pydantic import BaseModel  # noqa: E402
 
 from Dimensionals.service_auth_fastapi import guard_internal_secret  # noqa: E402
 from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict  # noqa: E402
+from src.security.ice_box.automation_policy import plan_scan  # noqa: E402
 from src.security.ice_box.quarantine import QuarantineStore  # noqa: E402
 from src.security.ice_box.signatures import get_library  # noqa: E402
 from src.security.warp_tunnel.tunnel import TunnelConfig, WarpTunnel  # noqa: E402
@@ -101,6 +102,8 @@ class ScanResponse(BaseModel):
     analysis_ms: float
     quarantine_id: Optional[str] = None
     findings: list[dict[str, Any]] = []
+    advisory_next_action: str = "hold_for_review"
+    advisory_requires_review: bool = True
 
 
 class ReleaseRequest(BaseModel):
@@ -118,6 +121,7 @@ def scan(req: ScanRequest):
     if req.auto_quarantine:
         result = _tunnel.scan(req.content, source=req.source)
         report = _analyser.analyse(req.content, source=req.source)
+        action = plan_scan(result.verdict.value, quarantined=bool(result.quarantine_id))
         return ScanResponse(
             content_hash=report.content_hash,
             verdict=result.verdict.value,
@@ -128,6 +132,8 @@ def scan(req: ScanRequest):
             entropy=report.entropy,
             analysis_ms=result.analysis_ms,
             quarantine_id=result.quarantine_id,
+            advisory_next_action=action.disposition,
+            advisory_requires_review=action.review_required,
             findings=[
                 {
                     "signature_id": f.signature_id,
@@ -140,6 +146,7 @@ def scan(req: ScanRequest):
         )
     else:
         report = _analyser.analyse(req.content, source=req.source)
+        action = plan_scan(report.verdict.value, quarantined=False)
         return ScanResponse(
             content_hash=report.content_hash,
             verdict=report.verdict.value,
@@ -150,6 +157,8 @@ def scan(req: ScanRequest):
             entropy=report.entropy,
             analysis_ms=report.analysis_ms,
             quarantine_id=None,
+            advisory_next_action=action.disposition,
+            advisory_requires_review=action.review_required,
             findings=[
                 {
                     "signature_id": f.signature_id,
