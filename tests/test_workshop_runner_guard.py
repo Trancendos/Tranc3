@@ -64,6 +64,21 @@ class WorkshopRunnerGuardTests(unittest.TestCase):
         self.write_workflow(event="pull_request_target")
         self.assertIn("UNTRUSTED_TRIGGER", self.codes())
 
+    def test_refuses_repository_dispatch(self):
+        self.write_workflow(event="repository_dispatch")
+        self.assertIn("UNTRUSTED_TRIGGER", self.codes())
+
+    def test_refuses_missing_workflow_trigger(self):
+        self.write_workflow()
+        path = self.workflows / "build.yml"
+        path.write_text(
+            path.read_text().replace(
+                "on:\n  push:\n    branches: [main]\n", ""
+            ),
+            encoding="utf-8",
+        )
+        self.assertIn("MISSING_TRIGGER", self.codes())
+
     def test_refuses_workflow_run(self):
         self.write_workflow(event="workflow_run")
         self.assertIn("UNTRUSTED_TRIGGER", self.codes())
