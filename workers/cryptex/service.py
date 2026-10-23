@@ -254,7 +254,12 @@ class OpenVASEngine:
             if 'status="201"' not in t_xml:
                 raise RuntimeError(f"OpenVAS target creation failed: {t_xml[:200]}")
             findings = [{"type": "vulnerability_scan_triggered", "target": req.target}]
-            return {"threat_found": False, "severity": "info", "findings": findings, "scan_performed": False}
+            return {
+                "threat_found": False,
+                "severity": "info",
+                "findings": findings,
+                "scan_performed": False,
+            }
 
 
 # ── Tier 5: ClamAV Antivirus ──────────────────────────────────────────────────
@@ -324,7 +329,12 @@ class YARAEngine:
                 if f.endswith(".yar") or f.endswith(".yara")
             }
             if not rule_files:
-                return {"threat_found": False, "severity": "info", "findings": [], "scan_performed": False}
+                return {
+                    "threat_found": False,
+                    "severity": "info",
+                    "findings": [],
+                    "scan_performed": False,
+                }
             rules = yara.compile(filepaths=rule_files)
             matches = rules.match(req.target)
             if matches:
@@ -545,7 +555,8 @@ class SecurityEngineRouter:
         substantive = [c for c in candidates if c != ScanEngine.offline.value]
         top = substantive[:3]
         chosen = (
-            self._pheromone.select(top) if len(top) > 1
+            self._pheromone.select(top)
+            if len(top) > 1
             else (top[0] if top else ScanEngine.offline.value)
         )
         fallback_order = [chosen] + [c for c in candidates if c != chosen]
