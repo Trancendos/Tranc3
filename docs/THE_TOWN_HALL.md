@@ -99,6 +99,26 @@ authenticated decision authority and integration with CranBania remain separate
 requirements under issue #1450. Never treat a preview response as release
 permission.
 
+## Expiring PLM waivers and revocation
+
+PLM waiver grants are now **time-boxed**. Existing authenticated admin requests
+to `POST /townhall/plm/deliverables/{id}/waivers` receive a 24-hour expiry
+by default; they may supply an explicit `ttl_seconds` greater than zero and
+no greater than 30 days. The expiry is persisted. Pre-existing indefinite
+waivers with no expiry are **inactive** until an administrator deliberately
+renews them; this intentionally changes older gate decisions.
+
+`POST /townhall/plm/deliverables/{id}/waivers/{criterion_id}/revoke` requires
+a written reason and authenticated admin identity, and makes an active waiver
+unusable immediately. `GET /townhall/plm/deliverables/{id}/waivers/history`
+returns the ordered grant/revoke audit ledger to administrators. These records
+are durable SQLite history entries, not cryptographic immutability guarantees.
+
+The actual PLM `advance` transaction reads waiver expiry/revocation under
+its existing SQLite write lock; expired, revoked and pre-migration indefinite
+waivers cannot substitute for passing evidence. These endpoints do **not**
+independently verify evidence sources or provide autonomous release authority.
+
 ## Evidence readiness report (advisory, admin only)
 
 `GET /townhall/plm/deliverables/{deliverable_id}/readiness` reads the existing
