@@ -38,9 +38,9 @@ def decrypt_legacy(ciphertext_hex: str, key_seed: str) -> str:
     if len(raw) < 60:
         raise ValueError("Invalid legacy AES-GCM envelope")
     salt, nonce, encrypted = raw[:32], raw[32:44], raw[44:]
-    key = PBKDF2HMAC(
-        algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000
-    ).derive(key_seed.encode())
+    key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000).derive(
+        key_seed.encode()
+    )
     return AESGCM(key).decrypt(nonce, encrypted, None).decode()
 
 
@@ -106,11 +106,17 @@ def migrate(
     headers = {"Authorization": f"Bearer {bearer_token}", "Content-Type": "application/json"}
     migrated = 0
     try:
-        with httpx.Client(base_url=void_url, headers=headers, timeout=15, transport=transport) as client:
+        with httpx.Client(
+            base_url=void_url, headers=headers, timeout=15, transport=transport
+        ) as client:
             inventory = client.get("/secrets")
             inventory.raise_for_status()
             existing = inventory.json()
-            if not isinstance(existing, dict) or existing.get("count") != 0 or existing.get("secrets") != []:
+            if (
+                not isinstance(existing, dict)
+                or existing.get("count") != 0
+                or existing.get("secrets") != []
+            ):
                 raise MigrationError("Destination is not empty; refusing non-idempotent migration")
 
             for blob, name in rows:
