@@ -43,13 +43,15 @@ DEFAULT_RESULTS = REPO / "logs" / "test_results.jsonl"
 
 # pytest outcomes -> Chaos Party run statuses. Anything unrecognised is
 # reported verbatim rather than coerced into "passed".
+# The Chaos Party worker and Observatory bridge require pass/fail/skip/error.
+# Preserve the original pytest outcome in metadata for diagnostics.
 _STATUS = {
-    "passed": "passed",
-    "failed": "failed",
-    "error": "failed",
-    "skipped": "skipped",
-    "xfailed": "skipped",
-    "xpassed": "passed",
+    "passed": "pass",
+    "failed": "fail",
+    "error": "error",
+    "skipped": "skip",
+    "xfailed": "skip",
+    "xpassed": "pass",
 }
 
 
@@ -80,7 +82,7 @@ def to_runs(rows: list[dict[str, Any]], ran_by: str) -> list[dict[str, Any]]:
         runs.append(
             {
                 "name": row["test"],
-                "status": _STATUS.get(outcome, outcome or "unknown"),
+                "status": _STATUS.get(outcome, "error"),
                 "duration_ms": int(duration) if isinstance(duration, (int, float)) else None,
                 "error_msg": (row.get("reason") or None),
                 "ran_by": ran_by,
@@ -88,6 +90,7 @@ def to_runs(rows: list[dict[str, Any]], ran_by: str) -> list[dict[str, Any]]:
                     "commit": row.get("commit"),
                     "run_id": row.get("run_id"),
                     "ts": row.get("ts"),
+                    "pytest_outcome": outcome,
                 },
             }
         )
