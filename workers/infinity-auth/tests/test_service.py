@@ -61,6 +61,75 @@ def test_decode_invalid_token_returns_none():
     assert decode_access_token("not.a.valid.token") is None
 
 
+def _forged_unsigned_token(**overrides) -> str:
+    """Build the unsigned base64-JSON token the old ImportError fallback accepted."""
+    import base64
+    import json
+    import time
+
+    claims = {
+        "sub": "attacker",
+        "username": "attacker",
+        "role": "admin",
+        "exp": int(time.time()) + 3600,
+        **overrides,
+    }
+    return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode()
+
+
+def test_forged_unsigned_token_is_rejected():
+    """Regression: an unsigned base64 token must never authenticate."""
+    from service import decode_access_token
+
+    assert decode_access_token(_forged_unsigned_token()) is None
+
+
+def test_forged_token_rejected_when_jose_unavailable(monkeypatch):
+    """Regression: with python-jose missing, decode fails closed instead of
+    falling back to base64 decoding (the original authentication bypass)."""
+    import builtins
+
+    from service import decode_access_token
+
+    real_import = builtins.__import__
+
+    def _no_jose(name, *args, **kwargs):
+        if name == "jose" or name.startswith("jose."):
+            raise ImportError("simulated missing python-jose")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _no_jose)
+    assert decode_access_token(_forged_unsigned_token()) is None
+
+
+def test_create_token_refuses_when_jose_unavailable(monkeypatch):
+    """Without python-jose, token issuance must raise rather than emit an
+    unsigned token."""
+    import builtins
+
+    import pytest
+    from service import create_access_token
+
+    real_import = builtins.__import__
+
+    def _no_jose(name, *args, **kwargs):
+        if name == "jose" or name.startswith("jose."):
+            raise ImportError("simulated missing python-jose")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _no_jose)
+    with pytest.raises(RuntimeError, match="python-jose"):
+        create_access_token("uid-1", "alice")
+
+
+def test_token_signed_with_wrong_secret_is_rejected():
+    from jose import jwt
+    from service import decode_access_token
+
+    forged = jwt.encode({"sub": "attacker", "role": "admin"}, "wrong-secret", algorithm="HS256")
+    assert decode_access_token(forged) is None
+
+
 def test_create_refresh_token_is_unique():
     from service import create_refresh_token
 
