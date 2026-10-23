@@ -235,9 +235,7 @@ class Library:
         src/artifactory/registry.py's apply_retention(). Returns count removed."""
         now = time.time()
         expired = [
-            a.id
-            for a in self._articles.values()
-            if not a.legal_hold and a.retention_expired(now)
+            a.id for a in self._articles.values() if not a.legal_hold and a.retention_expired(now)
         ]
         removed = 0
         for article_id in expired:
