@@ -115,8 +115,8 @@ export function encodeWorkflow(workflow: WorkflowDef): WireWorkflow {
       config: node.config,
       inputs: workflow.edges.filter(e => e.targetId === node.id).map(e => e.sourceId),
       outputs: workflow.edges.filter(e => e.sourceId === node.id).map(e => e.targetId),
-      timeout_sec: 30,
-      retry_count: 3,
+      timeout_sec: node.timeout_sec ?? 30,
+      retry_count: node.retry_count ?? 3,
     };
     layout[node.id] = {
       x: node.x,
@@ -168,6 +168,8 @@ export function decodeWorkflow(value: unknown): WorkflowDef {
       type,
       label: typeof entry.name === "string" ? entry.name : nodeId,
       config: optionalObject(entry.config),
+      ...(typeof entry.timeout_sec === "number" ? { timeout_sec: entry.timeout_sec } : {}),
+      ...(typeof entry.retry_count === "number" ? { retry_count: entry.retry_count } : {}),
       x: typeof positioning.x === "number" ? positioning.x : index * 180 + 40,
       y: typeof positioning.y === "number" ? positioning.y : 40,
       ...(Array.isArray(positioning.inputs) ? { inputs: positioning.inputs as GridNode["inputs"] } : {}),
