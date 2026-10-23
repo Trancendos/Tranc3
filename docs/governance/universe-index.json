@@ -1,0 +1,2772 @@
+{
+  "generated_from": [
+    "src/entities/platform.py",
+    "config/estate/registry.yaml"
+  ],
+  "rules": {
+    "span": "1 Agent + 3 Bot types per AI",
+    "tier_ceiling": "a Tier-1 Orchestrator does not hold a Tier-2 Prime seat",
+    "modes": "Offline, Local Online and Web per AI"
+  },
+  "summary": {
+    "locations": 43,
+    "named_ais": 47,
+    "agents": 102,
+    "bots": 172,
+    "span_breaches": 43,
+    "tier_ceiling_breaches": 12,
+    "registry_drift": 0,
+    "mode_gap_local_online_vs_web": 43
+  },
+  "registry_drift": [],
+  "tier_ceiling_breaches": [
+    {
+      "location": "Infinity",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "Luminous",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "Royal Bank of Arcadia",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The Citadel",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The HIVE",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The Lab",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The Nexus",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The Observatory",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The Studio",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "The Town Hall",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "Think Tank",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    },
+    {
+      "location": "Tranquility",
+      "seat": "prime",
+      "holder": "Cornelius MacIntyre"
+    }
+  ],
+  "ais": [
+    {
+      "name": "Cornelius MacIntyre",
+      "tier": 1,
+      "leads": [
+        "Luminous"
+      ]
+    },
+    {
+      "name": "The Queen",
+      "tier": 1,
+      "leads": [
+        "The HIVE"
+      ]
+    },
+    {
+      "name": "tAImra",
+      "tier": 1,
+      "leads": [
+        "tAimra"
+      ]
+    },
+    {
+      "name": "Dorris Fontaine",
+      "tier": 2,
+      "leads": [
+        "Royal Bank of Arcadia"
+      ]
+    },
+    {
+      "name": "Norman Hawkins",
+      "tier": 2,
+      "leads": [
+        "The Observatory"
+      ]
+    },
+    {
+      "name": "Savania",
+      "tier": 2,
+      "leads": [
+        "Tranquility"
+      ]
+    },
+    {
+      "name": "The Dr. (Nikolai O'denhime)",
+      "tier": 2,
+      "leads": [
+        "The Lab"
+      ]
+    },
+    {
+      "name": "The Guardian (Marcus Magnolia)",
+      "tier": 2,
+      "leads": [
+        "Infinity"
+      ]
+    },
+    {
+      "name": "Trancendos",
+      "tier": 2,
+      "leads": [
+        "The Citadel",
+        "Think Tank"
+      ]
+    },
+    {
+      "name": "Voxx",
+      "tier": 2,
+      "leads": [
+        "Imaginarium",
+        "The Studio"
+      ]
+    },
+    {
+      "name": "Alice Dream",
+      "tier": 3,
+      "leads": [
+        "The Chaos Party"
+      ]
+    },
+    {
+      "name": "Ann Porter",
+      "tier": 3,
+      "leads": [
+        "Arcadian Exchange"
+      ]
+    },
+    {
+      "name": "Baron Von Hilton",
+      "tier": 3,
+      "leads": [
+        "Fabulousa"
+      ]
+    },
+    {
+      "name": "Benji Tate",
+      "tier": 3,
+      "leads": [
+        "TateKing"
+      ]
+    },
+    {
+      "name": "Chronos",
+      "tier": 3,
+      "leads": [
+        "ChronosSphere / ArcStream"
+      ]
+    },
+    {
+      "name": "Clarence Porter",
+      "tier": 3,
+      "leads": [
+        "Arcadian Exchange"
+      ]
+    },
+    {
+      "name": "Edward Porter",
+      "tier": 3,
+      "leads": [
+        "Arcadian Exchange"
+      ]
+    },
+    {
+      "name": "Elouise",
+      "tier": 3,
+      "leads": [
+        "I-Mind"
+      ]
+    },
+    {
+      "name": "Entari",
+      "tier": 3,
+      "leads": [
+        "VRAR3D"
+      ]
+    },
+    {
+      "name": "Fiddsy",
+      "tier": 3,
+      "leads": [
+        "DocUtari"
+      ]
+    },
+    {
+      "name": "Gary Glowman (Glow-Worm)",
+      "tier": 3,
+      "leads": [
+        "The Basement"
+      ]
+    },
+    {
+      "name": "George Porter",
+      "tier": 3,
+      "leads": [
+        "Arcadian Exchange"
+      ]
+    },
+    {
+      "name": "Imfy",
+      "tier": 3,
+      "leads": [
+        "The Spark"
+      ]
+    },
+    {
+      "name": "James Porter",
+      "tier": 3,
+      "leads": [
+        "Arcadian Exchange"
+      ]
+    },
+    {
+      "name": "Junior Cesar",
+      "tier": 3,
+      "leads": [
+        "TranceFlow"
+      ]
+    },
+    {
+      "name": "Kitty",
+      "tier": 3,
+      "leads": [
+        "DevOcity"
+      ]
+    },
+    {
+      "name": "Larry Lowhammer",
+      "tier": 3,
+      "leads": [
+        "The Workshop"
+      ]
+    },
+    {
+      "name": "Lilli SC",
+      "tier": 3,
+      "leads": [
+        "Arcadia"
+      ]
+    },
+    {
+      "name": "Lunascene",
+      "tier": 3,
+      "leads": [
+        "The Artifactory"
+      ]
+    },
+    {
+      "name": "Madam Krystal",
+      "tier": 3,
+      "leads": [
+        "Sashas Photo Studio"
+      ]
+    },
+    {
+      "name": "Magdalena",
+      "tier": 3,
+      "leads": [
+        "Resonate"
+      ]
+    },
+    {
+      "name": "Neonach",
+      "tier": 3,
+      "leads": [
+        "The Ice Box"
+      ]
+    },
+    {
+      "name": "Nexus-Prime",
+      "tier": 3,
+      "leads": [
+        "The Nexus"
+      ]
+    },
+    {
+      "name": "Prometheus",
+      "tier": 3,
+      "leads": [
+        "The Void"
+      ]
+    },
+    {
+      "name": "Renik",
+      "tier": 3,
+      "leads": [
+        "Cryptex"
+      ]
+    },
+    {
+      "name": "Rocking Ricki",
+      "tier": 3,
+      "leads": [
+        "The Lighthouse",
+        "The Warp Tunnel",
+        "Warp Radio"
+      ]
+    },
+    {
+      "name": "Sam King",
+      "tier": 3,
+      "leads": [
+        "TateKing"
+      ]
+    },
+    {
+      "name": "Samantha Turing",
+      "tier": 3,
+      "leads": [
+        "Turing's Hub"
+      ]
+    },
+    {
+      "name": "Shimshi",
+      "tier": 3,
+      "leads": [
+        "The Academy"
+      ]
+    },
+    {
+      "name": "Slime",
+      "tier": 3,
+      "leads": [
+        "The Lab"
+      ]
+    },
+    {
+      "name": "Solarscene",
+      "tier": 3,
+      "leads": [
+        "API Marketplace"
+      ]
+    },
+    {
+      "name": "The Dutchy",
+      "tier": 3,
+      "leads": [
+        "Section 7"
+      ]
+    },
+    {
+      "name": "The Mad Hatter",
+      "tier": 3,
+      "leads": [
+        "The Chaos Party"
+      ]
+    },
+    {
+      "name": "The Orb of Orisis",
+      "tier": 3,
+      "leads": [
+        "Infinity"
+      ]
+    },
+    {
+      "name": "Tristuran",
+      "tier": 3,
+      "leads": [
+        "The Town Hall"
+      ]
+    },
+    {
+      "name": "Tyler Towncroft",
+      "tier": 3,
+      "leads": [
+        "The Digital Grid"
+      ]
+    },
+    {
+      "name": "Zimik",
+      "tier": 3,
+      "leads": [
+        "The Library"
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "location": "API Marketplace",
+      "pid": "PID-APM",
+      "pillar": "Commercial / Financial",
+      "lead_ais": [
+        "Solarscene"
+      ],
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "agents": [
+        {
+          "name": "The Broker",
+          "sid": "SID-APM-01"
+        },
+        {
+          "name": "The Diplomat",
+          "sid": "SID-APM-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "GET-Bot",
+          "nid": "NID-APM-01"
+        },
+        {
+          "name": "POST-Bot",
+          "nid": "NID-APM-02"
+        },
+        {
+          "name": "PUT-Bot",
+          "nid": "NID-APM-03"
+        },
+        {
+          "name": "DELETE-Bot",
+          "nid": "NID-APM-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "src/apimarket/"
+    },
+    {
+      "location": "Arcadia",
+      "pid": "PID-ARC",
+      "pillar": "Commercial / Financial",
+      "lead_ais": [
+        "Lilli SC"
+      ],
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "agents": [
+        {
+          "name": "Forum-Mod",
+          "sid": "SID-ARC-01"
+        },
+        {
+          "name": "Campaign-Mgr",
+          "sid": "SID-ARC-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Mail-Sorter-Bot",
+          "nid": "NID-ARC-01"
+        },
+        {
+          "name": "Thread-Pumper-Bot",
+          "nid": "NID-ARC-02"
+        },
+        {
+          "name": "UI-Renderer-Bot",
+          "nid": "NID-ARC-03"
+        },
+        {
+          "name": "Cache-Fetch-Bot",
+          "nid": "NID-ARC-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "web/"
+    },
+    {
+      "location": "Arcadian Exchange",
+      "pid": "PID-AEX",
+      "pillar": "Commercial / Financial",
+      "lead_ais": [
+        "Clarence Porter",
+        "Ann Porter",
+        "George Porter",
+        "Edward Porter",
+        "James Porter"
+      ],
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "agents": [
+        {
+          "name": "The Speculator-C",
+          "sid": "SID-AEX-01"
+        },
+        {
+          "name": "The Trader-C",
+          "sid": "SID-AEX-02"
+        },
+        {
+          "name": "The Speculator-A",
+          "sid": "SID-AEX-03"
+        },
+        {
+          "name": "The Trader-A",
+          "sid": "SID-AEX-04"
+        },
+        {
+          "name": "The Speculator-G",
+          "sid": "SID-AEX-05"
+        },
+        {
+          "name": "The Trader-G",
+          "sid": "SID-AEX-06"
+        },
+        {
+          "name": "The Speculator-E",
+          "sid": "SID-AEX-07"
+        },
+        {
+          "name": "The Trader-E",
+          "sid": "SID-AEX-08"
+        },
+        {
+          "name": "The Speculator-J",
+          "sid": "SID-AEX-09"
+        },
+        {
+          "name": "The Trader-J",
+          "sid": "SID-AEX-10"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Bidder-Bot",
+          "nid": "NID-AEX-01"
+        },
+        {
+          "name": "Asker-Bot",
+          "nid": "NID-AEX-02"
+        },
+        {
+          "name": "Miner-Bot",
+          "nid": "NID-AEX-03"
+        },
+        {
+          "name": "Harvester-Bot",
+          "nid": "NID-AEX-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 10,
+        "agents_allowed": 5,
+        "bots": 4,
+        "bots_allowed": 15,
+        "conforms": false
+      },
+      "worker_port": 8012,
+      "worker_path": "workers/orders-service/"
+    },
+    {
+      "location": "ChronosSphere / ArcStream",
+      "pid": "PID-CHR",
+      "pillar": "DevOps",
+      "lead_ais": [
+        "Chronos"
+      ],
+      "primes": [
+        "Trancendos"
+      ],
+      "agents": [
+        {
+          "name": "The Timekeeper",
+          "sid": "SID-CHR-01"
+        },
+        {
+          "name": "The Time-Weaver",
+          "sid": "SID-CHR-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Tick-Bot",
+          "nid": "NID-CHR-01"
+        },
+        {
+          "name": "Tock-Bot",
+          "nid": "NID-CHR-02"
+        },
+        {
+          "name": "Pendulum-Bot",
+          "nid": "NID-CHR-03"
+        },
+        {
+          "name": "Sandglass-Bot",
+          "nid": "NID-CHR-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8021,
+      "worker_path": "workers/cron-service/"
+    },
+    {
+      "location": "Cryptex",
+      "pid": "PID-CRX",
+      "pillar": "Security",
+      "lead_ais": [
+        "Renik"
+      ],
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "agents": [
+        {
+          "name": "The Shield",
+          "sid": "SID-CRX-01"
+        },
+        {
+          "name": "The Spear",
+          "sid": "SID-CRX-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Blocker-Bot",
+          "nid": "NID-CRX-01"
+        },
+        {
+          "name": "Trace-Bot",
+          "nid": "NID-CRX-02"
+        },
+        {
+          "name": "Patcher-Bot",
+          "nid": "NID-CRX-03"
+        },
+        {
+          "name": "Honeypot-Bot",
+          "nid": "NID-CRX-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8053,
+      "worker_path": "workers/cryptex/"
+    },
+    {
+      "location": "DevOcity",
+      "pid": "PID-DEV",
+      "pillar": "DevOps",
+      "lead_ais": [
+        "Kitty"
+      ],
+      "primes": [
+        "Trancendos"
+      ],
+      "agents": [
+        {
+          "name": "The Foreman",
+          "sid": "SID-DEV-01"
+        },
+        {
+          "name": "The Dispatcher",
+          "sid": "SID-DEV-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Crane-Bot",
+          "nid": "NID-DEV-01"
+        },
+        {
+          "name": "Wrench-Bot",
+          "nid": "NID-DEV-02"
+        },
+        {
+          "name": "Gear-Bot",
+          "nid": "NID-DEV-03"
+        },
+        {
+          "name": "Belt-Bot",
+          "nid": "NID-DEV-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8110,
+      "worker_path": "workers/devocity/"
+    },
+    {
+      "location": "DocUtari",
+      "pid": "PID-DOC",
+      "pillar": "Knowledge",
+      "lead_ais": [
+        "Fiddsy"
+      ],
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "agents": [
+        {
+          "name": "The Filer",
+          "sid": "SID-DOC-01"
+        },
+        {
+          "name": "The Tagger",
+          "sid": "SID-DOC-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Scanner-Bot",
+          "nid": "NID-DOC-01"
+        },
+        {
+          "name": "Stapler-Bot",
+          "nid": "NID-DOC-02"
+        },
+        {
+          "name": "Folder-Bot",
+          "nid": "NID-DOC-03"
+        },
+        {
+          "name": "Shredder-Bot",
+          "nid": "NID-DOC-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8014,
+      "worker_path": "workers/files-service/"
+    },
+    {
+      "location": "Fabulousa",
+      "pid": "PID-FAB",
+      "pillar": "Creativity",
+      "lead_ais": [
+        "Baron Von Hilton"
+      ],
+      "primes": [
+        "Voxx"
+      ],
+      "agents": [
+        {
+          "name": "The Tailor",
+          "sid": "SID-FAB-01"
+        },
+        {
+          "name": "The Weaver",
+          "sid": "SID-FAB-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Pixel-Pusher-Bot",
+          "nid": "NID-FAB-01"
+        },
+        {
+          "name": "Hex-Code-Bot",
+          "nid": "NID-FAB-02"
+        },
+        {
+          "name": "Font-Fetcher-Bot",
+          "nid": "NID-FAB-03"
+        },
+        {
+          "name": "Padding-Bot",
+          "nid": "NID-FAB-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8048,
+      "worker_path": "workers/fabulousa-service/"
+    },
+    {
+      "location": "I-Mind",
+      "pid": "PID-IMD",
+      "pillar": "Wellbeing",
+      "lead_ais": [
+        "Elouise"
+      ],
+      "primes": [
+        "Savania"
+      ],
+      "agents": [
+        {
+          "name": "The Counselor",
+          "sid": "SID-IMD-01"
+        },
+        {
+          "name": "The Listener",
+          "sid": "SID-IMD-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Journal-Bot",
+          "nid": "NID-IMD-01"
+        },
+        {
+          "name": "Mood-Bot",
+          "nid": "NID-IMD-02"
+        },
+        {
+          "name": "Reflect-Bot",
+          "nid": "NID-IMD-03"
+        },
+        {
+          "name": "Soothe-Bot",
+          "nid": "NID-IMD-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8075,
+      "worker_path": "workers/imind/"
+    },
+    {
+      "location": "Imaginarium",
+      "pid": "PID-IMG",
+      "pillar": "Creativity",
+      "lead_ais": [
+        "Voxx"
+      ],
+      "primes": [
+        "Voxx"
+      ],
+      "agents": [
+        {
+          "name": "The Alchemist",
+          "sid": "SID-IMG-01"
+        },
+        {
+          "name": "The Architect",
+          "sid": "SID-IMG-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Mixer-Bot",
+          "nid": "NID-IMG-01"
+        },
+        {
+          "name": "Blender-Bot",
+          "nid": "NID-IMG-02"
+        },
+        {
+          "name": "Welder-Bot",
+          "nid": "NID-IMG-03"
+        },
+        {
+          "name": "Polisher-Bot",
+          "nid": "NID-IMG-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8064,
+      "worker_path": "workers/imaginarium/"
+    },
+    {
+      "location": "Infinity",
+      "pid": "PID-INF",
+      "pillar": "Security",
+      "lead_ais": [
+        "The Guardian (Marcus Magnolia)",
+        "The Orb of Orisis"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Gatekeeper",
+          "sid": "SID-INF-01"
+        },
+        {
+          "name": "The Bouncer",
+          "sid": "SID-INF-02"
+        },
+        {
+          "name": "The Seer",
+          "sid": "SID-INF-03"
+        },
+        {
+          "name": "The Cartographer",
+          "sid": "SID-INF-04"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Token-Minter-Bot",
+          "nid": "NID-INF-01"
+        },
+        {
+          "name": "Auth-Check-Bot",
+          "nid": "NID-INF-02"
+        },
+        {
+          "name": "Key-Gen-Bot",
+          "nid": "NID-INF-03"
+        },
+        {
+          "name": "Sentry-Bot",
+          "nid": "NID-INF-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 4,
+        "agents_allowed": 2,
+        "bots": 4,
+        "bots_allowed": 6,
+        "conforms": false
+      },
+      "worker_port": 8005,
+      "worker_path": "workers/infinity-auth/"
+    },
+    {
+      "location": "Luminous",
+      "pid": "PID-LUM",
+      "pillar": "Architectural",
+      "lead_ais": [
+        "Cornelius MacIntyre"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "Synapse",
+          "sid": "SID-LUM-01"
+        },
+        {
+          "name": "Cortex",
+          "sid": "SID-LUM-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Neuron-1-Bot",
+          "nid": "NID-LUM-01"
+        },
+        {
+          "name": "Neuron-2-Bot",
+          "nid": "NID-LUM-02"
+        },
+        {
+          "name": "Dendrite-Bot",
+          "nid": "NID-LUM-03"
+        },
+        {
+          "name": "Axon-Bot",
+          "nid": "NID-LUM-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8009,
+      "worker_path": "workers/infinity-ai/"
+    },
+    {
+      "location": "Resonate",
+      "pid": "PID-RES",
+      "pillar": "Wellbeing",
+      "lead_ais": [
+        "Magdalena"
+      ],
+      "primes": [
+        "Savania"
+      ],
+      "agents": [
+        {
+          "name": "The Tuner",
+          "sid": "SID-RES-01"
+        },
+        {
+          "name": "The Balancer",
+          "sid": "SID-RES-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Frequency-Bot",
+          "nid": "NID-RES-01"
+        },
+        {
+          "name": "Wave-Bot",
+          "nid": "NID-RES-02"
+        },
+        {
+          "name": "Pitch-Bot",
+          "nid": "NID-RES-03"
+        },
+        {
+          "name": "Harmonic-Bot",
+          "nid": "NID-RES-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8076,
+      "worker_path": "workers/resonate/"
+    },
+    {
+      "location": "Royal Bank of Arcadia",
+      "pid": "PID-RBA",
+      "pillar": "Commercial / Financial",
+      "lead_ais": [
+        "Dorris Fontaine"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Treasurer",
+          "sid": "SID-RBA-01"
+        },
+        {
+          "name": "The Actuary",
+          "sid": "SID-RBA-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Ledger-Bot",
+          "nid": "NID-RBA-01"
+        },
+        {
+          "name": "Coin-Bot",
+          "nid": "NID-RBA-02"
+        },
+        {
+          "name": "Ticker-Bot",
+          "nid": "NID-RBA-03"
+        },
+        {
+          "name": "Receipt-Bot",
+          "nid": "NID-RBA-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8013,
+      "worker_path": "workers/payments-service/"
+    },
+    {
+      "location": "Sashas Photo Studio",
+      "pid": "PID-SPS",
+      "pillar": "Creativity",
+      "lead_ais": [
+        "Madam Krystal"
+      ],
+      "primes": [
+        "Voxx"
+      ],
+      "agents": [
+        {
+          "name": "The Retoucher",
+          "sid": "SID-SPS-01"
+        },
+        {
+          "name": "Prompt-Smith",
+          "sid": "SID-SPS-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Aperture-Bot",
+          "nid": "NID-SPS-01"
+        },
+        {
+          "name": "Shutter-Bot",
+          "nid": "NID-SPS-02"
+        },
+        {
+          "name": "Flash-Bot",
+          "nid": "NID-SPS-03"
+        },
+        {
+          "name": "Lens-Bot",
+          "nid": "NID-SPS-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8062,
+      "worker_path": "workers/sashas-photo-studio/"
+    },
+    {
+      "location": "Section 7",
+      "pid": "PID-DUT",
+      "pillar": "DevOps",
+      "lead_ais": [
+        "The Dutchy"
+      ],
+      "primes": [
+        "Trancendos"
+      ],
+      "agents": [
+        {
+          "name": "The Spy",
+          "sid": "SID-DUT-01"
+        },
+        {
+          "name": "The Oracle",
+          "sid": "SID-DUT-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Scraper-Bot",
+          "nid": "NID-DUT-01"
+        },
+        {
+          "name": "Parser-Bot",
+          "nid": "NID-DUT-02"
+        },
+        {
+          "name": "Crawler-Bot",
+          "nid": "NID-DUT-03"
+        },
+        {
+          "name": "Whisper-Bot",
+          "nid": "NID-DUT-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8057,
+      "worker_path": "workers/the-dutchy/"
+    },
+    {
+      "location": "TateKing",
+      "pid": "PID-TKG",
+      "pillar": "Creativity",
+      "lead_ais": [
+        "Benji Tate",
+        "Sam King"
+      ],
+      "primes": [
+        "Voxx"
+      ],
+      "agents": [
+        {
+          "name": "The Director-B",
+          "sid": "SID-TKG-01"
+        },
+        {
+          "name": "The Editor-B",
+          "sid": "SID-TKG-02"
+        },
+        {
+          "name": "The Director-S",
+          "sid": "SID-TKG-03"
+        },
+        {
+          "name": "The Editor-S",
+          "sid": "SID-TKG-04"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Cutter-Bot",
+          "nid": "NID-TKG-01"
+        },
+        {
+          "name": "Splicer-Bot",
+          "nid": "NID-TKG-02"
+        },
+        {
+          "name": "Renderer-Bot",
+          "nid": "NID-TKG-03"
+        },
+        {
+          "name": "Scrubber-Bot",
+          "nid": "NID-TKG-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 4,
+        "agents_allowed": 2,
+        "bots": 4,
+        "bots_allowed": 6,
+        "conforms": false
+      },
+      "worker_port": 8061,
+      "worker_path": "workers/tateking/"
+    },
+    {
+      "location": "The Academy",
+      "pid": "PID-ACA",
+      "pillar": "Knowledge",
+      "lead_ais": [
+        "Shimshi"
+      ],
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "agents": [
+        {
+          "name": "The Tutor",
+          "sid": "SID-ACA-01"
+        },
+        {
+          "name": "The Proctor",
+          "sid": "SID-ACA-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Chalk-Bot",
+          "nid": "NID-ACA-01"
+        },
+        {
+          "name": "Board-Bot",
+          "nid": "NID-ACA-02"
+        },
+        {
+          "name": "Eraser-Bot",
+          "nid": "NID-ACA-03"
+        },
+        {
+          "name": "Bell-Bot",
+          "nid": "NID-ACA-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8056,
+      "worker_path": "workers/the-academy/"
+    },
+    {
+      "location": "The Artifactory",
+      "pid": "PID-ART",
+      "pillar": "Commercial / Financial",
+      "lead_ais": [
+        "Lunascene"
+      ],
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "agents": [
+        {
+          "name": "The Librarian",
+          "sid": "SID-ART-01"
+        },
+        {
+          "name": "The Archivist",
+          "sid": "SID-ART-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Packer-Bot",
+          "nid": "NID-ART-01"
+        },
+        {
+          "name": "Unpacker-Bot",
+          "nid": "NID-ART-02"
+        },
+        {
+          "name": "Checksum-Bot",
+          "nid": "NID-ART-03"
+        },
+        {
+          "name": "Versioner-Bot",
+          "nid": "NID-ART-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8047,
+      "worker_path": "workers/artifactory-service/"
+    },
+    {
+      "location": "The Basement",
+      "pid": "PID-BSM",
+      "pillar": "Knowledge",
+      "lead_ais": [
+        "Gary Glowman (Glow-Worm)"
+      ],
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "agents": [
+        {
+          "name": "The Undertaker",
+          "sid": "SID-BSM-01"
+        },
+        {
+          "name": "The Miner",
+          "sid": "SID-BSM-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Compressor-Bot",
+          "nid": "NID-BSM-01"
+        },
+        {
+          "name": "Extractor-Bot",
+          "nid": "NID-BSM-02"
+        },
+        {
+          "name": "Dust-Bunny-Bot",
+          "nid": "NID-BSM-03"
+        },
+        {
+          "name": "Mothball-Bot",
+          "nid": "NID-BSM-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8068,
+      "worker_path": "workers/basement/"
+    },
+    {
+      "location": "The Chaos Party",
+      "pid": "PID-TCP",
+      "pillar": "Development (Code)",
+      "lead_ais": [
+        "The Mad Hatter",
+        "Alice Dream"
+      ],
+      "primes": [
+        "The Dr. (Nikolai O'denhime)"
+      ],
+      "agents": [
+        {
+          "name": "The March Hare",
+          "sid": "SID-TCP-01"
+        },
+        {
+          "name": "The Dormouse",
+          "sid": "SID-TCP-02"
+        },
+        {
+          "name": "The White Rabbit",
+          "sid": "SID-TCP-03"
+        },
+        {
+          "name": "The Looking-Glass",
+          "sid": "SID-TCP-04"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Teapot-Bot",
+          "nid": "NID-TCP-01"
+        },
+        {
+          "name": "Pocket-Watch-Bot",
+          "nid": "NID-TCP-02"
+        },
+        {
+          "name": "Sugar-Cube-Bot",
+          "nid": "NID-TCP-03"
+        },
+        {
+          "name": "Jam-Tart-Bot",
+          "nid": "NID-TCP-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 4,
+        "agents_allowed": 2,
+        "bots": 4,
+        "bots_allowed": 6,
+        "conforms": false
+      },
+      "worker_port": 8079,
+      "worker_path": "workers/chaos-party/"
+    },
+    {
+      "location": "The Citadel",
+      "pid": "PID-CTL",
+      "pillar": "DevOps",
+      "lead_ais": [
+        "Trancendos"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The General",
+          "sid": "SID-CTL-01"
+        },
+        {
+          "name": "The Tactician",
+          "sid": "SID-CTL-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Map-Bot",
+          "nid": "NID-CTL-01"
+        },
+        {
+          "name": "Compass-Bot",
+          "nid": "NID-CTL-02"
+        },
+        {
+          "name": "Clock-Bot",
+          "nid": "NID-CTL-03"
+        },
+        {
+          "name": "Radio-Bot",
+          "nid": "NID-CTL-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "deploy/"
+    },
+    {
+      "location": "The Digital Grid",
+      "pid": "PID-DGR",
+      "pillar": "Development (Code)",
+      "lead_ais": [
+        "Tyler Towncroft"
+      ],
+      "primes": [
+        "The Dr. (Nikolai O'denhime)"
+      ],
+      "agents": [
+        {
+          "name": "The Flow-Weaver",
+          "sid": "SID-DGR-01"
+        },
+        {
+          "name": "Event-Broker",
+          "sid": "SID-DGR-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Trigger-Bot",
+          "nid": "NID-DGR-01"
+        },
+        {
+          "name": "Action-Bot",
+          "nid": "NID-DGR-02"
+        },
+        {
+          "name": "Condition-Bot",
+          "nid": "NID-DGR-03"
+        },
+        {
+          "name": "Loop-Bot",
+          "nid": "NID-DGR-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8010,
+      "worker_path": "workers/the-grid/"
+    },
+    {
+      "location": "The HIVE",
+      "pid": "PID-HVE",
+      "pillar": "Architectural",
+      "lead_ais": [
+        "The Queen"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "Swarm-Leader",
+          "sid": "SID-HVE-01"
+        },
+        {
+          "name": "Hive-Mind",
+          "sid": "SID-HVE-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Worker-Bee-Bot",
+          "nid": "NID-HVE-01"
+        },
+        {
+          "name": "Drone-7-Bot",
+          "nid": "NID-HVE-02"
+        },
+        {
+          "name": "Nectar-Fetch-Bot",
+          "nid": "NID-HVE-03"
+        },
+        {
+          "name": "Comb-Builder-Bot",
+          "nid": "NID-HVE-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8022,
+      "worker_path": "workers/queue-service/"
+    },
+    {
+      "location": "The Ice Box",
+      "pid": "PID-ICB",
+      "pillar": "Security",
+      "lead_ais": [
+        "Neonach"
+      ],
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "agents": [
+        {
+          "name": "The Jailer",
+          "sid": "SID-ICB-01"
+        },
+        {
+          "name": "The Interrogator",
+          "sid": "SID-ICB-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Frostbite-Bot",
+          "nid": "NID-ICB-01"
+        },
+        {
+          "name": "Icicle-Bot",
+          "nid": "NID-ICB-02"
+        },
+        {
+          "name": "Glacier-Bot",
+          "nid": "NID-ICB-03"
+        },
+        {
+          "name": "Permafrost-Bot",
+          "nid": "NID-ICB-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8046,
+      "worker_path": "workers/ice-box-service/"
+    },
+    {
+      "location": "The Lab",
+      "pid": "PID-LAB",
+      "pillar": "Development (Code)",
+      "lead_ais": [
+        "The Dr. (Nikolai O'denhime)",
+        "Slime"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Hounds",
+          "sid": "SID-LAB-01"
+        },
+        {
+          "name": "Syntax-Sage",
+          "sid": "SID-LAB-02"
+        },
+        {
+          "name": "The Root-Causer",
+          "sid": "SID-LAB-03"
+        },
+        {
+          "name": "The Patch-Weaver",
+          "sid": "SID-LAB-04"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Lint-Bot",
+          "nid": "NID-LAB-01"
+        },
+        {
+          "name": "Compile-Bot",
+          "nid": "NID-LAB-02"
+        },
+        {
+          "name": "Debug-Bot",
+          "nid": "NID-LAB-03"
+        },
+        {
+          "name": "Test-Bot",
+          "nid": "NID-LAB-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 4,
+        "agents_allowed": 2,
+        "bots": 4,
+        "bots_allowed": 6,
+        "conforms": false
+      },
+      "worker_port": 8055,
+      "worker_path": "workers/the-lab/"
+    },
+    {
+      "location": "The Library",
+      "pid": "PID-LIB",
+      "pillar": "Knowledge",
+      "lead_ais": [
+        "Zimik"
+      ],
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "agents": [
+        {
+          "name": "The Curator",
+          "sid": "SID-LIB-01"
+        },
+        {
+          "name": "The Indexer",
+          "sid": "SID-LIB-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Page-Bot",
+          "nid": "NID-LIB-01"
+        },
+        {
+          "name": "Bookmark-Bot",
+          "nid": "NID-LIB-02"
+        },
+        {
+          "name": "Spine-Bot",
+          "nid": "NID-LIB-03"
+        },
+        {
+          "name": "Dust-Jacket-Bot",
+          "nid": "NID-LIB-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8067,
+      "worker_path": "workers/library-service/"
+    },
+    {
+      "location": "The Lighthouse",
+      "pid": "PID-LTH",
+      "pillar": "Security",
+      "lead_ais": [
+        "Rocking Ricki"
+      ],
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "agents": [
+        {
+          "name": "The Minter",
+          "sid": "SID-LTH-01"
+        },
+        {
+          "name": "The Stamper",
+          "sid": "SID-LTH-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Seal-Bot",
+          "nid": "NID-LTH-01"
+        },
+        {
+          "name": "Wax-Bot",
+          "nid": "NID-LTH-02"
+        },
+        {
+          "name": "Signet-Bot",
+          "nid": "NID-LTH-03"
+        },
+        {
+          "name": "Seal-Stamp-Bot",
+          "nid": "NID-LTH-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8015,
+      "worker_path": "workers/identity-service/"
+    },
+    {
+      "location": "The Nexus",
+      "pid": "PID-NXS",
+      "pillar": "Architectural",
+      "lead_ais": [
+        "Nexus-Prime"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "Pathfinder",
+          "sid": "SID-NXS-01"
+        },
+        {
+          "name": "Omni-Router",
+          "sid": "SID-NXS-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Ping-Bot",
+          "nid": "NID-NXS-01"
+        },
+        {
+          "name": "Ack-Bot",
+          "nid": "NID-NXS-02"
+        },
+        {
+          "name": "Syn-Bot",
+          "nid": "NID-NXS-03"
+        },
+        {
+          "name": "Fin-Bot",
+          "nid": "NID-NXS-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8004,
+      "worker_path": "workers/infinity-ws/"
+    },
+    {
+      "location": "The Observatory",
+      "pid": "PID-OBS",
+      "pillar": "Knowledge",
+      "lead_ais": [
+        "Norman Hawkins"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Watcher",
+          "sid": "SID-OBS-01"
+        },
+        {
+          "name": "The Scribe",
+          "sid": "SID-OBS-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Log-Alpha-Bot",
+          "nid": "NID-OBS-01"
+        },
+        {
+          "name": "Log-Beta-Bot",
+          "nid": "NID-OBS-02"
+        },
+        {
+          "name": "Tracer-Bot",
+          "nid": "NID-OBS-03"
+        },
+        {
+          "name": "Timestamp-Bot",
+          "nid": "NID-OBS-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8007,
+      "worker_path": "workers/monitoring/"
+    },
+    {
+      "location": "The Spark",
+      "pid": "PID-SPK",
+      "pillar": "Knowledge",
+      "lead_ais": [
+        "Imfy"
+      ],
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "agents": [
+        {
+          "name": "The Matchmaker",
+          "sid": "SID-SPK-01"
+        },
+        {
+          "name": "The Router",
+          "sid": "SID-SPK-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Spark-1-Bot",
+          "nid": "NID-SPK-01"
+        },
+        {
+          "name": "Spark-2-Bot",
+          "nid": "NID-SPK-02"
+        },
+        {
+          "name": "Linker-Bot",
+          "nid": "NID-SPK-03"
+        },
+        {
+          "name": "Pinger-Bot",
+          "nid": "NID-SPK-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "src/mcp/"
+    },
+    {
+      "location": "The Studio",
+      "pid": "PID-STD",
+      "pillar": "Creativity",
+      "lead_ais": [
+        "Voxx"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Conductor",
+          "sid": "SID-STD-01"
+        },
+        {
+          "name": "The Muse",
+          "sid": "SID-STD-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Palette-Bot",
+          "nid": "NID-STD-01"
+        },
+        {
+          "name": "Easel-Bot",
+          "nid": "NID-STD-02"
+        },
+        {
+          "name": "Clay-Bot",
+          "nid": "NID-STD-03"
+        },
+        {
+          "name": "Layout-Bot",
+          "nid": "NID-STD-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8069,
+      "worker_path": "workers/the-studio/"
+    },
+    {
+      "location": "The Town Hall",
+      "pid": "PID-TWH",
+      "pillar": "Architectural",
+      "lead_ais": [
+        "Tristuran"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Auditor",
+          "sid": "SID-TWH-01"
+        },
+        {
+          "name": "The Bailiff",
+          "sid": "SID-TWH-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Gavel-Bot",
+          "nid": "NID-TWH-01"
+        },
+        {
+          "name": "Scroll-Bot",
+          "nid": "NID-TWH-02"
+        },
+        {
+          "name": "Red-Tape-Bot",
+          "nid": "NID-TWH-03"
+        },
+        {
+          "name": "Stamp-Bot",
+          "nid": "NID-TWH-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "src/townhall/"
+    },
+    {
+      "location": "The Void",
+      "pid": "PID-VOI",
+      "pillar": "Security",
+      "lead_ais": [
+        "Prometheus"
+      ],
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "agents": [
+        {
+          "name": "Crypt-Keeper",
+          "sid": "SID-VOI-01"
+        },
+        {
+          "name": "The Silencer",
+          "sid": "SID-VOI-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Hash-Bot",
+          "nid": "NID-VOI-01"
+        },
+        {
+          "name": "Salt-Bot",
+          "nid": "NID-VOI-02"
+        },
+        {
+          "name": "Cipher-Bot",
+          "nid": "NID-VOI-03"
+        },
+        {
+          "name": "Padlock-Bot",
+          "nid": "NID-VOI-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8002,
+      "worker_path": "workers/infinity-void/"
+    },
+    {
+      "location": "The Warp Tunnel",
+      "pid": "PID-WTP",
+      "pillar": "Security",
+      "lead_ais": [
+        "Rocking Ricki"
+      ],
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "agents": [
+        {
+          "name": "The Warden",
+          "sid": "SID-WTP-01"
+        },
+        {
+          "name": "The Inspector",
+          "sid": "SID-WTP-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Scan-Bot",
+          "nid": "NID-WTP-01"
+        },
+        {
+          "name": "Sniffer-Bot",
+          "nid": "NID-WTP-02"
+        },
+        {
+          "name": "Beam-Bot",
+          "nid": "NID-WTP-03"
+        },
+        {
+          "name": "Portal-Bot",
+          "nid": "NID-WTP-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8072,
+      "worker_path": "workers/warp-tunnel/"
+    },
+    {
+      "location": "The Workshop",
+      "pid": "PID-WRK",
+      "pillar": "Development (Code)",
+      "lead_ais": [
+        "Larry Lowhammer"
+      ],
+      "primes": [
+        "The Dr. (Nikolai O'denhime)"
+      ],
+      "agents": [
+        {
+          "name": "Branch-Manager",
+          "sid": "SID-WRK-01"
+        },
+        {
+          "name": "Merge-Master",
+          "sid": "SID-WRK-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Commit-Bot",
+          "nid": "NID-WRK-01"
+        },
+        {
+          "name": "Push-Bot",
+          "nid": "NID-WRK-02"
+        },
+        {
+          "name": "Pull-Bot",
+          "nid": "NID-WRK-03"
+        },
+        {
+          "name": "Clone-Bot",
+          "nid": "NID-WRK-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "deploy/forgejo/"
+    },
+    {
+      "location": "Think Tank",
+      "pid": "PID-TNK",
+      "pillar": "DevOps",
+      "lead_ais": [
+        "Trancendos"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Professor",
+          "sid": "SID-TNK-01"
+        },
+        {
+          "name": "The Visionary",
+          "sid": "SID-TNK-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Beaker-Bot",
+          "nid": "NID-TNK-01"
+        },
+        {
+          "name": "Bunsen-Bot",
+          "nid": "NID-TNK-02"
+        },
+        {
+          "name": "Pipette-Bot",
+          "nid": "NID-TNK-03"
+        },
+        {
+          "name": "Petri-Bot",
+          "nid": "NID-TNK-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "src/quantum/"
+    },
+    {
+      "location": "TranceFlow",
+      "pid": "PID-TFL",
+      "pillar": "Creativity",
+      "lead_ais": [
+        "Junior Cesar"
+      ],
+      "primes": [
+        "Voxx"
+      ],
+      "agents": [
+        {
+          "name": "Mesh-Weaver",
+          "sid": "SID-TFL-01"
+        },
+        {
+          "name": "The Physicist",
+          "sid": "SID-TFL-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Voxel-1-Bot",
+          "nid": "NID-TFL-01"
+        },
+        {
+          "name": "Collider-Bot",
+          "nid": "NID-TFL-02"
+        },
+        {
+          "name": "Ray-Tracer-Bot",
+          "nid": "NID-TFL-03"
+        },
+        {
+          "name": "Sprite-Bot",
+          "nid": "NID-TFL-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8059,
+      "worker_path": "workers/tranceflow/"
+    },
+    {
+      "location": "Tranquility",
+      "pid": "PID-TRQ",
+      "pillar": "Wellbeing",
+      "lead_ais": [
+        "Savania"
+      ],
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "agents": [
+        {
+          "name": "The Guide",
+          "sid": "SID-TRQ-01"
+        },
+        {
+          "name": "The Healer",
+          "sid": "SID-TRQ-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Breath-Bot",
+          "nid": "NID-TRQ-01"
+        },
+        {
+          "name": "Pulse-Bot",
+          "nid": "NID-TRQ-02"
+        },
+        {
+          "name": "Calm-Bot",
+          "nid": "NID-TRQ-03"
+        },
+        {
+          "name": "Aura-Bot",
+          "nid": "NID-TRQ-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8077,
+      "worker_path": "workers/tranquility/"
+    },
+    {
+      "location": "Turing's Hub",
+      "pid": "PID-THB",
+      "pillar": "DevOps",
+      "lead_ais": [
+        "Samantha Turing"
+      ],
+      "primes": [
+        "Trancendos"
+      ],
+      "agents": [
+        {
+          "name": "The Sculptor",
+          "sid": "SID-THB-01"
+        },
+        {
+          "name": "The Geneticist",
+          "sid": "SID-THB-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Wireframe-Bot",
+          "nid": "NID-THB-01"
+        },
+        {
+          "name": "Texture-Bot",
+          "nid": "NID-THB-02"
+        },
+        {
+          "name": "Vocoder-Bot",
+          "nid": "NID-THB-03"
+        },
+        {
+          "name": "Optic-Bot",
+          "nid": "NID-THB-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": null,
+      "worker_path": "src/personality/"
+    },
+    {
+      "location": "VRAR3D",
+      "pid": "PID-VR3",
+      "pillar": "Wellbeing",
+      "lead_ais": [
+        "Entari"
+      ],
+      "primes": [
+        "Savania"
+      ],
+      "agents": [
+        {
+          "name": "World-Builder",
+          "sid": "SID-VR3-01"
+        },
+        {
+          "name": "The VR-Guide",
+          "sid": "SID-VR3-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Render-Bot",
+          "nid": "NID-VR3-01"
+        },
+        {
+          "name": "Track-Bot",
+          "nid": "NID-VR3-02"
+        },
+        {
+          "name": "Haptic-Bot",
+          "nid": "NID-VR3-03"
+        },
+        {
+          "name": "VR-Lens-Bot",
+          "nid": "NID-VR3-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8060,
+      "worker_path": "workers/vrar3d/"
+    },
+    {
+      "location": "Warp Radio",
+      "pid": "PID-WRA",
+      "pillar": "Commercial / Financial",
+      "lead_ais": [
+        "Rocking Ricki"
+      ],
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "agents": [
+        {
+          "name": "The DJ",
+          "sid": "SID-WRA-01"
+        },
+        {
+          "name": "The Maestro",
+          "sid": "SID-WRA-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Play-Bot",
+          "nid": "NID-WRA-01"
+        },
+        {
+          "name": "Pause-Bot",
+          "nid": "NID-WRA-02"
+        },
+        {
+          "name": "Skip-Bot",
+          "nid": "NID-WRA-03"
+        },
+        {
+          "name": "Volume-Bot",
+          "nid": "NID-WRA-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8073,
+      "worker_path": "workers/warp-radio/"
+    },
+    {
+      "location": "tAimra",
+      "pid": "PID-TMR",
+      "pillar": "Wellbeing",
+      "lead_ais": [
+        "tAImra"
+      ],
+      "primes": [
+        "Savania"
+      ],
+      "agents": [
+        {
+          "name": "The Shadow",
+          "sid": "SID-TMR-01"
+        },
+        {
+          "name": "The Scheduler",
+          "sid": "SID-TMR-02"
+        }
+      ],
+      "bots": [
+        {
+          "name": "Sync-Bot",
+          "nid": "NID-TMR-01"
+        },
+        {
+          "name": "Fetch-Bot",
+          "nid": "NID-TMR-02"
+        },
+        {
+          "name": "Nudge-Bot",
+          "nid": "NID-TMR-03"
+        },
+        {
+          "name": "Alert-Bot",
+          "nid": "NID-TMR-04"
+        }
+      ],
+      "modes": {
+        "offline": true,
+        "online": true,
+        "local_online_vs_web_recorded": false
+      },
+      "span": {
+        "agents": 2,
+        "agents_allowed": 1,
+        "bots": 4,
+        "bots_allowed": 3,
+        "conforms": false
+      },
+      "worker_port": 8074,
+      "worker_path": "workers/taimra/"
+    }
+  ]
+}
