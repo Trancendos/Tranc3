@@ -43,25 +43,10 @@ def test_a_real_password_is_accepted(monkeypatch):
     assert WarpRadioConfig().icecast_admin_password == "super-secret"
 
 
-def test_the_default_can_be_opted_into_deliberately(monkeypatch):
-    """Local development still needs to run, but has to say so."""
-    monkeypatch.delenv("ICECAST_ADMIN_PASSWORD", raising=False)
-    monkeypatch.setenv("TRANC3_WARP_RADIO_ALLOW_INSECURE", "1")
-
-    assert WarpRadioConfig().icecast_admin_password == "hackme"
-
-
-def test_the_opt_in_does_not_override_a_real_password(monkeypatch):
-    monkeypatch.setenv("ICECAST_ADMIN_PASSWORD", "super-secret")
-    monkeypatch.setenv("TRANC3_WARP_RADIO_ALLOW_INSECURE", "1")
-
-    assert WarpRadioConfig().icecast_admin_password == "super-secret"
-
-
 def test_url_and_the_non_secret_defaults_are_unchanged(monkeypatch):
     """The URL keeps an ordinary default -- it is not a credential."""
     monkeypatch.delenv("ICECAST_URL", raising=False)
-    monkeypatch.setenv("TRANC3_WARP_RADIO_ALLOW_INSECURE", "1")
+    monkeypatch.setenv("ICECAST_ADMIN_PASSWORD", "super-secret")
 
     config = WarpRadioConfig()
     assert config.icecast_url == "http://localhost:8000"
@@ -73,6 +58,6 @@ def test_url_and_the_non_secret_defaults_are_unchanged(monkeypatch):
 
 def test_url_honours_its_env_var(monkeypatch):
     monkeypatch.setenv("ICECAST_URL", "http://my-secure-icecast:8000")
-    monkeypatch.setenv("TRANC3_WARP_RADIO_ALLOW_INSECURE", "1")
+    monkeypatch.setenv("ICECAST_ADMIN_PASSWORD", "super-secret")
 
     assert WarpRadioConfig().icecast_url == "http://my-secure-icecast:8000"

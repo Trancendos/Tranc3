@@ -55,13 +55,12 @@ def _require_icecast_password() -> str:
     password = os.getenv("ICECAST_ADMIN_PASSWORD")
     if password and password != _INSECURE_DEFAULT_PASSWORD:
         return password
-    if os.getenv("TRANC3_WARP_RADIO_ALLOW_INSECURE") == "1":
-        return password or _INSECURE_DEFAULT_PASSWORD
+
+    # Do NOT fallback to the insecure password under any condition, even for development.
+    # To fix this, set a real ICECAST_ADMIN_PASSWORD environment variable.
     raise ValueError(
         "ICECAST_ADMIN_PASSWORD is not set, or is still Icecast's stock "
-        f"'{_INSECURE_DEFAULT_PASSWORD}'. Set a real password, or set "
-        "TRANC3_WARP_RADIO_ALLOW_INSECURE=1 to accept the default deliberately "
-        "(local development only)."
+        f"'{_INSECURE_DEFAULT_PASSWORD}'. Set a real password."
     )
 
 
