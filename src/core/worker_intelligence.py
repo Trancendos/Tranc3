@@ -11,6 +11,8 @@ Zero-cost: Pure Python stdlib only.
 from __future__ import annotations
 
 import logging
+import math
+import operator
 import threading
 import time
 from collections import deque
@@ -18,6 +20,8 @@ from dataclasses import dataclass
 from typing import Any, Deque, Dict, List, Tuple
 
 logger = logging.getLogger("tranc3.core.worker_intelligence")
+
+_HAS_SUMPROD = hasattr(math, "sumprod")
 
 
 # ── Data classes ──────────────────────────────────────────────────────────
@@ -289,8 +293,17 @@ class WorkerIntelligence:
         ys = [p[1] for p in points]
         mx = sum(xs) / n
         my = sum(ys) / n
-        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
-        den = sum((x - mx) ** 2 for x in xs)
+
+        x_diffs = [x - mx for x in xs]
+        y_diffs = [y - my for y in ys]
+
+        if _HAS_SUMPROD:
+            num = math.sumprod(x_diffs, y_diffs)  # type: ignore[attr-defined]
+            den = math.sumprod(x_diffs, x_diffs)  # type: ignore[attr-defined]
+        else:
+            num = sum(map(operator.mul, x_diffs, y_diffs))
+            den = sum(map(operator.mul, x_diffs, x_diffs))
+
         return num / den if den != 0 else 0.0
 
     def _get_cb_state(self, state: _WorkerState) -> str:
