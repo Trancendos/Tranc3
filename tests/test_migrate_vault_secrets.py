@@ -25,9 +25,9 @@ def old_db(tmp_path):
     path = tmp_path / "legacy.db"
     master = "synthetic-master-test-only"
     salt, nonce = os.urandom(32), os.urandom(12)
-    dk = PBKDF2HMAC(
-        algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000
-    ).derive(master.encode())
+    dk = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000).derive(
+        master.encode()
+    )
     envelope = (salt + nonce + AESGCM(dk).encrypt(nonce, b"synthetic-value-only", None)).hex()
     conn = sqlite3.connect(path)
     conn.execute("CREATE TABLE secrets (id TEXT, key TEXT, encrypted_value TEXT, is_active INT)")
@@ -51,7 +51,13 @@ def test_execute_requires_authenticated_bearer(old_db):
 def test_rejects_remote_plaintext_http(old_db):
     path, master = old_db
     with pytest.raises(mig.MigrationError, match="HTTPS"):
-        mig.migrate(str(path), master_key=master, execute=True, bearer_token="synthetic", void_url="http://vault.example.com")
+        mig.migrate(
+            str(path),
+            master_key=master,
+            execute=True,
+            bearer_token="synthetic",
+            void_url="http://vault.example.com",
+        )
 
 
 def test_successful_migration_uses_current_api_and_verifies_readback(old_db):
@@ -65,6 +71,7 @@ def test_successful_migration_uses_current_api_and_verifies_readback(old_db):
             return httpx.Response(200, json={"count": 0, "secrets": []})
         if request.url.path == "/secrets" and request.method == "POST":
             import json
+
             payload = json.loads(request.content)
             assert payload["name"] == "synthetic-name"
             seen["stored"] = payload["value"]
@@ -74,12 +81,16 @@ def test_successful_migration_uses_current_api_and_verifies_readback(old_db):
         return httpx.Response(404)
 
     result = mig.migrate(
-        str(path), master_key=master, execute=True,
-        bearer_token="synthetic-token", transport=httpx.MockTransport(respond),
+        str(path),
+        master_key=master,
+        execute=True,
+        bearer_token="synthetic-token",
+        transport=httpx.MockTransport(respond),
     )
     assert result == {"verified": 1, "migrated": 1}
     assert seen["methods"] == [
-        ("GET", "/secrets"), ("POST", "/secrets"),
+        ("GET", "/secrets"),
+        ("POST", "/secrets"),
         ("POST", "/secrets/retrieve"),
     ]
 
@@ -87,22 +98,32 @@ def test_successful_migration_uses_current_api_and_verifies_readback(old_db):
 def test_nonempty_destination_blocks_any_write(old_db):
     path, master = old_db
     calls = []
+
     def respond(request):
         calls.append(request.method)
         return httpx.Response(200, json={"count": 1, "secrets": [{"name": "already"}]})
+
     with pytest.raises(mig.MigrationError, match="not empty"):
-        mig.migrate(str(path), master_key=master, execute=True, bearer_token="synthetic", transport=httpx.MockTransport(respond))
+        mig.migrate(
+            str(path),
+            master_key=master,
+            execute=True,
+            bearer_token="synthetic",
+            transport=httpx.MockTransport(respond),
+        )
     assert calls == ["GET"]
 
 
 def test_mismatch_aborts_without_deleting_source(old_db):
     path, master = old_db
+
     def respond(request):
         if request.method == "GET":
             return httpx.Response(200, json={"count": 0, "secrets": []})
         if request.url.path == "/secrets":
             return httpx.Response(200, json={"secret_id": "syn-1"})
         return httpx.Response(200, json={"plaintext": "wrong-value"})
+
     with pytest.raises(mig.MigrationError, match="readback mismatch"):
         mig.migrate(str(path), master_key=master, execute=True, bearer_token="synthetic", transport=httpx.MockTransport(respond))
     assert path.exists()
