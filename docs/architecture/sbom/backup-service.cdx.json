@@ -77,9 +77,9 @@
     {
       "type": "library",
       "name": "cryptography",
-      "bom-ref": "pkg:pypi/cryptography@50.0.1",
-      "purl": "pkg:pypi/cryptography@50.0.1",
-      "version": "50.0.1"
+      "bom-ref": "pkg:pypi/cryptography@50.0.2",
+      "purl": "pkg:pypi/cryptography@50.0.2",
+      "version": "50.0.2"
     }
   ]
 }

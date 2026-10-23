@@ -77,9 +77,9 @@
     {
       "type": "library",
       "name": "ruff",
-      "bom-ref": "pkg:pypi/ruff@0.16.9",
-      "purl": "pkg:pypi/ruff@0.16.9",
-      "version": "0.16.9"
+      "bom-ref": "pkg:pypi/ruff@0.16.10",
+      "purl": "pkg:pypi/ruff@0.16.10",
+      "version": "0.16.10"
     },
     {
       "type": "library",
