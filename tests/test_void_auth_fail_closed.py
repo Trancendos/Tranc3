@@ -31,9 +31,7 @@ def test_missing_header_is_denied_even_in_test_mode(void_worker):
 
 
 def test_unconfigured_verifier_denies_arbitrary_bearer_tokens(void_worker):
-    assert asyncio.run(
-        void_worker.get_auth_user_id("Bearer invented-credential")
-    ) is None
+    assert asyncio.run(void_worker.get_auth_user_id("Bearer invented-credential")) is None
 
 
 def test_blank_bearer_token_is_denied(void_worker):
@@ -43,7 +41,9 @@ def test_blank_bearer_token_is_denied(void_worker):
 def test_without_verifier_secret_endpoints_return_401(void_worker):
     with TestClient(void_worker.app) as client:
         assert client.get("/vault/status").status_code == 401
-        assert client.get("/secrets", headers={"Authorization": "Bearer invented"}).status_code == 401
+        assert (
+            client.get("/secrets", headers={"Authorization": "Bearer invented"}).status_code == 401
+        )
 
 
 @pytest.mark.parametrize(
