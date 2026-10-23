@@ -153,5 +153,9 @@ async def delete_article(
 
 @router.post("/retention/apply")
 async def apply_retention(current_user: dict = Depends(get_current_user)):
+    # Retention pruning acts on every article and cannot be scoped to a
+    # caller's own records. Require an administrator before any mutation.
+    if current_user.get("role") != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
     removed = get_library().apply_retention()
     return {"articles_removed": removed}
