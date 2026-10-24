@@ -12,6 +12,7 @@ import config
 from database import VRARDatabase
 from Dimensionals.service_auth_fastapi import guard_internal_secret
 from models import (
+    AssetJobStatusResponse,
     AssetProcessRequest,
     AssetProcessResponse,
     SceneCreate,
@@ -30,7 +31,9 @@ def _make_vrar3d_router(db: VRARDatabase, vrar: VRARRouter) -> APIRouter:
     router = APIRouter(prefix="/vrar3d", tags=["vrar3d"])
 
     @router.post("/scenes", response_model=SceneResponse, status_code=201)
-    def create_scene(req: SceneCreate, _: None = Header(default=None)) -> SceneResponse:
+    def create_scene(
+        req: SceneCreate, _: Optional[str] = Header(default=None, alias="x-internal-secret")
+    ) -> SceneResponse:
         _auth(_)
         return vrar.create_scene(req)
 
@@ -71,6 +74,30 @@ def _make_vrar3d_router(db: VRARDatabase, vrar: VRARRouter) -> APIRouter:
     ) -> AssetProcessResponse:
         _auth(_)
         return await vrar.process_asset(req)
+
+    @router.get("/assets/{asset_id}", response_model=AssetJobStatusResponse)
+    def get_asset_status(
+        asset_id: str,
+        _: Optional[str] = Header(default=None, alias="x-internal-secret"),
+    ) -> AssetJobStatusResponse:
+        _auth(_)
+        job = db.get_asset_job(asset_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="Asset job not found")
+        download_url = (
+            f"/vrar3d/assets/{asset_id}/download"
+            if vrar.get_asset_download_path(asset_id) is not None
+            else None
+        )
+        return AssetJobStatusResponse(
+            job_id=asset_id,
+            scene_id=job["scene_id"],
+            source_format=job["source_format"],
+            target_format=job["target_format"],
+            backend=job["backend"],
+            status=job["status"],
+            download_url=download_url,
+        )
 
     @router.get("/assets/{asset_id}/download")
     def download_asset(
