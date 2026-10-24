@@ -1,9 +1,10 @@
 """Regression tests for tenant model authorization and cache isolation."""
+
 import pytest
 
 from src.ai_gateway.gateway import AIGateway, AIGatewayError
-from src.ai_gateway.types import AIRequest, AIResponse, ProviderHealth, RouteRule, TenantAIConfig
 from src.ai_gateway.providers.base import AIProvider
+from src.ai_gateway.types import AIRequest, AIResponse, ProviderHealth, RouteRule, TenantAIConfig
 
 
 class StubProvider(AIProvider):
@@ -13,8 +14,12 @@ class StubProvider(AIProvider):
 
     async def complete(self, request):
         self.calls += 1
-        return AIResponse(text=f"reply-{self.calls}", model=request.model or "stub-default",
-                          provider=self.name, tokens_total=1)
+        return AIResponse(
+            text=f"reply-{self.calls}",
+            model=request.model or "stub-default",
+            provider=self.name,
+            tokens_total=1,
+        )
 
     async def health_check(self):
         return ProviderHealth(provider=self.name, healthy=True)
@@ -33,8 +38,12 @@ def configured_gateway():
 @pytest.mark.asyncio
 async def test_denied_requested_model_never_calls_provider():
     gateway, provider = configured_gateway()
-    tenant = TenantAIConfig(tenant_id="a", routes=[RouteRule(provider="stub")],
-                            blocked_models=["denied"], cache_enabled=False)
+    tenant = TenantAIConfig(
+        tenant_id="a",
+        routes=[RouteRule(provider="stub")],
+        blocked_models=["denied"],
+        cache_enabled=False,
+    )
     with pytest.raises(AIGatewayError) as error:
         await gateway.route(AIRequest(prompt="hi", model="denied"), tenant)
     assert error.value.code == "MODEL_NOT_ALLOWED"
@@ -44,9 +53,12 @@ async def test_denied_requested_model_never_calls_provider():
 @pytest.mark.asyncio
 async def test_route_override_cannot_bypass_model_allowlist():
     gateway, provider = configured_gateway()
-    tenant = TenantAIConfig(tenant_id="a",
-                            routes=[RouteRule(provider="stub", model="denied")],
-                            allowed_models=["approved"], cache_enabled=False)
+    tenant = TenantAIConfig(
+        tenant_id="a",
+        routes=[RouteRule(provider="stub", model="denied")],
+        allowed_models=["approved"],
+        cache_enabled=False,
+    )
     with pytest.raises(AIGatewayError):
         await gateway.route(AIRequest(prompt="hi"), tenant)
     assert provider.calls == 0
@@ -55,9 +67,12 @@ async def test_route_override_cannot_bypass_model_allowlist():
 @pytest.mark.asyncio
 async def test_approved_route_model_is_forwarded():
     gateway, provider = configured_gateway()
-    tenant = TenantAIConfig(tenant_id="a",
-                            routes=[RouteRule(provider="stub", model="approved")],
-                            allowed_models=["approved"], cache_enabled=False)
+    tenant = TenantAIConfig(
+        tenant_id="a",
+        routes=[RouteRule(provider="stub", model="approved")],
+        allowed_models=["approved"],
+        cache_enabled=False,
+    )
     result = await gateway.route(AIRequest(prompt="hi"), tenant)
     assert result.model == "approved"
     assert provider.calls == 1
