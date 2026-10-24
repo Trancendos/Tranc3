@@ -55,12 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **ROUTING DEFECT — `/chaos-party` has no `stripprefix` and this worker
-  does not serve the prefixed path.** Verified against its own source: every
-  route it registers sits below `/`, not below `/chaos-party`, so Traefik
-  forwards `/chaos-party/x` unchanged and the worker 404s on all of them.
-  Either add a stripprefix middleware to the compose labels, or give the
-  worker's router the prefix. **Fix this before building anything on it.**
+- **Traefik `stripprefix` is mandatory** for `/chaos-party` routing; without the middleware
+  the router matches and the worker 404s on every path. This has bitten the estate
+  before (resonate, imind).
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -105,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik forwards /chaos-party unchanged (no stripprefix)
+1. Request arrives  →  Traefik strips /chaos-party
 2. The March Hare — Sends rapid mock inputs and payloads to stress-test systems.
 3. The Dormouse — Sits silently in tests, measuring memory leaks/performance dips.
 4. Bots fire: Teapot-Bot, Pocket-Watch-Bot, Sugar-Cube-Bot, Jam-Tart-Bot
@@ -194,6 +191,8 @@ has to name.
     ports: [ "8079:8079" ]
     labels:
       - "traefik.http.routers.chaos-party.rule=Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)"
+      - "traefik.http.routers.chaos-party.middlewares=chaos-party-strip@docker"
+      - "traefik.http.middlewares.chaos-party-strip.stripprefix.prefixes=/chaos-party"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -203,9 +202,8 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/chaos-party` reach a route the worker actually serves — today they do not, and this epic is that fix.
-- As an implementer, EITHER a stripprefix middleware for `/chaos-party` is added to the compose labels, OR the worker's router is given the prefix. One of the two, not neither.
-- As a reviewer, a request through Traefik returns something other than 404.
+- As a client, requests to `/chaos-party` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities
 
