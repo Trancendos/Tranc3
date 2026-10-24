@@ -10,7 +10,9 @@ Port: 8063  Entity: The Chaos Party  Lead AI: The Mad Hatter
 
 from __future__ import annotations
 
+import asyncio
 import json
+import secrets
 import logging
 import os
 import random
@@ -447,27 +449,104 @@ async def create_chaos_experiment(
 
 
 @_router.patch("/chaos/{experiment_id}/run")
-async def run_chaos(experiment_id: int, x_internal_secret: str = Header(default="")):
+async def run_chaos(
+    experiment_id: int,
+    x_internal_secret: str = Header(default=""),
+    x_chaos_approval: str = Header(default=""),
+):
+    """Execute only bounded, isolated staging simulations.
+
+    No live service is contacted or mutated. Production execution is forbidden,
+    regardless of caller credentials. A second independent token is required.
+    """
     _auth(x_internal_secret)
-    now = time.time()
+    if (
+        os.getenv("CHAOS_ENVIRONMENT", "").lower() != "staging"
+        or os.getenv("CHAOS_EXECUTION_ENABLED", "false").lower() != "true"
+    ):
+        raise HTTPException(status_code=403, detail="Chaos execution disabled outside staging")
+    approval = os.getenv("CHAOS_APPROVAL_TOKEN", "")
+    if (
+        len(approval) < 16
+        or approval == INTERNAL_SECRET
+        or not secrets.compare_digest(x_chaos_approval, approval)
+    ):
+        raise HTTPException(status_code=403, detail="Independent chaos approval required")
+
     with get_conn() as conn:
         row = conn.execute(
             "SELECT * FROM chaos_experiments WHERE id=?", (experiment_id,)
         ).fetchone()
-        if not row:
+        if row is None:
             raise HTTPException(status_code=404, detail="Experiment not found")
+        if row["status"] != "idle":
+            raise HTTPException(status_code=409, detail="Experiment has already been executed")
+
+        # Never resolve arbitrary URLs or contact production infrastructure.
+        if row["target_service"] != "local-sandbox":
+            raise HTTPException(status_code=403, detail="Only local-sandbox is permitted")
+        kind = row["experiment_type"]
+        if kind not in ("latency_injection", "error_injection"):
+            raise HTTPException(status_code=400, detail="Only bounded synthetic fault types are permitted")
+        try:
+            config = json.loads(row["config"] or "{}")
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(status_code=400, detail="Invalid experiment configuration") from exc
+        if not isinstance(config, dict) or set(config) - {"delay_ms", "ttl_seconds"}:
+            raise HTTPException(status_code=400, detail="Unsupported simulation parameters")
+        ttl = config.get("ttl_seconds", 1)
+        delay = config.get("delay_ms", 0)
+        if type(ttl) is not int or not 1 <= ttl <= 10:
+            raise HTTPException(status_code=400, detail="ttl_seconds must be 1..10")
+        if type(delay) is not int or not 0 <= delay <= 500:
+            raise HTTPException(status_code=400, detail="delay_ms must be 0..500")
+        if kind == "error_injection" and delay:
+            raise HTTPException(status_code=400, detail="error_injection cannot add latency")
+
+        started_at = time.time()
+        cursor = conn.execute(
+            "UPDATE chaos_experiments SET status='running', started_at=? "
+            "WHERE id=? AND status='idle'",
+            (started_at, experiment_id),
+        )
+        if cursor.rowcount != 1:
+            raise HTTPException(status_code=409, detail="Experiment already claimed")
+        conn.commit()
+
+    # The only executable effect is a <=500ms sleep in this worker process.
+    # A synthetic 500 is returned as evidence, never sent to another service.
+    try:
+        if kind == "latency_injection":
+            await asyncio.wait_for(asyncio.sleep(delay / 1000), timeout=ttl)
+        results = {
+            "mode": "isolated_simulation",
+            "target": "local-sandbox",
+            "experiment_type": kind,
+            "ttl_seconds": ttl,
+            "injected_latency_ms": delay if kind == "latency_injection" else 0,
+            "synthetic_http_status": 500 if kind == "error_injection" else None,
+            "rollback": "no external state modified",
+        }
+        status = "completed"
+    except Exception:
+        logger.exception("Isolated chaos simulation failed")
+        results = {"mode": "isolated_simulation", "error": "simulation failed", "rollback": "no external state modified"}
+        status = "failed"
+
+    ended_at = time.time()
+    with get_conn() as conn:
         conn.execute(
-            "UPDATE chaos_experiments SET status='running', started_at=? WHERE id=?",
-            (now, experiment_id),
+            "UPDATE chaos_experiments SET status=?, ended_at=?, results=? WHERE id=?",
+            (status, ended_at, json.dumps(results), experiment_id),
         )
         conn.commit()
     return {
         "id": experiment_id,
-        "status": "running",
-        "started_at": now,
-        "note": "Chaos experiment marked as running — implement actual injection in target service",
+        "status": status,
+        "started_at": started_at,
+        "ended_at": ended_at,
+        "results": results,
     }
-
 
 @_router.get("/stats")
 async def stats(x_internal_secret: str = Header(default="")):
