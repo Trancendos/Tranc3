@@ -25,11 +25,19 @@ def validate_asset_url(url: str, allowed_hosts: frozenset[str]) -> str:
         port = parsed.port
     except ValueError as exc:
         raise AssetIngestError("Malformed asset URL") from exc
-    if (parsed.scheme.lower() != "https" or not hostname or
-            parsed.username is not None or parsed.password is not None or
-            port not in (None, 443) or not parsed.netloc or
-            "\\" in url or any(ord(ch) < 32 for ch in url)):
-        raise AssetIngestError("Only HTTPS asset URLs without credentials or custom ports are allowed")
+    if (
+        parsed.scheme.lower() != "https"
+        or not hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+        or not parsed.netloc
+        or "\\" in url
+        or any(ord(ch) < 32 for ch in url)
+    ):
+        raise AssetIngestError(
+            "Only HTTPS asset URLs without credentials or custom ports are allowed"
+        )
     if hostname not in allowed_hosts:
         raise AssetIngestError("Asset host is not in the configured allowlist")
     try:
@@ -55,8 +63,12 @@ def validate_asset_url(url: str, allowed_hosts: frozenset[str]) -> str:
 
 
 async def fetch_asset_bytes(
-    url: str, *, allowed_hosts: frozenset[str], max_bytes: int = 20 * 1024 * 1024,
-    timeout_s: float = 15.0, transport: httpx.AsyncBaseTransport | None = None,
+    url: str,
+    *,
+    allowed_hosts: frozenset[str],
+    max_bytes: int = 20 * 1024 * 1024,
+    timeout_s: float = 15.0,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> bytes:
     """Download without redirects or proxy environment, rejecting oversized streams.
 
@@ -66,8 +78,11 @@ async def fetch_asset_bytes(
     validate_asset_url(url, allowed_hosts)
     try:
         async with httpx.AsyncClient(
-            verify=True, follow_redirects=False, trust_env=False,
-            timeout=timeout_s, transport=transport,
+            verify=True,
+            follow_redirects=False,
+            trust_env=False,
+            timeout=timeout_s,
+            transport=transport,
         ) as client:
             async with client.stream("GET", url) as response:
                 if response.status_code != 200:

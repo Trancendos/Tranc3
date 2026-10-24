@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
+from asset_ingest import AssetIngestError, fetch_asset_bytes
 
 import config
-from asset_ingest import AssetIngestError, fetch_asset_bytes
 from database import VRARDatabase
 from models import (
     AssetProcessRequest,
@@ -325,20 +325,25 @@ class VRARRouter:
         except (AssetIngestError, ValueError, binascii.Error):
             guard.decay()
             self._db.record_event(backend.value, False)
-            self._db.save_asset_job({
-                "asset_id": job_id,
-                "scene_id": req.scene_id,
-                "source_format": req.source_format.value,
-                "target_format": req.target_format.value,
-                "backend": backend.value,
-                "status": "failed",
-                "output_path": None,
-                "metadata": req.metadata,
-            })
+            self._db.save_asset_job(
+                {
+                    "asset_id": job_id,
+                    "scene_id": req.scene_id,
+                    "source_format": req.source_format.value,
+                    "target_format": req.target_format.value,
+                    "backend": backend.value,
+                    "status": "failed",
+                    "output_path": None,
+                    "metadata": req.metadata,
+                }
+            )
             return AssetProcessResponse(
-                job_id=job_id, scene_id=req.scene_id,
-                source_format=req.source_format, target_format=req.target_format,
-                backend=backend, status="failed",
+                job_id=job_id,
+                scene_id=req.scene_id,
+                source_format=req.source_format,
+                target_format=req.target_format,
+                backend=backend,
+                status="failed",
                 latency_ms=(time.time() - start) * 1000,
             )
 

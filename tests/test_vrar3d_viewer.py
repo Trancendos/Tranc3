@@ -193,8 +193,11 @@ class TestAssetProcessingSafety:
         monkeypatch.setattr(main_mod.config, "REMOTE_INGEST_ENABLED", False)
         res = client.post(
             "/vrar3d/assets/process",
-            json={"source_format": "obj", "target_format": "glb",
-                  "asset_url": "https://example.com/a.obj"},
+            json={
+                "source_format": "obj",
+                "target_format": "glb",
+                "asset_url": "https://example.com/a.obj",
+            },
             headers=_HEADERS,
         )
         assert res.status_code == 202
@@ -204,8 +207,7 @@ class TestAssetProcessingSafety:
     def test_invalid_base64_is_a_failed_job(self, client):
         res = client.post(
             "/vrar3d/assets/process",
-            json={"source_format": "obj", "target_format": "glb",
-                  "asset_data_b64": "not-base64!"},
+            json={"source_format": "obj", "target_format": "glb", "asset_data_b64": "not-base64!"},
             headers=_HEADERS,
         )
         assert res.status_code == 202
@@ -222,14 +224,17 @@ class TestAssetProcessingSafety:
 
     def test_offline_fallback_is_deferred_not_done(self, client, monkeypatch):
         import base64
+
         selector_globals = main_mod.VRARRouter.process_asset.__globals__
         backend_type = selector_globals["ProcessingBackend"]
-        monkeypatch.setitem(selector_globals, "_select_backend",
-                            lambda: backend_type.offline)
+        monkeypatch.setitem(selector_globals, "_select_backend", lambda: backend_type.offline)
         res = client.post(
             "/vrar3d/assets/process",
-            json={"source_format": "obj", "target_format": "glb",
-                  "asset_data_b64": base64.b64encode(b"sample-obj").decode()},
+            json={
+                "source_format": "obj",
+                "target_format": "glb",
+                "asset_data_b64": base64.b64encode(b"sample-obj").decode(),
+            },
             headers=_HEADERS,
         )
         assert res.status_code == 202
@@ -241,20 +246,23 @@ class TestAssetProcessingSafety:
 
 class TestCanonicalSceneAndJobContract:
     def test_authenticated_scene_creation_and_job_status(self, client):
-        created = client.post("/vrar3d/scenes", json={"name": "Contract smoke test"},
-                              headers=_HEADERS)
+        created = client.post(
+            "/vrar3d/scenes", json={"name": "Contract smoke test"}, headers=_HEADERS
+        )
         assert created.status_code == 201
         assert created.json()["name"] == "Contract smoke test"
 
-        _db.save_asset_job({
-            "asset_id": "contract-test-job",
-            "scene_id": created.json()["scene_id"],
-            "source_format": "obj",
-            "target_format": "glb",
-            "backend": "trimesh",
-            "status": "failed",
-            "output_path": "/non-public/path/object.glb",
-        })
+        _db.save_asset_job(
+            {
+                "asset_id": "contract-test-job",
+                "scene_id": created.json()["scene_id"],
+                "source_format": "obj",
+                "target_format": "glb",
+                "backend": "trimesh",
+                "status": "failed",
+                "output_path": "/non-public/path/object.glb",
+            }
+        )
         response = client.get("/vrar3d/assets/contract-test-job", headers=_HEADERS)
         assert response.status_code == 200
         payload = response.json()
