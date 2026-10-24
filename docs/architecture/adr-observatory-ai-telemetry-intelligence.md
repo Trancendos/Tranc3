@@ -1,7 +1,7 @@
 # ADR — AI telemetry intelligence ownership and integration (draft)
 
-**Date:** 2026-10-24  
-**Status:** Proposed; implementation gated by existing Observatory release work.  
+**Date:** 2026-10-24
+**Status:** Proposed; implementation gated by existing Observatory release work.
 **Repository context:** Tranc3 is a disassembly/migration source; it is not the Tranc3 AI model or the Trancendos Universe platform identity.
 
 ## Decision
