@@ -51,7 +51,9 @@ curl -X POST https://tranc3-backend.fly.dev/townhall/documents/templates/add/ren
 
 `POST /townhall/check` preserves individual policy results (`pass`, `warn`, `fail`,
 `unknown`). Its **overall** result is `fail` when a required policy is missing,
-not executable, throws, returns an invalid status, or when no policies are evaluated.
+not executable, throws, returns an invalid status, is draft/retired, or when no
+policies are evaluated. An explicitly empty `policy_ids: []` selection does
+not fall back to evaluating all active policies: it returns `overall: fail`.
 A warning remains `warn` only when all the other evaluated policies pass.
 Do not treat policy metadata scores as proof that an executable check passed.
 
