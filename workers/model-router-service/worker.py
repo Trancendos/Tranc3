@@ -37,6 +37,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from provider_policy import PolicyDenied, RouteCandidate, RoutePolicy, admit
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
@@ -449,8 +450,40 @@ async def route_request(body: RouteRequest):
 
     conn.close()
 
+    # Admission occurs before selecting a model, not after.  In particular,
+    # the database's legacy is_free bit is not trusted as billing evidence.
+    # Only explicitly configured local Ollama models are admitted at present.
+    # External/paid models require a separate trusted pricing and governance
+    # authority before this boundary can be widened.
+    configured_models = frozenset(
+        name.strip()
+        for name in os.getenv("LUMINOUS_ALLOWED_LOCAL_MODELS", "").split(",")
+        if name.strip()
+    )
+    admission_policy = RoutePolicy(
+        allowed_providers=frozenset({"ollama"}),
+        allowed_models=configured_models,
+    )
+    eligible_models = []
+    for model in models:
+        provider = model["provider"]
+        name = model["model_id"] or model["name"]
+        candidate = RouteCandidate(
+            provider=provider,
+            model=name,
+            external=provider != "ollama",
+            advertised_free=provider == "ollama",
+            cost_verified=provider == "ollama",  # no per-request third-party API billing
+        )
+        try:
+            admit(candidate, admission_policy, classification="public")
+        except PolicyDenied:
+            continue
+        eligible_models.append(model)
+    models = eligible_models
+
     if not models:
-        raise HTTPException(404, "No available models match the criteria") from None
+        raise HTTPException(403, "No models permitted by Luminous admission policy") from None
 
     # Only validate persona_traits under persona_aware — every other
     # strategy is documented to ignore the field entirely, so a malformed or
