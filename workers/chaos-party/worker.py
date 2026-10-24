@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import asyncio
 import json
-import secrets
 import logging
 import os
 import random
+import secrets
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -487,7 +487,9 @@ async def run_chaos(
             raise HTTPException(status_code=403, detail="Only local-sandbox is permitted")
         kind = row["experiment_type"]
         if kind not in ("latency_injection", "error_injection"):
-            raise HTTPException(status_code=400, detail="Only bounded synthetic fault types are permitted")
+            raise HTTPException(
+                status_code=400, detail="Only bounded synthetic fault types are permitted"
+            )
         try:
             config = json.loads(row["config"] or "{}")
         except (ValueError, TypeError) as exc:
@@ -530,7 +532,11 @@ async def run_chaos(
         status = "completed"
     except Exception:
         logger.exception("Isolated chaos simulation failed")
-        results = {"mode": "isolated_simulation", "error": "simulation failed", "rollback": "no external state modified"}
+        results = {
+            "mode": "isolated_simulation",
+            "error": "simulation failed",
+            "rollback": "no external state modified",
+        }
         status = "failed"
 
     ended_at = time.time()
@@ -547,6 +553,7 @@ async def run_chaos(
         "ended_at": ended_at,
         "results": results,
     }
+
 
 @_router.get("/stats")
 async def stats(x_internal_secret: str = Header(default="")):

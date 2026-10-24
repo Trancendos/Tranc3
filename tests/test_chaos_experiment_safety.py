@@ -1,4 +1,5 @@
 """PID-TCP: opt-in, bounded, isolated chaos simulations only."""
+
 from __future__ import annotations
 
 import json
@@ -46,7 +47,9 @@ async def test_disabled_experiment_never_enters_running(party, monkeypatch):
         await party.run_chaos(experiment["id"], x_internal_secret=SECRET, x_chaos_approval=APPROVAL)
     assert exc.value.status_code == 403
     with party.get_conn() as conn:
-        row = conn.execute("SELECT status FROM chaos_experiments WHERE id=?", (experiment["id"],)).fetchone()
+        row = conn.execute(
+            "SELECT status FROM chaos_experiments WHERE id=?", (experiment["id"],)
+        ).fetchone()
     assert row["status"] == "idle"
 
 
@@ -55,7 +58,9 @@ async def test_live_or_unknown_targets_are_denied(party):
     for target in ("api-service", "http://127.0.0.1", "production", ""):
         experiment = await create(party, target=target)
         with pytest.raises(party.HTTPException) as exc:
-            await party.run_chaos(experiment["id"], x_internal_secret=SECRET, x_chaos_approval=APPROVAL)
+            await party.run_chaos(
+                experiment["id"], x_internal_secret=SECRET, x_chaos_approval=APPROVAL
+            )
         assert exc.value.status_code == 403
 
 
@@ -82,7 +87,10 @@ async def test_bounded_latency_simulation_completes_with_audit_evidence(party):
     assert result["results"]["target"] == "local-sandbox"
     assert result["results"]["injected_latency_ms"] == 1
     with party.get_conn() as conn:
-        row = conn.execute("SELECT status, ended_at, results FROM chaos_experiments WHERE id=?", (experiment["id"],)).fetchone()
+        row = conn.execute(
+            "SELECT status, ended_at, results FROM chaos_experiments WHERE id=?",
+            (experiment["id"],),
+        ).fetchone()
     assert row["status"] == "completed"
     assert row["ended_at"] is not None
     assert json.loads(row["results"])["mode"] == "isolated_simulation"
@@ -118,5 +126,7 @@ async def test_unsupported_or_unbounded_injection_is_rejected_before_state_chang
             )
         assert exc.value.status_code in (400, 403)
         with party.get_conn() as conn:
-            row = conn.execute("SELECT status FROM chaos_experiments WHERE id=?", (experiment["id"],)).fetchone()
+            row = conn.execute(
+                "SELECT status FROM chaos_experiments WHERE id=?", (experiment["id"],)
+            ).fetchone()
         assert row["status"] == "idle"
