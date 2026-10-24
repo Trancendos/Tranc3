@@ -27,7 +27,9 @@ def app(monkeypatch):
 
 def _scene(owner: str, scene_id: str = _ONE):
     return {
-        "scene_id": scene_id, "name": "Scene", "scene_type": "3d",
+        "scene_id": scene_id,
+        "name": "Scene",
+        "scene_type": "3d",
         "metadata": {"owner_id": owner},
     }
 
@@ -36,7 +38,8 @@ def test_list_returns_only_owned_scenes(app, monkeypatch):
     async def fake_request(method, path, *, payload=None, params=None):
         assert method == "GET"
         return [
-            _scene("alice"), _scene("bob", "22222222-2222-4222-8222-222222222222"),
+            _scene("alice"),
+            _scene("bob", "22222222-2222-4222-8222-222222222222"),
             {"scene_id": "legacy", "metadata": {}},
         ]
 
@@ -56,14 +59,18 @@ def test_create_overrides_owner_and_rejects_spoofed_metadata(app, monkeypatch):
     monkeypatch.setattr(gw, "_worker_request", fake_request)
     client = TestClient(app)
     response = client.post(
-        "/spatial/scenes", json={
-            "name": "Mine", "scene_type": "3d", "metadata": {"owner_id": "bob"},
+        "/spatial/scenes",
+        json={
+            "name": "Mine",
+            "scene_type": "3d",
+            "metadata": {"owner_id": "bob"},
         },
     )
     assert response.status_code == 422
 
     response = client.post(
-        "/spatial/scenes", json={"name": "Mine", "scene_type": "3d"},
+        "/spatial/scenes",
+        json={"name": "Mine", "scene_type": "3d"},
     )
     assert response.status_code == 201
     assert seen[-1][2]["metadata"]["owner_id"] == "alice"
@@ -94,7 +101,8 @@ def test_delete_rechecks_ownership(app, monkeypatch):
 
 def test_anonymous_identity_is_denied(app):
     app.dependency_overrides[get_current_user_dep] = lambda: {
-        "sub": "anonymous", "role": "user",
+        "sub": "anonymous",
+        "role": "user",
     }
     response = TestClient(app).get("/spatial/scenes")
     assert response.status_code == 401

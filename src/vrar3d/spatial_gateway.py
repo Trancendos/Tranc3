@@ -56,9 +56,17 @@ def _worker_settings() -> tuple[str, str]:
         or (host.startswith("vrar3d.") and host.endswith(".svc.cluster.local"))
         or host == "127.0.0.1"
     )
-    if not service_host or parsed.scheme != "http" or port != 8060 or (
-        parsed.path not in ("", "/") or parsed.query or parsed.fragment
-        or parsed.username is not None or parsed.password is not None
+    if (
+        not service_host
+        or parsed.scheme != "http"
+        or port != 8060
+        or (
+            parsed.path not in ("", "/")
+            or parsed.query
+            or parsed.fragment
+            or parsed.username is not None
+            or parsed.password is not None
+        )
     ):
         raise ValueError("Worker URL must target the private VRAR3D service on port 8060")
     return f"http://{host}:8060", secret
@@ -75,10 +83,16 @@ async def _worker_request(
     # Caller supplies only fixed paths or canonical UUIDs, never a full URL.
     try:
         async with httpx.AsyncClient(
-            base_url=base, timeout=8.0, follow_redirects=False, trust_env=False,
+            base_url=base,
+            timeout=8.0,
+            follow_redirects=False,
+            trust_env=False,
         ) as client:
             response = await client.request(
-                method, path, json=payload, params=params,
+                method,
+                path,
+                json=payload,
+                params=params,
                 headers={"X-Internal-Secret": secret},
             )
     except httpx.RequestError as exc:
@@ -102,7 +116,9 @@ async def list_spatial_scenes(
     current_user: dict[str, Any] = Depends(get_current_user_dep),
 ) -> list[dict[str, Any]]:
     uid = _user_id(current_user)
-    scenes = await _worker_request("GET", "/vrar3d/scenes", params={"limit": limit, "offset": offset})
+    scenes = await _worker_request(
+        "GET", "/vrar3d/scenes", params={"limit": limit, "offset": offset}
+    )
     if not isinstance(scenes, list):
         raise HTTPException(status_code=502, detail="Invalid VRAR3D scene list")
     return [scene for scene in scenes if isinstance(scene, dict) and _is_owned(scene, uid)]
@@ -115,7 +131,9 @@ async def create_spatial_scene(
 ) -> dict[str, Any]:
     uid = _user_id(current_user)
     payload = {
-        "name": req.name, "scene_type": req.scene_type, "description": req.description,
+        "name": req.name,
+        "scene_type": req.scene_type,
+        "description": req.description,
         "metadata": {"owner_id": uid, "source": "spatial_gateway"},
     }
     result = await _worker_request("POST", "/vrar3d/scenes", payload=payload)
