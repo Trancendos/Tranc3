@@ -171,3 +171,23 @@ def test_duplicate_connector_slug_returns_conflict(client):
         c for c in client.get("/apimarket/connectors").json() if c["slug"] == payload["slug"]
     ]
     assert len(entries) == 1
+
+
+
+def test_registry_conflict_after_precheck_is_http_409(client, monkeypatch):
+    from src.apimarket.marketplace import APIMarketplace
+
+    def reject_duplicate(self, *args, **kwargs):
+        raise ValueError("Connector slug already registered")
+
+    monkeypatch.setattr(APIMarketplace, "register", reject_duplicate)
+    response = client.post(
+        "/apimarket/connectors",
+        headers=headers("admin"),
+        json={
+            "name": "Race Condition",
+            "slug": "race-condition-registration",
+            "base_url": "https://api.example.com",
+        },
+    )
+    assert response.status_code == 409
