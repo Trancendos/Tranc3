@@ -212,3 +212,7 @@
 | Date | Verifier | Commit | Result |
 |------|----------|--------|--------|
 | 2026-07-02 | Platform Engineering | `70fec6b` | Routes (`/events`, `/recent`, `/stats`, `/search`, `/export`, `/sse`, `/verify`, `/health`), W3C TraceContext tracing, Prometheus metrics, `AuditMiddleware`, `HealthChecker`/`SelfHealer`, and batched flush verified against `src/observability/`. Lead AI/Prime per PLATFORM_ENTITIES.md PID-OBS. |
+
+## Operations
+
+- [WAL-safe SQLite audit backup and restore rehearsal](BACKUP-RESTORE-RUNBOOK.md) — checksum manifest, isolated restore verification and v2-aware rollback limitations.
