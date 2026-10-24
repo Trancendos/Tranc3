@@ -37,11 +37,11 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from provider_policy import PolicyDenied, RouteCandidate, RoutePolicy, admit
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 from Dimensionals.service_auth_fastapi import guard_internal_secret
-from provider_policy import RouteCandidate, RoutePolicy, PolicyDenied, admit
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -456,7 +456,8 @@ async def route_request(body: RouteRequest):
     # External/paid models require a separate trusted pricing and governance
     # authority before this boundary can be widened.
     configured_models = frozenset(
-        name.strip() for name in os.getenv("LUMINOUS_ALLOWED_LOCAL_MODELS", "").split(",")
+        name.strip()
+        for name in os.getenv("LUMINOUS_ALLOWED_LOCAL_MODELS", "").split(",")
         if name.strip()
     )
     admission_policy = RoutePolicy(
