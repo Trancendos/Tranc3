@@ -57,3 +57,23 @@ def test_admin_registers_approved_https_provider(client):
     })
     assert response.status_code == 200, response.text
     assert response.json()["slug"] == "test-provider-20261024"
+
+
+@pytest.mark.parametrize("provider,endpoint", [
+    ("OpenAI", "https://api.openai.com/v1"),
+    ("Anthropic", "https://api.anthropic.com/v1"),
+    ("Google Gemini", "https://generativelanguage.googleapis.com/v1beta"),
+    ("Groq", "https://api.groq.com/openai/v1"),
+    ("Mistral", "https://api.mistral.ai/v1"),
+    ("Cohere", "https://api.cohere.com/v2"),
+    ("Together AI", "https://api.together.xyz/v1"),
+    ("OpenRouter", "https://openrouter.ai/api/v1"),
+])
+def test_registry_accepts_multiple_external_ai_provider_declarations(client, provider, endpoint):
+    slug = provider.lower().replace(" ", "-")
+    response = client.post("/apimarket/connectors", headers=headers("admin"), json={
+        "name": provider, "slug": slug, "base_url": endpoint,
+        "auth_type": "api_key", "tags": ["ai", "external-model-provider"],
+    })
+    assert response.status_code == 200, response.text
+    assert response.json()["base_url"] == endpoint
