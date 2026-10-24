@@ -131,3 +131,19 @@ def test_legacy_database_migrates_without_rewriting_old_rows(tmp_path, monkeypat
     with module._connect() as conn:
         names = {row["name"] for row in conn.execute("PRAGMA table_info(audit_log)")}
     assert "hash_version" in names
+
+
+def test_export_and_event_query_include_hash_version_for_forensic_replay(audit):
+    """Exports must identify which hash algorithm verifies each record."""
+    module, client = audit
+    _append(client)
+    listed = client.get("/events")
+    assert listed.status_code == 200
+    assert listed.json()[0]["hash_version"] == 2
+    exported = client.get("/export")
+    assert exported.status_code == 200
+    import json
+
+    row = json.loads(exported.text.splitlines()[0])
+    assert row["hash_version"] == 2
+    assert row["hash"] == listed.json()[0]["hash"]
