@@ -5,12 +5,21 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Path, Query, Depends, HTTPException
+from src.auth.facade import get_current_user
 from fastapi.responses import JSONResponse
 
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
+from src.apimarket.validation import validate_external_catalogue_url
 
 router = APIRouter(prefix="/apimarket", tags=["api-marketplace"])
+
+
+def require_marketplace_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Allow catalogue changes only from authenticated platform admins."""
+    if current_user.get("role") != "admin" or current_user.get("sub") == "anonymous":
+        raise HTTPException(status_code=403, detail="Marketplace admin role required")
+    return current_user
 
 
 @router.get("/status")
@@ -44,7 +53,10 @@ async def get_connector(connector_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/connectors")
-async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def register_connector(
+    body: Dict[str, Any] = Body(...),
+    _admin: dict = Depends(require_marketplace_admin),
+) -> Dict[str, Any]:
     name = body.get("name")
     slug = body.get("slug")
     base_url = body.get("base_url")
@@ -56,6 +68,10 @@ async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]
     except ValueError:
         valid = [a.value for a in AuthType]
         return JSONResponse({"error": f"Unknown auth_type. Valid: {valid}"}, status_code=400)
+    try:
+        validate_external_catalogue_url(base_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     connector = get_marketplace().register(
         name=name,
         slug=slug,
@@ -72,6 +88,7 @@ async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]
 async def add_endpoint(
     connector_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
+    _admin: dict = Depends(require_marketplace_admin),
 ) -> Dict[str, Any]:
     method = body.get("method", "GET")
     path = body.get("path")
