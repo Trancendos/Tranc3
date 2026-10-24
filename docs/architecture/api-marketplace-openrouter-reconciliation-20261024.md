@@ -1,7 +1,7 @@
 # API Marketplace / OpenRouter consolidation — evidence and implementation contract
 
-Status: **DRAFT / NO RUNTIME CHANGES**  
-Date: 2026-10-24  
+Status: **DRAFT / NO RUNTIME CHANGES**
+Date: 2026-10-24
 Scope: Trancendos Universe platform services currently housed in the Tranc3 migration repository.
 
 ## Verified existing implementation
