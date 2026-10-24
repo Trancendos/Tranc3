@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import ChatView from './ChatView'
 import TrancendosDashboard from './trancendos/Dashboard'
 import DashboardPage from './pages/DashboardPage'
+import ArcadiaPage from './pages/ArcadiaPage'
 import ComplianceDashboard from './pages/ComplianceDashboard'
 import UxShowcasePage from './pages/UxShowcasePage'
 import DigitalGridPage from './components/workflow/DigitalGridPage'
@@ -95,6 +96,7 @@ export default function AppRouter() {
         {/* Protected — all wrapped in persistent Layout */}
         <Route path="/chat"         element={<Protected><ChatView /></Protected>} />
         <Route path="/dashboard"    element={<Protected><DashboardPage /></Protected>} />
+        <Route path="/arcadia"      element={<Protected><ArcadiaPage /></Protected>} />
         <Route path="/mission"      element={<Protected><TrancendosDashboard /></Protected>} />
         <Route path="/spark"        element={<Protected><SparkDashboard /></Protected>} />
         <Route path="/status"       element={<Protected><StatusPage /></Protected>} />
