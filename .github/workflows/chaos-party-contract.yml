@@ -54,7 +54,7 @@ jobs:
             -e OBSERVATORY_FORWARD_ENABLED=false \
             -e PORT=8079 \
             -p 127.0.0.1:18079:8079 chaos-party:contract
-          trap 'docker logs chaos-party-contract || true; docker rm -f chaos-party-contract >/dev/null 2>&1 || true' EXIT
+          trap 'docker logs chaos-party-contract; docker rm -f chaos-party-contract >/dev/null 2>&1' EXIT
           python - <<'PY'
           import json
           import time
