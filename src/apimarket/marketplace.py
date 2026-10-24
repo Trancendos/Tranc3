@@ -181,6 +181,8 @@ class APIMarketplace:
         tags: Optional[List[str]] = None,
         rate_limit_per_min: int = 60,
     ) -> APIConnector:
+        if self.find_by_slug(slug) is not None:
+            raise ValueError("Connector slug already registered")
         connector = APIConnector(
             name=name,
             slug=slug,
