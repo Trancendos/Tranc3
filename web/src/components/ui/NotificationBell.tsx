@@ -80,7 +80,7 @@ export default function NotificationBell() {
         aria-label={`Notifications${totalUnread > 0 ? `, ${totalUnread} unread` : ''}`}
         className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-5 h-5" aria-hidden="true" />
         {totalUnread > 0 && (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-purple-600 text-white text-[10px] font-bold px-1 leading-none">
             {totalUnread > 99 ? '99+' : totalUnread}
