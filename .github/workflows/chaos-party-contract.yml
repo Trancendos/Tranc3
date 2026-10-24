@@ -10,6 +10,7 @@ on:
       - "tests/test_flow_wiring.py"
       - "tests/test_chaos_ci_contract.py"
       - "tests/test_chaos_experiment_safety.py"
+      - "tests/test_chaos_trend_contract.py"
       - ".github/workflows/test.yml"
       - ".github/workflows/chaos-party-contract.yml"
       - "docker-compose.production.yml"
@@ -39,6 +40,7 @@ jobs:
         run: |
           python -m pytest -q tests/test_chaos_ci_contract.py
           python -m pytest -q tests/test_chaos_experiment_safety.py
+          python -m pytest -q tests/test_chaos_trend_contract.py
           python -m pytest -q tests/test_flow_wiring.py -k "reporter or chaos_party or ci_invokes"
       - name: Build worker image with shared-core context
         run: |
