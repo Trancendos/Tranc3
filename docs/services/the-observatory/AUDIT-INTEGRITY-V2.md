@@ -20,12 +20,12 @@ tip under normal SQLite locking.
 
 The health endpoint retains HTTP 200 even for a corrupted chain, but reports
 status=degraded and chain_valid=false. External monitoring MUST alert on that
-field, not just HTTP status. The full GET /verify checks the entire chain.
+field, not just HTTP status. The full GET /verify checks the entire chain. Read and NDJSON export responses now include `hash_version` so consumers can distinguish legacy v1 events from v2 records.
 
 ## Verification required before production
 
 ```bash
-pytest -q tests/test_audit_integrity_v2.py tests/test_observatory_audit_service_v2.py
+pytest -q tests/test_audit_integrity_v2.py tests/test_observatory_audit_service_v2.py tests/test_observatory_sqlite_backup.py
 pytest -q tests/test_workers_p3.py -k AuditService
 python -m compileall -q workers/audit-service
 ```
@@ -82,3 +82,7 @@ probe emits actionable signals but never deletes or repairs forensic records.
 5. Explicit change approval for production rollout, with rollback evidence.
 
 Source task: https://github.com/Trancendos/Tranc3/issues/1434
+
+## Backup utility
+
+Use [`scripts/observatory_sqlite_backup.py`](../../../scripts/observatory_sqlite_backup.py) for consistent online SQLite backups (including committed WAL state), an integrity check, and a SHA-256 manifest. The [backup and restore rehearsal runbook](BACKUP-RESTORE-RUNBOOK.md) specifies how to validate an isolated restore before promotion. No live backup has been performed by this PR.
