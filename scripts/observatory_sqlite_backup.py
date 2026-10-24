@@ -14,6 +14,7 @@ import os
 import sqlite3
 import tempfile
 from datetime import datetime, timezone
+from contextlib import closing
 from pathlib import Path
 
 
@@ -44,8 +45,8 @@ def backup_database(source: Path, destination: Path) -> dict:
     manifest = destination.with_suffix(destination.suffix + '.json')
     try:
         # Read-only connection prevents creating a missing source database.
-        with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True, timeout=30) as src:
-            with sqlite3.connect(str(temp), timeout=30) as dst:
+        with closing(sqlite3.connect(source.as_uri() + '?mode=ro', uri=True, timeout=30)) as src:
+            with closing(sqlite3.connect(str(temp), timeout=30)) as dst:
                 src.backup(dst)
                 integrity = dst.execute('PRAGMA integrity_check').fetchone()[0]
                 if integrity != 'ok':
