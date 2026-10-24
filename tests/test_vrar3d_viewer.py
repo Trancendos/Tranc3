@@ -237,3 +237,37 @@ class TestAssetProcessingSafety:
         assert payload["status"] == "deferred"
         assert payload["output_url"] is None
         assert _db.get_asset_job(payload["job_id"])["status"] == "deferred"
+
+
+class TestCanonicalSceneAndJobContract:
+    def test_authenticated_scene_creation_and_job_status(self, client):
+        created = client.post("/vrar3d/scenes", json={"name": "Contract smoke test"},
+                              headers=_HEADERS)
+        assert created.status_code == 201
+        assert created.json()["name"] == "Contract smoke test"
+
+        _db.save_asset_job({
+            "asset_id": "contract-test-job",
+            "scene_id": created.json()["scene_id"],
+            "source_format": "obj",
+            "target_format": "glb",
+            "backend": "trimesh",
+            "status": "failed",
+            "output_path": "/non-public/path/object.glb",
+        })
+        response = client.get("/vrar3d/assets/contract-test-job", headers=_HEADERS)
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["job_id"] == "contract-test-job"
+        assert payload["status"] == "failed"
+        assert payload["download_url"] is None
+        assert "output_path" not in payload
+        assert "/non-public/path/" not in response.text
+
+    def test_job_status_requires_secret(self, client):
+        response = client.get("/vrar3d/assets/contract-test-job")
+        assert response.status_code == 403
+
+    def test_unknown_job_status_is_404(self, client):
+        response = client.get("/vrar3d/assets/unknown-status-job", headers=_HEADERS)
+        assert response.status_code == 404
