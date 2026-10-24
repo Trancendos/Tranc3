@@ -191,3 +191,46 @@ def test_registry_conflict_after_precheck_is_http_409(client, monkeypatch):
         },
     )
     assert response.status_code == 409
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"slug": "../bad"},
+        {"slug": "UPPER_CASE"},
+        {"slug": ""},
+        {"rate_limit_per_min": 0},
+        {"rate_limit_per_min": -1},
+        {"rate_limit_per_min": "many"},
+        {"tags": "ai"},
+        {"tags": [12]},
+        {"name": {"unexpected": "object"}},
+    ],
+)
+def test_invalid_connector_metadata_is_rejected(client, changes):
+    payload = {
+        "name": "Provider",
+        "slug": "valid-provider",
+        "base_url": "https://api.example.com",
+    }
+    payload.update(changes)
+    response = client.post(
+        "/apimarket/connectors", headers=headers("admin"), json=payload
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_approved_connector_must_have_valid_endpoint_method(client):
+    slug = "endpoint-method-test"
+    registration = client.post(
+        "/apimarket/connectors",
+        headers=headers("admin"),
+        json={"name": "Endpoint Test", "slug": slug, "base_url": "https://api.example.com"},
+    )
+    assert registration.status_code == 200
+    bad_method = client.post(
+        f"/apimarket/connectors/{slug}/endpoints",
+        headers=headers("admin"),
+        json={"method": "TRACE", "path": "/users"},
+    )
+    assert bad_method.status_code == 422
