@@ -3,7 +3,7 @@
 ## Current implementation, safety and merge readiness
 
 The authoritative change-specific runbook is
-[The Chaos Party — Implementation and Safety](docs/services/the-chaos-party/IMPLEMENTATION-AND-SAFETY.md)
+[The Chaos Party — Implementation and Safety](IMPLEMENTATION-AND-SAFETY.md)
 (`docs/services/the-chaos-party/IMPLEMENTATION-AND-SAFETY.md`).
 Follow that runbook for canonical API statuses, dual-authorised staging-only
 simulations, deployment prerequisites, observability limitations, and
