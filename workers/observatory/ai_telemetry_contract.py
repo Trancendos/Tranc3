@@ -17,10 +17,10 @@ SPAN_PATTERN = r"^[0-9a-f]{16}$"
 
 
 class TokenUsage(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="forbid")
 
-    input: int = Field(ge=0, le=1_000_000_000)
-    output: int = Field(ge=0, le=1_000_000_000)
+    input: int = Field(strict=True, ge=0, le=1_000_000_000)
+    output: int = Field(strict=True, ge=0, le=1_000_000_000)
 
 
 class AIExecutionEvent(BaseModel):
@@ -38,7 +38,7 @@ class AIExecutionEvent(BaseModel):
     operation: Literal["model.invoke", "agent.step", "tool.invoke", "workflow.step"]
     provider: str = Field(pattern=ID_PATTERN)
     model: str = Field(pattern=ID_PATTERN)
-    duration_ms: float = Field(ge=0, le=86_400_000, allow_inf_nan=False)
+    duration_ms: float = Field(strict=True, ge=0, le=86_400_000, allow_inf_nan=False)
     tokens: TokenUsage
     status: Literal["ok", "error", "cancelled"]
     error_code: str | None = Field(default=None, pattern=ID_PATTERN)
