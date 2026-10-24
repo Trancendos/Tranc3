@@ -339,6 +339,15 @@ export default defineConfig({
           }]
         }
       }
+    }, {
+      // Lightweight SSR checks cover protected Arcadia navigation and honest
+      // disabled-service states without adding jsdom or testing-library deps.
+      extends: true,
+      test: {
+        name: 'arcadia-contract',
+        environment: 'node',
+        include: ['src/test/arcadia.test.tsx'],
+      },
     }]
   }
 });
