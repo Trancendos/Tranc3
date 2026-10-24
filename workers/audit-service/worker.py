@@ -244,6 +244,7 @@ class AuditEventIn(BaseModel):
 
 class AuditEventOut(BaseModel):
     id: int
+    hash_version: int
     event_id: str
     timestamp: str
     service: str
@@ -305,6 +306,7 @@ _START_TIME = time.monotonic()
 def _row_to_out(row: sqlite3.Row) -> AuditEventOut:
     return AuditEventOut(
         id=row["id"],
+        hash_version=row["hash_version"],
         event_id=row["event_id"],
         timestamp=row["timestamp"],
         service=row["service"],
@@ -656,6 +658,7 @@ async def export_ndjson(
             for row in cur:
                 record = {
                     "id": row["id"],
+                    "hash_version": row["hash_version"],
                     "event_id": row["event_id"],
                     "timestamp": row["timestamp"],
                     "service": row["service"],
