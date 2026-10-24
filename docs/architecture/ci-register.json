@@ -3,7 +3,7 @@
   "custodian_of_all_containers": "The Ice Box",
   "counts": {
     "datastores_registered": 125,
-    "datastores_excluded_as_test_fixtures": 53,
+    "datastores_excluded_as_test_fixtures": 54,
     "containers_registered": 174,
     "containers_built_here": 88,
     "containers_pulled": 86,
@@ -406,9 +406,10 @@
       "jurisdiction": "_unrouted_",
       "test_only": false,
       "evidence": [
+        "tests/test_observatory_audit_service_v2.py",
         "workers/audit-service/worker.py"
       ],
-      "evidence_count": 1
+      "evidence_count": 2
     },
     {
       "ci_id": "CI-DS-sqlite-basement-db",
