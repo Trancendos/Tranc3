@@ -1,6 +1,6 @@
 # The Chaos Party — implementation and safety contract
 
-**Product ID:** PID-TCP · **Lead AIs:** The Mad Hatter (adversarial) and Alice Dream (deterministic QA)  
+**Product ID:** PID-TCP · **Lead AIs:** The Mad Hatter (adversarial) and Alice Dream (deterministic QA)
 **Repository:** Trancendos/Tranc3 · **Worker:** `workers/chaos-party/` · **Internal port:** 8079
 
 ## Implemented interfaces
