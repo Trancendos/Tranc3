@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Path, Query, Depends, HTTPException
-from src.auth.facade import get_current_user
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
+
+from src.auth.facade import get_current_user
 
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
 from src.apimarket.validation import validate_external_catalogue_url
@@ -100,3 +101,19 @@ async def add_endpoint(
     if ep is None:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
     return ep.to_dict()
+
+
+@router.post("/connectors/{connector_id}/approval")
+async def decide_connector_approval(
+    connector_id: str = Path(...),
+    body: Dict[str, Any] = Body(...),
+    _admin: dict = Depends(require_marketplace_admin),
+) -> Dict[str, Any]:
+    """Explicit admin approval; catalogue registration does not grant execution."""
+    approved = body.get("approved")
+    if not isinstance(approved, bool):
+        raise HTTPException(status_code=422, detail="approved must be boolean")
+    connector = get_marketplace().set_approval(connector_id, approved)
+    if connector is None:
+        raise HTTPException(status_code=404, detail="Connector not found")
+    return connector.to_dict()
