@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import binascii
 import tempfile
 import time
 import uuid
@@ -14,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 import config
+from asset_ingest import AssetIngestError, fetch_asset_bytes
 from database import VRARDatabase
 from models import (
     AssetProcessRequest,
@@ -300,32 +302,45 @@ class VRARRouter:
         asset_path = str(Path(config.ASSET_DIR) / f"{job_id}.{req.source_format.value}")
         Path(config.ASSET_DIR).mkdir(parents=True, exist_ok=True)
 
-        if req.asset_data_b64:
-            with open(asset_path, "wb") as f:
-                f.write(base64.b64decode(req.asset_data_b64))
-        elif req.asset_url:
-            try:
-                async with httpx.AsyncClient(
-                    timeout=config.PROBE_TIMEOUT,
-                    verify=config.TLS_VERIFY,
-                ) as client:
-                    r = await client.get(req.asset_url)
-                    with open(asset_path, "wb") as f:
-                        f.write(r.content)
-            except Exception:
-                guard.decay()
-                self._db.record_event(backend.value, False)
-                return AssetProcessResponse(
-                    job_id=job_id,
-                    scene_id=req.scene_id,
-                    source_format=req.source_format,
-                    target_format=req.target_format,
-                    backend=backend,
-                    status="failed",
-                    latency_ms=(time.time() - start) * 1000,
+        try:
+            if req.asset_data_b64 is not None:
+                # Guard before decoding to avoid allocating an enormous decoded payload.
+                if len(req.asset_data_b64) > 4 * ((config.REMOTE_INGEST_MAX_BYTES + 2) // 3):
+                    raise AssetIngestError("Asset exceeds size limit")
+                content = base64.b64decode(req.asset_data_b64, validate=True)
+                if not content or len(content) > config.REMOTE_INGEST_MAX_BYTES:
+                    raise AssetIngestError("Empty or oversized asset")
+            elif req.asset_url:
+                if not config.REMOTE_INGEST_ENABLED or not config.REMOTE_INGEST_ALLOWED_HOSTS:
+                    raise AssetIngestError("Remote asset ingestion is disabled")
+                content = await fetch_asset_bytes(
+                    req.asset_url,
+                    allowed_hosts=config.REMOTE_INGEST_ALLOWED_HOSTS,
+                    max_bytes=config.REMOTE_INGEST_MAX_BYTES,
+                    timeout_s=config.PROBE_TIMEOUT,
                 )
-        else:
-            asset_path = f"/dev/null.{req.source_format.value}"
+            else:
+                raise AssetIngestError("An asset source is required")
+            Path(asset_path).write_bytes(content)
+        except (AssetIngestError, ValueError, binascii.Error):
+            guard.decay()
+            self._db.record_event(backend.value, False)
+            self._db.save_asset_job({
+                "asset_id": job_id,
+                "scene_id": req.scene_id,
+                "source_format": req.source_format.value,
+                "target_format": req.target_format.value,
+                "backend": backend.value,
+                "status": "failed",
+                "output_path": None,
+                "metadata": req.metadata,
+            })
+            return AssetProcessResponse(
+                job_id=job_id, scene_id=req.scene_id,
+                source_format=req.source_format, target_format=req.target_format,
+                backend=backend, status="failed",
+                latency_ms=(time.time() - start) * 1000,
+            )
 
         _adapters = {
             ProcessingBackend.trimesh: _call_trimesh,
@@ -339,16 +354,16 @@ class VRARRouter:
 
         output_path: Optional[str] = None
         if backend == ProcessingBackend.offline:
-            output_path = _offline_process(
-                asset_path, req.source_format.value, req.target_format.value, req.optimize
-            )
-            success = True
+            # A queue/pseudo-URL is not a produced 3D file.
+            status = "deferred"
+            success = False
         else:
             adapter = _adapters[backend]
             output_path = await adapter(
                 asset_path, req.source_format.value, req.target_format.value, req.optimize
             )
             success = output_path is not None
+            status = "done" if success else "failed"
 
         latency_ms = (time.time() - start) * 1000
 
@@ -365,7 +380,7 @@ class VRARRouter:
                 "source_format": req.source_format.value,
                 "target_format": req.target_format.value,
                 "backend": backend.value,
-                "status": "done" if success else "failed",
+                "status": status,
                 "output_path": output_path,
                 "metadata": req.metadata,
             }
@@ -377,7 +392,7 @@ class VRARRouter:
             source_format=req.source_format,
             target_format=req.target_format,
             backend=backend,
-            status="done" if success else "failed",
+            status=status,
             output_url=output_path,
             latency_ms=latency_ms,
         )
