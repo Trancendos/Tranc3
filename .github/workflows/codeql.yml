@@ -66,7 +66,7 @@ jobs:
         # pin bump silently dropped this comment once already -- so the rule is
         # now enforced by scripts/check_codeql_action_consistency.py in ci.yml
         # rather than trusted to this note.
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -75,7 +75,7 @@ jobs:
 
       - name: Perform CodeQL Analysis
         id: analyze
-        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           category: "/language:${{ matrix.language }}"
           output: sarif-results
@@ -131,7 +131,7 @@ jobs:
       # actual argument for this step: the count was never the finding.
       - name: Retain SARIF so the alerts can be read outside the Security tab
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: codeql-sarif-${{ matrix.sarif-name }}
           path: sarif-results/${{ matrix.sarif-name }}.sarif
@@ -140,7 +140,7 @@ jobs:
 
       - name: Upload SARIF results
         id: upload_sarif
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: sarif-results/${{ matrix.sarif-name }}.sarif
           category: "/language:${{ matrix.language }}"
