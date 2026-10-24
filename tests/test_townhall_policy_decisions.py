@@ -57,7 +57,6 @@ def test_policy_returning_unrecognised_status_is_unknown():
     assert policy.evaluate({}) is ComplianceResult.UNKNOWN
 
 
-
 @pytest.mark.parametrize("status", [PolicyStatus.DRAFT, PolicyStatus.RETIRED])
 def test_explicit_inactive_policy_cannot_be_used_to_approve(status):
     townhall = TownHall()
