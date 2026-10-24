@@ -1,6 +1,7 @@
 """Catalogue-only URL screening. Runtime connections require additional DNS/IP pinning,
 redirect rejection and egress enforcement; registration NEVER authorises execution.
 """
+
 from __future__ import annotations
 
 import ipaddress
@@ -28,7 +29,9 @@ def validate_external_catalogue_url(value: str) -> None:
     ):
         raise ValueError("External provider URL must be a valid credential-free HTTPS URL")
     host = hostname.rstrip(".").lower()
-    if host in {"localhost", "localhost.localdomain"} or host.endswith((".localhost", ".local", ".internal")):
+    if host in {"localhost", "localhost.localdomain"} or host.endswith(
+        (".localhost", ".local", ".internal")
+    ):
         raise ValueError("Local and internal provider hostnames cannot be registered externally")
     if "." not in host:
         raise ValueError("External provider hostname must be fully qualified")

@@ -8,10 +8,9 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 
-from src.auth.facade import get_current_user
-
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
 from src.apimarket.validation import validate_external_catalogue_url
+from src.auth.facade import get_current_user
 
 router = APIRouter(prefix="/apimarket", tags=["api-marketplace"])
 

@@ -47,9 +47,7 @@ def test_normal_user_cannot_register_connector(client):
 
 
 def test_anonymous_cannot_add_endpoint(client):
-    response = client.post(
-        "/apimarket/connectors/not-real/endpoints", json={"path": "/chat"}
-    )
+    response = client.post("/apimarket/connectors/not-real/endpoints", json={"path": "/chat"})
     assert response.status_code == 401
 
 
@@ -101,9 +99,7 @@ def test_admin_registers_approved_https_provider(client):
         ("OpenRouter", "https://openrouter.ai/api/v1"),
     ],
 )
-def test_registry_accepts_multiple_external_ai_provider_declarations(
-    client, provider, endpoint
-):
+def test_registry_accepts_multiple_external_ai_provider_declarations(client, provider, endpoint):
     slug = provider.lower().replace(" ", "-")
     response = client.post(
         "/apimarket/connectors",

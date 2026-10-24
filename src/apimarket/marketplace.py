@@ -203,12 +203,8 @@ class APIMarketplace:
         connector = self.get_connector(connector_id) or self.find_by_slug(connector_id)
         if connector is None:
             return None
-        connector.approval_status = (
-            ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
-        )
-        connector.status = (
-            ConnectorStatus.ACTIVE if approved else ConnectorStatus.INACTIVE
-        )
+        connector.approval_status = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
+        connector.status = ConnectorStatus.ACTIVE if approved else ConnectorStatus.INACTIVE
         self._emit(
             "apimarket.connector.approval_changed",
             {"connector_id": connector.id, "approved": approved},
