@@ -82,6 +82,30 @@ def test_explicit_empty_policy_selection_fails_without_running_defaults():
     assert overall_compliance_result(results) is ComplianceResult.FAIL
 
 
+
+def test_policy_exception_fails_closed_and_preserves_audit_event():
+    def broken_check(context):
+        raise RuntimeError("evaluator unavailable")
+
+    townhall = TownHall()
+    townhall.register(
+        Policy(id="broken-required", name="Broken required", framework="test", check=broken_check)
+    )
+    results = townhall.check({}, policy_ids=["broken-required"], actor="test-actor")
+    assert results == {"broken-required": ComplianceResult.UNKNOWN}
+    assert overall_compliance_result(results) is ComplianceResult.FAIL
+    assert townhall._history[-1].policy_id == "broken-required"
+    assert townhall._history[-1].result is ComplianceResult.UNKNOWN
+
+
+def test_default_policy_selection_fails_closed_with_unimplemented_active_policies():
+    townhall = TownHall()
+    results = townhall.check({"monthly_cost_usd": 0, "personal_data": False})
+    assert results["zero-cost"] is ComplianceResult.PASS
+    assert results["uk-gdpr"] is ComplianceResult.UNKNOWN
+    assert overall_compliance_result(results) is ComplianceResult.FAIL
+
+
 @pytest.mark.asyncio
 async def test_http_check_fails_closed_when_policy_cannot_be_evaluated(monkeypatch):
     from src.townhall import routes
