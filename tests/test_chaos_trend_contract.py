@@ -13,9 +13,7 @@ BRIDGE = ROOT / "workers" / "chaos-party" / "observatory_bridge.py"
 
 def _history(*, baseline: list[str], recent: list[str]) -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:")
-    conn.execute(
-        "CREATE TABLE test_runs (id INTEGER PRIMARY KEY, name TEXT, status TEXT)"
-    )
+    conn.execute("CREATE TABLE test_runs (id INTEGER PRIMARY KEY, name TEXT, status TEXT)")
     # Trend queries order by descending ID: baseline must precede recent.
     conn.executemany(
         "INSERT INTO test_runs (name, status) VALUES (?, ?)",
