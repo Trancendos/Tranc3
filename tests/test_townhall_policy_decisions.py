@@ -7,6 +7,7 @@ import pytest
 from src.townhall.governance import (
     ComplianceResult,
     Policy,
+    PolicyStatus,
     TownHall,
     overall_compliance_result,
 )
@@ -54,6 +55,32 @@ def test_policy_returning_unrecognised_status_is_unknown():
         check=lambda context: "pass",
     )
     assert policy.evaluate({}) is ComplianceResult.UNKNOWN
+
+
+
+@pytest.mark.parametrize("status", [PolicyStatus.DRAFT, PolicyStatus.RETIRED])
+def test_explicit_inactive_policy_cannot_be_used_to_approve(status):
+    townhall = TownHall()
+    townhall.register(
+        Policy(
+            id="inactive-release-gate",
+            name="Inactive release gate",
+            framework="test",
+            status=status,
+            check=lambda context: ComplianceResult.PASS,
+        )
+    )
+    results = townhall.check({}, policy_ids=["inactive-release-gate"], actor="test-actor")
+    assert results == {"inactive-release-gate": ComplianceResult.UNKNOWN}
+    assert overall_compliance_result(results) is ComplianceResult.FAIL
+    assert townhall._history[-1].result is ComplianceResult.UNKNOWN
+
+
+def test_explicit_empty_policy_selection_fails_without_running_defaults():
+    townhall = TownHall()
+    results = townhall.check({"monthly_cost_usd": 0}, policy_ids=[])
+    assert results == {}
+    assert overall_compliance_result(results) is ComplianceResult.FAIL
 
 
 @pytest.mark.asyncio
