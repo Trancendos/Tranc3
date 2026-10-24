@@ -53,7 +53,7 @@ jobs:
             --cov=Dimensionals \
             --cov=src \
             --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
+            --cov-report=xml:coverage.xml
 
 
       # The Chaos Party is the platform's testing Location. Until this step
