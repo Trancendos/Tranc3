@@ -234,3 +234,25 @@ def test_approved_connector_must_have_valid_endpoint_method(client):
         json={"method": "TRACE", "path": "/users"},
     )
     assert bad_method.status_code == 422
+
+
+
+def test_endpoint_can_be_registered_by_connector_slug(client):
+    slug = "endpoint-slug-lookup-test"
+    registration = client.post(
+        "/apimarket/connectors",
+        headers=headers("admin"),
+        json={
+            "name": "Endpoint Lookup",
+            "slug": slug,
+            "base_url": "https://api.example.com",
+        },
+    )
+    assert registration.status_code == 200
+    response = client.post(
+        f"/apimarket/connectors/{slug}/endpoints",
+        headers=headers("admin"),
+        json={"method": "POST", "path": "/v1/chat/completions"},
+    )
+    assert response.status_code == 200
+    assert response.json()["method"] == "POST"
