@@ -176,12 +176,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/tateking-svc/, '')
       },
-      // VRAR3D immersion — Port 8068
-      '/vrar3d-svc': {
-        target: 'http://localhost:8068',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/vrar3d-svc/, '')
-      },
       // Warp Radio music streaming — Port 8057
       '/warp-radio-svc': {
         target: 'http://localhost:8057',
