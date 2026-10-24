@@ -926,6 +926,13 @@ app.include_router(_resonate_router)
 # place — tests still exercise them directly — only the live HTTP mount on
 # this shared process is removed.
 
+# ── VRAR3D user-scoped gateway (standalone worker port 8060) ────────────────
+# Deliberately separate from the removed in-process wellbeing router.
+# JWT user identity is verified here; INTERNAL_SECRET never reaches the browser.
+from src.vrar3d.spatial_gateway import router as _spatial_gateway_router
+
+app.include_router(_spatial_gateway_router)
+
 # ── Turing's Hub (AI personality creation centre) ────────────────────────────
 from src.personality.turingshub.routes import (
     router as _turingshub_router,  # noqa: F401  # intentional top-level import
