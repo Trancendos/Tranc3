@@ -72,6 +72,8 @@ async def register_connector(
         validate_external_catalogue_url(base_url)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if get_marketplace().find_by_slug(slug) is not None:
+        raise HTTPException(status_code=409, detail="Connector slug already registered")
     connector = get_marketplace().register(
         name=name,
         slug=slug,
