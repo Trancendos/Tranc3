@@ -523,9 +523,11 @@
       "jurisdiction": "The Chaos Party",
       "test_only": false,
       "evidence": [
+        "tests/test_chaos_experiment_safety.py",
+        "tests/test_flow_wiring.py",
         "workers/chaos-party/worker.py"
       ],
-      "evidence_count": 1
+      "evidence_count": 3
     },
     {
       "ci_id": "CI-DS-sqlite-config-db",
