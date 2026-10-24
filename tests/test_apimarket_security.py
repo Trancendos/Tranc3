@@ -173,7 +173,6 @@ def test_duplicate_connector_slug_returns_conflict(client):
     assert len(entries) == 1
 
 
-
 def test_registry_conflict_after_precheck_is_http_409(client, monkeypatch):
     from src.apimarket.marketplace import APIMarketplace
 
