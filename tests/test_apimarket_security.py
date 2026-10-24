@@ -77,3 +77,44 @@ def test_registry_accepts_multiple_external_ai_provider_declarations(client, pro
     })
     assert response.status_code == 200, response.text
     assert response.json()["base_url"] == endpoint
+
+
+def test_new_connector_is_pending_until_admin_approval(client):
+    slug = "approval-regression-case"
+    created = client.post(
+        "/apimarket/connectors",
+        headers=headers("admin"),
+        json={
+            "name": "Approval Test",
+            "slug": slug,
+            "base_url": "https://api.example.com",
+        },
+    )
+    assert created.status_code == 200
+    assert created.json()["approval_status"] == "pending"
+    assert created.json()["status"] == "inactive"
+
+    denied = client.post(
+        f"/apimarket/connectors/{slug}/approval",
+        headers=headers("user"),
+        json={"approved": True},
+    )
+    assert denied.status_code == 403
+
+    accepted = client.post(
+        f"/apimarket/connectors/{slug}/approval",
+        headers=headers("admin"),
+        json={"approved": True},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["approval_status"] == "approved"
+    assert accepted.json()["status"] == "active"
+
+
+def test_non_boolean_approval_is_rejected(client):
+    response = client.post(
+        "/apimarket/connectors/the-spark/approval",
+        headers=headers("admin"),
+        json={"approved": "yes"},
+    )
+    assert response.status_code == 422
