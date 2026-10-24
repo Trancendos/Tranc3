@@ -33,7 +33,7 @@ The `CHAOS_PARTY_URL` and `INTERNAL_SECRET` GitHub Actions secrets are needed fo
 | Variable | Default | Meaning |
 |---|---|---|
 | `INTERNAL_SECRET` | **required** | Strong unique internal API secret |
-| `PORT` | 8063 (worker fallback) | Compose sets **8079** |
+| `PORT` | 8079 | Worker and Compose use the same canonical port |
 | `OBSERVATORY_FORWARD_ENABLED` | true | Best-effort forwarding |
 | `AUDIT_SERVICE_URL` | http://audit-service:8025 | Internal Observatory audit endpoint |
 | `CHAOS_ENVIRONMENT` | unset | Must equal `staging` to enable isolated simulations |
