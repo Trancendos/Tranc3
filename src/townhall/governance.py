@@ -126,13 +126,19 @@ class TownHall:
         """
         policies = (
             [self._policies[pid] for pid in policy_ids if pid in self._policies]
-            if policy_ids
+            if policy_ids is not None
             else self.active_policies()
         )
 
         results: Dict[str, ComplianceResult] = {}
         for policy in policies:
-            result = policy.evaluate(context)
+            # A caller must not force a draft or retired policy to report PASS.
+            # The missing active evaluation remains visible and fails the gate.
+            result = (
+                policy.evaluate(context)
+                if policy.status is PolicyStatus.ACTIVE
+                else ComplianceResult.UNKNOWN
+            )
             results[policy.id] = result
 
             ev = GovernanceEvent(
@@ -164,7 +170,7 @@ class TownHall:
 
         # An explicit, unregistered policy must not silently disappear from
         # the decision. Record UNKNOWN so the API will deny the overall gate.
-        if policy_ids:
+        if policy_ids is not None:
             for policy_id in policy_ids:
                 if policy_id not in self._policies:
                     results[policy_id] = ComplianceResult.UNKNOWN
