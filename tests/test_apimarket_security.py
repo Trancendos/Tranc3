@@ -168,7 +168,6 @@ def test_duplicate_connector_slug_returns_conflict(client):
     second = client.post("/apimarket/connectors", headers=headers("admin"), json=payload)
     assert second.status_code == 409
     entries = [
-        c for c in client.get("/apimarket/connectors").json()
-        if c["slug"] == payload["slug"]
+        c for c in client.get("/apimarket/connectors").json() if c["slug"] == payload["slug"]
     ]
     assert len(entries) == 1
