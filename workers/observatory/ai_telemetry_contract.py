@@ -3,6 +3,7 @@
 No prompt/completion bodies, arbitrary metadata, user identifiers, or credentials
 are accepted. This module validates data; it does not persist or route events.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

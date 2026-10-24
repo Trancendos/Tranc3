@@ -1,10 +1,10 @@
 """Regression tests for the Observatory provider-neutral telemetry contract."""
+
 from __future__ import annotations
 
-from copy import deepcopy
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-import sys
 from uuid import uuid4
 
 import pytest
@@ -37,16 +37,19 @@ def test_accepts_valid_envelope():
     assert AIExecutionEvent.model_validate(valid_event()).service_id == "SRV-OBS-001"
 
 
-@pytest.mark.parametrize("field,value", [
-    ("schema_version", "unsupported"),
-    ("trace_id", "invalid"),
-    ("span_id", "ZZ" * 8),
-    ("duration_ms", -1),
-    ("duration_ms", float("inf")),
-    ("operation", "unknown"),
-    ("provider", "../unsafe"),
-    ("occurred_at", "2026-10-24T22:00:00"),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("schema_version", "unsupported"),
+        ("trace_id", "invalid"),
+        ("span_id", "ZZ" * 8),
+        ("duration_ms", -1),
+        ("duration_ms", float("inf")),
+        ("operation", "unknown"),
+        ("provider", "../unsafe"),
+        ("occurred_at", "2026-10-24T22:00:00"),
+    ],
+)
 def test_rejects_invalid_fields(field, value):
     payload = valid_event()
     payload[field] = value
@@ -54,7 +57,9 @@ def test_rejects_invalid_fields(field, value):
         AIExecutionEvent.model_validate(payload)
 
 
-@pytest.mark.parametrize("field", ["prompt", "completion", "api_key", "user_id", "metadata", "tenant_id"])
+@pytest.mark.parametrize(
+    "field", ["prompt", "completion", "api_key", "user_id", "metadata", "tenant_id"]
+)
 def test_rejects_sensitive_and_untrusted_extra_fields(field):
     payload = valid_event()
     payload[field] = "secret"
