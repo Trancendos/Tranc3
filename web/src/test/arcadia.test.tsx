@@ -21,7 +21,7 @@ describe('Arcadia rendered frontend contract', () => {
       const area = html.match(new RegExp('data-testid="' + name + '"[\\s\\S]*?</article>'))?.[0]
       expect(area, name).toBeDefined()
       expect(area).toContain('Not connected')
-      expect(area).not.toMatch(/<a\\b/)
+      expect(area).not.toContain('<a')
     }
   })
 
@@ -32,14 +32,17 @@ describe('Arcadia rendered frontend contract', () => {
     }
     expect(html).toContain('No live marketplace data')
     expect(html).toContain('Financial transactions are unavailable')
-    expect(html).not.toMatch(/<button\\b|<form\\b/)
+    expect(html).not.toContain('<button')
+    expect(html).not.toContain('<form')
   })
 
   it('uses the existing authenticated route and contains no internal-worker secrets', () => {
     const router = readFileSync('src/AppRouter.tsx', 'utf8')
     const page = readFileSync('src/pages/ArcadiaPage.tsx', 'utf8')
     expect(router).toContain('path="/arcadia"')
-    expect(router).toMatch(/path="\\/arcadia"\\s+element={<Protected><ArcadiaPage \\/><\\/Protected>} \\/>/)
-    expect(page).not.toMatch(/X-Internal-Secret|dev-secret|fetch\\s*\\(/)
+    expect(router).toContain('<Route path="/arcadia"      element={<Protected><ArcadiaPage /></Protected>} />')
+    expect(page).not.toContain('X-Internal-Secret')
+    expect(page).not.toContain('dev-secret')
+    expect(page).not.toContain('fetch(')
   })
 })
