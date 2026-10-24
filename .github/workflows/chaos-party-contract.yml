@@ -1,0 +1,95 @@
+# Dedicated, fail-closed contract gate for PID-TCP. No external chaos injection.
+name: Chaos Party Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "workers/chaos-party/**"
+      - "scripts/report_tests_to_chaos_party.py"
+      - "tests/test_flow_wiring.py"
+      - "tests/test_chaos_ci_contract.py"
+      - "tests/test_chaos_experiment_safety.py"
+      - "tests/test_chaos_trend_contract.py"
+      - ".github/workflows/test.yml"
+      - ".github/workflows/chaos-party-contract.yml"
+      - "docker-compose.production.yml"
+      - "requirements.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chaos-party-contract:
+    name: Chaos Party — contract and container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+      - name: Install focused test dependencies
+        run: |
+          python -m pip install -r workers/chaos-party/requirements.txt
+          python -m pip install pytest pytest-asyncio PyYAML
+      - name: Verify source and API contracts
+        env:
+          INTERNAL_SECRET: chaos-contract-test-secret-for-isolated-ci
+        run: |
+          python -m pytest -q tests/test_chaos_ci_contract.py
+          python -m pytest -q tests/test_chaos_experiment_safety.py
+          python -m pytest -q tests/test_chaos_trend_contract.py
+          python -m pytest -q tests/test_flow_wiring.py -k "reporter or chaos_party or ci_invokes"
+      - name: Build worker image with shared-core context
+        run: |
+          docker buildx build --load \
+            --build-context sharedcore=./Dimensionals \
+            -f workers/chaos-party/Dockerfile \
+            -t chaos-party:contract workers/chaos-party
+      - name: Smoke-test container and authenticated ingestion
+        run: |
+          set -euo pipefail
+          docker run -d --name chaos-party-contract \
+            -e INTERNAL_SECRET=chaos-contract-test-secret-for-isolated-ci \
+            -e OBSERVATORY_FORWARD_ENABLED=false \
+            -e PORT=8079 \
+            -p 127.0.0.1:18079:8079 chaos-party:contract
+          trap 'docker logs chaos-party-contract; docker rm -f chaos-party-contract >/dev/null 2>&1' EXIT
+          python - <<'PY'
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          base = "http://127.0.0.1:18079"
+          for attempt in range(40):
+              try:
+                  with urllib.request.urlopen(base + "/health", timeout=2) as response:
+                      assert json.load(response)["status"] == "healthy"
+                  break
+              except (urllib.error.URLError, TimeoutError, ConnectionError):
+                  time.sleep(1)
+          else:
+              raise AssertionError("Chaos Party did not become healthy")
+
+          secret = "chaos-contract-test-secret-for-isolated-ci"
+          body = json.dumps({"runs": [
+              {"name": "smoke_ok", "status": "pass"},
+              {"name": "smoke_skip", "status": "skip"}
+          ]}).encode()
+          request = urllib.request.Request(
+              base + "/runs/batch", data=body,
+              headers={"X-Internal-Secret": secret, "Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(request, timeout=5) as response:
+              assert json.load(response)["inserted"] == 2
+          request = urllib.request.Request(base + "/stats", headers={"X-Internal-Secret": secret})
+          with urllib.request.urlopen(request, timeout=5) as response:
+              stats = json.load(response)
+          assert stats["total_runs"] == 2
+          assert stats["pass_rate_pct"] == 100.0
+          print("Container smoke passed: health, ingestion, skip-aware metrics")
+          PY
