@@ -1,5 +1,39 @@
 # Service Doc-Pack — VRAR3D
 
+## User-authenticated spatial gateway (review branch)
+
+A new user-scoped gateway mounted into the Tranc3 API at `/spatial/scenes`
+accepts the existing platform JWT and makes server-to-server requests to
+the canonical `workers/vrar3d/main.py` worker on port **8060**. The frontend
+calls `/api/spatial/scenes` through the existing Vite `/api` reverse proxy
+(which removes the `/api` prefix). The gateway does **not** remount the
+old `src/vrar3d/routes.py` wellbeing HTTP router or launch legacy port 8068.
+
+- Scene metadata is marked with the authenticated user's `owner_id`.
+  Lists, reads and deletes are owner-scoped. Existing legacy scenes without
+  an owner are hidden until a reviewed ownership migration is implemented.
+- Browser requests carry **only the user's platform JWT**. The worker's
+  `INTERNAL_SECRET` is injected server-side, requires a non-default value,
+  and is never added to client JavaScript, URLs or responses.
+- Worker URL is restricted to an internal VRAR3D service hostname or local
+  loopback on port 8060. Configure `VRAR3D_WORKER_URL` only when necessary.
+- This gateway currently supports scene list/create/get/delete, not asset
+  uploads, direct GLB rendering or VR headset sessions. Job ownership,
+  audited asset provenance, and a privileged network-isolation review are
+  prerequisites before adding those capabilities.
+- The worker's creation-auth header must be corrected first (draft PR
+  [#1467](https://github.com/Trancendos/Tranc3/pull/1467)). The gateway
+  follows as a stacked PR, covering [issue #1468](https://github.com/Trancendos/Tranc3/issues/1468)
+  partially, not claiming full schema migration.
+- Security deployment requirement: the worker's internal-secret API must not
+  be directly exposed to untrusted clients. Browser auth on the gateway does
+  not compensate for an externally reachable worker. Route through private
+  service networking and enforce authenticated rate limits/quotas before rollout.
+- Automated tests validate owner filtering and spoof rejection with isolated
+  mocked worker calls. A staging environment, identity-integration tests,
+  full TypeScript build, and real GLB import/viewer tests are **not yet verified**.
+
+
 ## P0 security remediation
 
 The standalone port-8060 worker's in-progress security changes and deployment gate are documented in [SECURITY_REMEDIATION_P0.md](./SECURITY_REMEDIATION_P0.md). They are tracked in [draft PR #1467](https://github.com/Trancendos/Tranc3/pull/1467); the separate legacy browser/API reconciliation is [issue #1468](https://github.com/Trancendos/Tranc3/issues/1468). This does **not** imply the worker is deployed or that the legacy 8068 and monolith route surfaces are already unified.
