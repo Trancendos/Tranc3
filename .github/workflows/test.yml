@@ -1,6 +1,6 @@
 # .github/workflows/test.yml
-# Full test suite on push to main
-# Zero-cost: GitHub Actions free tier (2,000 min/month for public repos)
+# Full test suite on push to main; deterministic dependency/test failures block CI
+# Uses existing GitHub Actions runners; no paid external test platform required.
 
 name: Test Suite
 
@@ -39,9 +39,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements-test.txt || true
-          pip install -r requirements.txt || true
-          pip install pytest pytest-asyncio pytest-cov || true
+          pip install -r requirements-test.txt
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
 
       - name: Run full test suite
         run: |
@@ -54,7 +54,7 @@ jobs:
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
-            || true  # Don't block main on test failures during stabilization
+
 
       # The Chaos Party is the platform's testing Location. Until this step
       # existed, CI ran pytest and told it nothing. /runs/batch also forwards to
