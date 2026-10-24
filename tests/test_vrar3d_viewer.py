@@ -186,3 +186,54 @@ class TestAssetDownloadRoute:
         )
         response = client.get("/vrar3d/assets/job-escape/download", headers=_HEADERS)
         assert response.status_code == 404
+
+
+class TestAssetProcessingSafety:
+    def test_remote_ingest_disabled_by_default(self, client, monkeypatch):
+        monkeypatch.setattr(main_mod.config, "REMOTE_INGEST_ENABLED", False)
+        res = client.post(
+            "/vrar3d/assets/process",
+            json={"source_format": "obj", "target_format": "glb",
+                  "asset_url": "https://example.com/a.obj"},
+            headers=_HEADERS,
+        )
+        assert res.status_code == 202
+        assert res.json()["status"] == "failed"
+        assert _db.get_asset_job(res.json()["job_id"])["status"] == "failed"
+
+    def test_invalid_base64_is_a_failed_job(self, client):
+        res = client.post(
+            "/vrar3d/assets/process",
+            json={"source_format": "obj", "target_format": "glb",
+                  "asset_data_b64": "not-base64!"},
+            headers=_HEADERS,
+        )
+        assert res.status_code == 202
+        assert res.json()["status"] == "failed"
+
+    def test_no_input_is_not_a_successful_conversion(self, client):
+        res = client.post(
+            "/vrar3d/assets/process",
+            json={"source_format": "obj", "target_format": "glb"},
+            headers=_HEADERS,
+        )
+        assert res.status_code == 202
+        assert res.json()["status"] == "failed"
+
+    def test_offline_fallback_is_deferred_not_done(self, client, monkeypatch):
+        import base64
+        selector_globals = main_mod.VRARRouter.process_asset.__globals__
+        backend_type = selector_globals["ProcessingBackend"]
+        monkeypatch.setitem(selector_globals, "_select_backend",
+                            lambda: backend_type.offline)
+        res = client.post(
+            "/vrar3d/assets/process",
+            json={"source_format": "obj", "target_format": "glb",
+                  "asset_data_b64": base64.b64encode(b"sample-obj").decode()},
+            headers=_HEADERS,
+        )
+        assert res.status_code == 202
+        payload = res.json()
+        assert payload["status"] == "deferred"
+        assert payload["output_url"] is None
+        assert _db.get_asset_job(payload["job_id"])["status"] == "deferred"
