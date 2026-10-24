@@ -155,3 +155,20 @@ def test_non_boolean_approval_is_rejected(client):
         json={"approved": "yes"},
     )
     assert response.status_code == 422
+
+
+def test_duplicate_connector_slug_returns_conflict(client):
+    payload = {
+        "name": "Unique Example",
+        "slug": "unique-provider-20261024",
+        "base_url": "https://api.example.com",
+    }
+    first = client.post("/apimarket/connectors", headers=headers("admin"), json=payload)
+    assert first.status_code == 200
+    second = client.post("/apimarket/connectors", headers=headers("admin"), json=payload)
+    assert second.status_code == 409
+    entries = [
+        c for c in client.get("/apimarket/connectors").json()
+        if c["slug"] == payload["slug"]
+    ]
+    assert len(entries) == 1
