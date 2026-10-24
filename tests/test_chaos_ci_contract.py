@@ -1,4 +1,5 @@
 """Regression checks for The Chaos Party's CI evidence and failure semantics."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -43,13 +44,12 @@ def test_otel_api_pin_matches_sdk():
 
 
 def test_chaos_contract_workflow_is_pull_request_gated():
-    workflow = yaml.safe_load(
-        (ROOT / ".github/workflows/chaos-party-contract.yml").read_text()
-    )
+    workflow = yaml.safe_load((ROOT / ".github/workflows/chaos-party-contract.yml").read_text())
     triggers = workflow.get("on", workflow.get(True))
     assert "pull_request" in triggers
     job = workflow["jobs"]["chaos-party-contract"]
     command = "\n".join(str(step.get("run", "")) for step in job["steps"])
     assert "tests/test_flow_wiring.py" in command
     assert "tests/test_chaos_ci_contract.py" in command
+    assert "tests/test_chaos_experiment_safety.py" in command
     assert "|| true" not in command
