@@ -82,7 +82,6 @@ def test_explicit_empty_policy_selection_fails_without_running_defaults():
     assert overall_compliance_result(results) is ComplianceResult.FAIL
 
 
-
 def test_policy_exception_fails_closed_and_preserves_audit_event():
     def broken_check(context):
         raise RuntimeError("evaluator unavailable")
