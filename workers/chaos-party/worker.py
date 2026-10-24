@@ -5,7 +5,7 @@ Alice in Wonderland-themed testing orchestration hub.
 Manages test suites, runs, results, and chaos injection experiments.
 Zero-cost: FastAPI + SQLite. No external CI services required.
 
-Port: 8063  Entity: The Chaos Party  Lead AI: The Mad Hatter
+Port: 8079  Entity: The Chaos Party  Lead AI: The Mad Hatter
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from pydantic import BaseModel
 
 from Dimensionals.service_auth_fastapi import guard_internal_secret
 
-WORKER_PORT = int(os.getenv("PORT") or "8063")
+WORKER_PORT = int(os.getenv("PORT") or "8079")
 WORKER_NAME = "chaos-party"
 _VALID_RUN_STATUSES = frozenset(("pass", "fail", "skip", "error"))
 DB_PATH = Path(__file__).parent / "data" / "chaos.db"
