@@ -72,7 +72,7 @@ export default function ArcadiaPage() {
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <ShieldCheck size={15} className="text-teal-400" aria-hidden="true" />
-              Protected by Infinity sign-in
+              Sign-in required
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Compass size={15} className="text-blue-400" aria-hidden="true" />
