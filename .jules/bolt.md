@@ -20,3 +20,7 @@
 ## 2024-05-28 - [OpenTelemetry package versions must match]
 **Learning:** OpenTelemetry packages have a strict lockstep versioning requirement across all requirements files. Upgrading one core package without the other leads to dependency resolution failures (e.g. opentelemetry-api==1.45.1 with opentelemetry-sdk==1.45.0).
 **Action:** When working with OpenTelemetry, ensure all core packages match exactly, and instrumentation packages match their series.
+
+## 2024-05-28 - [Dependency pinning version conflicts]
+**Learning:** Hard-pinning versions of transitive dependencies like `filelock==4.2.1` in `requirements-security.txt` can conflict with bounds in primary dependency trees, causing `pip install` to fail.
+**Action:** When a transitive dependency constraint fails CI, modify the pin in `requirements-security.txt` to satisfy both the CVE patch bound and the parent package's requirements (e.g. downgrading to `3.20.3` which is `>=3.16.1` and `<4.0`).
