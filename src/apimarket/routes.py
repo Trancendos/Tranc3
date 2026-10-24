@@ -74,15 +74,18 @@ async def register_connector(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if get_marketplace().find_by_slug(slug) is not None:
         raise HTTPException(status_code=409, detail="Connector slug already registered")
-    connector = get_marketplace().register(
-        name=name,
-        slug=slug,
-        base_url=base_url,
-        auth_type=auth_type,
-        description=body.get("description", ""),
-        tags=body.get("tags"),
-        rate_limit_per_min=body.get("rate_limit_per_min", 60),
-    )
+    try:
+        connector = get_marketplace().register(
+            name=name,
+            slug=slug,
+            base_url=base_url,
+            auth_type=auth_type,
+            description=body.get("description", ""),
+            tags=body.get("tags"),
+            rate_limit_per_min=body.get("rate_limit_per_min", 60),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Connector slug already registered") from exc
     return connector.to_dict()
 
 
