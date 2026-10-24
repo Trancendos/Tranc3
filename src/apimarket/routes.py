@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 
+from src.apimarket.contracts import validate_connector_metadata, validate_endpoint_declaration
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
 from src.apimarket.validation import validate_external_catalogue_url
 from src.auth.facade import get_current_user
@@ -69,6 +70,9 @@ async def register_connector(
         valid = [a.value for a in AuthType]
         return JSONResponse({"error": f"Unknown auth_type. Valid: {valid}"}, status_code=400)
     try:
+        validate_connector_metadata(
+            name, slug, body.get("tags", []), body.get("rate_limit_per_min", 60)
+        )
         validate_external_catalogue_url(base_url)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -99,8 +103,18 @@ async def add_endpoint(
     path = body.get("path")
     if not path:
         return JSONResponse({"error": "path is required"}, status_code=400)
+    try:
+        validate_endpoint_declaration(method, path)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    connector = get_marketplace().get_connector(connector_id) or get_marketplace().find_by_slug(
+        connector_id
+    )
     ep = get_marketplace().add_endpoint(
-        connector_id, method=method, path=path, description=body.get("description", "")
+        connector.id if connector else connector_id,
+        method=method,
+        path=path,
+        description=body.get("description", ""),
     )
     if ep is None:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
