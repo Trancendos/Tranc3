@@ -182,6 +182,14 @@ class AIGateway:
                     f"Daily token budget exceeded: {config.tokens_used_today}/{config.daily_token_budget}",
                 )
 
+        # 2. Model authorization must precede any cache lookup or provider call.
+        # A route may override the requested model, so authorization is checked
+        # again for each resolved effective model below.
+        if request.model and not self._model_permitted(request.model, config):
+            raise AIGatewayError("MODEL_NOT_ALLOWED", "Requested model is not permitted")
+
+        # Cache is evaluated after a permitted route is selected, avoiding
+        # serving data created under a different routing policy.
         # 2. Check cache
         if config.cache_enabled:
             cached = self._check_cache(request, config)
@@ -203,6 +211,10 @@ class AIGateway:
         errors: list[dict[str, str]] = []
 
         for route_idx, route in enumerate(routes):
+            effective_model = route.model or request.model or config.default_model
+            if not self._model_permitted(effective_model, config):
+                errors.append({"provider": route.provider, "error": "Model not permitted"})
+                continue
             provider = self._get_viable_provider(route, errors)
             if not provider:
                 continue
@@ -211,7 +223,7 @@ class AIGateway:
                 # Apply route-specific model
                 routed_request = request.model_copy(
                     update={
-                        "model": route.model or request.model,
+                        "model": effective_model,
                     }
                 )
 
@@ -296,6 +308,15 @@ class AIGateway:
         # Check request metadata for condition
         return request.metadata.get(key) == value
 
+    @staticmethod
+    def _model_permitted(model: str | None, config: TenantAIConfig) -> bool:
+        """Fail closed for explicit allowlists and denylisted models."""
+        if model is None:
+            return not config.allowed_models
+        if model in config.blocked_models:
+            return False
+        return not config.allowed_models or model in config.allowed_models
+
     async def _execute_with_timeout(
         self,
         provider: AIProvider,
@@ -338,8 +359,20 @@ class AIGateway:
 
     def _make_cache_key(self, request: AIRequest, config: TenantAIConfig) -> str:
         """Generate a cache key from request and tenant config."""
-        key_data = f"{config.tenant_id}:{request.model or 'default'}:{request.prompt[:200]}:{request.max_tokens}:{request.temperature}"
-        return hashlib.sha256(key_data.encode()).hexdigest()[:32]
+        import json
+
+        # Include the full conversation and effective routing policy. A truncated
+        # prompt or omitted messages could otherwise return another answer.
+        payload = {
+            "tenant": config.tenant_id,
+            "request": request.model_dump(mode="json"),
+            "routes": [rule.model_dump(mode="json") for rule in config.routes],
+            "default_model": config.default_model,
+            "allowed_models": sorted(config.allowed_models),
+            "blocked_models": sorted(config.blocked_models),
+        }
+        key_data = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(key_data.encode()).hexdigest()
 
     def _track_success(self, provider: str, response: AIResponse) -> None:
         """Track a successful provider call."""
