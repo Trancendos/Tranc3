@@ -173,6 +173,11 @@ def test_ci_invokes_the_reporter():
 # ---------------------------------------------------------------------------
 
 
+def test_chaos_party_default_port_matches_its_compose_contract():
+    worker_source = (REPO / "workers" / "chaos-party" / "worker.py").read_text()
+    assert 'WORKER_PORT = int(os.getenv("PORT") or "8079")' in worker_source
+
+
 def test_chaos_party_image_packages_observatory_bridge():
     """The optional bridge import cannot work if the module is missing from /app."""
     dockerfile = (REPO / "workers" / "chaos-party" / "Dockerfile").read_text()
