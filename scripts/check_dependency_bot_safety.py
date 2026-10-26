@@ -47,7 +47,9 @@ def issues(config: Any) -> list[str]:
                 and final.get("groupName") == "OpenTelemetry coordinated upgrades"
             )
             if not valid:
-                problems.append("final packageRule must require reviewed, grouped OpenTelemetry updates")
+                problems.append(
+                    "final packageRule must require reviewed, grouped OpenTelemetry updates"
+                )
     return problems
 
 
