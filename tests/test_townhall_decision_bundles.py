@@ -102,7 +102,7 @@ async def test_change_preview_uses_server_mandatory_policies(monkeypatch):
             "cross_border_transfer": False,
             "policy_ids": ["zero-cost"],
             "actor": "spoofed",
-            "secret": "must-not-log",
+            "secret": "must-not-log",  # pragma: allowlist secret
         },
     )
     assert observed["policy_ids"] == ["zero-cost", "gdpr"]
