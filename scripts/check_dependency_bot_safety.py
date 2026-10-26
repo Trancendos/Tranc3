@@ -64,7 +64,9 @@ def main() -> int:
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         return 1
-    print("Dependency bot safety: PASSED — urgent alerts remain enabled; unattended merging disabled")
+    print(
+        "Dependency bot safety: PASSED — urgent alerts remain enabled; unattended merging disabled"
+    )
     return 0
 
 
