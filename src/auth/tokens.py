@@ -8,7 +8,6 @@ Imported by workers/infinity-auth/worker.py so JWT logic lives here once.
 
 from __future__ import annotations
 
-import json
 import secrets
 import time
 import uuid
@@ -60,7 +59,7 @@ def create_access_token(
 
         return jwt.encode(claims, jwt_secret, algorithm=algorithm)
     except ImportError:
-        raise RuntimeError("Critical security dependency 'jose' is missing.")
+        raise RuntimeError("Critical security dependency 'jose' is missing.") from None
 
 
 def decode_access_token(
@@ -75,7 +74,7 @@ def decode_access_token(
         except JWTError:
             return None
     except ImportError:
-        raise RuntimeError("Critical security dependency 'jose' is missing.")
+        raise RuntimeError("Critical security dependency 'jose' is missing.") from None
 
 
 def create_refresh_token() -> str:
