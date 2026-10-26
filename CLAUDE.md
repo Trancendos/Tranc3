@@ -556,7 +556,7 @@ pipelines — but it is dormant, so today GitHub Actions is the only CI that act
 an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
 execute. Describe them as the target state, not as a system currently gating anything.
 
-`.github/workflows/` has **28** files (this said 12 until 2026-08-28, 20 until 2026-09-03 when
+`.github/workflows/` has **29** files (this said 12 until 2026-08-28, 20 until 2026-09-03 when
 `codecov.yml` was retired, and **19 until 2026-09-28, against 28 on disk**). Several gate this
 repo's PRs directly (`ci.yml`'s Ruff/lint, Service Topology and Pytest jobs, `codeql.yml`,
 `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`,
