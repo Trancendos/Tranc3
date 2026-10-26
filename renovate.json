@@ -32,10 +32,10 @@
       "security",
       "urgent"
     ],
-    "automerge": true,
+    "automerge": false,
     "automergeType": "pr",
     "minimumReleaseAge": null,
-    "description": "Security remediation is exempt from the 7-day supply-chain cooldown: the cooldown exists to let a compromised release be discovered before it is taken, and applying it to a published CVE fix would delay remediation for exactly as long."
+    "description": "Security updates remain urgent and skip release-age cooldown, but require successful compatibility gates and human review before merge. An OpenTelemetry single-package vulnerability bump previously rendered the Python dependency tree unsatisfiable."
   },
   "osvVulnerabilityAlerts": true,
   "packageRules": [
@@ -216,6 +216,18 @@
         "/^@types/react$/",
         "/^@types/react-dom$/"
       ],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Review coupled OpenTelemetry Python packages together. Normal updates are grouped for compatibility; vulnerability PRs remain urgent, never unattended. This rule remains last so later rules cannot re-enable automerge for the family.",
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchPackageNames": [
+        "/^opentelemetry-/"
+      ],
+      "groupName": "OpenTelemetry coordinated upgrades",
+      "automerge": false,
       "minimumReleaseAge": null
     }
   ],
