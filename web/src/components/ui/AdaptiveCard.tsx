@@ -157,9 +157,21 @@ export function AdaptiveCard({
         'rounded-xl border transition-all duration-300',
         HEALTH_STYLES[health],
         SIZE_STYLES[size],
-        onClick ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]' : '',
+        onClick ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950' : '',
         className,
       ].join(' ')}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
     >
       {/* Header slot */}
       {(header || title) && (
