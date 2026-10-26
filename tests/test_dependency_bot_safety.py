@@ -60,9 +60,7 @@ class DependencyBotSafetyTests(unittest.TestCase):
         self.assertTrue(issues(bad))
 
     def test_security_manifest_has_independent_fail_closed_preflight(self):
-        workflow = (ROOT / ".github/workflows/dependency-preflight.yml").read_text(
-            encoding="utf-8"
-        )
+        workflow = (ROOT / ".github/workflows/dependency-preflight.yml").read_text(encoding="utf-8")
         self.assertIn("  security-resolver:", workflow)
         self.assertIn("name: Security toolchain resolution", workflow)
         self.assertIn(
