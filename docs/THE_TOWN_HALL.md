@@ -63,6 +63,44 @@ required policy IDs and must not use an arbitrary narrower set to bypass the
 applicable release/approval gate. Governance criteria for releases belong in
 the separate evidence-backed PLM gates, not static registry scores.
 
+## Server-owned decision previews (advisory only)
+
+`POST /townhall/decisions/{intent}/preview` resolves mandatory policy IDs on the
+server rather than accepting caller-selected policy IDs. Available intents:
+
+| Intent | Mandatory policies | Additional input |
+|---|---|---|
+| `change` | `zero-cost`, `gdpr` | Declared cost and data handling |
+| `release` | `zero-cost`, `gdpr`, `prince2` | As above plus build/test evidence identifiers |
+
+Call with a nested `context` object, for example:
+
+```json
+{
+  "context": {
+    "monthly_cost_usd": 0,
+    "personal_data": false,
+    "cross_border_transfer": false
+  }
+}
+```
+
+Required fields must be supplied with explicit values. Personal-data processing
+additionally requires a non-empty `lawful_basis`; cross-border transfers require
+an explicit Boolean `adequacy_decision`. An incomplete or invalid context returns
+`overall: fail` and a list of `input_errors` without running policy checks.
+
+**This endpoint does not authorise anything.** Every response includes
+`preview_only: true` and `authorization_granted: false`, even if the
+preliminary `overall` assessment is `pass`. Supplied values and evidence IDs are untrusted claims, not independently
+verified source records or human approvals. The preview ignores user-supplied
+`actor`, `policy_ids` and unrelated context fields rather than recording spoofed
+identity or copying arbitrary data into compliance logs. `prince2` currently has no executable evaluator, so release
+previews fail closed. The persistent PLM stage gates, trusted evidence lookup,
+authenticated decision authority and integration with CranBania remain separate
+requirements under issue #1450. Never treat a preview response as release
+permission.
+
 ## Compliance integration
 
 - Fail/warn results emit to **The Observatory** (`observe(..., category=GOVERNANCE)`).

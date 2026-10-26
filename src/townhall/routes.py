@@ -1,14 +1,16 @@
 # src/townhall/routes.py
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Query
 
 from src.townhall.agile import get_kanban_service
+from src.townhall.decision_bundles import DecisionIntent, get_bundle, validate_context
 from src.townhall.documents import list_templates
 from src.townhall.framework_registry import get_framework_registry
-from src.townhall.governance import get_townhall, overall_compliance_result
+from src.townhall.governance import ComplianceResult, get_townhall, overall_compliance_result
 
 router = APIRouter(prefix="/townhall", tags=["townhall"])
 
@@ -60,4 +62,72 @@ async def compliance_check(
     return {
         "overall": overall.value,
         "results": {k: v.value for k, v in results.items()},
+    }
+
+
+@router.post("/decisions/{intent}/preview")
+async def townhall_decision_preview(
+    intent: DecisionIntent,
+    context: Dict[str, Any] = Body(...),
+):
+    """Preview mandatory policy outcomes; never grant release or change authority.
+
+    The intent determines the full server-owned policy set. Submitted evidence
+    identifiers are unverified claims and cannot confer authorisation.
+    """
+    bundle = get_bundle(intent)
+    input_errors = validate_context(intent, context)
+    assessment_error = False
+    if input_errors:
+        results = dict.fromkeys(bundle.policy_ids, ComplianceResult.UNKNOWN)
+    else:
+        try:
+            # Keep user-controlled extras and evidence identifiers out of the
+            # compliance audit summary. Identity must come from trusted auth,
+            # never a caller-controlled JSON field.
+            evaluation_context = {
+                key: context[key]
+                for key in (
+                    "monthly_cost_usd",
+                    "personal_data",
+                    "cross_border_transfer",
+                    "lawful_basis",
+                    "adequacy_decision",
+                )
+                if key in context
+            }
+            evaluated = get_townhall().check(evaluation_context, policy_ids=list(bundle.policy_ids))
+        except Exception:
+            # Do not log the submitted context: it may contain sensitive data.
+            logging.getLogger(__name__).exception(
+                "Townhall decision preview evaluation unavailable"
+            )
+            evaluated = {}
+            assessment_error = True
+
+        if not isinstance(evaluated, dict):
+            evaluated = {}
+            assessment_error = True
+
+        # A missing or malformed mandatory result is always UNKNOWN, never PASS.
+        results = {
+            policy_id: (
+                evaluated[policy_id]
+                if isinstance(evaluated.get(policy_id), ComplianceResult)
+                else ComplianceResult.UNKNOWN
+            )
+            for policy_id in bundle.policy_ids
+        }
+
+    overall = overall_compliance_result(results)
+    return {
+        "intent": intent.value,
+        "bundle_version": bundle.version,
+        "required_policies": list(bundle.policy_ids),
+        "overall": overall.value,
+        "results": {policy_id: status.value for policy_id, status in results.items()},
+        "input_errors": list(input_errors),
+        "assessment_error": assessment_error,
+        "preview_only": True,
+        "authorization_granted": False,
     }
