@@ -29,16 +29,19 @@ upgrades of coupled dependency families.
    vulnerability automerge or override the family rule are rejected.
 3. `.github/workflows/dependency-preflight.yml` triggers when Python
    dependency manifests, bot policies or its own check logic change. It
-   performs static checks and a Python 3.11 `pip install --dry-run
-   --ignore-installed -r requirements.txt` resolution. The dry run does
-   not install application dependencies.
+   performs static checks, a Python 3.11 `pip install --dry-run
+   --ignore-installed -r requirements.txt` resolution, and an **independent**
+   dry-run resolution of `requirements-security.txt`. Separate jobs keep
+   security-scanner pin conflicts visible even when the root OpenTelemetry
+   check fails first. These dry runs do not install application dependencies.
 4. The existing CI Service Topology and Pytest jobs, SBOM freshness gate,
    container-image scan, security analysis and production merge gate remain
    authoritative. Do not remove them or mark a PR ready merely because
    preflight passes.
 
-**Scope:** the dry run resolves the root requirements file, not every
-worker lockfile, every platform/Python version or built container. Other
+**Scope:** the dry runs resolve the root and security requirements files
+independently, not every worker lockfile, the root+security combined
+environment, every platform/Python version or built container. Other
 workers receive static lockstep protection; their real builds and tests are
 still mandatory. This is a deliberately targeted, relatively low-cost
 preflight rather than a claim of complete dependency verification.
@@ -68,7 +71,9 @@ repository ruleset separately before relying on this gate for merging.
    not a substitute for the final built-image SBOM/vulnerability scan.
 5. Rerun focused tests, full required CI, security scanners and the
    production gate on the **same commit SHA**. Surface independent
-   findings (e.g. stale SBOMs or Rust advisories) as separate blockers.
+   findings (e.g. stale SBOMs, Rust advisories, or security scanner
+   constraints such as `safety<4 filelock` versus an incompatible 4.x pin)
+   as separate blockers.
 6. Keep draft PRs blocked until checks and mandatory human reviews pass.
    Avoid forced pushes, blind merges and repository-wide pin changes
    without a coordinated release/rollback review.
