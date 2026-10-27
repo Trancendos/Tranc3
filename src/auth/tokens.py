@@ -59,10 +59,8 @@ def create_access_token(
         from jose import jwt  # type: ignore
 
         return jwt.encode(claims, jwt_secret, algorithm=algorithm)
-    except ImportError:
-        import base64
-
-        return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode()
+    except ImportError as err:
+        raise RuntimeError("python-jose is required for secure JWT operations") from err
 
 
 def decode_access_token(
@@ -76,16 +74,8 @@ def decode_access_token(
             return jwt.decode(token, jwt_secret, algorithms=[algorithm])
         except JWTError:
             return None
-    except ImportError:
-        try:
-            import base64
-
-            payload = json.loads(base64.urlsafe_b64decode(token + "=="))
-            if payload.get("exp", 0) < time.time():
-                return None
-            return payload
-        except Exception:
-            return None
+    except ImportError as err:
+        raise RuntimeError("python-jose is required for secure JWT operations") from err
 
 
 def create_refresh_token() -> str:
