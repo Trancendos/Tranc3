@@ -38,6 +38,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+_HAS_SUMPROD = hasattr(math, "sumprod")
+
 # Optional numpy for vector operations
 try:
     import numpy as np
@@ -153,14 +155,23 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
             return 0.0
         return dot / (norm_a * norm_b)
     else:
-        # Performance optimization: Single pass loop avoids generator overhead
-        dot = 0.0
-        norm_a_sq = 0.0
-        norm_b_sq = 0.0
-        for x, y in zip(a, b, strict=False):
-            dot += x * y
-            norm_a_sq += x * x
-            norm_b_sq += y * y
+        # Performance optimization: Uses math.sumprod when available
+        if len(a) != len(b):
+            return 0.0
+
+        if _HAS_SUMPROD:
+            dot = float(math.sumprod(a, b))  # type: ignore[attr-defined]
+            norm_a_sq = float(math.sumprod(a, a))  # type: ignore[attr-defined]
+            norm_b_sq = float(math.sumprod(b, b))  # type: ignore[attr-defined]
+        else:
+            dot = 0.0
+            norm_a_sq = 0.0
+            norm_b_sq = 0.0
+            for x, y in zip(a, b, strict=False):
+                dot += x * y
+                norm_a_sq += x * x
+                norm_b_sq += y * y
+
         if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
         return dot / math.sqrt(norm_a_sq * norm_b_sq)
