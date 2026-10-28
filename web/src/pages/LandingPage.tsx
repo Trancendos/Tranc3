@@ -138,19 +138,19 @@ export default function LandingPage() {
           <div className="anim-in-3 flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <button
               onClick={() => navigate('/login')}
-              className="group relative px-8 py-3.5 rounded-xl font-semibold text-white overflow-hidden"
+              className="group relative px-8 py-3.5 rounded-xl font-semibold text-white overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
               style={{
                 background: 'linear-gradient(135deg, #1d4ed8, #7c3aed)',
                 boxShadow: '0 0 30px rgba(37,99,235,0.4)',
               }}
             >
               <span className="relative z-10">Get Started →</span>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
                 style={{ background: 'linear-gradient(135deg, #2563eb, #8b5cf6)' }} />
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="px-8 py-3.5 rounded-xl font-semibold border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white transition-colors"
+              className="px-8 py-3.5 rounded-xl font-semibold border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             >
               Sign In
             </button>

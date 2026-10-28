@@ -11,6 +11,7 @@
         "test": "vitest run"
     },
     "dependencies": {
+        "@axe-core/react": "^4.14.0",
         "lucide-react": "^1.48.0",
         "posthog-js": "^1.434.12",
         "react": "^18.3.1",
