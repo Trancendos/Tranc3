@@ -6371,6 +6371,11 @@
               "kind": "branch",
               "children": [
                 {
+                  "name": "asset_ingest",
+                  "kind": "component",
+                  "source": "workers/vrar3d/asset_ingest.py"
+                },
+                {
                   "name": "config",
                   "kind": "component",
                   "source": "workers/vrar3d/config.py"

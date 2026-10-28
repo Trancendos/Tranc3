@@ -7,7 +7,7 @@ RUN addgroup --system vrar3d && adduser --system --ingroup vrar3d vrar3d
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY config.py models.py database.py service.py router.py main.py ./
+COPY config.py models.py database.py asset_ingest.py service.py router.py main.py ./
 COPY static/ ./static/
 
 RUN mkdir -p /data/assets && chown vrar3d:vrar3d /data /data/assets
