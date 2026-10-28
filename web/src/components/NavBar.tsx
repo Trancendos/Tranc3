@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   // Core
   { path: '/',               label: 'Chat',          icon: <MessageSquare size={18} aria-hidden="true" />, group: 'core' },
   { path: '/dashboard',     label: 'Dashboard',     icon: <LayoutDashboard size={18} aria-hidden="true" />, group: 'core' },
+  { path: '/arcadia',       label: 'Arcadia',       icon: <Globe size={18} aria-hidden="true" />, group: 'core' },
   { path: '/spark',         label: 'The Spark',     icon: <Zap size={18} aria-hidden="true" />, group: 'core' },
   // Platform
   { path: '/grid',          label: 'Digital Grid',  icon: <GitBranch size={18} aria-hidden="true" />, group: 'platform' },
