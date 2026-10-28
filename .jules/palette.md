@@ -1,0 +1,3 @@
+## 2024-10-18 - Graceful Keyboard Focus for Hover States
+**Learning:** When using `opacity-0 group-hover:opacity-100` to hide secondary actions, icons, or background states, keyboard users are often left without a visible focus state or the hidden element remains invisible when focused. This breaks the WCAG requirement for visible focus and makes interactive elements undiscoverable to keyboard navigators.
+**Action:** Always pair `group-hover:opacity-100` with `group-focus-visible:opacity-100` on the hidden element, and ensure the interactive parent container has proper `focus-visible` ring styles (e.g., `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`) to gracefully support keyboard navigation.
