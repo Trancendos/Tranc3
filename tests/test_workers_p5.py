@@ -577,12 +577,16 @@ class TestInfinityVoid:
         monkeypatch.setenv("VOID_DATA_DIR", str(tmp_path / "void"))
         monkeypatch.setenv("MASTER_KEY_SEED", "test-master-key-seed-for-unit-tests")
         monkeypatch.setenv("INTERNAL_SECRET", "test-internal-secret")
-        # get_auth_user_id() only bypasses its Authorization-header check when
-        # ENVIRONMENT == "test" (worker.py's own built-in test-mode escape
-        # hatch); _client_for() doesn't send an Authorization header at all,
-        # so every guarded route 401s without this.
+        # Business-route tests use an explicit synthetic identity, never a
+        # runtime ENVIRONMENT-based authentication bypass. Authentication's
+        # fail-closed behavior is covered by test_void_auth_fail_closed.py.
         monkeypatch.setenv("ENVIRONMENT", "test")
         self.mod = _import_worker("workers/infinity-void/worker.py")
+
+        async def verified_test_user(authorization: str | None) -> str:
+            return "test-user"
+
+        monkeypatch.setattr(self.mod, "get_auth_user_id", verified_test_user)
         self.client = _client_for(self.mod)
 
     def test_health(self):
