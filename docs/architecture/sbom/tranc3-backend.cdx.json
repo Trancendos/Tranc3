@@ -149,9 +149,9 @@
     {
       "type": "library",
       "name": "filelock",
-      "bom-ref": "pkg:pypi/filelock@4.2.1",
-      "purl": "pkg:pypi/filelock@4.2.1",
-      "version": "4.2.1"
+      "bom-ref": "pkg:pypi/filelock@3.32.7",
+      "purl": "pkg:pypi/filelock@3.32.7",
+      "version": "3.32.7"
     },
     {
       "type": "library",
