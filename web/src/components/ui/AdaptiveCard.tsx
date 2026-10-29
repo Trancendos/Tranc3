@@ -160,7 +160,7 @@ export function AdaptiveCard({
           ? (e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                onClick(e as any)
+                onClick(e)
               }
             }
           : undefined
