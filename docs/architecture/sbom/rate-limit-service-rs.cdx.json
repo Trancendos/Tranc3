@@ -487,9 +487,9 @@
     {
       "type": "library",
       "name": "tokio",
-      "bom-ref": "pkg:cargo/tokio@1.53.1",
-      "purl": "pkg:cargo/tokio@1.53.1",
-      "version": "1.53.1"
+      "bom-ref": "pkg:cargo/tokio@1.53.3",
+      "purl": "pkg:cargo/tokio@1.53.3",
+      "version": "1.53.3"
     },
     {
       "type": "library",
