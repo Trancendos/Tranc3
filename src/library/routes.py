@@ -144,11 +144,23 @@ async def delete_article(
         return JSONResponse({"error": "Not found"}, status_code=404)
     if not _can_read(art, current_user):
         return JSONResponse({"error": "Forbidden"}, status_code=403)
-    get_library().delete(article_id)
+    # Reading a shared article is not permission to delete it. Only the
+    # original author or an administrator may remove an unheld article.
+    caller_id = current_user.get("id") or current_user.get("sub")
+    if current_user.get("role") != "admin" and caller_id != art.author:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    if art.legal_hold:
+        return JSONResponse({"error": "Article is under legal hold"}, status_code=409)
+    if not get_library().delete(article_id):
+        return JSONResponse({"error": "Deletion refused"}, status_code=409)
     return {"deleted": article_id}
 
 
 @router.post("/retention/apply")
 async def apply_retention(current_user: dict = Depends(get_current_user)):
+    # Retention pruning acts on every article and cannot be scoped to a
+    # caller's own records. Require an administrator before any mutation.
+    if current_user.get("role") != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
     removed = get_library().apply_retention()
     return {"articles_removed": removed}
