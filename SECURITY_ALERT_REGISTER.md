@@ -25,6 +25,26 @@ a reason no fix is possible and a trigger for revisiting.
 
 ## Open entries
 
+### SEC-023 — filelock PYSEC-2026-1374, PYSEC-2026-1375, CVE-2026-112909, CVE-2026-112910
+
+| Field | Value |
+|---|---|
+| Finding | `filelock` PYSEC-2026-1374, PYSEC-2026-1375, CVE-2026-112909, CVE-2026-112910 |
+| Package | `filelock==3.16.1` |
+| Manifest | `requirements-security.txt` |
+| Status | SUPPRESS |
+| Justification | Version `3.16.1` is pinned due to a constraint in `safety==3.8.1`. Upgrading breaks pip dependency resolution. Re-evaluate when `safety` updates its dependencies. |
+
+### SEC-022 — opentelemetry-api CVE-2026-114603
+
+| Field | Value |
+|---|---|
+| Finding | `opentelemetry-api` CVE-2026-114603 |
+| Package | `opentelemetry-api==1.45.0` |
+| Manifest | `requirements.txt` |
+| Status | SUPPRESS |
+| Justification | Version `1.45.0` is pinned to avoid a lockstep version conflict across the OpenTelemetry suite. A patch exists in `1.45.1`, but upgrading breaks the lockstep check. Re-evaluate when all instrumentation packages catch up. |
+
 ### SEC-001 — sentencepiece heap overflow
 
 | Field | Value |
