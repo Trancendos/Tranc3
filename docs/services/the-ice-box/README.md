@@ -1,5 +1,7 @@
 # Service Doc-Pack — The Ice Box
 
+> **October 2026 verified update:** [IceBox advancement and integration evidence](../../research/ICEBOX-ADVANCEMENT-2026-10-23.md). The current source gates protected routes through canonical fail-closed internal authentication. This dated addendum supersedes historical claims elsewhere in this document that release or scan routes are unauthenticated when the secret is unset. Quarantine persistence and image packaging repairs are proposed in draft PR #1442 and are not yet deployed. Optional metadata-only automation does not constitute dynamic malware sandboxing.
+
 | Field | Value |
 |---|---|
 | **ServiceID (CMDB)** | `SRV-ICEBOX-001` |

@@ -47,7 +47,16 @@ def compose_services() -> dict[str, dict]:
     """Every compose service, with its published port and route prefix."""
     services: dict[str, dict] = {}
     current: str | None = None
+    in_services = False
     for line in COMPOSE.read_text(encoding="utf-8").splitlines():
+        # YAML top-level boundaries: named volumes and networks are NOT services.
+        # Only parse entries within the top-level services: mapping.
+        if re.match(r"^[a-zA-Z_][a-zA-Z0-9_-]*:\s*(?:#.*)?$", line):
+            in_services = line.split(":", 1)[0] == "services"
+            current = None
+            continue
+        if not in_services:
+            continue
         match = _SERVICE.match(line)  # anchored-ok: line parser, not a validator
         if match:
             current = match.group(1)
