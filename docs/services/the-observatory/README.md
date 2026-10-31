@@ -4,9 +4,11 @@
 > Claims cite `src/observability/`.
 
 **Service:** The Observatory · **Slug:** `the-observatory` · **Lead AI:** Norman Hawkins (AID-OBS-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2) · **ServiceID (CMDB):** `SRV-OBS-001`
-**Canonical status:** ✅ Self-hosted → **Live** tier (status per `CLAUDE.md`; identity/PID-OBS per `PLATFORM_ENTITIES.md`)
+**Catalogue status:** Self-hosted / historically marked **Live** in `CLAUDE.md`; this label is **not evidence of current production readiness**. Current release verification is tracked in [Observatory issue #1434](https://github.com/Trancendos/Tranc3/issues/1434) and its draft PRs. The current runtime and deployment status are **unverified in this doc-pack**.
 **Code root:** `src/observability/` · **Worker:** `monitoring` (port 8007) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `70fec6b`
+
+> **Evidence gate (2026-10-24):** Historical source verification must not be treated as a current operational acceptance test. Before declaring this service production-ready, record commit-linked reproducible results for protected-route authorization (including query/export/SSE), tamper/restart/concurrent-write and replay tests, retained/offline audit recovery, collector-version compatibility, and deployment health. Keep the service and any automated remediation in review/draft until these checks and owner approval are documented in issue #1434. No secrets or audit payloads should be committed as evidence.
 
 ---
 
