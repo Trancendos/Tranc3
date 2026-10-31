@@ -340,7 +340,7 @@ export default function ChatView() {
               disabled={loading} />
             <button aria-label="Send message" onClick={send} disabled={loading || !input.trim()}
               className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
