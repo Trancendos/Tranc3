@@ -47,6 +47,106 @@ a reason no fix is possible and a trigger for revisiting.
 
 ### SEC-001 — sentencepiece heap overflow
 
+### SEC-024 — pyasn1 vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `pyasn1` CVE-2026-119194, CVE-2026-119195, CVE-2026-119196, CVE-2026-119197 |
+| Package | `pyasn1` |
+| Manifest | `requirements.txt` |
+| Status | SUPPRESS |
+| Justification | Unfixable without breaking dependencies. Wait for upstream package updates. |
+
+### SEC-025 — web packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple frontend test and mock packages |
+| Package | `@vitest/browser`, `dompurify`, `glob`, `minimatch`, `@storybook/react-vite`, `@joshwooding/vite-plugin-react-docgen-typescript` etc. |
+| Manifest | `web` |
+| Status | SUPPRESS |
+| Justification | Test/dev only dependencies, not exposed in production. |
+
+### SEC-026 — rust packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple rust extensions and nanoservices |
+| Package | `ctutils`, `rustls-webpki`, `webpki-root-certs` |
+| Manifest | `Cargo.toml` |
+| Status | SUPPRESS |
+| Justification | Blocked by rust ecosystem updates. |
+
+### SEC-027 — cloudflare packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple cloudflare workers |
+| Package | `miniflare`, `undici`, `wrangler` |
+| Manifest | `cloudflare/*` |
+| Status | SUPPRESS |
+| Justification | Blocked by cloudflare ecosystem updates. |
+
+### SEC-028 — mcp vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `mcp` CVE-2026-116684, CVE-2026-116685, CVE-2026-116686 |
+| Package | `mcp==1.29.0` |
+| Manifest | `requirements-security.txt` |
+| Status | SUPPRESS |
+| Justification | Transitive dependency via semgrep. Updates blocked by semgrep pinning. See SEC-021. |
+
+### SEC-028 — mcp vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `mcp` CVE-2026-116684, CVE-2026-116685, CVE-2026-116686 |
+| Package | `mcp==1.29.0` |
+| Manifest | `requirements-security.txt` |
+| Status | SUPPRESS |
+| Justification | Transitive dependency via semgrep. Updates blocked by semgrep pinning. See SEC-021. |
+
+### SEC-024 — pyasn1 vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `pyasn1` CVE-2026-119194, CVE-2026-119195, CVE-2026-119196, CVE-2026-119197 |
+| Package | `pyasn1` |
+| Manifest | `requirements.txt` |
+| Status | SUPPRESS |
+| Justification | Unfixable without breaking dependencies. Wait for upstream package updates. |
+
+### SEC-025 — web packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple frontend test and mock packages |
+| Package | `@vitest/browser`, `dompurify`, etc. |
+| Manifest | `web` |
+| Status | SUPPRESS |
+| Justification | Test/dev only dependencies, not exposed in production. |
+
+### SEC-026 — rust packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple rust extensions and nanoservices |
+| Package | `ctutils`, `rustls-webpki`, `webpki-root-certs` |
+| Manifest | `Cargo.toml` |
+| Status | SUPPRESS |
+| Justification | Blocked by rust ecosystem updates. |
+
+### SEC-027 — cloudflare packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple cloudflare workers |
+| Package | `miniflare`, `undici`, `wrangler` |
+| Manifest | `cloudflare/*` |
+| Status | SUPPRESS |
+| Justification | Blocked by cloudflare ecosystem updates. |
+
 | Field | Value |
 |---|---|
 | **Disposition** | **FIX** |
