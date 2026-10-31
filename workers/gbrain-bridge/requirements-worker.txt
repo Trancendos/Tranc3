@@ -21,4 +21,4 @@ pydantic==2.13.5
 httpx==0.28.1
 python-jose[cryptography]==3.5.0
 ecdsa==0.19.2
-pyasn1==0.6.4
+pyasn1==0.6.5
