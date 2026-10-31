@@ -5,12 +5,22 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 
+from src.apimarket.contracts import validate_connector_metadata, validate_endpoint_declaration
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
+from src.apimarket.validation import validate_external_catalogue_url
+from src.auth.facade import get_current_user
 
 router = APIRouter(prefix="/apimarket", tags=["api-marketplace"])
+
+
+def require_marketplace_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Allow catalogue changes only from authenticated platform admins."""
+    if current_user.get("role") != "admin" or current_user.get("sub") == "anonymous":
+        raise HTTPException(status_code=403, detail="Marketplace admin role required")
+    return current_user
 
 
 @router.get("/status")
@@ -44,7 +54,10 @@ async def get_connector(connector_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/connectors")
-async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def register_connector(
+    body: Dict[str, Any] = Body(...),
+    _admin: dict = Depends(require_marketplace_admin),
+) -> Dict[str, Any]:
     name = body.get("name")
     slug = body.get("slug")
     base_url = body.get("base_url")
@@ -56,15 +69,27 @@ async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]
     except ValueError:
         valid = [a.value for a in AuthType]
         return JSONResponse({"error": f"Unknown auth_type. Valid: {valid}"}, status_code=400)
-    connector = get_marketplace().register(
-        name=name,
-        slug=slug,
-        base_url=base_url,
-        auth_type=auth_type,
-        description=body.get("description", ""),
-        tags=body.get("tags"),
-        rate_limit_per_min=body.get("rate_limit_per_min", 60),
-    )
+    try:
+        validate_connector_metadata(
+            name, slug, body.get("tags", []), body.get("rate_limit_per_min", 60)
+        )
+        validate_external_catalogue_url(base_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if get_marketplace().find_by_slug(slug) is not None:
+        raise HTTPException(status_code=409, detail="Connector slug already registered")
+    try:
+        connector = get_marketplace().register(
+            name=name,
+            slug=slug,
+            base_url=base_url,
+            auth_type=auth_type,
+            description=body.get("description", ""),
+            tags=body.get("tags"),
+            rate_limit_per_min=body.get("rate_limit_per_min", 60),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Connector slug already registered") from exc
     return connector.to_dict()
 
 
@@ -72,14 +97,41 @@ async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]
 async def add_endpoint(
     connector_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
+    _admin: dict = Depends(require_marketplace_admin),
 ) -> Dict[str, Any]:
     method = body.get("method", "GET")
     path = body.get("path")
     if not path:
         return JSONResponse({"error": "path is required"}, status_code=400)
+    try:
+        validate_endpoint_declaration(method, path)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    connector = get_marketplace().get_connector(connector_id) or get_marketplace().find_by_slug(
+        connector_id
+    )
     ep = get_marketplace().add_endpoint(
-        connector_id, method=method, path=path, description=body.get("description", "")
+        connector.id if connector else connector_id,
+        method=method,
+        path=path,
+        description=body.get("description", ""),
     )
     if ep is None:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
     return ep.to_dict()
+
+
+@router.post("/connectors/{connector_id}/approval")
+async def decide_connector_approval(
+    connector_id: str = Path(...),
+    body: Dict[str, Any] = Body(...),
+    _admin: dict = Depends(require_marketplace_admin),
+) -> Dict[str, Any]:
+    """Explicit admin approval; catalogue registration does not grant execution."""
+    approved = body.get("approved")
+    if not isinstance(approved, bool):
+        raise HTTPException(status_code=422, detail="approved must be boolean")
+    connector = get_marketplace().set_approval(connector_id, approved)
+    if connector is None:
+        raise HTTPException(status_code=404, detail="Connector not found")
+    return connector.to_dict()
