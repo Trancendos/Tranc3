@@ -177,12 +177,17 @@ def analyse_trend(conn: sqlite3.Connection, test_name: str) -> dict[str, Any]:
     out["recent_pass_rate"] = round(r_rate, 4) if r_rate is not None else None
     out["baseline_pass_rate"] = round(b_rate, 4) if b_rate is not None else None
     scored_recent = [s for s in recent if s in ("pass", "fail", "error")]
+    # An all-skipped window supplies no evidence of pass or failure.
+    # Treat it as insufficient data, never as a 100% predicted failure
+    # or a regression from an otherwise healthy baseline.
+    if r_rate is None:
+        return out
     out["confidence_floor"] = round(
         _wilson_lower_bound(sum(1 for s in scored_recent if s == "pass"), len(scored_recent)), 4
     )
-    # Probability the next run fails, from the recent window only. An estimate
-    # for ranking attention, not a forecast.
-    out["predicted_next_fail"] = round(1.0 - (r_rate or 0.0), 4)
+    # Probability the next run fails, from the scored recent window only.
+    # An estimate for ranking attention, not a forecast.
+    out["predicted_next_fail"] = round(1.0 - r_rate, 4)
 
     if b_rate is None:
         out["trend"] = "stable" if (r_rate or 0) >= 0.9 else "chronic"
