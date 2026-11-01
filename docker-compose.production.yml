@@ -2193,7 +2193,7 @@ services:
   # Route: weaviate.trancendos.com
   # ══════════════════════════════════════════════════════════════════════════
   weaviate:
-    image: cr.weaviate.io/semitechnologies/weaviate:1.25.4
+    image: cr.weaviate.io/semitechnologies/weaviate:1.25.4@sha256:9559748bba9fb5c009de4bd8566993a22271d22b5a4c204f9e134c324df4f92b
     container_name: trancendos-weaviate
     restart: unless-stopped
     ports:
