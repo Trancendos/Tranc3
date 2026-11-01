@@ -1,11 +1,13 @@
 from typing import List
 
+import pytest
+
 from src.evaluation.model_eval import EvalSuite
 from src.nanoservices.transcendent_fusion.transcendent_fusion import (
     CrossModalAttention,
     FusionEngine,
 )
-from src.neural.attention_router import _dot_product
+from src.neural.attention_router import AttentionRouter, RoutingRequest, _dot_product
 from src.search.semantic_cache import SemanticCache
 from src.skills.enhanced_registry import EnhancedSkillRegistry
 
@@ -43,22 +45,22 @@ def test_enhanced_registry_cosine() -> None:
     reg = EnhancedSkillRegistry()
     assert reg._cosine([1.0, 0.0], [1.0, 0.0]) == 1.0
 
+
 def test_attention_router_norm() -> None:
     import math
 
     from src.neural.attention_router import _vector_norm
+
     assert math.isclose(_vector_norm([3.0, 4.0]), 5.0)
+
 
 def test_attention_router_softmax() -> None:
     from src.neural.attention_router import _softmax
+
     scores = [1.0, 2.0]
     out = _softmax(scores)
     assert len(out) == 2
     assert sum(out) > 0
-
-import pytest
-
-from src.neural.attention_router import AttentionRouter, RoutingRequest
 
 
 @pytest.mark.asyncio
