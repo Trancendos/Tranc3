@@ -53,7 +53,7 @@ export function UploadZone({
   return (
     <div
       className={cn(
-        "relative rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer select-none",
+        "relative rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         dragging && "border-primary scale-[1.01]",
         !dragging && variant === "fluid" && "border-primary/30 hover:border-primary/60",
         !dragging && variant === "glass" && "glass border-white/20 hover:border-white/40",
@@ -69,10 +69,13 @@ export function UploadZone({
       onDrop={onDrop}
       onClick={() => !disabled && inputRef.current?.click()}
       role="button"
-      tabIndex={0}
+      tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") inputRef.current?.click()
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          inputRef.current?.click()
+        }
       }}
     >
       <input
