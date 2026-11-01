@@ -149,9 +149,22 @@
     {
       "type": "library",
       "name": "filelock",
-      "bom-ref": "pkg:pypi/filelock@4.2.1",
-      "purl": "pkg:pypi/filelock@4.2.1",
-      "version": "4.2.1"
+      "bom-ref": "pkg:pypi/filelock",
+      "purl": "pkg:pypi/filelock",
+      "properties": [
+        {
+          "name": "trancendos:pinned",
+          "value": "false"
+        },
+        {
+          "name": "trancendos:constraint",
+          "value": "filelock>=3.16.1,<4.0"
+        },
+        {
+          "name": "trancendos:declared-range",
+          "value": ">=3.16.1"
+        }
+      ]
     },
     {
       "type": "library",
