@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility updates for hover elements and icon-only buttons
+**Learning:** Found a specific pattern in the application where secondary actions or external link icons hidden via `opacity-0 group-hover:opacity-100` are invisible during keyboard navigation. Also discovered that decorative icons inside icon-only buttons (which contain an `aria-label`) were redundantly announced by screen readers if they lack `aria-hidden="true"`.
+**Action:** Always add `group-focus-visible:opacity-100` to the hidden element alongside hover styles, and apply `focus-visible` styles to the parent. In addition, when implementing icon-only buttons with `aria-label`, ensure the nested icon has `aria-hidden="true"`.
