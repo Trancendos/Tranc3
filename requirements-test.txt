@@ -5,8 +5,8 @@
 # ──────────────────────────────────────────────────────────────────
 
 # Fixes: CVE-2025-71176 (tempfile race condition)
-pytest==9.1.1
-pytest-asyncio==1.4.0  # 0.25.0 required pytest<9; 1.4.0 supports pytest<10,>=8.4
+pytest==9.2.0
+pytest-asyncio==1.4.1  # 0.25.0 required pytest<9; 1.4.0 supports pytest<10,>=8.4
 pytest-cov==7.1.0
 
 # Worker deps imported by the test suite (tests/test_workers_p0.py imports the
