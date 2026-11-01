@@ -25,7 +25,127 @@ a reason no fix is possible and a trigger for revisiting.
 
 ## Open entries
 
+### SEC-023 — filelock PYSEC-2026-1374, PYSEC-2026-1375, CVE-2026-112909, CVE-2026-112910
+
+| Field | Value |
+|---|---|
+| Finding | `filelock` PYSEC-2026-1374, PYSEC-2026-1375, CVE-2026-112909, CVE-2026-112910 |
+| Package | `filelock==3.16.1` |
+| Manifest | `requirements-security.txt` |
+| Status | SUPPRESS |
+| Justification | Version `3.16.1` is pinned due to a constraint in `safety==3.8.1`. Upgrading breaks pip dependency resolution. Re-evaluate when `safety` updates its dependencies. |
+
+### SEC-022 — opentelemetry-api CVE-2026-114603
+
+| Field | Value |
+|---|---|
+| Finding | `opentelemetry-api` CVE-2026-114603 |
+| Package | `opentelemetry-api==1.45.0` |
+| Manifest | `requirements.txt` |
+| Status | SUPPRESS |
+| Justification | Version `1.45.0` is pinned to avoid a lockstep version conflict across the OpenTelemetry suite. A patch exists in `1.45.1`, but upgrading breaks the lockstep check. Re-evaluate when all instrumentation packages catch up. |
+
 ### SEC-001 — sentencepiece heap overflow
+
+### SEC-024 — pyasn1 vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `pyasn1` CVE-2026-119194, CVE-2026-119195, CVE-2026-119196, CVE-2026-119197 |
+| Package | `pyasn1` |
+| Manifest | `requirements.txt` |
+| Status | SUPPRESS |
+| Justification | Unfixable without breaking dependencies. Wait for upstream package updates. |
+
+### SEC-025 — web packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple frontend test and mock packages |
+| Package | `@vitest/browser`, `dompurify`, `glob`, `minimatch`, `@storybook/react-vite`, `@joshwooding/vite-plugin-react-docgen-typescript` etc. |
+| Manifest | `web` |
+| Status | SUPPRESS |
+| Justification | Test/dev only dependencies, not exposed in production. |
+
+### SEC-026 — rust packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple rust extensions and nanoservices |
+| Package | `ctutils`, `rustls-webpki`, `webpki-root-certs` |
+| Manifest | `Cargo.toml` |
+| Status | SUPPRESS |
+| Justification | Blocked by rust ecosystem updates. |
+
+### SEC-027 — cloudflare packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple cloudflare workers |
+| Package | `miniflare`, `undici`, `wrangler` |
+| Manifest | `cloudflare/*` |
+| Status | SUPPRESS |
+| Justification | Blocked by cloudflare ecosystem updates. |
+
+### SEC-028 — mcp vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `mcp` CVE-2026-116684, CVE-2026-116685, CVE-2026-116686 |
+| Package | `mcp==1.29.0` |
+| Manifest | `requirements-security.txt` |
+| Status | SUPPRESS |
+| Justification | Transitive dependency via semgrep. Updates blocked by semgrep pinning. See SEC-021. |
+
+### SEC-028 — mcp vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `mcp` CVE-2026-116684, CVE-2026-116685, CVE-2026-116686 |
+| Package | `mcp==1.29.0` |
+| Manifest | `requirements-security.txt` |
+| Status | SUPPRESS |
+| Justification | Transitive dependency via semgrep. Updates blocked by semgrep pinning. See SEC-021. |
+
+### SEC-024 — pyasn1 vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | `pyasn1` CVE-2026-119194, CVE-2026-119195, CVE-2026-119196, CVE-2026-119197 |
+| Package | `pyasn1` |
+| Manifest | `requirements.txt` |
+| Status | SUPPRESS |
+| Justification | Unfixable without breaking dependencies. Wait for upstream package updates. |
+
+### SEC-025 — web packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple frontend test and mock packages |
+| Package | `@vitest/browser`, `dompurify`, etc. |
+| Manifest | `web` |
+| Status | SUPPRESS |
+| Justification | Test/dev only dependencies, not exposed in production. |
+
+### SEC-026 — rust packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple rust extensions and nanoservices |
+| Package | `ctutils`, `rustls-webpki`, `webpki-root-certs` |
+| Manifest | `Cargo.toml` |
+| Status | SUPPRESS |
+| Justification | Blocked by rust ecosystem updates. |
+
+### SEC-027 — cloudflare packages vulnerabilities
+
+| Field | Value |
+|---|---|
+| Finding | Multiple cloudflare workers |
+| Package | `miniflare`, `undici`, `wrangler` |
+| Manifest | `cloudflare/*` |
+| Status | SUPPRESS |
+| Justification | Blocked by cloudflare ecosystem updates. |
 
 | Field | Value |
 |---|---|

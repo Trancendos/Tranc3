@@ -52,6 +52,8 @@ export function PdfOpsPanel({
             key={op.id}
             disabled={isDisabled}
             onClick={() => !isDisabled && onSelectOp?.(op.id)}
+            aria-pressed={isSelected}
+            aria-disabled={isDisabled}
             className={cn(
               "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               isSelected
@@ -60,7 +62,7 @@ export function PdfOpsPanel({
               isDisabled && "opacity-40 cursor-not-allowed",
             )}
           >
-            <span className="text-2xl">{op.icon}</span>
+            <span className="text-2xl" aria-hidden="true">{op.icon}</span>
             <span className="text-xs font-semibold text-foreground">{op.label}</span>
             <span className="text-[10px] text-muted-foreground leading-tight">
               {op.description}
