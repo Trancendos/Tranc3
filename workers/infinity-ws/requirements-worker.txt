@@ -2,7 +2,7 @@
 fastapi==0.141.1
 starlette==1.6.0
 uvicorn==0.52.4
-websockets==17.1
+websockets==17.3
 pydantic==2.13.5
-PyJWT==2.15.0
-cryptography==50.0.1
+PyJWT==2.15.1
+cryptography==50.0.2
