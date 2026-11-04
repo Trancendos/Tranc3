@@ -72,7 +72,7 @@ void and the suppression must be removed.
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** |
+| **Disposition** | **BLOCKED** |
 | **ID** | hostIPC / shared `/dev/shm` (Trivy KSV / Kubernetes policy) |
 | **Components** | `nsa-broker`, `shi-gateway`, `dnf-orchestrator` |
 | **Owner** | Platform / The Citadel |
@@ -1728,7 +1728,7 @@ identifier.
 
 | Field | Value |
 |---|---|
-| **Disposition** | **ACCEPT** |
+| **Disposition** | **BLOCKED** |
 | **ID** | CVE-2026-59951 (GHSA-84m7-p3x7-pcfv) |
 | **Scanner** | pip-audit (census `requirements-security.txt` surface) |
 | **Component** | `mcp==1.29.0` — transitive via `semgrep` (`mcp==1.29.0`, an exact pin), `requirements-security.txt` |
@@ -1925,3 +1925,1104 @@ python scripts/pre_deploy_quality_gate.py
 - Full Forgejo export — run `python scripts/export_forgejo_code_scan_alerts.py
   --merge` with `FORGEJO_TOKEN` set, and confirm **0 open Critical** in the
   Forgejo UI.
+
+### SEC-022 — opentelemetry-api patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | CVE-2026-114603 |
+| **Scanner** | pip-audit (census `requirements-security.txt` and `requirements.txt` surfaces) |
+| **Component** | `opentelemetry-api==1.45.0` |
+| **Blocked-by** | `opentelemetry-api==1.45.0` is required by `opentelemetry-sdk==1.45.0` to prevent dependency resolution errors. OpenTelemetry packages must stay in lockstep (core 1.45.0 with instrumentation 0.66b0). |
+| **Recorded** | 2026-10-28 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate when a new lockstep pair is available for OpenTelemetry packages. |
+
+### SEC-023 — filelock patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | CVE-2026-112910 |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `filelock==3.20.3` |
+| **Blocked-by** | `filelock==3.20.3` is required by `safety` for scanning Python dependencies. `safety==3.8.1` is incompatible with `filelock>=3.20.4`. |
+| **Recorded** | 2026-10-28 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate when `safety` is bumped and permits an updated `filelock` version. |
+
+### SEC-024 — filelock patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | CVE-2026-112909 |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `filelock==3.20.3` |
+| **Blocked-by** | `filelock==3.20.3` is required by `safety` for scanning Python dependencies. `safety==3.8.1` is incompatible with `filelock>=3.20.4`. |
+| **Recorded** | 2026-10-28 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate when `safety` is bumped and permits an updated `filelock` version. |
+
+### SEC-025 — mcp patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | CVE-2026-116685 |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `mcp==1.29.0` |
+| **Blocked-by** | `semgrep==1.179.0` requires `mcp==1.29.0` exactly. The patched release is out of reach. |
+| **Recorded** | 2026-10-28 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate when `semgrep` is bumped. |
+
+### SEC-026 — mcp patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | CVE-2026-116684 |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `mcp==1.29.0` |
+| **Blocked-by** | `semgrep==1.179.0` requires `mcp==1.29.0` exactly. The patched release is out of reach. |
+| **Recorded** | 2026-10-28 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate when `semgrep` is bumped. |
+
+### SEC-027 — mcp patched upstream but out of reach
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | CVE-2026-116686 |
+| **Scanner** | pip-audit (census `requirements-security.txt` surface) |
+| **Component** | `mcp==1.29.0` |
+| **Blocked-by** | `semgrep==1.179.0` requires `mcp==1.29.0` exactly. The patched release is out of reach. |
+| **Recorded** | 2026-10-28 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate when `semgrep` is bumped. |
+
+
+### SEC-028 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-029 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-4qv8-2p9j-2685 |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-030 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-f72v-6w45-q472 |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-031 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-xjj6-f33q-929c |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-032 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-4w7w-5xrc-9h26 |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-033 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-2m5v-pch6-74hx |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-034 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-qrxm-fqhp-jwvm |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-035 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-9fm3-97px-rjf6 |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-036 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-55wc-3pg8-jfw6 |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-037 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-038 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-039 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-4qv8-2p9j-2685 |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-040 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-f72v-6w45-q472 |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-041 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-xjj6-f33q-929c |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-042 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-4w7w-5xrc-9h26 |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-043 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-2m5v-pch6-74hx |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-044 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-qrxm-fqhp-jwvm |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-045 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-9fm3-97px-rjf6 |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-046 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-55wc-3pg8-jfw6 |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-047 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-048 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-049 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-4qv8-2p9j-2685 |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-050 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-f72v-6w45-q472 |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-051 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-xjj6-f33q-929c |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-052 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-4w7w-5xrc-9h26 |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-053 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-2m5v-pch6-74hx |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-054 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-qrxm-fqhp-jwvm |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-055 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-9fm3-97px-rjf6 |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-056 — undici blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-55wc-3pg8-jfw6 |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | undici |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-057 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-058 — @vitest/browser blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-059 — @vitest/browser-playwright blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser-playwright |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-060 — @vitest/mocker blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-qxg6-89mg-rqv8 |
+| **Scanner** | census (web) |
+| **Component** | @vitest/mocker |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-061 — @vitest/mocker blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-xp26-3454-mjgp |
+| **Scanner** | census (web) |
+| **Component** | @vitest/mocker |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-062 — block-buffer blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-qwgh-2vcv-g2f7 |
+| **Scanner** | census (rust_extensions/tranc3_crypto/Cargo.toml) |
+| **Component** | block-buffer |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-063 — ctutils blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | RUSTSEC-2026-0385 |
+| **Scanner** | census (rust_extensions/tranc3_crypto/Cargo.toml) |
+| **Component** | ctutils |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-064 — ctutils blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | RUSTSEC-2026-0385 |
+| **Scanner** | census (src/nanoservices/rust/tranc3-nanoservice/Cargo.toml) |
+| **Component** | ctutils |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-065 — rustls-webpki blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | RUSTSEC-2026-0382 |
+| **Scanner** | census (src/nanoservices/rust/tranc3-nanoservice/Cargo.toml) |
+| **Component** | rustls-webpki |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-066 — webpki-root-certs blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | RUSTSEC-2026-0383 |
+| **Scanner** | census (src/nanoservices/rust/tranc3-nanoservice/Cargo.toml) |
+| **Component** | webpki-root-certs |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-067 — block-buffer blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | GHSA-qwgh-2vcv-g2f7 |
+| **Scanner** | census (workers/nexus-ws-rs/Cargo.toml) |
+| **Component** | block-buffer |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+
+
+### SEC-060 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-061 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-062 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-063 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-064 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-065 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-066 — @vitest/browser blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-067 — @vitest/browser-playwright blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser-playwright |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+
+
+### SEC-100 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-101 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-102 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-103 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-104 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-105 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-106 — @vitest/browser blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-107 — @vitest/browser-playwright blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser-playwright |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+
+
+### SEC-108 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-109 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-110 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-111 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-112 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-113 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-114 — @vitest/browser blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-115 — @vitest/browser-playwright blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser-playwright |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+
+
+### SEC-200 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-201 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/infinity-void) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-202 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-203 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/tranc3-ai) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-204 — miniflare blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | miniflare |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-205 — wrangler blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (cloudflare/trancendos-api-gateway) |
+| **Component** | wrangler |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-206 — @vitest/browser blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
+
+### SEC-207 — @vitest/browser-playwright blocked
+
+| Field | Value |
+|---|---|
+| **Disposition** | **BLOCKED** |
+| **ID** | unknown |
+| **Scanner** | census (web) |
+| **Component** | @vitest/browser-playwright |
+| **Blocked-by** | Existing repo state. |
+| **Recorded** | 2026-10-29 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2027-01-28 |
+| **Re-evaluate** | Re-evaluate in next quarter. |
