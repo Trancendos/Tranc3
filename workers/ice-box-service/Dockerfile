@@ -12,6 +12,10 @@ COPY workers/ice-box-service/requirements.txt workers/ice-box-service/requiremen
 RUN pip install --no-cache-dir -r workers/ice-box-service/requirements.txt
 
 COPY workers/ice-box-service/worker.py workers/ice-box-service/worker.py
+# Worker auth is imported at startup; copy only the required lightweight SFSC modules.
+COPY Dimensionals/__init__.py Dimensionals/__init__.py
+COPY Dimensionals/service_auth_fastapi.py Dimensionals/service_auth_fastapi.py
+COPY Dimensionals/service_auth.py Dimensionals/service_auth.py
 COPY src/__init__.py src/__init__.py
 COPY src/security/__init__.py src/security/__init__.py
 COPY src/security/ice_box/ src/security/ice_box/

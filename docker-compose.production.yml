@@ -4112,10 +4112,13 @@ services:
     <<: *worker-common
     environment:
       - PORT=8046
+      - ICE_BOX_QUARANTINE_DB=/app/workers/ice-box-service/data/ice_box_quarantine.db
     expose:
       - "8046"
     ports:
       - "8046:8046"
+    volumes:
+      - ice-box-quarantine:/app/workers/ice-box-service/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8046/health')"]
@@ -4640,6 +4643,8 @@ volumes:
   openvas-data:
     driver: local
   cuckoo-data:
+    driver: local
+  ice-box-quarantine:
     driver: local
   jaeger-data:
     driver: local
