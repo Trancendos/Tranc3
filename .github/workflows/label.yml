@@ -38,7 +38,7 @@ jobs:
     #   2. This does not silence a security control. It stops a labeller from
     #      voting on mergeability. If labelling genuinely breaks, the job log
     #      still carries the error; what changes is that it no longer blocks.
-    - uses: actions/labeler@v4
+    - uses: actions/labeler@ac9175f8a1f3625fd0d4fb234536d26811351594 # v4
       continue-on-error: true
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
