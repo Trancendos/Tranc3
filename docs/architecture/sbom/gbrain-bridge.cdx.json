@@ -98,9 +98,9 @@
     {
       "type": "library",
       "name": "pyasn1",
-      "bom-ref": "pkg:pypi/pyasn1@0.6.4",
-      "purl": "pkg:pypi/pyasn1@0.6.4",
-      "version": "0.6.4"
+      "bom-ref": "pkg:pypi/pyasn1@0.6.5",
+      "purl": "pkg:pypi/pyasn1@0.6.5",
+      "version": "0.6.5"
     }
   ]
 }
