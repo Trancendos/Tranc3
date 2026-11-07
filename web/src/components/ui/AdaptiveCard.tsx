@@ -153,11 +153,23 @@ export function AdaptiveCard({
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
       className={[
         'rounded-xl border transition-all duration-300',
         HEALTH_STYLES[health],
         SIZE_STYLES[size],
-        onClick ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]' : '',
+        onClick ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500' : '',
         className,
       ].join(' ')}
     >
