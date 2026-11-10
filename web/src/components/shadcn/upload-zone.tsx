@@ -69,10 +69,13 @@ export function UploadZone({
       onDrop={onDrop}
       onClick={() => !disabled && inputRef.current?.click()}
       role="button"
-      tabIndex={0}
+      tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") inputRef.current?.click()
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          inputRef.current?.click()
+        }
       }}
     >
       <input
