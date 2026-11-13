@@ -27,6 +27,7 @@ docs (referenced by automation, tests, or CI) stay in the repo under `docs/`.
 | `docs/runbooks/` | Operational runbooks (api-backend, disaster-recovery, zero-downtime-deploy) |
 | `docs/compliance/` | Live compliance controls (ISO 27001, SOC2, GDPR, AI governance) |
 | `docs/architecture/` | As-built architecture, blueprints, infrastructure modes |
+| `docs/architecture/ARCADIA_SERVICE_OWNERSHIP.md` | Arcadia portal, catalogue, bank and exchange source boundaries; links to #1445 |
 | `docs/API_REFERENCE.md` | Developer API reference |
 | `docs/DESIGN_SYSTEM.md` | Frontend design tokens and component guidelines |
 | `docs/SECURITY-ASSESSMENT.md` | PyTorch CVE risk assessment and Bandit SAST results |
