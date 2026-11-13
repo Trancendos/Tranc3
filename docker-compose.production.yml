@@ -493,6 +493,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.infinity-void.rule=Host(`api.trancendos.com`) && PathPrefix(`/api/void`)"
+      - "traefik.http.routers.infinity-void.middlewares=strip-infinity-void"
+      - "traefik.http.middlewares.strip-infinity-void.stripprefix.prefixes=/api/void"
+      - "traefik.http.routers.infinity-void.priority=100"
       - "traefik.http.routers.infinity-void.entrypoints=websecure"
       - "traefik.http.routers.infinity-void.tls=true"
       - "traefik.http.routers.infinity-void.tls.certresolver=letsencrypt"
