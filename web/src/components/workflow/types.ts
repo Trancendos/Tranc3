@@ -15,6 +15,7 @@ export type NodeType =
   | "merge"
   | "output"
   | "spark_tool"
+  | "skill_call"
   | "vector_search"
   | "ml_predict"
   | "delay"
@@ -32,6 +33,8 @@ export interface GridNode {
   x: number;
   y: number;
   config: Record<string, unknown>;
+  timeout_sec?: number;
+  retry_count?: number;
   inputs?: NodePort[];
   outputs?: NodePort[];
 }
@@ -48,6 +51,9 @@ export interface WorkflowDef {
   id?: string;
   name: string;
   description: string;
+  version?: string;
+  triggers?: string[];
+  metadata?: Record<string, unknown>;
   nodes: GridNode[];
   edges: GridEdge[];
   created_at?: string;
@@ -86,7 +92,7 @@ export const NODE_META: Record<
     label: "Code",
     color: "#059669",
     icon: "{ }",
-    description: "Execute Python code",
+    description: "Evaluate a restricted expression (not arbitrary Python)",
   },
   condition: {
     label: "Condition",

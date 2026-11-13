@@ -19,6 +19,7 @@ export default function ExecutionPanel({ executionId, onClose }: Props) {
   const { getExecution, cancelExecution } = useGridApi();
   const [status, setStatus] = useState<ExecutionStatus | null>(null);
   const [polling, setPolling] = useState(false);
+  const [pollError, setPollError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!executionId) {
@@ -27,19 +28,27 @@ export default function ExecutionPanel({ executionId, onClose }: Props) {
     }
 
     let cancelled = false;
+    let consecutiveFailures = 0;
+    setPollError(null);
 
     async function poll() {
       setPolling(true);
       while (!cancelled) {
         const s = await getExecution(executionId!);
         if (cancelled) break;
-        if (s) setStatus(s);
+        if (s) {
+          consecutiveFailures = 0;
+          setStatus(s);
+        } else if (++consecutiveFailures >= 3) {
+          setPollError("Execution status is unavailable after 3 attempts. No successful run is being assumed.");
+          break;
+        }
         if (s && (s.status === "completed" || s.status === "failed" || s.status === "cancelled")) {
           break;
         }
         await new Promise((r) => setTimeout(r, 1500));
       }
-      setPolling(false);
+      if (!cancelled) setPolling(false);
     }
 
     poll();
@@ -56,11 +65,14 @@ export default function ExecutionPanel({ executionId, onClose }: Props) {
       </div>
 
       {!status ? (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 text-xs">Loading…</p>
+        <div className="flex-1 flex items-center justify-center p-3">
+          <p role={pollError ? "alert" : undefined} className={pollError ? "text-red-300 text-xs" : "text-gray-500 text-xs"}>
+            {pollError || "Loading…"}
+          </p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {pollError && <p role="alert" className="text-red-300 text-xs">{pollError}</p>}
           {/* Overall status */}
           <div className="bg-gray-800 rounded p-3">
             <div className="flex items-center justify-between mb-2">

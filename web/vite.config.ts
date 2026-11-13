@@ -308,6 +308,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/config-svc/, '')
       },
+      // Tranc3 monolith Digital Grid API (keep the /grid prefix).
+      '/grid': {
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
+        changeOrigin: true
+      },
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8000',
         changeOrigin: true,
@@ -338,6 +343,13 @@ export default defineConfig({
             browser: 'chromium'
           }]
         }
+      }
+    }, {
+      extends: true,
+      test: {
+        name: 'grid-contract',
+        environment: 'node',
+        include: ['src/components/workflow/gridContract.test.ts']
       }
     }]
   }
