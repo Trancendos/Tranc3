@@ -2844,6 +2844,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.cryptex.rule=Host(`trancendos.com`) && PathPrefix(`/cryptex`)"
+      - "traefik.http.routers.cryptex.middlewares=cryptex-strip"
+      - "traefik.http.middlewares.cryptex-strip.stripprefix.prefixes=/cryptex"
       - "traefik.http.services.cryptex.loadbalancer.server.port=8053"
 
   # ── Observatory — The Observatory / Norman Hawkins (Port 8065)

@@ -1510,6 +1510,16 @@
                   "source": "workers/cryptex/config.py"
                 },
                 {
+                  "name": "cryptex_assurance",
+                  "kind": "component",
+                  "source": "workers/cryptex/cryptex_assurance.py"
+                },
+                {
+                  "name": "cryptex_capabilities",
+                  "kind": "component",
+                  "source": "workers/cryptex/cryptex_capabilities.py"
+                },
+                {
                   "name": "database",
                   "kind": "component",
                   "source": "workers/cryptex/database.py"
@@ -1533,6 +1543,18 @@
                   "name": "service",
                   "kind": "component",
                   "source": "workers/cryptex/service.py"
+                },
+                {
+                  "name": "tests",
+                  "kind": "component",
+                  "source": "workers/cryptex/tests",
+                  "children": [
+                    {
+                      "name": "test_scan_assurance_phase1",
+                      "kind": "module",
+                      "source": "workers/cryptex/tests/test_scan_assurance_phase1.py"
+                    }
+                  ]
                 },
                 {
                   "name": "worker",

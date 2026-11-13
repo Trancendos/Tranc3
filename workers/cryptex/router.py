@@ -10,7 +10,7 @@ from service import SecurityEngineRouter
 import config
 from database import CryptexDatabase
 from Dimensionals.service_auth_fastapi import guard_internal_secret
-from models import ScanRequest, ThreatIndicator
+from models import ScanRequest, ScanStatus, ThreatIndicator
 
 
 def _make_cryptex_router(db: CryptexDatabase, engine_router: SecurityEngineRouter) -> APIRouter:
@@ -39,7 +39,7 @@ def _make_cryptex_router(db: CryptexDatabase, engine_router: SecurityEngineRoute
         """Submit a security scan via the 8-tier adaptive engine router."""
         result = await engine_router.scan(req)
         return {
-            "ok": True,
+            "ok": result.status == ScanStatus.completed,
             "scan_id": result.scan_id,
             "status": result.status.value,
             "engine_used": result.engine_used,

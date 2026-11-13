@@ -16,7 +16,7 @@ Quadrants split at each axis's median across all 43 Locations (criticality 4, re
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
 | Infinity | `PID-INF` | Security | 10/10 | 10/10 | 5 | 8005 | [pack](infinity.md) |
-| Cryptex | `PID-CRX` | Security | 5/10 | 9/10 | 0 | 8053 | [pack](cryptex.md) |
+| Cryptex | `PID-CRX` | Security | 5/10 | 10/10 | 0 | 8053 | [pack](cryptex.md) |
 
 ## Invest — above-median dependency, below-median readiness  (14)
 

@@ -22,8 +22,8 @@ never been assembled:
 |---|---:|
 | Location | 43 |
 | Ability | 180 |
-| Component | 173 |
-| Module | 213 |
+| Component | 176 |
+| Module | 214 |
 | Nanoservice | 73 |
 | Job Description | 56 |
 | Power Up | 344 |
@@ -81,7 +81,7 @@ None. Every branch of the structure is populated by a source in this repository.
       - **Abilities**
         - _2 more — see `taxonomy.json`_
       - **Components**
-        - _7 more — see `taxonomy.json`_
+        - _10 more — see `taxonomy.json`_
       - **Job Descriptions**
         - _1 more — see `taxonomy.json`_
       - **Power Ups**
