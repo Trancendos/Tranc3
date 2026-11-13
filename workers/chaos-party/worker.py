@@ -5,15 +5,17 @@ Alice in Wonderland-themed testing orchestration hub.
 Manages test suites, runs, results, and chaos injection experiments.
 Zero-cost: FastAPI + SQLite. No external CI services required.
 
-Port: 8063  Entity: The Chaos Party  Lead AI: The Mad Hatter
+Port: 8079  Entity: The Chaos Party  Lead AI: The Mad Hatter
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import random
+import secrets
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -26,8 +28,9 @@ from pydantic import BaseModel
 
 from Dimensionals.service_auth_fastapi import guard_internal_secret
 
-WORKER_PORT = int(os.getenv("PORT") or "8063")
+WORKER_PORT = int(os.getenv("PORT") or "8079")
 WORKER_NAME = "chaos-party"
+_VALID_RUN_STATUSES = frozenset(("pass", "fail", "skip", "error"))
 DB_PATH = Path(__file__).parent / "data" / "chaos.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -230,7 +233,7 @@ async def health():
         suites = conn.execute("SELECT COUNT(*) FROM test_suites").fetchone()[0]
         runs = conn.execute("SELECT COUNT(*) FROM test_runs").fetchone()[0]
         pass_rate_row = conn.execute(
-            "SELECT AVG(CASE WHEN status='pass' THEN 1.0 ELSE 0.0 END)*100 FROM test_runs"
+            "SELECT AVG(CASE WHEN status='pass' THEN 1.0 ELSE 0.0 END)*100 FROM test_runs WHERE status IN ('pass','fail','error')"
         ).fetchone()[0]
     return {
         "status": "healthy",
@@ -308,7 +311,7 @@ async def list_suites(
 @_router.post("/runs", status_code=201)
 async def record_run(body: TestRunIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
-    if body.status not in ("pass", "fail", "skip", "error"):
+    if body.status not in _VALID_RUN_STATUSES:
         raise HTTPException(status_code=400, detail="status must be: pass, fail, skip, error")
     now = time.time()
     with get_conn() as conn:
@@ -345,6 +348,10 @@ async def record_run(body: TestRunIn, x_internal_secret: str = Header(default=""
 @_router.post("/runs/batch", status_code=201)
 async def record_batch_runs(body: BatchRunIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
+    # Reject invalid batches atomically before writing any of their rows.
+    for run in body.runs:
+        if run.status not in _VALID_RUN_STATUSES:
+            raise HTTPException(status_code=400, detail="status must be: pass, fail, skip, error")
     now = time.time()
     results = []
     with get_conn() as conn:
@@ -442,25 +449,109 @@ async def create_chaos_experiment(
 
 
 @_router.patch("/chaos/{experiment_id}/run")
-async def run_chaos(experiment_id: int, x_internal_secret: str = Header(default="")):
+async def run_chaos(
+    experiment_id: int,
+    x_internal_secret: str = Header(default=""),
+    x_chaos_approval: str = Header(default=""),
+):
+    """Execute only bounded, isolated staging simulations.
+
+    No live service is contacted or mutated. Production execution is forbidden,
+    regardless of caller credentials. A second independent token is required.
+    """
     _auth(x_internal_secret)
-    now = time.time()
+    if (
+        os.getenv("CHAOS_ENVIRONMENT", "").lower() != "staging"
+        or os.getenv("CHAOS_EXECUTION_ENABLED", "false").lower() != "true"
+    ):
+        raise HTTPException(status_code=403, detail="Chaos execution disabled outside staging")
+    approval = os.getenv("CHAOS_APPROVAL_TOKEN", "")
+    if (
+        len(approval) < 16
+        or approval == INTERNAL_SECRET
+        or not secrets.compare_digest(x_chaos_approval, approval)
+    ):
+        raise HTTPException(status_code=403, detail="Independent chaos approval required")
+
     with get_conn() as conn:
         row = conn.execute(
             "SELECT * FROM chaos_experiments WHERE id=?", (experiment_id,)
         ).fetchone()
-        if not row:
+        if row is None:
             raise HTTPException(status_code=404, detail="Experiment not found")
+        if row["status"] != "idle":
+            raise HTTPException(status_code=409, detail="Experiment has already been executed")
+
+        # Never resolve arbitrary URLs or contact production infrastructure.
+        if row["target_service"] != "local-sandbox":
+            raise HTTPException(status_code=403, detail="Only local-sandbox is permitted")
+        kind = row["experiment_type"]
+        if kind not in ("latency_injection", "error_injection"):
+            raise HTTPException(
+                status_code=400, detail="Only bounded synthetic fault types are permitted"
+            )
+        try:
+            config = json.loads(row["config"] or "{}")
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(status_code=400, detail="Invalid experiment configuration") from exc
+        if not isinstance(config, dict) or set(config) - {"delay_ms", "ttl_seconds"}:
+            raise HTTPException(status_code=400, detail="Unsupported simulation parameters")
+        ttl = config.get("ttl_seconds", 1)
+        delay = config.get("delay_ms", 0)
+        if type(ttl) is not int or not 1 <= ttl <= 10:
+            raise HTTPException(status_code=400, detail="ttl_seconds must be 1..10")
+        if type(delay) is not int or not 0 <= delay <= 500:
+            raise HTTPException(status_code=400, detail="delay_ms must be 0..500")
+        if kind == "error_injection" and delay:
+            raise HTTPException(status_code=400, detail="error_injection cannot add latency")
+
+        started_at = time.time()
+        cursor = conn.execute(
+            "UPDATE chaos_experiments SET status='running', started_at=? "
+            "WHERE id=? AND status='idle'",
+            (started_at, experiment_id),
+        )
+        if cursor.rowcount != 1:
+            raise HTTPException(status_code=409, detail="Experiment already claimed")
+        conn.commit()
+
+    # The only executable effect is a <=500ms sleep in this worker process.
+    # A synthetic 500 is returned as evidence, never sent to another service.
+    try:
+        if kind == "latency_injection":
+            await asyncio.wait_for(asyncio.sleep(delay / 1000), timeout=ttl)
+        results = {
+            "mode": "isolated_simulation",
+            "target": "local-sandbox",
+            "experiment_type": kind,
+            "ttl_seconds": ttl,
+            "injected_latency_ms": delay if kind == "latency_injection" else 0,
+            "synthetic_http_status": 500 if kind == "error_injection" else None,
+            "rollback": "no external state modified",
+        }
+        status = "completed"
+    except Exception:
+        logger.exception("Isolated chaos simulation failed")
+        results = {
+            "mode": "isolated_simulation",
+            "error": "simulation failed",
+            "rollback": "no external state modified",
+        }
+        status = "failed"
+
+    ended_at = time.time()
+    with get_conn() as conn:
         conn.execute(
-            "UPDATE chaos_experiments SET status='running', started_at=? WHERE id=?",
-            (now, experiment_id),
+            "UPDATE chaos_experiments SET status=?, ended_at=?, results=? WHERE id=?",
+            (status, ended_at, json.dumps(results), experiment_id),
         )
         conn.commit()
     return {
         "id": experiment_id,
-        "status": "running",
-        "started_at": now,
-        "note": "Chaos experiment marked as running — implement actual injection in target service",
+        "status": status,
+        "started_at": started_at,
+        "ended_at": ended_at,
+        "results": results,
     }
 
 
@@ -476,10 +567,13 @@ async def stats(x_internal_secret: str = Header(default="")):
             "SELECT AVG(duration_ms) FROM test_runs WHERE duration_ms IS NOT NULL"
         ).fetchone()[0]
     pass_count = next((r["c"] for r in by_status if r["status"] == "pass"), 0)
+    scored_count = sum(
+        r["c"] for r in by_status if r["status"] in _VALID_RUN_STATUSES and r["status"] != "skip"
+    )
     return {
         "total_runs": total,
         "by_status": [dict(r) for r in by_status],
-        "pass_rate_pct": round(pass_count / total * 100, 1) if total else 0,
+        "pass_rate_pct": round(pass_count / scored_count * 100, 1) if scored_count else 0,
         "avg_duration_ms": round(avg_duration, 1) if avg_duration else None,
     }
 

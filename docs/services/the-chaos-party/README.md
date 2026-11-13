@@ -1,5 +1,20 @@
 # Service Doc-Pack — The Chaos Party (Central Testing Platform)
 
+## Current implementation, safety and merge readiness
+
+The authoritative change-specific runbook is
+[The Chaos Party — Implementation and Safety](IMPLEMENTATION-AND-SAFETY.md)
+(`docs/services/the-chaos-party/IMPLEMENTATION-AND-SAFETY.md`).
+Follow that runbook for canonical API statuses, dual-authorised staging-only
+simulations, deployment prerequisites, observability limitations, and
+release blockers. The legacy sections below record earlier service history
+and must not be interpreted as independent evidence of live deployment.
+
+This work is under review in [Trancendos/Tranc3 draft PR #1460](https://github.com/Trancendos/Tranc3/pull/1460);
+do not deploy it or run service-targeted fault injection before release approval.
+The canonical worker default and Compose port is **8079**.
+
+
 | Field | Value |
 |---|---|
 | **ServiceID (CMDB)** | `SRV-CHAOSPARTY-001` |
@@ -12,7 +27,7 @@
 > version of this note (2026-07-03) flagged `workers/chaos-party/worker.py` for hardcoding
 > `WORKER_PORT = 8063` and ignoring the compose `PORT=8079` env. That was true at the time but is
 > **now stale** — commit `a5c74c8` ("honor PORT env in 36 workers") already fixed this across the
-> platform; `worker.py` now correctly reads `int(os.getenv("PORT") or "8063")`. Separately, this
+> platform; `worker.py` now correctly reads `int(os.getenv("PORT") or "8079")`. Separately, this
 > pass found and fixed a **second, independent** defect in the same class as The Academy/The
 > Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, always
 > returns empty/404 responses) while this real, SQLite-backed, auth-gated `worker.py` sat unused in

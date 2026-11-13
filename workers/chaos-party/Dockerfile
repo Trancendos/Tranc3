@@ -4,6 +4,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     adduser --disabled-password --gecos "" appuser
 COPY worker.py .
+COPY observatory_bridge.py .
 RUN mkdir -p /app/data && chown appuser:appuser /app/data
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the
