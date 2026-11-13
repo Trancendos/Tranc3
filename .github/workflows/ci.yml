@@ -83,6 +83,11 @@ jobs:
       - name: Install PyYAML and pydantic
         run: pip install PyYAML pydantic
 
+      - name: Workshop privileged-runner boundary (fail closed)
+        run: |
+          python -m unittest tests.test_workshop_runner_guard -v
+          python scripts/check_workshop_runner_guard.py --json
+
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
 

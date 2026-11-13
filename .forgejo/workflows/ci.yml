@@ -64,6 +64,11 @@ jobs:
         # over the day The Workshop comes back up.
         run: python scripts/estate_lint.py
 
+      - name: Workshop privileged-runner boundary (fail closed)
+        run: |
+          python -m unittest tests.test_workshop_runner_guard -v
+          python scripts/check_workshop_runner_guard.py --json
+
       - name: Estate registry matches the deployment
         run: python scripts/check_estate_registry_alignment.py
 
