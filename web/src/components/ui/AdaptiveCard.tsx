@@ -24,7 +24,7 @@ interface AdaptiveCardProps {
   footer?: ReactNode
   actions?: ReactNode
   className?: string
-  onClick?: () => void
+  onClick?: (e?: React.KeyboardEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>) => void
   children?: ReactNode
 }
 
@@ -153,11 +153,23 @@ export function AdaptiveCard({
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick(e)
+              }
+            }
+          : undefined
+      }
       className={[
         'rounded-xl border transition-all duration-300',
         HEALTH_STYLES[health],
         SIZE_STYLES[size],
-        onClick ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]' : '',
+        onClick ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500' : '',
         className,
       ].join(' ')}
     >

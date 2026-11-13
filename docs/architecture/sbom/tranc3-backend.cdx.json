@@ -261,9 +261,9 @@
     {
       "type": "library",
       "name": "aiohttp",
-      "bom-ref": "pkg:pypi/aiohttp@3.14.3",
-      "purl": "pkg:pypi/aiohttp@3.14.3",
-      "version": "3.14.3"
+      "bom-ref": "pkg:pypi/aiohttp@3.14.4",
+      "purl": "pkg:pypi/aiohttp@3.14.4",
+      "version": "3.14.4"
     },
     {
       "type": "library",
@@ -583,45 +583,45 @@
     {
       "type": "library",
       "name": "msgpack",
-      "bom-ref": "pkg:pypi/msgpack@1.2.2",
-      "purl": "pkg:pypi/msgpack@1.2.2",
-      "version": "1.2.2"
+      "bom-ref": "pkg:pypi/msgpack@1.2.3",
+      "purl": "pkg:pypi/msgpack@1.2.3",
+      "version": "1.2.3"
     },
     {
       "type": "library",
       "name": "undici",
-      "bom-ref": "pkg:npm/undici@8.11.2",
+      "bom-ref": "pkg:npm/undici@8.12.2",
       "scope": "required",
       "properties": [
         {
           "name": "tranc3:declared-range",
-          "value": "8.11.2"
+          "value": "8.12.2"
         },
         {
           "name": "tranc3:manifest-field",
           "value": "dependencies"
         }
       ],
-      "version": "8.11.2",
-      "purl": "pkg:npm/undici@8.11.2"
+      "version": "8.12.2",
+      "purl": "pkg:npm/undici@8.12.2"
     },
     {
       "type": "library",
       "name": "vite",
-      "bom-ref": "pkg:npm/vite@8.3.1",
+      "bom-ref": "pkg:npm/vite@8.3.3",
       "scope": "required",
       "properties": [
         {
           "name": "tranc3:declared-range",
-          "value": "8.3.1"
+          "value": "8.3.3"
         },
         {
           "name": "tranc3:manifest-field",
           "value": "dependencies"
         }
       ],
-      "version": "8.3.1",
-      "purl": "pkg:npm/vite@8.3.1"
+      "version": "8.3.3",
+      "purl": "pkg:npm/vite@8.3.3"
     },
     {
       "type": "library",
