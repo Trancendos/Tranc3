@@ -111,6 +111,16 @@ class AssetProcessResponse(BaseModel):
     created_at: Optional[str] = None
 
 
+class AssetJobStatusResponse(BaseModel):
+    job_id: str
+    scene_id: Optional[str] = None
+    source_format: AssetFormat
+    target_format: AssetFormat
+    backend: ProcessingBackend
+    status: str
+    download_url: Optional[str] = None
+
+
 class BackendStatus(BaseModel):
     name: ProcessingBackend
     healthy: bool

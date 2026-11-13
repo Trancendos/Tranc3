@@ -9,6 +9,17 @@ WORKER_PORT = int(os.environ.get("PORT", "8060"))
 DB_PATH = os.environ.get("VRAR3D_DB_PATH", "/data/vrar3d.db")
 ASSET_DIR = os.environ.get("VRAR3D_ASSET_DIR", "/data/assets")
 
+# Remote imports are disabled unless an operator explicitly opts in.
+# Hostnames are exact matches, not wildcard suffixes. Enforce public-only
+# network egress at the host/container firewall to prevent DNS rebinding.
+REMOTE_INGEST_ENABLED = os.environ.get("VRAR3D_REMOTE_INGEST", "0") == "1"
+REMOTE_INGEST_ALLOWED_HOSTS = frozenset(
+    h.strip().lower().rstrip(".")
+    for h in os.environ.get("VRAR3D_REMOTE_INGEST_HOSTS", "").split(",")
+    if h.strip()
+)
+REMOTE_INGEST_MAX_BYTES = int(os.environ.get("VRAR3D_MAX_ASSET_BYTES", str(20 * 1024 * 1024)))
+
 # ── Rendering / processing backends (all zero-cost) ───────────────────────────
 # Primary: trimesh — fast Python mesh processing (MIT)
 TRIMESH_ENABLED = os.environ.get("VRAR3D_TRIMESH", "1") == "1"
@@ -68,5 +79,5 @@ if not INTERNAL_SECRET or INTERNAL_SECRET == "dev-secret":
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 
-TLS_VERIFY = os.environ.get("VRAR3D_TLS_VERIFY", "0") != "0"
+TLS_VERIFY = True  # Never permit asset import TLS verification to be disabled.
 OTEL_ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")

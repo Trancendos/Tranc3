@@ -1,5 +1,10 @@
 # Service Doc-Pack — VRAR3D
 
+## P0 security remediation
+
+The standalone port-8060 worker's in-progress security changes and deployment gate are documented in [SECURITY_REMEDIATION_P0.md](./SECURITY_REMEDIATION_P0.md). They are tracked in [draft PR #1467](https://github.com/Trancendos/Tranc3/pull/1467); the separate legacy browser/API reconciliation is [issue #1468](https://github.com/Trancendos/Tranc3/issues/1468). This does **not** imply the worker is deployed or that the legacy 8068 and monolith route surfaces are already unified.
+
+
 | Field | Value |
 |---|---|
 | **ServiceID (CMDB)** | `SRV-VRAR3D-001` |
