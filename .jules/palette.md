@@ -1,0 +1,3 @@
+## 2023-11-01 - Keyboard Interactions on Custom Interactive Elements
+**Learning:** When making non-semantic HTML elements (like `div`) interactive via keyboard events (like a dropzone acting as a button), it's important to prevent default browser behavior for the 'Space' key (to stop the page from scrolling down), set a dynamic `tabIndex` based on disabled state, and explicitly define focus visible styles (`focus-visible:ring-2`, etc.).
+**Action:** Next time I make a custom component keyboard interactive, I will ensure `tabIndex={disabled ? -1 : 0}`, add `e.preventDefault()` for spacebar inside `onKeyDown`, and provide explicit visual focus indicators.
