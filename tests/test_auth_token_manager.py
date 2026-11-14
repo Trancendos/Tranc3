@@ -1,3 +1,6 @@
+import sys
+from unittest.mock import patch
+
 import jwt
 import pytest
 
@@ -42,3 +45,25 @@ def test_create_token_fails_closed_without_jwt_secret_in_production(monkeypatch)
 
     with pytest.raises(RuntimeError, match="JWT_SECRET"):
         auth.create_token(user_id="1", username="alice")
+
+
+def test_create_access_token_missing_jose():
+    import src.auth.tokens as tokens
+
+    # Mock 'jose' missing
+    with patch.dict(sys.modules, {"jose": None}):
+        with pytest.raises(
+            RuntimeError, match="python-jose must be installed for secure JWT encoding."
+        ):
+            tokens.create_access_token("user1", "testuser", "secret")
+
+
+def test_decode_access_token_missing_jose():
+    import src.auth.tokens as tokens
+
+    # Mock 'jose' missing
+    with patch.dict(sys.modules, {"jose": None}):
+        with pytest.raises(
+            RuntimeError, match="python-jose must be installed for secure JWT decoding."
+        ):
+            tokens.decode_access_token("token", "secret")
