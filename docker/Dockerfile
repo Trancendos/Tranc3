@@ -2,7 +2,7 @@
 # Security: non-root user, minimal base, no cache, pinned versions
 # Updated: 2025-07 — CVE Remediation
 
-FROM python:3.11-slim-bookworm@sha256:2333bd330d12de02514770b3585cad313644316047cdee24a7acfdece6de6efb AS base
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS base
 
 # Security labels
 LABEL maintainer="Trancendos Security <security@trancendos.ai>"
