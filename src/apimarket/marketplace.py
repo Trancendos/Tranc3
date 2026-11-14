@@ -33,6 +33,13 @@ class ConnectorStatus(str, Enum):
     ERROR = "error"
 
 
+class ApprovalStatus(str, Enum):
+    DISCOVERED = "discovered"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class AuthType(str, Enum):
     NONE = "none"
     API_KEY = "api_key"
@@ -64,7 +71,8 @@ class APIConnector:
     description: str = ""
     base_url: str = ""
     auth_type: AuthType = AuthType.NONE
-    status: ConnectorStatus = ConnectorStatus.ACTIVE
+    status: ConnectorStatus = ConnectorStatus.INACTIVE
+    approval_status: ApprovalStatus = ApprovalStatus.PENDING
     version: str = "1.0.0"
     tags: List[str] = field(default_factory=list)
     endpoints: List[ConnectorEndpoint] = field(default_factory=list)
@@ -82,6 +90,7 @@ class APIConnector:
             "base_url": self.base_url,
             "auth_type": self.auth_type.value,
             "status": self.status.value,
+            "approval_status": self.approval_status.value,
             "version": self.version,
             "tags": self.tags,
             "endpoint_count": len(self.endpoints),
@@ -157,6 +166,8 @@ class APIMarketplace:
                 auth_type=auth,
                 tags=tags,
                 description=desc,
+                approval_status=ApprovalStatus.APPROVED,
+                status=ConnectorStatus.ACTIVE,
             )
             self._connectors[connector.id] = connector
 
@@ -170,6 +181,8 @@ class APIMarketplace:
         tags: Optional[List[str]] = None,
         rate_limit_per_min: int = 60,
     ) -> APIConnector:
+        if self.find_by_slug(slug) is not None:
+            raise ValueError("Connector slug already registered")
         connector = APIConnector(
             name=name,
             slug=slug,
@@ -186,6 +199,18 @@ class APIMarketplace:
             sanitize_for_log(slug),
             sanitize_for_log(base_url),
         )  # codeql[py/cleartext-logging]
+        return connector
+
+    def set_approval(self, connector_id: str, approved: bool) -> APIConnector | None:
+        connector = self.get_connector(connector_id) or self.find_by_slug(connector_id)
+        if connector is None:
+            return None
+        connector.approval_status = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
+        connector.status = ConnectorStatus.ACTIVE if approved else ConnectorStatus.INACTIVE
+        self._emit(
+            "apimarket.connector.approval_changed",
+            {"connector_id": connector.id, "approved": approved},
+        )
         return connector
 
     def get_connector(self, connector_id: str) -> Optional[APIConnector]:
