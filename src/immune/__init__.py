@@ -40,6 +40,7 @@ and where this goes further.
 from src.immune.memory import Adjudication, apply_memory, load_adjudications
 from src.immune.sarif import Finding, MergedReport, merge
 from src.immune.sensors import Outcome, Sensor, SensorResult, load_manifest, run_sensor
+from src.immune.verdict import Verdict, VerdictReport, load_verdict
 
 __all__ = [
     "Adjudication",
@@ -48,9 +49,12 @@ __all__ = [
     "Outcome",
     "Sensor",
     "SensorResult",
+    "Verdict",
+    "VerdictReport",
     "apply_memory",
     "load_adjudications",
     "load_manifest",
+    "load_verdict",
     "merge",
     "run_sensor",
 ]

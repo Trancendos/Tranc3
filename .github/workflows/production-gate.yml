@@ -209,6 +209,24 @@ jobs:
       - name: Dependency vulnerability census
         run: python3 scripts/vulnerability_census.py --check --scope core
 
+      # The census answers a question about a LIVE advisory feed, so its answer
+      # has a shelf life that the recorded check-run conclusion does not.
+      # GitHub satisfies a required check from any green on the head commit,
+      # however old -- so when a head stops moving the green stops being
+      # re-earned and nothing notices it has aged out of being true.
+      #
+      # Measured 2026-10-13: nine open pull requests, `main` among them, held a
+      # green Production merge gate timestamped inside one forty-five-minute
+      # window on 2026-10-05, all of them predating the seventeen advisories
+      # that landed in between. Seven also read `mergeable_state: clean`.
+      #
+      # This step runs immediately after the census because it judges the
+      # census's own output. It cannot pass on a stale answer, and -- per the
+      # estate's founding rule -- it reports "could not establish" separately
+      # from "failed". See src/immune/verdict.py.
+      - name: Census verdict is still current
+        run: python3 scripts/check_verdict_freshness.py
+
       # A disposition in SECURITY_ALERT_REGISTER.md silences a finding the census
       # would otherwise block on. Two of them are justified by how this repository
       # uses the component, not by the advisory -- so if that usage changes, the

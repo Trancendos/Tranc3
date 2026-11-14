@@ -17,19 +17,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bytes::Bytes;
 use chrono::Utc;
-// `KeyInit` is what provides `new_from_slice`. RustCrypto moved it behind the
-// trait in the 0.13 generation, so `use hmac::{Hmac, Mac}` alone stopped
-// compiling at #1099 (`fix(deps): update rust crate hmac to 0.13`), and `main`
-// has not built since 2026-10-04.
-//
-// Worth recording how it got in and why it stayed in, because they are two
-// different failures. `Nanoservice Check` ran on #1099 and FAILED -- the run
-// on `renovate/hmac-0.x` at 2026-10-04T02:24:46Z -- and the PR merged anyway,
-// then failed again on the push to `main` at 03:27:45Z. A check that reports
-// correctly and blocks nothing is the first failure. The second is why twelve
-// days passed with nobody seeing it: rust-nanoservice.yml is path-filtered to
-// this directory, so after that push no commit touched it and the workflow
-// never ran again. A red result nobody re-runs looks exactly like no result.
+// hmac 0.13 exposes `new_from_slice` through the `KeyInit` trait, so it has
+// to be in scope. See the commit that added it for how a twelve-day build
+// break on `main` went unseen; this is the API requirement, not the story.
 use hmac::{Hmac, KeyInit, Mac};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};

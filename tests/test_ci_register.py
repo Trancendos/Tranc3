@@ -317,6 +317,154 @@ class TestThePartialCheckout:
         finally:
             containers.REPO = original
 
+    def test_an_uppercase_path_key_still_counts_as_a_declaration(self, tmp_path):
+        """REGRESSION. `.gitmodules` holds git-config keys and they are
+        case-insensitive: `git config --file` normalises `PATH =` to `path`,
+        confirmed against this repository's own file. The line scan this guard
+        used required lowercase, so that spelling made the submodule invisible
+        and the guard reported NO absent submodules -- silently disabling the
+        one check it exists to perform."""
+        import src.cmdb.containers as containers
+        from src.immune import repo
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tPATH = workers/cranbania\n',
+            encoding="utf-8",
+        )
+        (tmp_path / "workers" / "cranbania").mkdir(parents=True)  # present, empty
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            repo.reset_boundary_cache()
+            assert containers._absent_submodules() == ["workers/cranbania"]
+        finally:
+            containers.REPO = original
+            repo.reset_boundary_cache()
+
+    def test_a_quoted_path_does_not_fail_a_healthy_tree(self, tmp_path):
+        """REGRESSION, the other direction. git strips the quotes from
+        `path = "workers/cranbania"`; the line scan did not, so it reported a
+        fully checked-out submodule as absent under the name
+        `"workers/cranbania"` and the register could not be generated at all."""
+        import src.cmdb.containers as containers
+        from src.immune import repo
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tpath = "workers/cranbania"\n',
+            encoding="utf-8",
+        )
+        sub = tmp_path / "workers" / "cranbania"
+        sub.mkdir(parents=True)
+        (sub / "package.json").write_text("{}", encoding="utf-8")
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            repo.reset_boundary_cache()
+            assert containers._absent_submodules() == []
+        finally:
+            containers.REPO = original
+            repo.reset_boundary_cache()
+
+    def test_a_submodule_directory_holding_only_dot_git_is_absent(self, tmp_path):
+        """REGRESSION. `any(target.iterdir())` counted a partially initialised
+        submodule -- a directory holding nothing but its `.git` file -- as
+        present, so the guard reported none absent and the register could be
+        generated without any of the evidence files it reads. Probed in exactly
+        that shape before the fix. Raised by cubic on #1403."""
+        import src.cmdb.containers as containers
+        from src.immune import repo
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tpath = workers/cranbania\n',
+            encoding="utf-8",
+        )
+        sub = tmp_path / "workers" / "cranbania"
+        sub.mkdir(parents=True)
+        # What `git submodule init` without a completed `update` leaves behind:
+        # the gitdir pointer and no worktree.
+        (sub / ".git").write_text(
+            "gitdir: ../../.git/modules/workers/cranbania\n", encoding="utf-8"
+        )
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            repo.reset_boundary_cache()
+            assert containers._absent_submodules() == ["workers/cranbania"]
+            # And one real file is enough to make it present again.
+            (sub / "package.json").write_text("{}", encoding="utf-8")
+            repo.reset_boundary_cache()
+            assert containers._absent_submodules() == []
+        finally:
+            containers.REPO = original
+            repo.reset_boundary_cache()
+
+    def test_a_guard_that_cannot_read_the_declarations_refuses(self, tmp_path, monkeypatch):
+        """A presence guard that cannot parse `.gitmodules` must not answer
+        "none absent" -- that is what a clean tree answers, and
+        IMMUNE-SYSTEM.md's rule is that a sensor which cannot see must say so.
+        This module already raises on a missing PyYAML for the same reason."""
+        import src.cmdb.containers as containers
+        import src.immune.repo as repo_module
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tpath = workers/cranbania\n',
+            encoding="utf-8",
+        )
+        # Patched at the SOURCE module, not on `containers`: the import is
+        # deliberately lazy there (it must not pull `src.immune` -- and so
+        # PyYAML -- in at module load), so `containers.declared_paths` is no
+        # longer an attribute to replace. The lazy `from ... import` reads this
+        # binding at call time, so this is what reaches the function.
+        monkeypatch.setattr(repo_module, "declared_paths", lambda _root: frozenset())
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            with pytest.raises(containers.CannotEnumerateContainers) as caught:
+                containers._absent_submodules()
+            assert "no submodule declaration could be read" in str(caught.value)
+        finally:
+            containers.REPO = original
+
+    def test_the_register_cannot_be_built_from_a_partial_checkout(self, tmp_path):
+        """The contract the datastore scan relies on, asserted rather than
+        assumed.
+
+        `src/cmdb/datastores.py` walks the tree INCLUDING submodules, on
+        purpose: this repository builds and deploys The Town Hall, so a
+        datastore CranBania's code opens is part of the estate the register
+        describes. Measured: planting a one-line SQLite connect call (see
+        `src/cmdb/datastores.py` for the exact probe -- written out here, this
+        docstring would itself register as a 54th test-fixture datastore and
+        move the figure, which is the self-measurement this scanner already
+        guards against for its own package) in
+        `compliance/magna-carta/scripts/dpa_readiness_check.py` takes the
+        register from 178 datastore CIs to 179 (125 live to 126), attributed to
+        that submodule path.
+
+        That is only safe because the SAME generator enumerates containers, and
+        that refuses a checkout missing a declared submodule -- so a smaller
+        estate is never written and reported as the estate. This test is what
+        keeps the two coupled."""
+        import scripts.build_ci_register as register
+        import src.cmdb.containers as containers
+
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "workers/cranbania"]\n\tpath = workers/cranbania\n',
+            encoding="utf-8",
+        )
+        (tmp_path / "workers" / "cranbania").mkdir(parents=True)  # declared, empty
+
+        original = containers.REPO
+        try:
+            containers.REPO = tmp_path
+            with pytest.raises(containers.CannotEnumerateContainers):
+                register.build_register()
+        finally:
+            containers.REPO = original
+
     def test_this_repository_has_its_submodules(self):
         """The guard is worth nothing if it never has anything to check."""
         import src.cmdb.containers as containers

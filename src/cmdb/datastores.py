@@ -165,6 +165,33 @@ SELF_PACKAGE = "src/cmdb"
 
 
 def _candidate_files() -> Iterable[Path]:
+    """Every Python file this scan reads, SUBMODULES INCLUDED, deliberately.
+
+    This walk crosses the submodule boundary, unlike the suppression ratchet
+    and the premise checkers, which exclude it (`src/immune/repo.py`). The
+    difference is what each one measures. Those are ratchets on THIS
+    repository's own code, where counting another repository's files makes a
+    recorded ceiling depend on whether a job checked out submodules. This is
+    the estate's CMDB: `workers/cranbania` is The Town Hall and this repository
+    builds and deploys it, so a datastore its code opens at runtime is part of
+    the estate the register describes -- the same reasoning that deliberately
+    keeps `workers/cranbania/package.json` in the CranBania container CI's
+    evidence list.
+
+    Measured, so the consequence is stated rather than assumed: planting
+    `sqlite3.connect("planted_probe.db")` in
+    `compliance/magna-carta/scripts/dpa_readiness_check.py` takes this register
+    from 178 datastore CIs to 179 (125 live to 126), attributed to that
+    submodule path. Today no submodule declares one, so the figure is the same
+    either way -- the exposure is latent, not absent.
+
+    What makes that safe is that the register can never be generated from a
+    partial checkout: `scripts/build_ci_register.py` calls
+    `src.cmdb.containers.discover()` in the same run, and that refuses outright
+    when a declared submodule is not checked out. A smaller estate is never
+    written and reported as the estate. If this scan is ever read by something
+    that does NOT also enumerate containers, that guard has to come with it.
+    """
     for path in REPO.rglob("*.py"):
         rel = path.relative_to(REPO)
         if any(part in SKIP_PARTS for part in rel.parts):
