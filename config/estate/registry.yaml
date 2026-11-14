@@ -19,7 +19,9 @@ components:
   - ref: TRC-P0-001
     name: "The Spark"
     short_id: spark
-    lead_ai: "Norman Hawkins"
+    # Was "Norman Hawkins" until 2026-10-23. He is The Spark's Prime (Tier 2),
+    # not its Lead AI; corrected in CLAUDE.md and platform.py on 2026-08-22.
+    lead_ai: "Imfy"
     role: "MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE"
     status: active
     version: "1.0.0"
