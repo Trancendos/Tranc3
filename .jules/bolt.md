@@ -13,3 +13,6 @@
 ## 2024-05-27 - [Fast Euclidean and Manhattan Distance Optimization]
 **Learning:** `list(map(operator.sub, a, b))` combined with `sum(map(operator.mul, diff, diff))` is ~30% faster for Euclidean distance, and `sum(map(abs, map(operator.sub, a, b)))` is ~28% faster for Manhattan distance compared to pure Python generator expressions with indexing. For multiple operations like `MSE`, materializing the `map` into a `list` is required to prevent iterator exhaustion.
 **Action:** When calculating Euclidean or Manhattan distances in pure Python without `numpy`, use `map` with `operator.sub`, `operator.mul`, and `abs` instead of index-based generator comprehensions.
+## 2024-05-28 - [Hamming distance optimization]
+**Learning:** `sum(map(operator.ne, a, b))` is ~1.4x faster than `sum(c1 != c2 for c1, c2 in zip(a, b))` for calculating Hamming distance in pure Python.
+**Action:** Use `map` with `operator.ne` instead of generator expressions for element-wise string comparisons or Hamming distance calculations.
