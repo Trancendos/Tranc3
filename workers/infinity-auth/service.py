@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
 import os
 import secrets
 import time
@@ -155,15 +154,20 @@ def create_access_token(
         **(extra_claims or {}),
     }
 
+    # Fail closed. There is deliberately no fallback when python-jose is
+    # missing: an unsigned base64-JSON "token" (what this function used to
+    # return on ImportError) can be minted by anyone, so issuing one would
+    # hand out credentials that decode_access_token could not tell apart from
+    # a forgery. python-jose is exact-pinned in requirements-worker.txt.
     try:
         from jose import jwt
+    except ImportError as exc:  # pragma: no cover - exercised via monkeypatch in tests
+        raise RuntimeError(
+            "python-jose is required to issue access tokens; refusing to issue an "
+            "unsigned token. Install workers/infinity-auth/requirements-worker.txt."
+        ) from exc
 
-        return jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    except ImportError:
-        # Fallback: simple base64-encoded token (for development)
-        import base64
-
-        return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode()
+    return jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def create_refresh_token() -> str:
@@ -172,26 +176,22 @@ def create_refresh_token() -> str:
 
 
 def decode_access_token(token: str) -> dict[str, Any] | None:
-    """Decode and validate a JWT access token."""
+    """Decode and validate a JWT access token.
+
+    Returns None for any token that does not carry a valid signature, including
+    when python-jose is unavailable. The previous ImportError branch accepted
+    any base64-encoded JSON with a future ``exp`` — no signature check — which
+    let an attacker forge ``{"sub": ..., "role": "admin"}`` and authenticate.
+    """
     try:
         from jose import JWTError, jwt
+    except ImportError:  # pragma: no cover - exercised via monkeypatch in tests
+        return None
 
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            return payload
-        except JWTError:
-            return None
-    except ImportError:
-        # Fallback: decode base64 token
-        try:
-            import base64
-
-            payload = json.loads(base64.urlsafe_b64decode(token + "=="))
-            if payload.get("exp", 0) < time.time():
-                return None
-            return payload
-        except Exception:
-            return None
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        return None
 
 
 # ── TOTP ───────────────────────────────────────────────────────────────────────
