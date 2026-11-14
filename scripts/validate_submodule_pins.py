@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -39,6 +40,33 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# Scrubbed from every git invocation below. `cwd=ROOT` is NO protection against
+# these: git takes its repository location from the environment and ignores the
+# working directory, so under a pre-commit hook -- which exports exactly these
+# variables, and which `.pre-commit-config.yaml` uses to run this estate's
+# checkers -- this validator read ANOTHER repository's index and reported every
+# declared submodule as unbacked. Probed on #1403: with GIT_DIR set, `unbacked`
+# grew from ["src"] to ["src", "vendor/real"], so a real pin read as missing.
+#
+# Duplicated from `src/immune/repo._GIT_LOCATION_VARS` rather than imported,
+# because this script is deliberately stdlib-only and importing the package
+# would make it need PyYAML -- the same mistake that made
+# `src/cmdb/containers.py` defeat its own fail-closed diagnostic. The
+# duplication is deliberate; the drift is what fails in CI, in
+# `test_the_pin_validator_scrubs_the_same_vars_as_the_boundary`.
+_GIT_LOCATION_VARS = frozenset(
+    {
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_NAMESPACE",
+        "GIT_PREFIX",
+    }
+)
 
 
 @dataclass
@@ -60,7 +88,12 @@ def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess:
     # there is no shell to interpret metacharacters and no command injection to
     # escape. The real exposure here is *argument* injection — see _url_is_safe.
     return subprocess.run(  # noqa: S603 — argv list, shell=False, inputs validated below
-        cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env={k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARS},
     )
 
 

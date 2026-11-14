@@ -412,7 +412,24 @@ def test_an_inherited_git_dir_cannot_redirect_the_boundary(tmp_path, monkeypatch
     # INDEX, so an initialised repository with an empty index is exactly the
     # subject here -- a tree whose honest answer is "no gitlinks".
     empty.mkdir()
-    subprocess.run(["git", "init", "-q", str(empty)], check=True, timeout=30)
+    # Scrubbed, like `_repo_with_gitlinks`. An *ambient* GIT_DIR -- which the
+    # pre-commit hook named above exports -- redirects `git init` away from
+    # `empty/.git` altogether: probed, no `.git` is created and `rev-parse`
+    # reports "not a git repository". The assertion below would then hold
+    # without an empty repository ever having existed, which is this file's
+    # own subject turned on itself. Raised by cubic on #1403.
+    subprocess.run(
+        ["git", "init", "-q", str(empty)],
+        check=True,
+        timeout=30,
+        env={k: v for k, v in os.environ.items() if k not in repo_module._GIT_LOCATION_VARS},
+    )
+    # The premise, asserted rather than assumed: a scrub that silently stopped
+    # working would otherwise leave this test passing for the wrong reason.
+    assert (empty / ".git").is_dir(), (
+        "premise failed: `git init` created no empty/.git, so the assertion "
+        "below would pass without an empty repository to read"
+    )
 
     monkeypatch.setenv("GIT_DIR", str(elsewhere / ".git"))
     monkeypatch.setenv("GIT_INDEX_FILE", str(elsewhere / ".git" / "index"))
@@ -637,3 +654,20 @@ def test_the_validators_json_mode_stays_machine_readable(tmp_path, monkeypatch, 
     payload = json_mod.loads(capsys.readouterr().out)
     assert payload["unbacked"] == ["src"]
     assert payload["broken"] == 1
+
+
+def test_the_pin_validator_scrubs_the_same_vars_as_the_boundary():
+    """The two lists of git location variables must stay identical.
+
+    `scripts/validate_submodule_pins.py` duplicates `_GIT_LOCATION_VARS`
+    instead of importing it, because it is deliberately stdlib-only and the
+    import would make it need PyYAML. Duplication is the right call there, and
+    this is where its price is paid: a variable added to the boundary and not
+    to the validator would leave the validator reading another repository's
+    index under a pre-commit hook, reporting real pins as unbacked -- measured,
+    not supposed, on #1403.
+    """
+    vsp = _load("vsp_scrub", "scripts/validate_submodule_pins.py")
+    assert vsp._GIT_LOCATION_VARS == repo_module._GIT_LOCATION_VARS, (
+        "the validator and the boundary disagree about which variables to scrub"
+    )
