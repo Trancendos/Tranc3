@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+_HAS_SUMPROD = hasattr(math, "sumprod")
+
 logger = logging.getLogger(__name__)
 
 
@@ -173,10 +175,15 @@ class EnhancedSkillRegistry:
             self._embedder = None
 
     def _cosine(self, a: List[float], b: List[float]) -> float:
-        # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
-        dot = sum(map(operator.mul, a, b))
-        mag_a = math.sqrt(sum(x * x for x in a))
-        mag_b = math.sqrt(sum(y * y for y in b))
+        # Optimization: math.sumprod executes in C, faster than map(operator.mul) in Python 3.12+
+        if _HAS_SUMPROD:
+            dot = math.sumprod(a, b)  # type: ignore[attr-defined]
+            mag_a = math.sqrt(math.sumprod(a, a))  # type: ignore[attr-defined]
+            mag_b = math.sqrt(math.sumprod(b, b))  # type: ignore[attr-defined]
+        else:
+            dot = sum(map(operator.mul, a, b))
+            mag_a = math.sqrt(sum(x * x for x in a))
+            mag_b = math.sqrt(sum(y * y for y in b))
         if mag_a < 1e-12 or mag_b < 1e-12:
             return 0.0
         return dot / (mag_a * mag_b)
