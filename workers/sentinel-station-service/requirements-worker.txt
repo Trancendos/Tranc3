@@ -17,5 +17,5 @@ ecdsa==0.19.2
 # there is no planned fix.
 # This worker never signs/verifies ES256/ES384/ES512 JWTs (grep confirms no ES2xx usage),
 # so the vulnerable ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
-pyasn1==0.6.4
+pyasn1==0.6.5
 email-validator==2.3.0
