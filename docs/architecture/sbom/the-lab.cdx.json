@@ -84,9 +84,9 @@
     {
       "type": "library",
       "name": "mypy",
-      "bom-ref": "pkg:pypi/mypy@1.20.2",
-      "purl": "pkg:pypi/mypy@1.20.2",
-      "version": "1.20.2"
+      "bom-ref": "pkg:pypi/mypy@2.3.1",
+      "purl": "pkg:pypi/mypy@2.3.1",
+      "version": "2.3.1"
     },
     {
       "type": "library",
