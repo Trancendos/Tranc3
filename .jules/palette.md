@@ -1,0 +1,3 @@
+## 2024-11-06 - Notification Bell Popover Accessibility
+**Learning:** Found that custom popovers (like the Notification Bell) were missing critical keyboard dismissal (Escape key) and proper ARIA state bindings (`aria-expanded`, `aria-haspopup`) which are necessary for screen readers to announce interactive state correctly. Additionally, decorative icons within action buttons without `aria-hidden="true"` can cause redundant announcements.
+**Action:** When building custom popover/dropdown components, always include an Escape key listener in the mounting `useEffect`, bind `aria-expanded` to the open state, set `aria-haspopup="true"` on the trigger, and hide inner decorative icons from screen readers.
