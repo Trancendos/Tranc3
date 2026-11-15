@@ -4,7 +4,7 @@
 # scripts/*.py relative to ROOT = Path(__file__).resolve().parents[2] — that computation
 # requires worker.py to sit two directories below the image's repo-root equivalent, so
 # the source tree's relative depth is preserved inside the image.
-FROM python:3.11-slim@sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
